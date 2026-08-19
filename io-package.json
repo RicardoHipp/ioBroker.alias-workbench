@@ -19,7 +19,6 @@
     "authors": [
       "Ricardo"
     ],
-    "license": "MIT",
     "platform": "Javascript/Node.js",
     "mode": "none",
     "onlyWWW": true,
@@ -44,7 +43,11 @@
     },
     "keywords": [
       "alias",
-      "type-detector"
+      "type-detector",
+      "device",
+      "template",
+      "mqtt",
+      "tasmota"
     ],
     "readme": "https://github.com/ricardo/ioBroker.alias-workbench/blob/main/README.md",
     "dependencies": [
@@ -56,7 +59,16 @@
       {
         "admin": ">=6.0.0"
       }
-    ]
+    ],
+    "licenseInformation": {
+      "license": "MIT",
+      "type": "free"
+    },
+    "tier": 3,
+    "messagebox": false,
+    "loglevel": "info",
+    "supportCustoms": false,
+    "noIntro": true
   },
   "native": {},
   "objects": [],

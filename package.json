@@ -2,7 +2,10 @@
   "name": "iobroker.alias-workbench",
   "version": "0.0.1",
   "description": "Shows what the type-detector makes of a channel, with live values",
-  "author": "Ricardo",
+  "author": {
+    "name": "Ricardo Hipp",
+    "email": "ricardo.hipp@googlemail.com"
+  },
   "license": "MIT",
   "keywords": [
     "ioBroker",
@@ -25,5 +28,6 @@
     "io-package.json",
     "LICENSE"
   ],
-  "main": "io-package.json"
+  "main": "io-package.json",
+  "readmeFilename": "README.md"
 }
