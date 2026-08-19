@@ -1,0 +1,29 @@
+{
+  "name": "iobroker.alias-workbench",
+  "version": "0.0.1",
+  "description": "Shows what the type-detector makes of a channel, with live values",
+  "author": "Ricardo",
+  "license": "MIT",
+  "keywords": [
+    "ioBroker",
+    "alias",
+    "type-detector"
+  ],
+  "engines": {
+    "node": ">= 20"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@iobroker/type-detector": "^6.0.0",
+    "esbuild": "^0.25.0"
+  },
+  "scripts": {
+    "build": "esbuild src/detector-bundle.js --bundle --minify --format=iife --target=es2019 --outfile=admin/detector.js"
+  },
+  "files": [
+    "admin/",
+    "io-package.json",
+    "LICENSE"
+  ],
+  "main": "io-package.json"
+}

@@ -1,0 +1,3100 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Alias-Werkbank</title>
+  <script src="../../socket.io/socket.io.js"></script>
+  <script src="./detector.js"></script>
+  <style>
+  :root {
+    --ground:#F2F4F4; --surface:#FFFFFF; --surface-2:#E9EDEE; --surface-3:#DFE5E6;
+    --ink:#12191B; --ink-2:#4A585C; --ink-3:#7C8A8E;
+    --line:#D3DADC; --line-strong:#B6C1C4;
+    --accent:#00707A; --accent-ink:#FFFFFF; --accent-soft:#DCEDEE;
+    --ok:#2E7D5B; --ok-soft:#DDEFE6;
+    --warn:#8A5D00; --warn-soft:#F6EBD4;
+    --bad:#A93B27; --bad-soft:#F6E2DE;
+    --shadow:0 1px 2px rgba(18,25,27,.05), 0 8px 24px rgba(18,25,27,.05);
+    --sans:"Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;
+    --mono:"Cascadia Mono","Cascadia Code",ui-monospace,"JetBrains Mono",Consolas,monospace;
+    --r:3px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:#0E1416; --surface:#151D20; --surface-2:#1C2528; --surface-3:#243033;
+      --ink:#E4EBEC; --ink-2:#A0B0B4; --ink-3:#6E7F84;
+      --line:#263438; --line-strong:#35474C;
+      --accent:#5BC8C2; --accent-ink:#06201F; --accent-soft:#11302F;
+      --ok:#5FBF92; --ok-soft:#122C22;
+      --warn:#D3A44A; --warn-soft:#302713;
+      --bad:#E1806C; --bad-soft:#33201C;
+      --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.3);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:#0E1416; --surface:#151D20; --surface-2:#1C2528; --surface-3:#243033;
+    --ink:#E4EBEC; --ink-2:#A0B0B4; --ink-3:#6E7F84;
+    --line:#263438; --line-strong:#35474C;
+    --accent:#5BC8C2; --accent-ink:#06201F; --accent-soft:#11302F;
+    --ok:#5FBF92; --ok-soft:#122C22;
+    --warn:#D3A44A; --warn-soft:#302713;
+    --bad:#E1806C; --bad-soft:#33201C;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.3);
+  }
+
+  * { box-sizing:border-box; }
+  html, body { height:100%; }
+  /* Spalte: Banner und Kopfzeile nehmen ihre Hoehe, der Rest gehoert der
+     Arbeitsflaeche. Vorher bekam .split volle 100% und schob die Fussleiste
+     genau um die Hoehe von Banner plus Kopf unter den Rand. */
+  body {
+    margin:0; background:var(--ground); color:var(--ink);
+    font-family:var(--sans); font-size:14px; line-height:1.5;
+    -webkit-font-smoothing:antialiased; overflow:hidden;
+    display:flex; flex-direction:column; height:100%;
+  }
+  .roflag, header.top { flex:0 0 auto; }
+  code,.mono { font-family:var(--mono); font-variant-ligatures:none; }
+  :focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+  [hidden] { display:none !important; }
+
+  .roflag {
+    background:var(--warn-soft); color:var(--warn);
+    border-bottom:1px solid var(--line); padding:5px 16px; font-size:11px;
+    letter-spacing:.04em; text-transform:uppercase; font-weight:700;
+    display:flex; gap:8px; align-items:baseline; flex-wrap:wrap;
+  }
+  .roflag span { text-transform:none; letter-spacing:0; font-weight:400; color:var(--ink-2); }
+
+  header.top {
+    display:flex; align-items:center; gap:12px; padding:9px 16px;
+    background:var(--surface); border-bottom:1px solid var(--line); flex-wrap:wrap;
+  }
+  header.top h1 { margin:0; font-size:15px; font-weight:650; }
+  header.top .meta { font-family:var(--mono); font-size:11px; color:var(--ink-3); }
+  header.top .sp { flex:1; }
+  .conn { font-size:11.5px; font-family:var(--mono); padding:2px 8px; border-radius:var(--r); }
+  .conn.on  { background:var(--ok-soft);  color:var(--ok); }
+  .conn.off { background:var(--bad-soft); color:var(--bad); }
+
+  .split {
+    display:grid; grid-template-columns:minmax(280px,32%) minmax(0,1fr);
+    flex:1 1 auto; min-height:0;
+  }
+  @media (max-width:880px) {
+    body { overflow:auto; display:block; height:auto; }
+    .split { grid-template-columns:minmax(0,1fr); height:auto; }
+    .pickpane { height:240px; }
+  }
+  .pickpane, .respane { display:flex; flex-direction:column; min-height:0; min-width:0; }
+  .pickpane { background:var(--surface); border-right:1px solid var(--line); }
+  .respane { background:var(--ground); }
+
+  .panehead {
+    padding:7px 11px; border-bottom:1px solid var(--line); background:var(--surface);
+    display:flex; align-items:center; gap:8px; flex:0 0 auto;
+  }
+  .panehead .lbl { font-size:9.5px; font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:var(--ink-3); }
+  .search {
+    flex:1; min-width:0; font-family:var(--mono); font-size:12px;
+    padding:4px 7px; border:1px solid var(--line-strong); border-radius:var(--r);
+    background:var(--ground); color:var(--ink);
+  }
+  .scroll { overflow:auto; flex:1 1 auto; min-height:0; }
+
+  .tree { font-family:var(--mono); font-size:12.5px; padding:5px 3px 24px; }
+  .tree ul { list-style:none; margin:0; padding-left:12px; }
+  .tree > ul { padding-left:1px; }
+  .tree .node {
+    display:flex; align-items:center; gap:5px; padding:2px 6px;
+    border-radius:var(--r); white-space:nowrap;
+  }
+  .tree .node.pick { cursor:pointer; }
+  .tree .node.pick:hover { background:var(--surface-2); }
+  .tree .node.sel { background:var(--accent); color:var(--accent-ink); font-weight:600; }
+  .tree .node.sel .kind { background:rgba(255,255,255,.22); color:inherit; }
+  .tree .kind {
+    font-size:8px; padding:0 3px; border-radius:2px; background:var(--surface-3);
+    color:var(--ink-3); text-transform:uppercase; letter-spacing:.04em;
+    font-family:var(--sans); font-weight:700; flex:0 0 auto;
+  }
+  .tree .cnt { margin-left:auto; font-size:9.5px; color:var(--ink-3); }
+  .tree .node.sel .cnt { color:var(--accent-ink); }
+  .tree .tw { cursor:pointer; width:11px; text-align:center; color:var(--ink-3); flex:0 0 auto; }
+  .tree .grp { color:var(--ink-3); }
+
+  .resscroll { overflow:auto; flex:1 1 auto; min-height:0; padding:14px; }
+  .resinner { max-width:820px; margin:0 auto; display:flex; flex-direction:column; gap:13px; }
+
+  .rhead .id { font-family:var(--mono); font-size:16px; font-weight:700; word-break:break-all; }
+  .rhead .sub { font-family:var(--mono); font-size:11.5px; color:var(--ink-3); margin-top:2px; }
+
+  .card {
+    background:var(--surface); border:1px solid var(--line); border-radius:var(--r);
+    box-shadow:var(--shadow); overflow:hidden;
+  }
+  .card > .ch {
+    display:flex; align-items:center; gap:10px; padding:9px 13px;
+    border-bottom:1px solid var(--line); background:var(--surface-2); flex-wrap:wrap;
+  }
+  .card > .ch .typ { font-family:var(--mono); font-size:15px; font-weight:700; color:var(--accent); }
+  .card.infod { border-style:dashed; }
+  .card.infod > .ch .typ { color:var(--ink-3); }
+
+  .slot {
+    display:grid; grid-template-columns:15px 130px 1fr auto; gap:9px; align-items:center;
+    padding:5px 13px; border-bottom:1px solid var(--line); font-family:var(--mono); font-size:12px;
+  }
+  .slot:last-child { border-bottom:0; }
+  .slot .mk { text-align:center; }
+  .slot.hit .mk { color:var(--ok); }
+  .slot.miss .mk { color:var(--bad); }
+  .slot.free .mk { color:var(--ink-3); }
+  .slot .sn { font-weight:600; }
+  .slot.free .sn, .slot.free .who { color:var(--ink-3); }
+  .slot .who { color:var(--ink-2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .slot .v { font-variant-numeric:tabular-nums; white-space:nowrap; color:var(--ink); }
+  .slot .rx { font-size:10px; color:var(--ink-3); }
+
+  .stlist .row {
+    display:grid; grid-template-columns:1fr 170px 110px 13px; gap:9px; align-items:center;
+    padding:6px 13px; border-bottom:1px solid var(--line); font-size:12.5px; cursor:pointer;
+  }
+  .stlist .row:last-of-type { border-bottom:0; }
+  .stlist .row:hover { background:var(--surface-2); }
+  .stlist .row.open { background:var(--surface-2); }
+  .stlist .row .nm { font-family:var(--mono); font-weight:600; overflow:hidden; text-overflow:ellipsis; }
+  .stlist .row .nm em { font-style:normal; font-weight:400; color:var(--ink-3); font-size:11px; margin-left:6px; }
+  .stlist .row .ro { font-family:var(--mono); font-size:11px; color:var(--ink-3); overflow:hidden; text-overflow:ellipsis; }
+  .stlist .row .vl { font-family:var(--mono); text-align:right; font-variant-numeric:tabular-nums; overflow:hidden; text-overflow:ellipsis; }
+  .stlist .row .ca { font-size:9px; color:var(--ink-3); text-align:center; }
+
+  .detail {
+    padding:11px 13px 13px 26px; background:var(--surface-2);
+    border-bottom:1px solid var(--line); font-family:var(--mono); font-size:11.5px;
+  }
+  .detail .dr { display:grid; grid-template-columns:88px 1fr; gap:8px; padding:3px 0; align-items:start; }
+  .detail .k {
+    font-family:var(--sans); font-size:9px; text-transform:uppercase; letter-spacing:.06em;
+    color:var(--ink-3); font-weight:700; padding-top:3px;
+  }
+  .detail .raw {
+    background:var(--surface); border:1px solid var(--line); border-radius:2px;
+    padding:5px 6px; word-break:break-all; color:var(--ink-2);
+    max-height:80px; overflow:auto; line-height:1.5;
+  }
+  .detail .res { font-size:14px; font-weight:700; font-variant-numeric:tabular-nums; }
+
+  .chip {
+    display:inline-flex; align-items:center; gap:4px; font-size:10px; font-weight:700;
+    letter-spacing:.04em; text-transform:uppercase; padding:1px 6px; border-radius:2px; white-space:nowrap;
+  }
+  .chip.ok{background:var(--ok-soft);color:var(--ok);} .chip.warn{background:var(--warn-soft);color:var(--warn);}
+  .chip.bad{background:var(--bad-soft);color:var(--bad);} .chip.mut{background:var(--surface-3);color:var(--ink-3);}
+
+  .aside {
+    font-size:12px; color:var(--ink-2); line-height:1.6;
+    background:var(--surface); border:1px solid var(--line); border-left:2px solid var(--accent);
+    padding:9px 11px; border-radius:0 var(--r) var(--r) 0;
+  }
+  .aside.w { border-left-color:var(--warn); }
+  .aside b { color:var(--ink); }
+
+  .empty { color:var(--ink-3); font-size:13px; padding:36px 8px; text-align:center; }
+
+  .footbar {
+    flex:0 0 auto; border-top:1px solid var(--line); background:var(--surface);
+    padding:8px 14px; display:flex; gap:9px; align-items:center; flex-wrap:wrap;
+    position:sticky; bottom:0; z-index:2;
+  }
+  button.btn {
+    font:inherit; font-size:12.5px; border-radius:var(--r); padding:5px 11px;
+    border:1px solid var(--line-strong); background:var(--surface); color:var(--ink); cursor:pointer;
+  }
+  button.btn:hover:not(:disabled) { background:var(--surface-2); }
+  button.btn:disabled { opacity:.4; cursor:not-allowed; }
+  .footnote { font-size:11.5px; color:var(--ink-3); }
+
+  /* ---- Kopf mit Musterwahl ---- */
+  .rhead { display:flex; gap:12px; align-items:flex-start; flex-wrap:wrap; justify-content:space-between; }
+  .verdictwrap {
+    border:1px solid var(--ok); background:var(--ok-soft); border-radius:var(--r);
+    padding:6px 8px; display:flex; flex-direction:column; gap:5px; align-items:flex-start;
+  }
+  .verdictwrap.bad { border-color:var(--bad); background:var(--bad-soft); }
+  select.musterwahl {
+    font-family:var(--mono); font-size:14px; font-weight:700;
+    border:1px solid var(--line-strong); border-radius:2px;
+    background:var(--surface); color:var(--ink); padding:2px 5px; max-width:290px;
+  }
+  .vmeta { display:flex; gap:5px; align-items:center; flex-wrap:wrap; }
+
+  /* ---- Geraetekarte ---- */
+  .strip { display:flex; align-items:center; gap:13px; padding:13px 15px; flex-wrap:wrap; }
+  .toggle { width:48px; height:27px; border-radius:14px; background:var(--ok); position:relative; flex:0 0 auto; border:0; }
+  .toggle::after { content:""; position:absolute; top:3px; left:24px; width:21px; height:21px;
+                   border-radius:50%; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.3); }
+  .toggle.off { background:var(--surface-3); } .toggle.off::after { left:3px; }
+  .strip .nm2 { font-size:15px; font-weight:600; }
+  .strip .nm2 small { display:block; font-size:11px; color:var(--ink-3); font-weight:400; }
+  .strip .metrics { margin-left:auto; display:flex; gap:18px; flex-wrap:wrap; }
+  .metric { text-align:right; }
+  .metric .v { font-family:var(--mono); font-size:18px; font-weight:700; font-variant-numeric:tabular-nums; line-height:1.15; }
+  .metric .v u { text-decoration:none; font-size:10px; color:var(--ink-3); font-weight:400; margin-left:2px; }
+  .metric .k { font-size:9px; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-3); font-weight:700; }
+
+  /* ---- Werkzeugleiste + Kopfzeile der Liste ---- */
+  .listbar { display:flex; align-items:center; gap:7px; flex-wrap:wrap; padding:6px 15px;
+             border-top:1px solid var(--line); border-bottom:1px solid var(--line);
+             background:var(--surface-2); font-size:11px; color:var(--ink-2); }
+  .listbar .cnt { font-family:var(--mono); font-weight:600; color:var(--ink); }
+  .listbar .sp2 { flex:1; }
+  .listbar button { font:inherit; font-size:11px; cursor:pointer; border:1px solid var(--line-strong);
+                    border-radius:2px; padding:1px 7px; background:var(--surface); color:var(--ink-2); }
+  .listbar button:hover { background:var(--surface-3); color:var(--ink); }
+  .lhead { display:grid; grid-template-columns:19px 14px 1fr 150px 105px 12px; gap:8px;
+           padding:4px 15px; border-bottom:1px solid var(--line);
+           font-size:8.5px; letter-spacing:.06em; text-transform:uppercase; font-weight:700; color:var(--ink-3); }
+  .lhead .r { text-align:right; }
+  .erow { display:grid; grid-template-columns:19px 14px 1fr 150px 105px 12px; gap:8px; align-items:center;
+          padding:6px 15px; border-bottom:1px solid var(--line); font-size:12.5px; cursor:pointer; }
+  .erow:last-of-type { border-bottom:0; }
+  .erow:hover, .erow.open { background:var(--surface-2); }
+  .erow.skip { opacity:.42; }
+  .erow.skip .nm3, .erow.skip .vl2 { text-decoration:line-through; }
+  .erow input[type="checkbox"] { accent-color:var(--accent); cursor:pointer; margin:0; }
+  .erow .mk2 { text-align:center; font-size:11px; }
+  .erow .mk2.ok { color:var(--ok); } .erow .mk2.bad { color:var(--bad); } .erow .mk2.out { color:var(--ink-3); }
+  .erow .nm3 { font-family:var(--mono); font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .erow .nm3 em { font-style:normal; font-weight:400; color:var(--ink-3); font-size:10.5px; margin-left:6px; }
+  .erow .nm3 .hand { font-family:var(--sans); font-size:8px; font-weight:700; letter-spacing:.05em;
+                     text-transform:uppercase; background:var(--surface-3); color:var(--ink-3);
+                     padding:0 4px; border-radius:2px; margin-left:6px; }
+  .erow .nm3 .geae { font-family:var(--sans); font-size:8px; font-weight:700; letter-spacing:.05em;
+                     text-transform:uppercase; background:var(--warn-soft); color:var(--warn);
+                     padding:0 4px; border-radius:2px; margin-left:6px; }
+  .erow .ro2 { font-family:var(--mono); font-size:10.5px; color:var(--ink-3); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .erow .ro2.warnrole { color:var(--warn); font-weight:700; }
+  .erow .vl2 { font-family:var(--mono); text-align:right; font-variant-numeric:tabular-nums;
+               overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .erow .ca2 { font-size:8.5px; color:var(--ink-3); text-align:center; }
+
+  .addrow { display:flex; align-items:center; gap:7px; width:100%; font:inherit; font-size:12.5px;
+            cursor:pointer; padding:8px 15px; border:0; border-top:1px dashed var(--line-strong);
+            background:var(--surface); color:var(--accent); font-weight:600; text-align:left; }
+  .addrow:hover { background:var(--accent-soft); }
+
+  /* ---- Bearbeitungsfelder im Detail ---- */
+  .detail .fields { display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end; }
+  .detail .fld { display:flex; flex-direction:column; gap:2px; }
+  .detail .fld > span { font-family:var(--sans); font-size:8.5px; letter-spacing:.06em;
+                        text-transform:uppercase; color:var(--ink-3); font-weight:700; }
+  .detail input.tx, .detail select.tx {
+    font-family:var(--mono); font-size:11.5px; padding:3px 5px;
+    border:1px solid var(--line-strong); border-radius:2px; background:var(--surface); color:var(--ink);
+  }
+  .detail input.tx.w { width:100%; } .detail select.tx.w { width:100%; }
+  .detail input.tx.miss, .detail select.tx.miss { border-color:var(--bad); background:var(--bad-soft); }
+  .detail .sugg { font-family:var(--sans); font-size:10px; color:var(--ink-3); padding-top:3px; }
+  .detail .sugg b { color:var(--accent); font-weight:600; }
+
+  dialog { border:1px solid var(--line-strong); border-radius:var(--r); background:var(--surface);
+           color:var(--ink); padding:0; max-width:560px; width:calc(100% - 32px);
+           box-shadow:0 18px 50px rgba(0,0,0,.32); }
+  dialog::backdrop { background:rgba(8,14,16,.55); }
+  dialog h3 { margin:0; padding:11px 15px; font-size:13.5px; border-bottom:1px solid var(--line); background:var(--surface-2); }
+  dialog .dbody { padding:15px; font-size:13px; max-height:60vh; overflow:auto; }
+  dialog .dfoot { padding:11px 15px; border-top:1px solid var(--line); display:flex; gap:8px;
+                  justify-content:flex-end; background:var(--surface-2); }
+  ul.checks { list-style:none; margin:0; padding:0; font-size:12.5px; }
+  ul.checks li { display:grid; grid-template-columns:15px 1fr auto; gap:9px; padding:6px 0;
+                 border-bottom:1px solid var(--line); align-items:baseline; }
+  ul.checks li:last-child { border-bottom:0; }
+  ul.checks .m.ok { color:var(--ok); } ul.checks .m.bad { color:var(--bad); }
+  ul.checks .m.warn { color:var(--warn); } ul.checks .m.mut { color:var(--ink-3); }
+  ul.checks .det { font-family:var(--mono); font-size:11px; color:var(--ink-3); }
+  #checkchip { margin-left:5px; }
+
+  .suggestbox { border:1px solid var(--accent); background:var(--accent-soft); border-radius:var(--r);
+                padding:10px 12px; display:flex; gap:13px; align-items:flex-start; flex-wrap:wrap; }
+  .suggestbox .txt { flex:1; min-width:220px; }
+  .suggestbox .hd { font-weight:650; margin-bottom:2px; }
+  .suggestbox ul { margin:5px 0 0; padding-left:16px; font-family:var(--mono);
+                   font-size:11px; color:var(--ink-2); line-height:1.7; }
+  .suggestbox .acts { display:flex; gap:7px; flex-wrap:wrap; }
+
+  button.btn.primary { background:var(--accent); border-color:var(--accent); color:var(--accent-ink); font-weight:600; }
+  button.btn.primary:hover:not(:disabled) { filter:brightness(1.08); background:var(--accent); }
+
+  .zielbar {
+    display:flex; align-items:center; gap:9px; flex-wrap:wrap;
+    background:var(--surface); border:1px solid var(--line); border-radius:var(--r);
+    padding:8px 11px;
+  }
+  .zielbar .zl { font-size:9px; letter-spacing:.06em; text-transform:uppercase;
+                 font-weight:700; color:var(--ink-3); }
+  .zielbar .tx { font-family:var(--mono); font-size:12px; padding:3px 6px;
+                 border:1px solid var(--line-strong); border-radius:2px;
+                 background:var(--ground); color:var(--ink); }
+  /* Die entstehende ID immer auf eigener Zeile, links buendig. Vorher
+     schob margin-left:auto sie bei kurzen Pfaden neben die Felder und bei
+     langen darunter — die Zeile sprang je nach Pfadlaenge um. */
+  .zielbar { flex-wrap:wrap; row-gap:6px; }
+  .zielbar .zid {
+    font-family:var(--mono); font-size:12.5px; font-weight:700;
+    color:var(--accent); width:100%; margin-left:0; word-break:break-all;
+  }
+
+  .umschalter { display:inline-flex; border:1px solid var(--line-strong); border-radius:var(--r); overflow:hidden; flex:0 0 auto; }
+  .umschalter button {
+    font:inherit; font-size:11px; padding:3px 9px; border:0; cursor:pointer;
+    background:var(--surface); color:var(--ink-3);
+  }
+  .umschalter button + button { border-left:1px solid var(--line-strong); }
+  .umschalter button.an { background:var(--accent); color:var(--accent-ink); font-weight:600; }
+
+  .tree .geraetepunkt { margin-left:auto; font-size:8px; color:var(--accent); }
+  .tree .node.sel .geraetepunkt { color:var(--accent-ink); }
+  .tree .geraetepunkt + .cnt { margin-left:5px; }
+
+  .freikopf {
+    display:flex; align-items:center; gap:8px; padding:6px 15px;
+    border-top:1px solid var(--line); border-bottom:1px solid var(--line);
+    background:var(--surface-2); font-size:9px; letter-spacing:.06em;
+    text-transform:uppercase; font-weight:700; color:var(--ink-3);
+  }
+  .freikopf .cnt2 { margin-left:auto; font-family:var(--mono); letter-spacing:0; text-transform:none; font-weight:400; }
+  .freirow {
+    display:grid; grid-template-columns:19px 150px 180px 1fr; gap:9px; align-items:center;
+    padding:4px 15px; border-bottom:1px solid var(--line); cursor:pointer;
+    font-family:var(--mono); font-size:11.5px; color:var(--ink-3);
+  }
+  .freirow:hover { background:var(--accent-soft); color:var(--ink); }
+  .freirow .mk3 { text-align:center; color:var(--accent); font-weight:700; }
+  .freirow .sn2 { font-weight:600; }
+  .freirow .rl2 { color:var(--ink-2); }
+  .freirow .rx2 { font-size:10px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .freirow.pflicht { background:var(--bad-soft); color:var(--bad); }
+  .freirow.pflicht .mk3, .freirow.pflicht .rl2, .freirow.pflicht .rx2 { color:var(--bad); }
+  .freirow.pflicht .rx2 { font-weight:700; }
+
+  .infopunkt {
+    display:inline-block; width:15px; height:15px; margin-left:8px;
+    border-radius:50%; border:1px solid var(--accent); color:var(--accent);
+    font-family:Georgia, "Times New Roman", serif; font-size:11px; font-weight:700;
+    font-style:normal; text-align:center; line-height:13px;
+    cursor:help; vertical-align:middle; box-sizing:border-box;
+  }
+  .infopunkt:hover, .infopunkt:focus { background:var(--accent); color:var(--accent-ink); }
+  .suggestbox .hd { display:flex; align-items:center; flex-wrap:wrap; }
+
+  .suggestbox { flex-direction:column; align-items:stretch; gap:9px; }
+  .suggestbox .hd { width:100%; }
+  .suggestbox .acts { display:flex; gap:14px; align-items:flex-end; flex-wrap:wrap; }
+  .suggestbox .verdictwrap { padding:5px 8px; }
+  .suggestbox .verdictwrap select.musterwahl { font-size:13px; }
+  .suggestbox .acts > .btn { align-self:flex-end; }
+
+  .feldlabel { font-size:8.5px; letter-spacing:.06em; text-transform:uppercase;
+               font-weight:700; color:var(--ink-3); }
+  .feld { display:flex; flex-direction:column; gap:3px; }
+  .suggestbox .acts { display:flex; gap:18px; align-items:flex-end; flex-wrap:wrap; width:100%; }
+  .suggestbox .verdictwrap {
+    border:0; background:none; padding:0; gap:3px; align-items:stretch;
+  }
+  .suggestbox .verdictwrap select.musterwahl { font-size:12.5px; font-weight:600; max-width:250px; }
+  .suggestbox .vmeta { font-size:10.5px; color:var(--ink-3); gap:6px; }
+  .suggestbox .luecke { flex:1 1 20px; }
+  .suggestbox .knoepfe { display:flex; gap:7px; align-items:flex-end; }
+  button.btn.schmal { font-size:11px; padding:3px 9px; }
+  .leise { color:var(--ink-3); }
+
+  /* Alle Auswahlfelder der Zeile gleich hoch, sonst sitzen sie versetzt. */
+  .suggestbox .acts select { height:26px; box-sizing:border-box; font-size:12px; }
+  .suggestbox .acts .feld, .suggestbox .acts .verdictwrap { justify-content:flex-end; }
+
+  .zielbar .ordnerfeld { width:230px; }
+  .zielbar .zl + .tx { margin-right:4px; }
+
+  .feldwrap { position:relative; display:inline-block; }
+  .vorschlaege {
+    position:absolute; top:calc(100% + 2px); left:0; z-index:40; min-width:100%;
+    background:var(--surface); border:1px solid var(--line-strong); border-radius:var(--r);
+    box-shadow:var(--shadow); max-height:200px; overflow:auto; padding:2px 0;
+  }
+  .vorschlaege .vz {
+    padding:4px 9px; font-family:var(--mono); font-size:11.5px;
+    cursor:pointer; white-space:nowrap; color:var(--ink-2);
+  }
+  .vorschlaege .vz:hover, .vorschlaege .vz.an { background:var(--accent-soft); color:var(--accent); }
+
+  .zielbar .ordnerfeld { padding-right:22px; }
+  /* Kreuz aus zwei gedrehten Strichen statt eines Schriftzeichens —
+     dessen Grundlinie sitzt je nach Schriftart nicht mittig im Kreis. */
+  .feldx {
+    position:absolute; right:5px; top:50%; margin-top:-8px;
+    width:16px; height:16px; padding:0; border:0; border-radius:50%;
+    cursor:pointer; background:var(--surface-3); font-size:0; line-height:0;
+  }
+  .feldx::before, .feldx::after {
+    content:""; position:absolute; left:50%; top:50%;
+    width:9px; height:1.5px; background:var(--ink-3); border-radius:1px;
+  }
+  .feldx::before { transform:translate(-50%,-50%) rotate(45deg); }
+  .feldx::after  { transform:translate(-50%,-50%) rotate(-45deg); }
+  .feldx:hover { background:var(--bad-soft); }
+  .feldx:hover::before, .feldx:hover::after { background:var(--bad); }
+
+  .vorschlaege .vz { display:flex; align-items:center; gap:8px; }
+  .vorschlaege .vz .tiefer { margin-left:auto; color:var(--ink-3); font-weight:700; }
+  .vorschlaege .vz.zurueck { color:var(--ink-3); border-bottom:1px solid var(--line); }
+  .vorschlaege .vz.zurueck:hover { background:var(--surface-2); color:var(--ink); }
+  </style>
+</head>
+<body>
+
+<div class="roflag">
+  <b>schreibt nur auf Knopfdruck</b> <span>&mdash; der Trockenlauf zeigt jedes Objekt vorher.</span>
+</div>
+
+<header class="top">
+  <h1>Alias-Werkbank</h1>
+  <span class="meta" id="meta"></span>
+  <span class="sp"></span>
+  <span class="conn off" id="conn">verbinde …</span>
+</header>
+
+<div class="split">
+  <div class="pickpane">
+    <div class="panehead">
+      <span class="umschalter">
+        <button id="m-quellen" class="an">Quellen</button><button id="m-aliase">Aliase</button>
+      </span>
+      <input class="search" id="q" type="search" placeholder="filtern …" aria-label="Objekte filtern">
+    </div>
+    <div class="scroll"><div class="tree" id="tree"><div class="empty">lade Objekte …</div></div></div>
+  </div>
+
+  <div class="respane">
+    <div class="panehead"><span class="lbl">Was der type-detector daraus macht</span></div>
+    <div class="resscroll"><div class="resinner" id="res">
+      <div class="empty">Links einen Kanal, ein Gerät oder einen Ordner wählen.</div>
+    </div></div>
+    <div class="footbar">
+      <button class="btn primary" id="btn-dry">Alias erzeugen &hellip;</button>
+      <button class="btn primary" id="btn-dry-alle" hidden>Alle erzeugen &hellip;</button>
+      <button class="btn" id="btn-checks">Pr&uuml;fungen <span id="checkchip"></span></button>
+      <span class="sp" style="flex:1"></span>
+      <span class="footnote" id="foot"></span>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ================== Sprachen ==================
+     Woerterbuch als flache Schluessel-Text-Karte unter admin/i18n/.
+     Neue Sprache = neue Datei, sonst nichts. Faellt eine Uebersetzung
+     aus, greift Englisch, danach der Schluessel selbst — so bleibt die
+     Oberflaeche bedienbar statt leer. */
+  var SPRACHEN = ['de', 'en'];
+  var woerter = {};
+  var woerterEn = {};
+  var sprache = 'en';
+
+  function tr(schluessel) {
+    var text = woerter[schluessel];
+    if (text === undefined) { text = woerterEn[schluessel]; }
+    if (text === undefined) { text = schluessel; }
+    if (arguments.length > 1) {
+      for (var i = 1; i < arguments.length; i++) {
+        text = text.split('{' + (i - 1) + '}').join(String(arguments[i]));
+      }
+    }
+    return text;
+  }
+
+  function ladeSprache(fertig) {
+    /* Die Systemsprache steht in system.config; bis die Antwort da ist,
+       nehmen wir die des Browsers. */
+    var vorgabe = (navigator.language || 'en').slice(0, 2).toLowerCase();
+
+    function hole(code, ziel, danach) {
+      fetch('./i18n/' + code + '.json')
+        .then(function (r) { return r.ok ? r.json() : {}; })
+        .then(function (d) { Object.keys(d).forEach(function (k) { ziel[k] = d[k]; }); danach(); })
+        .catch(function () { danach(); });
+    }
+
+    var weiter = function (code) {
+      sprache = (SPRACHEN.indexOf(code) > -1) ? code : 'en';
+      hole('en', woerterEn, function () {
+        if (sprache === 'en') { woerter = woerterEn; return fertig(); }
+        hole(sprache, woerter, fertig);
+      });
+    };
+
+    var beantwortet = false;
+    socket.emit('getObject', 'system.config', function (err, obj) {
+      if (beantwortet) { return; }
+      beantwortet = true;
+      var l = (!err && obj && obj.common && obj.common.language) || vorgabe;
+      weiter(l);
+    });
+    setTimeout(function () {
+      if (!beantwortet) { beantwortet = true; weiter(vorgabe); }
+    }, 2500);
+  }
+
+  /* Beschriftungen im festen HTML nachziehen. */
+  function beschrifteHtml() {
+    document.title = tr('app.title');
+    var setz = function (wahl, text) {
+      var el2 = document.querySelector(wahl);
+      if (el2) { el2.textContent = text; }
+    };
+    setz('.roflag b', tr('app.readonlyFlag'));
+    setz('.roflag span', '— ' + tr('app.readonlyNote'));
+    setz('header.top h1', tr('app.title'));
+    setz('#m-quellen', tr('tree.sources'));
+    setz('#m-aliase', tr('tree.aliases'));
+    setz('.pickpane .panehead .lbl', tr('app.objectsCount', '').trim());
+    setz('.respane .panehead .lbl', tr('result.header'));
+    var q = $('#q'); if (q) { q.placeholder = tr('tree.filter'); }
+    setz('#btn-dry', tr('write.createAlias'));
+    setz('#btn-dry-alle', tr('write.createAll', ''));
+    var bc = $('#btn-checks');
+    if (bc) { bc.childNodes[0].nodeValue = tr('check.button') + ' '; }
+    setz('#dry-titel', tr('write.dryTitleCreate'));
+    setz('#tree .empty', tr('tree.loading'));
+    setz('#res .empty', tr('result.pickSomething'));
+    setz('#btn-dry-write', tr('write.now'));
+    setz('#dlg-checks h3', tr('check.title'));
+    document.querySelectorAll('dialog [data-close]').forEach(function (b) {
+      b.textContent = tr('write.close');
+    });
+  }
+
+  /* ---------- Verbindung, wie im Original: ueber den Admin ---------- */
+  var parts = location.pathname.split('/');
+  parts.splice(-3);
+  if (location.pathname.match(/^\/admin\//)) { parts = []; }
+  var socket = io.connect('/', { path: parts.join('/') + '/socket.io' });
+
+  var D = window.AWDetector;
+  var $ = function (s) { return document.querySelector(s); };
+
+  var objects = {};        // alle relevanten Objekte
+  var keysSorted = [];
+  var werte = {};          // id -> state
+  var current = null;      // gewaehlter Kanal
+  var openRow = null;
+  var aufgeklappt = {};    // Baumknoten
+  var abo = null;          // aktuelles Abo-Muster
+
+  function el(tag, cls, txt) {
+    var e = document.createElement(tag);
+    if (cls) { e.className = cls; }
+    if (txt !== undefined) { e.textContent = txt; }
+    return e;
+  }
+
+  /* ================== Verbindung ================== */
+  socket.on('connect', function () {
+    var c = $('#conn');
+    c.className = 'conn on';
+    /* Erst nach dem Laden beschriften — vorher gaebe tr() nur den
+       Schluessel zurueck, das Woerterbuch ist noch leer. */
+    ladeSprache(function () {
+    c.textContent = tr('app.connected');
+    beschrifteHtml();
+    ladeVorlagen(function () {
+      $('#meta').textContent = tr('app.detector') + ' ' + (D ? D.version : '?') +
+        '  ·  ' + tr('app.patternsCount', D ? Object.keys(D.patterns).length : 0) +
+        '  ·  ' + tr('app.templatesCount', VORLAGEN.length);
+      ladeObjekte();
+    });
+    });
+  });
+  socket.on('disconnect', function () {
+    var c = $('#conn');
+    c.className = 'conn off';
+    c.textContent = tr('app.disconnected');
+  });
+  socket.on('stateChange', function (id, state) {
+    if (!state) { return; }
+    werte[id] = state;
+    if (current) { zeichneErgebnis(); }
+  });
+
+  /* Kopfzeile: die Vorlagenzahl kommt erst, wenn sie geladen sind —
+     hier steht VORLAGEN noch auf undefined. */
+  $('#meta').textContent = 'type-detector ' + (D ? D.version : '?');
+
+  /* ================== Objekte holen ================== */
+  var ARTEN = ['device', 'channel', 'folder', 'state'];
+
+  function ladeObjekte() {
+    var offen = ARTEN.length;
+    objects = {};
+    ARTEN.forEach(function (art) {
+      socket.emit('getObjectView', 'system', art, { startkey: '', endkey: '香' }, function (err, doc) {
+        if (!err && doc && doc.rows) {
+          doc.rows.forEach(function (r) {
+            if (r.value && r.id) { objects[r.id] = r.value; }
+          });
+        }
+        if (--offen === 0) {
+          keysSorted = Object.keys(objects).sort();
+          kleinIndex = {};
+          $('#foot').textContent = tr('app.objectsRead', keysSorted.length);
+          zeichneBaum();
+        }
+      });
+    });
+  }
+
+  /* ================== Baum ================== */
+  /* Aus den flachen IDs einen Baum bauen. Nur Zweige, die irgendwo
+     Zustaende enthalten — der Rest ist fuer uns Laerm. */
+  function baueBaum() {
+    var wurzel = { kinder: {}, id: '', name: '' };
+    keysSorted.forEach(function (id) {
+      var o = objects[id];
+      var teile = id.split('.');
+      var k = wurzel;
+      var pfad = '';
+      for (var i = 0; i < teile.length; i++) {
+        pfad = pfad ? (pfad + '.' + teile[i]) : teile[i];
+        if (!k.kinder[teile[i]]) {
+          k.kinder[teile[i]] = { kinder: {}, id: pfad, name: teile[i] };
+        }
+        k = k.kinder[teile[i]];
+      }
+      k.obj = o;
+      k.art = o.type;
+    });
+    return wurzel;
+  }
+
+  function zaehleZustaende(k, eltern) {
+    k._eltern = eltern || null;
+    var n = (k.art === 'state') ? 1 : 0;
+    var tiefe = -1;
+    Object.keys(k.kinder).forEach(function (name) {
+      var kind = k.kinder[name];
+      n += zaehleZustaende(kind, k);
+      if (kind._zust) {
+        var t = kind._tiefe + 1;
+        if (t > tiefe) { tiefe = t; }
+      }
+    });
+    k._zust = n;
+    k._tiefe = tiefe < 0 ? 0 : tiefe;
+    k._hatTypen = false;
+    Object.keys(k.kinder).forEach(function (name) {
+      var kind = k.kinder[name];
+      if (kind.art === 'channel' || kind.art === 'device' || kind._hatTypen) { k._hatTypen = true; }
+    });
+    return n;
+  }
+
+  var baum = null;
+
+  function zeichneBaum() {
+    baum = baueBaum();
+    zaehleZustaende(baum, null);
+
+    /* alias.0 ist unser Ergebnis, keine Quelle — deshalb getrennte Sicht. */
+    var wurzel = { kinder: {}, id: '', name: '', _zust: 1, _tiefe: 9 };
+    Object.keys(baum.kinder).forEach(function (n) {
+      var istAlias = (n === 'alias');
+      if ((baumModus === 'aliase') === istAlias) { wurzel.kinder[n] = baum.kinder[n]; }
+    });
+    baum = wurzel;
+    var host = $('#tree');
+    host.textContent = '';
+    var filter = ($('#q').value || '').trim().toLowerCase();
+    var ul = renderKinder(baum, filter, 0);
+    if (!ul.childNodes.length) {
+      host.appendChild(el('div', 'empty', tr('tree.nothingFound')));
+    } else {
+      host.appendChild(ul);
+    }
+  }
+
+  /* Waehlbar ist alles, unter dem irgendwo Zustaende liegen — nicht nur
+     direkt darunter. MQTT legt fuer Zwischenebenen gar keine Objekte an:
+     unter …SmartHome.Karbonator existieren nur tele.LWT, tele.SENSOR und
+     tele.STATE, aber weder „Karbonator" noch „tele" selbst. Wer nur direkte
+     Kinder zaehlt, kann das Geraet nie auswaehlen. */
+  var baumModus = 'quellen';
+  var fokusOrdnerfeld = false;
+
+  /* Was ist ein Geraet? Erst die Typen fragen, die ioBroker selbst pflegt —
+     channel und device sind Geraete, folder ist es nie. Das gilt fuer
+     hm-rpc, shelly, alexa2, dreame und alle anderen ohne Sonderfall.
+     Nur wo gar kein Objekt existiert (MQTT legt fuer Zwischenebenen keins
+     an), muss geraten werden: dann der oberste Knoten, unter dem die
+     Datenpunkte hoechstens zwei Ebenen tief liegen. */
+  function istWaehlbar(k) {
+    if (k.art === 'state' || !k._zust) { return false; }
+    if (k.art === 'channel' || k.art === 'device') { return true; }
+    if (k.art === 'folder' || k.art === 'meta') { return false; }
+    if (k.art) { return false; }
+    /* Notbehelf nur dort, wo im ganzen Zweig keine Typen gepflegt sind.
+       Wo es getypte Kanäle gibt, sollen die das Gerät sein. */
+    if (k._hatTypen) { return false; }
+    /* Sonst: alles waehlbar. Was ein Geraet ist, weiss nur der Mensch —
+       bei Duneweaver ist es der Knoten darueber, bei Tasmota der darunter.
+       Statt zu sperren wird geraten (siehe wohlGeraet) und gewarnt. */
+    return true;
+  }
+
+  /* Sieht dieser Knoten wie ein einzelnes Geraet aus? Nur ein Hinweis. */
+  function wohlGeraet(k) {
+    if (k.art === 'channel' || k.art === 'device') { return true; }
+    if (k.art) { return false; }
+    return k._tiefe <= 2 && (!k._eltern || k._eltern._tiefe > 2);
+  }
+
+  function renderKinder(knoten, filter, tiefe) {
+    var ul = el('ul');
+    Object.keys(knoten.kinder).sort().forEach(function (name) {
+      var k = knoten.kinder[name];
+      if (!k._zust) { return; }
+      if (k.art === 'state' && tiefe > 0) { return; }   // Zustaende zeigt die rechte Seite
+
+      var passt = !filter || k.id.toLowerCase().indexOf(filter) !== -1;
+      var kinderUl = renderKinder(k, filter, tiefe + 1);
+      var kinderPassen = kinderUl.childNodes.length > 0;
+      if (!passt && !kinderPassen) { return; }
+
+      var li = el('li');
+      var waehlbar = istWaehlbar(k);
+      var d = el('div', 'node' + (waehlbar ? ' pick' : ' grp') + (k.id === current ? ' sel' : ''));
+
+      var hatKinder = kinderUl.childNodes.length > 0;
+      var auf = filter ? true : (aufgeklappt[k.id] !== undefined ? aufgeklappt[k.id] : tiefe <= 1);
+      var tw = el('span', 'tw', hatKinder ? (auf ? '▾' : '▸') : '');
+      if (hatKinder) {
+        tw.addEventListener('click', function (e) {
+          e.stopPropagation();
+          aufgeklappt[k.id] = !auf;
+          zeichneBaum();
+        });
+      }
+      d.appendChild(tw);
+      var kk = el('span', 'kind', k.art ? k.art.slice(0, 3) : '·');
+      if (!k.art) { kk.title = tr('tree.noObjectHint'); }
+      d.appendChild(kk);
+      d.appendChild(el('span', null, k.name));
+      if (waehlbar) {
+        if (wohlGeraet(k)) {
+          var pk = el('span', 'geraetepunkt', '●');
+          pk.title = tr('tree.looksLikeDevice');
+          d.appendChild(pk);
+        }
+        d.appendChild(el('span', 'cnt', k._zust + ''));
+      }
+
+      if (waehlbar) {
+        d.tabIndex = 0;
+        d.setAttribute('role', 'button');
+        var go = function () { waehle(k.id); };
+        d.addEventListener('click', go);
+        d.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); }
+        });
+      }
+      li.appendChild(d);
+      if (hatKinder && auf) { li.appendChild(kinderUl); }
+      ul.appendChild(li);
+    });
+    return ul;
+  }
+
+  $('#q').addEventListener('input', zeichneBaum);
+
+  function setzeModus(m) {
+    baumModus = m;
+    $('#m-quellen').className = (m === 'quellen') ? 'an' : '';
+    $('#m-aliase').className = (m === 'aliase') ? 'an' : '';
+    zeichneBaum();
+  }
+  $('#m-quellen').addEventListener('click', function () { setzeModus('quellen'); });
+  $('#m-aliase').addEventListener('click', function () { setzeModus('aliase'); });
+
+  /* ================== Entwurf ==================
+     Alles, was du aenderst, lebt hier im Speicher. Geschrieben wird nichts.
+     Der echte Detektor laeuft gegen ein Objekt-Abbild dieses Entwurfs —
+     deshalb reagiert der Bericht sofort auf jede Aenderung. */
+  var entwurf = null;
+
+  /* Die Rollen kommen aus dem Paket, nicht aus einer eigenen Liste —
+     sonst pflegt man eine zweite Wahrheit, die auseinanderlaeuft. */
+  var ROLLEN = (function () {
+    if (!D) { return []; }
+    var m = {};
+    Object.keys(D.patterns).forEach(function (t) {
+      D.patterns[t].states.forEach(function (st) { if (st.defaultRole) { m[st.defaultRole] = 1; } });
+    });
+    ['state', 'text', 'json', 'value'].forEach(function (r) { m[r] = 1; });
+    return Object.keys(m).sort();
+  })();
+
+  /* Welche Rolle faende im gewaehlten Muster einen Platz? */
+  function plaetzeFuerRollen(musterName) {
+    var raus = {};
+    var mu = musterName && D.patterns[musterName];
+    if (!mu) { return raus; }
+    ROLLEN.forEach(function (r) {
+      mu.states.forEach(function (st) {
+        if (raus[r] || !st.role) { return; }
+        try { if (new RegExp(st.role.source || st.role).test(r)) { raus[r] = st.name; } } catch (e) {}
+      });
+    });
+    return raus;
+  }
+
+  var VORSCHAU = ['socket', 'light', 'dimmer', 'blinds', 'thermostat', 'temperature', 'humidity', 'info'];
+
+  /* Vorlagennamen duerfen je Sprache anders lauten: entweder eine
+     Zeichenkette oder ein Objekt wie { de: '...', en: '...' }. */
+  function sprachtext(v) {
+    if (v === undefined || v === null) { return ''; }
+    if (typeof v === 'object') { return v[sprache] || v.en || v.de || Object.values(v)[0] || ''; }
+    return String(v);
+  }
+
+  function txt(v) {
+    if (v === undefined || v === null) { return ''; }
+    if (typeof v === 'object') { return v.de || v.en || ''; }
+    return String(v);
+  }
+
+  function baueEntwurf(kanal) {
+    var istAlias = (kanal.indexOf('alias.') === 0);
+    var e = { kanal: kanal, states: [], want: null, wantAuto: null, alleMuster: false };
+    kindZustaende(kanal).forEach(function (id) {
+      var o = objects[id], c = o.common || {}, a = c.alias || {}, q = aliasQuellen(o);
+      var kurzName = id.slice(kanal.length + 1);
+      e.states.push({
+        /* Bei einer Quelle wird aus stat.POWER der Zustand stat_POWER —
+           ein Punkt im Namen wuerde sonst eine Unterebene im Alias
+           aufmachen statt eines Datenpunkts im Geraet. */
+        n: istAlias ? kurzName : kurzName.replace(/\./g, '_'),
+        urId: istAlias ? id : undefined,
+        on: true,
+        role: istAlias ? (c.role || '') : '',
+        typ: c.type || '',
+        unit: c.unit || '',
+        wr: !!c.write,
+        /* Ohne common.alias ist der Punkt seine eigene Quelle. Vorher stand
+           hier nichts und man musste jede Zeile von Hand zuweisen. */
+        srcR: istAlias ? (q.read || '') : id,
+        srcW: istAlias ? (q.einfach ? '' : (q.write || '')) : (c.write ? id : ''),
+        f: (typeof a.read === 'string') ? a.read : '',
+        fw: (typeof a.write === 'string') ? a.write : '',
+        caption: istAlias ? txt(c.name) : '',
+        manuell: false
+      });
+    });
+    return e;
+  }
+
+  /* Objekt-Abbild des Entwurfs — genau das, was der Detektor sehen wuerde. */
+  function abbild(e) {
+    var m = {};
+    var k = objects[e.kanal];
+    m[e.kanal] = k
+      ? { _id: e.kanal, type: (k.type === 'device' ? 'device' : 'channel'), common: k.common || {}, native: {} }
+      : { _id: e.kanal, type: 'channel', common: { name: e.kanal.split('.').pop() }, native: {} };
+    e.states.forEach(function (s) {
+      if (!s.on || !s.n) { return; }
+      var id = e.kanal + '.' + s.n;
+      m[id] = { _id: id, type: 'state', native: {}, common: {
+        name: s.caption || s.n,
+        role: s.role,
+        type: s.typ || undefined,
+        unit: s.unit || undefined,
+        read: true,
+        write: !!(s.wr || s.srcW)
+      } };
+    });
+    return m;
+  }
+
+  function erkenneEntwurf(e, nurTyp) {
+    if (!D) { return []; }
+    var m = abbild(e);
+    var keys = Object.keys(m).sort();
+    var opt2 = { id: e.kanal, objects: m, _keysOptional: keys, _keysOptionalSorted: true,
+                 _usedIdsOptional: [], ignoreCache: true };
+    if (nurTyp) { opt2.allowedTypes = [nurTyp]; }
+    try { return new D.ChannelDetector().detect(opt2) || []; } catch (err) { return []; }
+  }
+
+
+
+  /* ================== Vorlagen ==================
+     Eine Datei je Vorlage unter admin/vorlagen/. Die Verarbeitung kennt
+     kein einziges Geraet — alles Geraetewissen steckt in den Dateien. */
+  var VORLAGEN = [];
+
+  function ladeVorlagen(fertig) {
+    fetch('./vorlagen/index.json').then(function (r) { return r.json(); }).then(function (ix) {
+      var offen = ix.vorlagen.length;
+      if (!offen) { return fertig(); }
+      /* Reihenfolge aus index.json festhalten. Vorher entschied bei
+         gleichwertigen Vorlagen, welche Datei zufaellig zuerst fertig
+         geladen war — dasselbe Geraet wurde mal Lampe, mal Steckdose. */
+      var platz = new Array(ix.vorlagen.length);
+      ix.vorlagen.forEach(function (datei, i) {
+        fetch('./vorlagen/' + datei).then(function (r) { return r.json(); }).then(function (v) {
+          v._datei = datei;
+          platz[i] = v;
+          if (--offen === 0) { VORLAGEN = platz.filter(Boolean); fertig(); }
+        }).catch(function () { if (--offen === 0) { VORLAGEN = platz.filter(Boolean); fertig(); } });
+      });
+    }).catch(function () { fertig(); });
+  }
+
+  function kurz(id, kanal) { return id.slice(kanal.length + 1); }
+
+  /* Direkt nachschlagen — die Vorlagen nennen den Pfad ja vollstaendig
+     ("stat.POWER"). Vorher lief das ueber alle Objekte, was beim Pruefen
+     ganzer Ordner unbezahlbar wird. */
+  /* MQTT uebernimmt die Schreibweise des Themas. Dasselbe Geraetemodell
+     meldet mal cmnd.POWER1, mal cmnd.power1 — deshalb erst genau suchen,
+     dann ohne Ruecksicht auf Gross- und Kleinschreibung. */
+  var kleinIndex = {};
+  function kleinKarte(kanal) {
+    if (kleinIndex[kanal]) { return kleinIndex[kanal]; }
+    var karte = {};
+    var pre = kanal + '.';
+    keysSorted.forEach(function (k) {
+      if (k.indexOf(pre) !== 0) { return; }
+      if (!objects[k] || objects[k].type !== 'state') { return; }
+      karte[k.slice(pre.length).toLowerCase()] = k;
+    });
+    kleinIndex[kanal] = karte;
+    return karte;
+  }
+
+  function hatPunkt(kanal, endung) {
+    var id = kanal + '.' + endung;
+    if (objects[id] && objects[id].type === 'state') { return id; }
+    var treffer = kleinKarte(kanal)[String(endung).toLowerCase()];
+    return treffer || null;
+  }
+
+  function jsonVon(id) {
+    var st = werte[id];
+    if (!st || typeof st.val !== 'string') { return null; }
+    try { return JSON.parse(st.val); } catch (e) { return null; }
+  }
+
+  function feldWert(obj, pfad) {
+    var t = pfad.split('.');
+    var x = obj;
+    for (var i = 0; i < t.length; i++) {
+      if (x === null || x === undefined || typeof x !== 'object') { return undefined; }
+      x = x[t[i]];
+    }
+    return x;
+  }
+
+  /* Welche Ausgangsnummern gibt es? Aus dem Bestand gelesen, nicht
+     hochgezaehlt — die Ventilinsel hat POWER1, POWER3, POWER4. */
+  function instanzenVon(v, kanal) {
+    var mf = v.mehrfach;
+    if (!mf) { return [null]; }
+    var ph = mf.platzhalter || '%N%';
+    var erf = (v.erkennung || {}).erforderlich || [];
+    var mitPh = erf.filter(function (e) { return e.indexOf(ph) > -1; });
+    if (!mitPh.length) { return [null]; }
+
+    var kurzNamen = kindZustaende(kanal).map(function (id) { return id.slice(kanal.length + 1); });
+
+    /* Ohne regulaeren Ausdruck: der Platzhalter teilt die Angabe in
+       Vorspann und Nachspann, dazwischen steht die Nummer. */
+    var mengen = mitPh.map(function (muster) {
+      var teile = muster.split(ph);
+      var vor = teile[0].toLowerCase(), nach = (teile[1] || '').toLowerCase();
+      var raus = {};
+      kurzNamen.forEach(function (n) {
+        /* Gross- und Kleinschreibung ignorieren: dasselbe Modell meldet
+           mal stat.POWER1 und cmnd.power1 — beides ist derselbe Ausgang. */
+        var k = n.toLowerCase();
+        if (k.length <= vor.length + nach.length) { return; }
+        if (k.slice(0, vor.length) !== vor) { return; }
+        if (nach && k.slice(-nach.length) !== nach) { return; }
+        var mitte = nach ? n.slice(vor.length, n.length - nach.length) : n.slice(vor.length);
+        if (mitte && /^[A-Za-z0-9_]+$/.test(mitte)) { raus[mitte] = 1; }
+      });
+      return raus;
+    });
+
+    /* nur Nummern, die in allen Pflichtangaben vorkommen */
+    var klein = mengen.map(function (m) {
+      var k = {};
+      Object.keys(m).forEach(function (n) { k[n.toLowerCase()] = n; });
+      return k;
+    });
+    return Object.keys(klein[0]).filter(function (n) {
+      return klein.every(function (k) { return k[n]; });
+    }).map(function (n) { return klein[0][n]; })
+      .sort(function (a, b) { return String(a).localeCompare(String(b), undefined, {numeric: true}); });
+  }
+
+  function setzeInstanz(text, v, n) {
+    if (!v.mehrfach || n === null || n === undefined) { return text; }
+    return String(text).split(v.mehrfach.platzhalter || '%N%').join(n);
+  }
+
+  /* Nur die Struktur pruefen — ohne in Rohwerte zu schauen. Braucht man
+     fuer die Frage „Ordner oder Geraet?", die schon vor dem Laden der
+     Werte beantwortet sein muss. */
+  function passtStrukturell(kanal) {
+    return VORLAGEN.some(function (v) {
+      var erf = (v.erkennung || {}).erforderlich || [];
+      if (!erf.length) { return false; }
+      if (v.mehrfach) { return instanzenVon(v, kanal).length > 0; }
+      return erf.every(function (e) { return hatPunkt(kanal, e); });
+    });
+  }
+
+  /* Passt die Vorlage auf diesen Kanal? Liefert null oder eine Bewertung. */
+  function pruefeVorlage(v, kanal, instanz) {
+    var erk = v.erkennung || {};
+    var gruende = [];
+    var fehler = [];
+
+    var inst = instanz;
+    if (v.mehrfach && (inst === undefined || inst === null)) {
+      var alle = instanzenVon(v, kanal);
+      if (!alle.length) {
+        return { vorlage: v, passt: false, fehler: [tr('tpl.noOutputs')], instanzen: [] };
+      }
+      inst = alle[0];
+    }
+    var auf = function (t) { return setzeInstanz(t, v, inst); };
+
+    var fehlt = (erk.erforderlich || []).map(auf).filter(function (e) { return !hatPunkt(kanal, e); });
+    fehlt.forEach(function (e) { fehler.push(tr('tpl.missingPoint', e)); });
+    (erk.erforderlich || []).map(auf).forEach(function (e) {
+      if (fehlt.indexOf(e) === -1) { gruende.push(tr('tpl.presentIn', e)); }
+    });
+    if (v.mehrfach) {
+      var liste = instanzenVon(v, kanal);
+      gruende.push(tr('tpl.outputsFound', liste.join(', ')));
+    }
+
+    if (erk.inhalt) {
+      Object.keys(erk.inhalt).forEach(function (punkt) {
+        var id = hatPunkt(kanal, punkt);
+        var j = id ? jsonVon(id) : null;
+        if (!id) { fehler.push(tr('tpl.missingPoint', punkt)); }
+        else if (!j) { fehler.push(tr('tpl.noJson', punkt)); }
+        else if (feldWert(j, erk.inhalt[punkt]) === undefined) {
+          fehler.push(tr('tpl.withoutField', punkt, erk.inhalt[punkt]));
+        } else { gruende.push(tr('tpl.contains', punkt, erk.inhalt[punkt])); }
+      });
+    }
+
+    if (fehler.length) {
+      /* Dieselbe Angabe kann aus erforderlich und inhalt kommen — einmal reicht. */
+      var einmal = [];
+      fehler.forEach(function (x) { if (einmal.indexOf(x) === -1) { einmal.push(x); } });
+      return { vorlage: v, passt: false, fehler: einmal };
+    }
+
+    /* Namenshinweis entscheidet nur zwischen sonst gleichwertigen Vorlagen. */
+    /* Bewertung, damit bei mehreren passenden Vorlagen nachvollziehbar
+       eine gewinnt: Namenshinweis schlaegt alles, dann die genauere
+       Erkennung, zuletzt der Rang aus der Vorlagendatei. */
+    var punkte = 0;
+    var name = kanal.split('.').pop();
+    if (erk.namenshinweis && new RegExp(erk.namenshinweis, 'i').test(name)) {
+      punkte += 1000;
+      gruende.push(tr('tpl.nameHint', sprachtext(v.name)));
+    }
+    punkte += (erk.erforderlich || []).length * 100;
+    punkte += Object.keys(erk.inhalt || {}).length * 100;
+    punkte += (v.rang || 0);
+    return { vorlage: v, passt: true, punkte: punkte, gruende: gruende, fehler: [],
+             instanz: inst, instanzen: v.mehrfach ? instanzenVon(v, kanal) : [] };
+  }
+
+  /* Vorlage auf einen Kanal anwenden → Entwurf. */
+  function wendeAn(v, kanal, gruende, instanz) {
+    var auf = function (t) { return setzeInstanz(t, v, instanz); };
+    var e = { kanal: kanal, states: [], want: v.geraetetyp, wantAuto: v.geraetetyp,
+              alleMuster: false, vorschlag: true, roh: false,
+              vorlage: v.id, vorlageVersion: v.version, tplName: sprachtext(v.name),
+              grund: (gruende || []).slice(), uebersprungen: [],
+              instanz: (instanz === undefined ? null : instanz),
+              instanzen: v.mehrfach ? instanzenVon(v, kanal) : [],
+              /* Wie der Kanal je Ausgang heisst — steht in der Vorlage,
+                 nicht im Code. */
+              kanalname: v.mehrfach ? auf(v.kanalname || 'POWER%N%') : null };
+
+    (v.zustaende || []).forEach(function (z) {
+      var quelle = hatPunkt(kanal, auf(z.lesen));
+      if (!quelle) {
+        if (!z.optional) { e.uebersprungen.push(tr('tpl.skippedSource', z.name, auf(z.lesen))); }
+        return;
+      }
+
+      /* Bei einem Feld aus JSON: nur anlegen, wenn das Feld wirklich da ist.
+         Sonst entstehen Karteileichen mit Dauerfehlern im Log. */
+      var formel = z.leseformel || '';
+      if (z.feld) {
+        var j = jsonVon(quelle);
+        if (!j || feldWert(j, z.feld) === undefined) {
+          e.uebersprungen.push(tr('tpl.skippedField', z.name, z.feld));
+          return;
+        }
+        formel = 'JSON.parse(val).' + z.feld;
+      }
+
+      e.states.push({
+        n: z.name,
+        on: !z.vorgabeAus,
+        role: z.rolle || '',
+        typ: z.typ || '',
+        unit: z.einheit || '',
+        wr: !!z.schreiben,
+        srcR: quelle,
+        srcW: z.schreiben ? (hatPunkt(kanal, auf(z.schreiben)) || '') : '',
+        f: formel,
+        fw: z.schreibformel || '',
+        caption: '',
+        manuell: false,
+        ausVorlage: z.name,
+        hinweis: z.hinweis || ''
+      });
+    });
+
+    return e.states.length ? e : null;
+  }
+
+  /* Beste Vorlage suchen und anwenden. */
+  function vorschlag(kanal, vorlagenId, instanz) {
+    if (!VORLAGEN.length) { return null; }
+
+    var alle = VORLAGEN.map(function (v) { return pruefeVorlage(v, kanal, instanz); });
+    var treffer = alle.filter(function (t) { return t.passt; });
+
+    var gewaehlt = null;
+    if (vorlagenId) {
+      /* Von Hand gewaehlt gilt auch, wenn die Erkennung nicht anspringt —
+         die Verarbeitung laesst dann weg, wofuer die Quelle fehlt. */
+      alle.forEach(function (t) { if (t.vorlage.id === vorlagenId) { gewaehlt = t; } });
+    }
+    if (!gewaehlt) {
+      if (!treffer.length) { return null; }
+      treffer.sort(function (a, b) { return b.punkte - a.punkte; });
+      gewaehlt = treffer[0];
+    }
+
+    var e = wendeAn(gewaehlt.vorlage, kanal, gewaehlt.gruende, gewaehlt.instanz);
+    if (!e) { return null; }
+    if (!vorlagenId && gewaehlt.passt) {
+      var gleichAuf = treffer.filter(function (t) { return t.punkte === gewaehlt.punkte; });
+      var ohneHinweis = gewaehlt.punkte < 1000;
+      if (gleichAuf.length > 1 || (ohneHinweis && treffer.length > 1)) {
+        e.grund.push(tr('tpl.noNameHint', sprachtext(gewaehlt.vorlage.name)));
+      }
+    }
+    if (!gewaehlt.passt) {
+      e.erzwungen = true;
+      e.grund = e.grund.concat(gewaehlt.fehler.map(function (f) { return tr('tpl.wouldNeed', f); }));
+    }
+    e.andere = treffer.filter(function (t) { return t.vorlage.id !== gewaehlt.vorlage.id; })
+                      .map(function (t) { return t.vorlage; });
+    if (vorlagenId) { e.vonHandGewaehlt = true; }
+    return e;
+  }
+
+  /* Rollen an ein anderes Muster anpassen — generisch ueber defaultRole,
+     nicht je Vorlage ausprogrammiert. */
+  function anMusterAnpassen(e, neuTyp) {
+    var alt = D.patterns[e.want], neu = D.patterns[neuTyp];
+    if (!alt || !neu) { return; }
+
+    function slotVon(muster, rolle) {
+      var s = null;
+      muster.states.forEach(function (st) {
+        if (s || !st.role) { return; }
+        try { if (new RegExp(st.role.source || st.role).test(rolle)) { s = st; } } catch (x) {}
+      });
+      return s;
+    }
+
+    e.states.forEach(function (st) {
+      var alterSlot = slotVon(alt, st.role);
+      if (!alterSlot) { return; }
+      var ziel = null;
+      neu.states.forEach(function (n) { if (!ziel && n.name === alterSlot.name) { ziel = n; } });
+      if (!ziel && /ACTUAL$/.test(alterSlot.name)) {
+        neu.states.forEach(function (n) { if (!ziel && /ACTUAL$/.test(n.name)) { ziel = n; } });
+      }
+      if (ziel && ziel.defaultRole && ziel.defaultRole !== st.role) {
+        st.role = ziel.defaultRole;
+        st.n = ziel.name;
+      }
+    });
+    e.want = neuTyp;
+  }
+
+  /* Wo der Alias landen wuerde: alias.0.<Ordner>.<Geraet> */
+  function zielId(kanal) {
+    var t = kanal.split('.');
+    var name = t.pop();
+    var raum = t.length > 2 ? t[t.length - 1] : '';
+    return raum ? ('alias.0.' + raum + '.' + name) : ('alias.0.' + name);
+  }
+
+  /* Alle Ordner, die es unter alias.0 schon gibt — als Ablagevorschlag.
+     Auch Zweige ohne eigenes Objekt zaehlen, MQTT legt die ja auch nicht an. */
+  function ordnerUnterAlias() {
+    var m = {};
+    keysSorted.forEach(function (id) {
+      if (id.indexOf('alias.0.') !== 0) { return; }
+      var o = objects[id];
+      if (!o) { return; }
+      var teile = id.split('.');
+      if (o.type === 'state') { teile = teile.slice(0, -1); }
+      /* jede Ebene oberhalb des Geraets ist ein moeglicher Ablageort */
+      for (var i = 3; i < teile.length; i++) {
+        m[teile.slice(0, i).join('.')] = 1;
+      }
+    });
+    return Object.keys(m).sort();
+  }
+
+  /* ================== Auswahl ================== */
+  function waehle(id) {
+    current = id;
+    openRow = null;
+    entwurf = baueEntwurf(id);
+
+    /* Alle Ebenen darueber aufklappen, damit die Auswahl im Baum auch
+       sichtbar wird — sonst waehlt man rechts etwas aus und links
+       passiert nichts. */
+    var teile = id.split('.');
+    for (var i = 1; i <= teile.length; i++) {
+      aufgeklappt[teile.slice(0, i).join('.')] = true;
+    }
+    zeichneBaum();
+
+    var sel = document.querySelector('#tree .node.sel');
+    if (sel && sel.scrollIntoView) {
+      sel.scrollIntoView({ block: 'nearest' });
+    }
+
+    if (abo) { socket.emit('unsubscribe', abo); }
+    abo = id + '.*';
+    socket.emit('subscribe', abo);
+
+    /* Erst die Werte, dann der Vorschlag. Die Erkennung schaut in den
+       Rohwert von tele.SENSOR hinein — ohne Werte haelt sie ein Geraet
+       mit Messung faelschlich fuer eines ohne. */
+    var quellen = kindZustaende(id).slice();
+    entwurf.states.forEach(function (s) {
+      if (s.srcR) { quellen.push(s.srcR); }
+      if (s.srcW) { quellen.push(s.srcW); }
+    });
+
+    holeWerte(id, quellen, function () {
+      if (id !== current) { return; }
+      if (id.indexOf('alias.') !== 0) {
+        var v = vorschlag(id);
+        if (v) { v.ziel = zielId(id); entwurf = v; }
+      }
+      var nach = [];
+      entwurf.states.forEach(function (s) {
+        if (s.srcR && !werte[s.srcR]) { nach.push(s.srcR); }
+      });
+      if (nach.length) { holeWerte(id, nach, function () { zeichneErgebnis(); }); }
+      zeichneErgebnis();
+    });
+    zeichneErgebnis();
+  }
+
+  function kindZustaende(kanal) {
+    var pre = kanal + '.';
+    return keysSorted.filter(function (k) {
+      return k.indexOf(pre) === 0 && objects[k] && objects[k].type === 'state';
+    });
+  }
+
+  function direkteZustaende(kanal) {
+    var pre = kanal + '.';
+    return kindZustaende(kanal).filter(function (k) { return k.slice(pre.length).indexOf('.') === -1; });
+  }
+
+  function aliasQuellen(obj) {
+    var a = obj && obj.common && obj.common.alias;
+    if (!a) { return {}; }
+    if (typeof a.id === 'string') { return { read: a.id, write: a.id, einfach: true }; }
+    if (a.id && typeof a.id === 'object') { return { read: a.id.read, write: a.id.write }; }
+    return {};
+  }
+
+  /* Der Admin-Socket kennt kein getForeignState. getForeignStates(muster)
+     und getState(id) funktionieren. */
+  function holeWerte(kanal, extraIds, fertig) {
+    var eindeutig = {};
+    (extraIds || []).forEach(function (i) { if (i) { eindeutig[i] = 1; } });
+    var liste = Object.keys(eindeutig);
+    var offen = 1 + liste.length;
+    var ab = function () { if (--offen <= 0) { fertig(); } };
+
+    socket.emit('getForeignStates', kanal + '.*', function (err, res) {
+      if (!err && res) { Object.keys(res).forEach(function (k) { if (res[k]) { werte[k] = res[k]; } }); }
+      ab();
+    });
+    liste.forEach(function (id) {
+      socket.emit('getState', id, function (err, st) {
+        if (!err && st) { werte[id] = st; }
+        ab();
+      });
+    });
+  }
+
+  /* ================== Formel und Wert ================== */
+  function auswerten(formel, roh) {
+    if (roh === undefined || roh === null) { return { ok: false, txt: tr('detail.noValue') }; }
+    if (!formel) { return { ok: true, val: roh }; }
+    try {
+      var v = (new Function('val', 'return (' + formel + ');'))(roh);
+      if (v === undefined) { return { ok: false, txt: 'undefined', leer: true }; }
+      if (typeof v === 'number' && isNaN(v)) { return { ok: false, txt: 'NaN', leer: true }; }
+      return { ok: true, val: v };
+    } catch (e) {
+      return { ok: false, txt: tr('detail.formulaThrows', e.message), fehler: true };
+    }
+  }
+
+  var JA   = ['ON', 'TRUE', 'YES', 'JA', '1'];
+  var NEIN = ['OFF', 'FALSE', 'NO', 'NEIN', '0'];
+
+  function alsZieltyp(v, typ) {
+    if (typ === 'boolean' && typeof v === 'string') {
+      var t = v.trim().toUpperCase();
+      if (JA.indexOf(t) > -1)   { return { val: true,  gewandelt: true }; }
+      if (NEIN.indexOf(t) > -1) { return { val: false, gewandelt: true }; }
+    }
+    if (typ === 'number' && typeof v === 'string' && v.trim() !== '' && !isNaN(Number(v))) {
+      return { val: Number(v), gewandelt: true };
+    }
+    return { val: v, gewandelt: false };
+  }
+
+  function wertVon(s) {
+    var st = werte[s.srcR];
+    var roh = st ? st.val : undefined;
+    var aus = auswerten(s.f, roh);
+    if (aus.ok) {
+      var um = alsZieltyp(aus.val, s.typ);
+      aus.val = um.val;
+      aus.gewandelt = um.gewandelt;
+    }
+    aus.roh = roh;
+    return aus;
+  }
+
+  function fmt(s) {
+    var a = wertVon(s);
+    if (!a.ok) { return '—'; }
+    var v = a.val;
+    if (typeof v === 'boolean') { return v ? 'an' : 'aus'; }
+    if (typeof v === 'number') {
+      var t = (s.dec === undefined || s.dec === '') ? String(v) : Number(v).toFixed(Number(s.dec));
+      return t.replace('.', ',') + (s.unit ? ' ' + s.unit : '');
+    }
+    if (typeof v === 'object') { return JSON.stringify(v).slice(0, 30); }
+    return String(v).slice(0, 30) + (s.unit ? ' ' + s.unit : '');
+  }
+
+  function feldAusFormel(f) {
+    var m = /^JSON\.parse\(val\)\.(.+)$/.exec(f || '');
+    return m ? m[1] : '';
+  }
+
+  function jsonFelder(id) {
+    var st = werte[id];
+    if (!st || typeof st.val !== 'string') { return null; }
+    var o;
+    try { o = JSON.parse(st.val); } catch (e) { return null; }
+    if (!o || typeof o !== 'object') { return null; }
+    var raus = [];
+    (function geh(x, pfad, tiefe) {
+      if (tiefe > 3) { return; }
+      Object.keys(x).forEach(function (k) {
+        var p = pfad ? pfad + '.' + k : k;
+        if (x[k] && typeof x[k] === 'object' && !Array.isArray(x[k])) { geh(x[k], p, tiefe + 1); }
+        else { raus.push(p); }
+      });
+    })(o, '', 0);
+    return raus;
+  }
+
+  function opt(val, text) {
+    var o = document.createElement('option');
+    o.value = val; o.textContent = text;
+    return o;
+  }
+
+  /* Datenpunkte, die als Quelle in Frage kommen: alles unter denselben
+     Quellzweigen, aus denen die bisherigen Punkte lesen. */
+  function quellenAuswahl(e) {
+    var liste = [];
+    function dazu(k) {
+      if (objects[k] && objects[k].type === 'state' && liste.indexOf(k) === -1) { liste.push(k); }
+    }
+
+    /* 1. Die Punkte des gewaehlten Knotens selbst — bei einer MQTT-Quelle
+       ist genau das die Auswahl. Vorher blieb die Liste hier leer und der
+       Kasten meldete „keine Quelle bekannt". */
+    kindZustaende(e.kanal).forEach(dazu);
+
+    /* 2. Zusaetzlich die Zweige, aus denen bestehende Punkte schon lesen —
+       bei einem fertigen Alias liegt die Quelle ja woanders. */
+    var wurzeln = {};
+    e.states.forEach(function (s) {
+      if (!s.srcR) { return; }
+      var t = s.srcR.split('.');
+      wurzeln[t.slice(0, Math.max(2, t.length - 1)).join('.')] = 1;
+    });
+    Object.keys(wurzeln).forEach(function (w) {
+      keysSorted.forEach(function (k) { if (k.indexOf(w + '.') === 0) { dazu(k); } });
+    });
+
+    return liste;
+  }
+
+  /* Welche Geraete liegen unter diesem Knoten? Ein Knoten gilt als Geraet,
+     sobald eine Vorlage darauf passt; darunter wird nicht weitergesucht.
+     Findet sich keine Vorlage, zaehlt jeder Knoten mit eigenen Zustaenden. */
+  function geraeteDarunter(wurzel) {
+    var pre = wurzel + '.';
+    var tiefeWurzel = wurzel.split('.').length;
+
+    var kandidaten = {};
+    keysSorted.forEach(function (id) {
+      if (id.indexOf(pre) !== 0) { return; }
+      if (!objects[id] || objects[id].type !== 'state') { return; }
+      var teile = id.split('.');
+      for (var i = tiefeWurzel + 1; i < teile.length; i++) {
+        kandidaten[teile.slice(0, i).join('.')] = 1;
+      }
+    });
+
+    var pfade = Object.keys(kandidaten).sort(function (a, b) {
+      return a.split('.').length - b.split('.').length || (a < b ? -1 : 1);
+    });
+
+    var geraete = [];
+    var abgedeckt = [];
+    function schonDrin(p) {
+      return abgedeckt.some(function (g) { return p === g || p.indexOf(g + '.') === 0; });
+    }
+
+    pfade.forEach(function (pfad) {
+      if (schonDrin(pfad)) { return; }
+      var beste = null;
+      VORLAGEN.forEach(function (v) {
+        var t = pruefeVorlage(v, pfad);
+        if (t.passt && (!beste || t.punkte > beste.punkte)) { beste = t; }
+      });
+      if (beste) {
+        geraete.push({ id: pfad, vorlage: beste.vorlage, punkte: beste.punkte });
+        abgedeckt.push(pfad);
+      }
+    });
+
+    /* Reste: Knoten mit eigenen Zustaenden, die keine Vorlage traf */
+    pfade.forEach(function (pfad) {
+      if (schonDrin(pfad)) { return; }
+      var eigene = keysSorted.filter(function (k) {
+        return k.indexOf(pfad + '.') === 0 && objects[k] && objects[k].type === 'state' &&
+               k.slice(pfad.length + 1).indexOf('.') === -1;
+      });
+      if (eigene.length) {
+        geraete.push({ id: pfad, vorlage: null, punkte: 0 });
+        abgedeckt.push(pfad);
+      }
+    });
+
+    geraete.sort(function (a, b) { return a.id < b.id ? -1 : 1; });
+    return geraete;
+  }
+
+  /* Gibt es fuer diese Quelle schon einen Alias? Ueber native.quelle. */
+  function aliasFuer(quelle) {
+    var treffer = null;
+    keysSorted.forEach(function (id) {
+      if (treffer || id.indexOf('alias.') !== 0) { return; }
+      var o = objects[id];
+      if (o && o.native && o.native.quelle === quelle) { treffer = id; }
+    });
+    return treffer;
+  }
+
+  /* ================== Ergebnis ================== */
+  function zeichneErgebnis() {
+    var host = $('#res');
+    host.textContent = '';
+    if (!current || !entwurf) {
+      host.appendChild(el('div', 'empty', tr('result.pickSomething')));
+      return;
+    }
+
+    var e = entwurf;
+    var obj = objects[current] || {};
+    var alleZust = kindZustaende(current);
+    var direkt = direkteZustaende(current);
+
+    /* Ist das ueberhaupt ein Geraet? Ein Ordner mit vielen Geraeten darunter
+       ergibt keinen Entwurf, sondern eine Uebersicht. Vorher landeten beim
+       Klick auf mqtt-client.0 alle Messpunkte in einem einzigen Entwurf. */
+    /* Sehr viele Punkte heisst fast immer: falscher Knoten gewaehlt.
+       Nicht sperren, aber auch nicht ungefragt 1000 Zeilen zeichnen. */
+    var VIEL = 40;
+    if (!e.vorschlag && e.states.length > VIEL && !e.trotzdem) {
+      var zweige = {};
+      e.states.forEach(function (st) {
+        zweige[(st.n.split('_')[0] || st.n)] = 1;
+      });
+      var wr = el('div', 'aside w');
+      wr.appendChild(el('b', null, tr('result.pointsFromBranches',
+        e.states.length, Object.keys(zweige).length)));
+      wr.appendChild(document.createTextNode(tr('result.tooManyStates', e.states.length)));
+      var bt = el('div');
+      bt.style.marginTop = '9px';
+      var btn = el('button', 'btn', tr('result.allAnyway') + e.states.length);
+      btn.addEventListener('click', function () { e.trotzdem = true; zeichneErgebnis(); });
+      bt.appendChild(btn);
+      wr.appendChild(bt);
+      host.appendChild(wr);
+      $('#foot').textContent = tr('app.objectsCount', keysSorted.length) + '  ·  ' + tr('diff.points', e.states.length);
+      var bd0 = $('#btn-dry');
+      if (bd0) { bd0.disabled = true; }
+      var ba0 = $('#btn-dry-alle');
+      if (ba0) { ba0.hidden = true; }
+      return;
+    }
+
+    /* --- erkannt (frei) und erzwungen --- */
+    var frei = erkenneEntwurf(e, null);
+    if (!e.wantAuto) {
+      e.wantAuto = frei.length ? frei[0].type : null;
+      if (!e.want) { e.want = e.wantAuto; }
+    }
+    var funde = e.want ? erkenneEntwurf(e, e.want) : frei;
+    var haupt = funde.length ? funde[0] : null;
+
+    /* --- Kopf --- */
+    var head = el('div', 'rhead');
+    var links = el('div');
+    links.appendChild(el('div', 'id', e.ziel || current));
+    var sub = el('div', 'sub');
+    var nm = txt(obj.common && obj.common.name);
+    if (e.vorschlag) {
+      var ch1 = el('span', 'chip ok', tr('result.newlyCreated'));
+      ch1.style.marginRight = '7px';
+      sub.appendChild(ch1);
+      sub.appendChild(document.createTextNode(tr('result.from') + current + '   ·   '));
+    }
+    sub.appendChild(document.createTextNode((objects[current] ? obj.type : 'kein Objekt') +
+      (nm ? '  ·  ' + nm : '') +
+      '  ·  ' + alleZust.length + ' Zustände' +
+      (direkt.length !== alleZust.length ? ' (' + direkt.length + ' direkt)' : '')));
+    links.appendChild(sub);
+    head.appendChild(links);
+
+    /* --- Musterwahl --- */
+    var pflichtFehlt = haupt ? haupt.states.filter(function (s) { return s.required && !s.id; }) : [];
+    var vw = el('div', 'verdictwrap' + (haupt && !pflichtFehlt.length ? '' : ' bad'));
+    var vlbl = el('span', 'feldlabel', tr('pattern.label'));
+    vw.appendChild(vlbl);
+    var sel = el('select', 'musterwahl');
+    var liste = e.alleMuster ? Object.keys(D.patterns).sort() : VORSCHAU.slice();
+    if (e.want && liste.indexOf(e.want) === -1) { liste.unshift(e.want); }
+    liste.forEach(function (m) {
+      if (!D.patterns[m]) { return; }
+
+      /* Die Vorschau muss vorhersagen, was das Auswaehlen wirklich tut.
+         Beim Vorschlag werden Lampe und Steckdose samt Rollen neu gebaut —
+         also auch hier gegen den umgebauten Entwurf pruefen. Sonst stuende
+         hier „SET fehlt", und nach dem Klick passte trotzdem alles. */
+      var pruefE = e, umgebaut = false;
+      if (e.vorschlag && !e.roh && m !== e.want && D.patterns[m]) {
+        var kopie = JSON.parse(JSON.stringify({ kanal: e.kanal, states: e.states, want: e.want }));
+        anMusterAnpassen(kopie, m);
+        if (kopie.states.some(function (x, i) { return x.role !== e.states[i].role; })) {
+          pruefE = kopie; umgebaut = true;
+        }
+      }
+
+      var r = erkenneEntwurf(pruefE, m);
+      var mark;
+      if (!r.length) {
+        var fehlend = D.patterns[m].states.filter(function (x) { return x.required; })
+          .map(function (x) { return x.name; });
+        mark = '✕ ' + (fehlend.length ? fehlend.join(', ') + ' fehlt' : 'passt nicht');
+      } else {
+        var g = r[0].states.filter(function (x) { return x.id; }).length;
+        mark = tr('pattern.slotsTaken', g, r[0].states.length);
+        if (umgebaut) { mark += '   ' + tr('pattern.rolesAdjusted'); }
+      }
+      var o = opt(m, m + '   ' + mark);
+      if (m === e.want) { o.selected = true; }
+      sel.appendChild(o);
+    });
+    sel.addEventListener('change', function () {
+      var neuTyp = sel.value;
+      /* Beim Vorschlag reicht es nicht, das Muster umzustellen — die Rollen
+         entscheiden. switch.light passt auf kein socket-SET. Also den
+         Vorschlag mit den passenden Rollen neu bauen. */
+      if (e.vorschlag && !e.roh && D.patterns[neuTyp]) {
+        anMusterAnpassen(e, neuTyp);
+        openRow = null;
+        zeichneErgebnis();
+        return;
+      }
+      e.want = neuTyp;
+      openRow = null;
+      zeichneErgebnis();
+    });
+    vw.appendChild(sel);
+
+    /* Kein Fliesstext unter dem Auswahlfeld: die Belegung steht schon in
+       jeder Zeile des Auswahlfelds, und eine zweite Zeile verschoebe die
+       Felder daneben gegeneinander. Nur Meldungen bleiben. */
+    var meta = el('div', 'vmeta');
+    if (!haupt) {
+      meta.appendChild(el('span', 'chip bad', tr('pattern.notDetected')));
+    } else if (pflichtFehlt.length) {
+      meta.appendChild(el('span', 'chip bad', pflichtFehlt.map(function (x) { return x.name; }).join(', ') + ' fehlt'));
+    }
+    if (e.want && e.wantAuto && e.want !== e.wantAuto) {
+      meta.appendChild(el('span', 'chip warn', tr('pattern.manualInstead', e.wantAuto)));
+    }
+    if (meta.childNodes.length) { vw.appendChild(meta); }
+    var alleBtn = el('button', 'btn schmal',
+      e.alleMuster ? tr('pattern.usualOnly') : tr('pattern.allPatterns', Object.keys(D.patterns).length));
+    alleBtn.addEventListener('click', function () { e.alleMuster = !e.alleMuster; zeichneErgebnis(); });
+    var musterBlock = vw;          /* wandert unten in den Vorlagenkasten */
+    var musterKnopf = alleBtn;
+    host.appendChild(head);
+
+    var istQuelle = current.indexOf('alias.') !== 0;
+    if (istQuelle) {
+      if (e.zielOrdner === undefined) {
+        var zt0 = (e.ziel || zielId(current)).split('.');
+        var geraet = zt0.pop();
+        if (e.instanzen && e.instanzen.length > 1) {
+          /* Mehrere Ausgaenge: das Geraet wird zum Ordner, jeder Ausgang
+             ein Kanal darin. Ein folder darueber, kein device — sonst
+             rutscht die Erkennung hoch und macht aus dreien wieder eins. */
+          e.zielOrdner = zt0.join('.') + '.' + geraet;
+          e.zielName = e.kanalname || ('POWER' + e.instanz);
+        } else {
+          e.zielOrdner = zt0.join('.');
+          e.zielName = geraet;
+        }
+      }
+      e.ziel = e.zielOrdner + '.' + e.zielName;
+
+      var zb = el('div', 'zielbar');
+      zb.appendChild(el('span', 'zl', tr('target.folder')));
+
+      /* Eingabefeld mit selbst gezeichneter Vorschlagsliste. Kein
+         <datalist>: dessen Auswahlfenster malt das Betriebssystem, und in
+         eingebetteten Ansichten landet es neben dem Fenster. */
+      var wrap = el('div', 'feldwrap');
+      var iO = el('input', 'tx ordnerfeld');
+      iO.type = 'text';
+      iO.setAttribute('autocomplete', 'off');
+      iO.placeholder = tr('target.folderPlaceholder');
+      iO.value = (e.zielOrdner === 'alias.0') ? '' : e.zielOrdner.slice('alias.0.'.length);
+      iO.title = tr('target.folderHint');
+      wrap.appendChild(iO);
+
+      /* Kreuz zum Leeren — sonst muss man den Text markieren und loeschen. */
+      var xBtn = el('button', 'feldx');
+      xBtn.type = 'button';
+      xBtn.title = tr('target.clearField');
+      xBtn.setAttribute('aria-label', tr('target.clearField'));
+      xBtn.hidden = !iO.value;
+      xBtn.addEventListener('mousedown', function (ev) {
+        ev.preventDefault();
+        iO.value = '';
+        fokusOrdnerfeld = true;
+        e.zielOrdner = 'alias.0';
+        zeichneErgebnis();
+      });
+      wrap.appendChild(xBtn);
+
+      var vlist = el('div', 'vorschlaege');
+      vlist.hidden = true;
+      wrap.appendChild(vlist);
+      zb.appendChild(wrap);
+      if (fokusOrdnerfeld) {
+        fokusOrdnerfeld = false;
+        setTimeout(function () { iO.focus(); }, 0);
+      }
+
+      var saeubern = function (t) {
+        return String(t).trim()
+          .replace(/[^\w.\- äöüÄÖÜß]/g, '_')
+          .replace(/\s+/g, '_')
+          .replace(/\.{2,}/g, '.')
+          .replace(/^\.+|\.+$/g, '');
+      };
+      var uebernehmen = function () {
+        var t = saeubern(iO.value);
+        e.zielOrdner = t ? ('alias.0.' + t) : 'alias.0';
+        zeichneErgebnis();
+      };
+
+      var markiert = -1;
+      var eintraege = [];
+
+      var schliessen = function () { vlist.hidden = true; markiert = -1; };
+
+      /* Nur die naechste Ebene anbieten: leer -> die obersten Ordner,
+         nach „SmartHome." dessen Unterordner. Eine flache Liste aller
+         Pfade wird bei vielen Ordnern unuebersichtlich. */
+      function ordnerKinder(basis) {
+        var alle = ordnerUnterAlias()
+          .map(function (o) { return o.slice('alias.0.'.length); })
+          .filter(Boolean);
+        var tiefe = basis ? basis.split('.').length : 0;
+        var raus = {};
+        alle.forEach(function (o) {
+          if (basis && o.indexOf(basis + '.') !== 0) { return; }
+          var teile = o.split('.');
+          if (teile.length <= tiefe) { return; }
+          var pfad = teile.slice(0, tiefe + 1).join('.');
+          if (!raus[pfad]) { raus[pfad] = { pfad: pfad, name: teile[tiefe], kinder: false }; }
+          if (teile.length > tiefe + 1) { raus[pfad].kinder = true; }
+        });
+        return Object.keys(raus).sort().map(function (k) { return raus[k]; });
+      }
+
+      var malen = function (alleZeigen) {
+        var t = iO.value;
+        var i = t.lastIndexOf('.');
+        var basis = (i > -1) ? t.slice(0, i) : '';
+        var rest = alleZeigen ? '' : ((i > -1) ? t.slice(i + 1) : t).toLowerCase();
+
+        eintraege = ordnerKinder(basis).filter(function (k) {
+          return !rest || k.name.toLowerCase().indexOf(rest) > -1;
+        });
+
+        vlist.textContent = '';
+        if (!eintraege.length) { schliessen(); return; }
+
+        if (basis) {
+          var zurueck = el('div', 'vz zurueck');
+          zurueck.appendChild(el('span', null, '‹ ' + basis));
+          zurueck.addEventListener('mousedown', function (ev) {
+            ev.preventDefault();
+            var j = basis.lastIndexOf('.');
+            iO.value = (j > -1) ? basis.slice(0, j) + '.' : '';
+            markiert = -1;
+            malen(true);
+          });
+          vlist.appendChild(zurueck);
+        }
+
+        eintraege.forEach(function (k, n) {
+          var z = el('div', 'vz' + (n === markiert ? ' an' : ''));
+          z.appendChild(el('span', null, k.name));
+          if (k.kinder) { z.appendChild(el('span', 'tiefer', '›')); }
+          /* mousedown statt click: sonst greift der Fokusverlust zuerst
+             und die Liste ist weg, bevor der Klick ankommt. */
+          z.addEventListener('mousedown', function (ev) {
+            ev.preventDefault();
+            if (k.kinder) {
+              /* eine Ebene tiefer, Punkt am Ende faellt beim Uebernehmen weg */
+              iO.value = k.pfad + '.';
+              markiert = -1;
+              malen(true);
+              iO.focus();
+            } else {
+              iO.value = k.pfad;
+              schliessen();
+              uebernehmen();
+            }
+          });
+          vlist.appendChild(z);
+        });
+        vlist.hidden = false;
+      };
+
+      /* Beim Hineinklicken alles zeigen — sonst muesste man erst loeschen,
+         um in einen anderen Ordner zu wechseln. */
+      iO.addEventListener('focus', function () { malen(true); });
+      iO.addEventListener('input', function () {
+        markiert = -1;
+        xBtn.hidden = !iO.value;
+        malen();
+      });
+      iO.addEventListener('blur', function () { setTimeout(schliessen, 120); });
+      iO.addEventListener('change', uebernehmen);
+      iO.addEventListener('keydown', function (ev) {
+        if (ev.key === 'Escape') { schliessen(); return; }
+        if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') {
+          if (vlist.hidden) { malen(true); return; }
+          ev.preventDefault();
+          markiert += (ev.key === 'ArrowDown' ? 1 : -1);
+          if (markiert < 0) { markiert = eintraege.length - 1; }
+          if (markiert >= eintraege.length) { markiert = 0; }
+          malen();
+          var akt = vlist.children[markiert];
+          if (akt && akt.scrollIntoView) { akt.scrollIntoView({ block: 'nearest' }); }
+          return;
+        }
+        if (ev.key === 'Enter') {
+          if (!vlist.hidden && markiert >= 0) {
+            ev.preventDefault();
+            iO.value = eintraege[markiert];
+          }
+          schliessen();
+          uebernehmen();
+        }
+      });
+
+      zb.appendChild(el('span', 'zl', tr('target.name')));
+      var iN2 = el('input', 'tx');
+      iN2.type = 'text';
+      iN2.style.width = '170px';
+      iN2.value = e.zielName;
+      iN2.addEventListener('change', function () {
+        e.zielName = iN2.value.trim().replace(/[^\w.\-äöüÄÖÜß]/g, '_') || current.split('.').pop();
+        zeichneErgebnis();
+      });
+      zb.appendChild(iN2);
+
+      var ergebnis = el('span', 'zid', e.zielOrdner + '.' + e.zielName);
+      if (objects[e.ziel]) {
+        var ch2 = el('span', 'chip warn', tr('target.exists'));
+        ch2.style.marginLeft = '7px';
+        ergebnis.appendChild(ch2);
+      }
+      zb.appendChild(ergebnis);
+      host.appendChild(zb);
+    }
+
+    if (e.vorschlag || istQuelle) {
+      var sg = el('div', 'suggestbox');
+      if (!e.vorschlag) {
+        sg.style.borderColor = 'var(--line-strong)';
+        sg.style.background = 'var(--surface-2)';
+      }
+      var hd = el('div', 'hd', e.vorschlag
+        ? tr('tpl.identifiedAs', e.tplName)
+        : tr('tpl.noneDetected'));
+      if (e.vorlageVersion) {
+        var vv2 = el('span', null, '  ·  ' + e.vorlage + ' v' + e.vorlageVersion);
+        vv2.style.fontFamily = 'var(--mono)';
+        vv2.style.fontSize = '10.5px';
+        vv2.style.fontWeight = '400';
+        vv2.style.color = 'var(--ink-3)';
+        hd.appendChild(vv2);
+      }
+      if (e.vonHandGewaehlt) {
+        var vh = el('span', 'chip warn', tr('tpl.manuallyChosen'));
+        vh.style.marginLeft = '7px';
+        hd.appendChild(vh);
+      }
+      sg.appendChild(hd);
+      /* Begruendung nicht mehr als Liste, sondern hinter einem kleinen i. */
+      var zeilen = [];
+      if (e.vorschlag) {
+        zeilen = e.grund.slice();
+      } else {
+        VORLAGEN.forEach(function (v) {
+          var t = pruefeVorlage(v, current);
+          zeilen.push(sprachtext(v.name) + ': ' + (t.passt ? 'passt' : t.fehler.join(', ')));
+        });
+      }
+      if (e.uebersprungen && e.uebersprungen.length) {
+        zeilen.push('');
+        zeilen.push(tr('tpl.skipped'));
+        e.uebersprungen.forEach(function (u) { zeilen.push('  ' + u); });
+      }
+      if (zeilen.length) {
+        var inf = el('span', 'infopunkt', 'i');
+        inf.title = zeilen.join(String.fromCharCode(10));
+        inf.setAttribute('tabindex', '0');
+        inf.setAttribute('role', 'note');
+        inf.setAttribute('aria-label', zeilen.join('. '));
+        hd.appendChild(inf);
+      }
+      if (e.erzwungen) {
+        var ezc = el('span', 'chip warn', tr('tpl.forced'));
+        ezc.style.marginLeft = '7px';
+        ezc.title = tr('tpl.forcedHint');
+        hd.appendChild(ezc);
+      }
+      var acts = el('div', 'acts');
+
+      /* Mehrere Ausgaenge: je Ausgang ein eigenes Geraet, weil ein socket
+         genau ein SET hat. Hier wird gewaehlt, welcher gerade bearbeitet wird. */
+      var ausgangFeld = null;
+      if (e.instanzen && e.instanzen.length > 1) {
+        var la = el('label', 'feld');
+        la.appendChild(el('span', 'feldlabel', tr('tpl.output')));
+        var selA = el('select', 'tx');
+        e.instanzen.forEach(function (n) {
+          var o = opt(n, 'POWER' + n);
+          if (String(n) === String(e.instanz)) { o.selected = true; }
+          selA.appendChild(o);
+        });
+        selA.addEventListener('change', function () {
+          var v2 = vorschlag(current, e.vorlage, selA.value);
+          if (v2) {
+            v2.zielOrdner = e.zielOrdner;
+            v2.zielName = v2.kanalname || ('POWER' + selA.value);
+            v2.ziel = v2.zielOrdner + '.' + v2.zielName;
+            entwurf = v2; openRow = null; zeichneErgebnis();
+          }
+        });
+        la.appendChild(selA);
+        ausgangFeld = la;
+      }
+
+      /* Vorlagenwahl: alle geladenen, mit Vermerk ob sie passen. */
+      var lv = el('label', 'feld');
+      lv.appendChild(el('span', 'feldlabel', tr('tpl.label')));
+
+      var selV = el('select', 'tx');
+      selV.style.fontFamily = 'var(--mono)';
+      selV.style.fontSize = '11.5px';
+      selV.style.padding = '3px 5px';
+      selV.style.border = '1px solid var(--line-strong)';
+      selV.style.borderRadius = '2px';
+      selV.style.background = 'var(--surface)';
+      selV.style.color = 'var(--ink)';
+      selV.style.maxWidth = '270px';
+
+      selV.appendChild(opt('', e.vorschlag ? tr('tpl.switch') : tr('tpl.choose')));
+      VORLAGEN.forEach(function (v) {
+        var t = pruefeVorlage(v, current);
+        /* Auch nicht passende bleiben waehlbar — mit Grund daneben. Sonst
+           steht man bei einem Geraet, das noch nichts gesendet hat, ohne
+           jede Moeglichkeit da. */
+        var o = opt(v.id, sprachtext(v.name) + '  v' + v.version + '   ' +
+          (t.passt ? tr('tpl.fits') : tr('tpl.fitsNot', t.fehler.join(', '))));
+        if (v.id === e.vorlage) { o.selected = true; }
+        selV.appendChild(o);
+      });
+      selV.addEventListener('change', function () {
+        if (!selV.value) { return; }
+        var v = vorschlag(current, selV.value);
+        if (v) {
+          v.ziel = e.ziel;
+          entwurf = v;
+          openRow = null;
+          zeichneErgebnis();
+        }
+      });
+      lv.appendChild(selV);
+      acts.appendChild(lv);
+
+      var bRoh = el('button', 'btn schmal', e.roh ? tr('tpl.showProposal') : tr('tpl.showRaw'));
+      if (!e.vorschlag) { bRoh.disabled = true; }
+      bRoh.addEventListener('click', function () {
+        var rohJetzt = !e.roh;
+        var neuE = rohJetzt ? baueEntwurf(current) : vorschlag(current);
+        neuE.roh = rohJetzt;
+        neuE.vorschlag = true;
+        neuE.tplName = e.tplName; neuE.grund = e.grund; neuE.ziel = e.ziel;
+        entwurf = neuE; openRow = null; zeichneErgebnis();
+      });
+      acts.appendChild(musterBlock);
+      musterBlock = null;
+      if (ausgangFeld) { acts.appendChild(ausgangFeld); }
+      acts.appendChild(el('span', 'luecke'));
+      var knoepfe = el('div', 'knoepfe');
+      knoepfe.appendChild(musterKnopf);
+      knoepfe.appendChild(bRoh);
+      acts.appendChild(knoepfe);
+      sg.appendChild(acts);
+      host.appendChild(sg);
+    }
+    /* Ohne Vorlagenkasten — etwa bei einem fertigen Alias — bleibt die
+       Musterwahl oben im Kopf stehen. */
+    if (musterBlock) {
+      musterBlock.appendChild(musterKnopf);
+      head.appendChild(musterBlock);
+    }
+
+    if (!objects[current]) {
+      var ko = el('div', 'aside w');
+      ko.appendChild(el('b', null, tr('result.noObject')));
+      ko.appendChild(document.createTextNode(tr('result.noObjectText')));
+      host.appendChild(ko);
+    }
+
+    /* --- welcher Punkt sitzt auf welchem Platz --- */
+    var platzVon = {};
+    if (haupt) {
+      haupt.states.forEach(function (x) {
+        if (x.id) { platzVon[x.id.slice(current.length + 1)] = x.name; }
+      });
+    }
+    var infoFund = erkenneEntwurf(e, 'info');
+    var imInfo = {};
+    if (infoFund.length && haupt && haupt.type !== 'info') {
+      infoFund[0].states.forEach(function (x) {
+        if (x.id) {
+          var kurz = x.id.slice(current.length + 1);
+          if (!platzVon[kurz]) { imInfo[kurz] = true; }
+        }
+      });
+    }
+
+    /* --- Gerätekarte --- */
+    var card = el('div', 'card');
+    var strip = el('div', 'strip');
+    var schalter = e.states.filter(function (s) { return s.on && (platzVon[s.n] === 'SET' || platzVon[s.n] === 'ACTUAL'); })[0];
+    if (schalter) {
+      var a = wertVon(schalter);
+      var tg = el('button', 'toggle' + (a.ok && a.val ? '' : ' off'));
+      tg.tabIndex = -1;
+      tg.setAttribute('aria-label', a.ok && a.val ? 'an' : 'aus');
+      strip.appendChild(tg);
+    }
+    var nmw = el('div', 'nm2', nm || current.split('.').pop());
+    nmw.appendChild(el('small', null, current.split('.').slice(0, -1).join('.')));
+    strip.appendChild(nmw);
+
+    var LBL = { ELECTRIC_POWER: 'Leistung', CONSUMPTION: 'Verbrauch', VOLTAGE: 'Spannung',
+                CURRENT: 'Strom', ACTUAL: 'Position', FREQUENCY: 'Frequenz' };
+    var mets = el('div', 'metrics');
+    e.states.forEach(function (s) {
+      if (!s.on) { return; }
+      var pl = platzVon[s.n];
+      if (!pl || !LBL[pl] || pl === 'ACTUAL' && s.typ === 'boolean') { return; }
+      var a = wertVon(s);
+      if (!a.ok || typeof a.val !== 'number') { return; }
+      if (mets.childNodes.length >= 3) { return; }
+      var m = el('div', 'metric');
+      var v = el('div', 'v', String(a.val).replace('.', ','));
+      if (s.unit) { v.appendChild(el('u', null, ' ' + s.unit)); }
+      m.appendChild(v);
+      m.appendChild(el('div', 'k', LBL[pl]));
+      mets.appendChild(m);
+    });
+    if (mets.childNodes.length) { strip.appendChild(mets); }
+    card.appendChild(strip);
+
+    /* --- Werkzeugleiste --- */
+    var bar = el('div', 'listbar');
+    var an = e.states.filter(function (s) { return s.on; }).length;
+    bar.appendChild(document.createTextNode(tr('list.willBeCreated')));
+    bar.appendChild(el('span', 'cnt', tr('list.countOf', an, e.states.length)));
+    bar.appendChild(document.createTextNode(tr('list.ofDatapoints')));
+    bar.appendChild(el('span', 'sp2'));
+    [[tr('list.all'), function () { e.states.forEach(function (s) { s.on = true; }); }],
+     [tr('list.onlyWithValue'), function () { e.states.forEach(function (s) { s.on = wertVon(s).ok; }); }],
+     [tr('list.onlyInDevice'), function () {
+        e.states.forEach(function (s) { s.on = !!platzVon[s.n]; });
+     }]].forEach(function (pr) {
+      var b = el('button', null, pr[0]);
+      b.addEventListener('click', function () { pr[1](); openRow = null; zeichneErgebnis(); });
+      bar.appendChild(b);
+    });
+    card.appendChild(bar);
+
+    var cap = el('div', 'lhead');
+    [tr('list.colOn'), '', tr('list.colState'), tr('list.colRole'), tr('list.colValue'), ''].forEach(function (t, i) {
+      cap.appendChild(el('span', i === 4 ? 'r' : null, t));
+    });
+    card.appendChild(cap);
+
+    /* --- Zustandsliste --- */
+    e.states.forEach(function (s, i) {
+      var pl = platzVon[s.n];
+      var info = imInfo[s.n];
+      var unfertig = (!s.n || !s.srcR);
+      var row = el('div', 'erow' + (s.on ? '' : ' skip') + (openRow === i ? ' open' : ''));
+      row.tabIndex = 0;
+
+      var cbw = el('span');
+      var cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = s.on;
+      cb.setAttribute('aria-label', s.n + ' anlegen');
+      cb.addEventListener('click', function (ev) { ev.stopPropagation(); });
+      cb.addEventListener('change', function () { s.on = cb.checked; zeichneErgebnis(); });
+      cbw.appendChild(cb);
+      row.appendChild(cbw);
+
+      var mk = el('span', 'mk2 ' + (!s.on ? 'out' : (unfertig ? 'bad' : (pl ? 'ok' : 'out'))));
+      mk.textContent = !s.on ? '' : (unfertig ? '!' : (pl ? '✓' : '·'));
+      row.appendChild(mk);
+
+      var n3 = el('span', 'nm3', s.n || tr('list.newPoint'));
+      if (s.manuell) { n3.appendChild(el('span', 'hand', tr('list.byHand'))); }
+      if (s.geaendert) { n3.appendChild(el('span', 'geae', tr('list.changed'))); }
+      if (s.on) {
+        if (unfertig) { n3.appendChild(el('em', null, !s.n ? tr('list.nameMissing') : tr('list.sourceMissing'))); }
+        else if (pl) { n3.appendChild(el('em', null, pl)); }
+        else if (info) { n3.appendChild(el('em', null, tr('pattern.noPlaceIn', e.want || '?'))); }
+      }
+      row.appendChild(n3);
+
+      var warn = (s.n === 'ACTUAL' && s.on && !pl);
+      row.appendChild(el('span', 'ro2' + (warn ? ' warnrole' : ''), s.role || tr('list.noRole')));
+      row.appendChild(el('span', 'vl2', fmt(s)));
+      row.appendChild(el('span', 'ca2', openRow === i ? '▾' : '▸'));
+
+      var um = function () { openRow = (openRow === i ? null : i); zeichneErgebnis(); };
+      row.addEventListener('click', um);
+      row.addEventListener('keydown', function (ev) {
+        if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); um(); }
+      });
+      card.appendChild(row);
+
+      if (openRow === i) { card.appendChild(detailZeile(e, s, i)); }
+    });
+
+    /* --- Freie Plaetze des gewaehlten Musters --- */
+    var belegteSlots = {};
+    Object.keys(platzVon).forEach(function (n) { belegteSlots[platzVon[n]] = 1; });
+    var muster = e.want && D.patterns[e.want];
+    var freie = muster ? muster.states.filter(function (st) {
+      return !belegteSlots[st.name] && !st.multiple;
+    }) : [];
+
+    if (freie.length) {
+      var fk = el('div', 'freikopf');
+      fk.appendChild(el('span', null, tr('pattern.freeSlots', e.want)));
+      fk.appendChild(el('span', 'cnt2', tr('list.countOf', freie.length, muster.states.length)));
+      card.appendChild(fk);
+
+      freie.forEach(function (st) {
+        var fr = el('div', 'freirow' + (st.required ? ' pflicht' : ''));
+        fr.tabIndex = 0;
+        fr.setAttribute('role', 'button');
+        fr.appendChild(el('span', 'mk3', st.required ? '✕' : '+'));
+        fr.appendChild(el('span', 'sn2', st.name));
+        fr.appendChild(el('span', 'rl2', st.defaultRole || String(st.role || '')));
+        fr.appendChild(el('span', 'rx2', st.required ? tr('pattern.required') : String(st.role || '')));
+
+        var nimm = function () {
+          e.states.push({
+            n: st.name,
+            on: true,
+            role: st.defaultRole || '',
+            typ: st.type || '',
+            unit: st.defaultUnit || '',
+            wr: !!st.write,
+            srcR: '', srcW: '', f: '', fw: '',
+            caption: '', manuell: true, ausPlatz: st.name
+          });
+          openRow = e.states.length - 1;
+          zeichneErgebnis();
+        };
+        fr.addEventListener('click', nimm);
+        fr.addEventListener('keydown', function (ev) {
+          if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); nimm(); }
+        });
+        card.appendChild(fr);
+      });
+    }
+
+    var add = el('button', 'addrow');
+    add.appendChild(el('span', null, '+'));
+    add.appendChild(el('span', null, tr('list.addByHand')));
+    add.addEventListener('click', function () {
+      e.states.push({ n: '', on: true, role: 'value', typ: 'number', unit: '', wr: false,
+                      srcR: '', srcW: '', f: '', fw: '', caption: '', manuell: true, geaendert: true });
+      openRow = e.states.length - 1;
+      zeichneErgebnis();
+    });
+    card.appendChild(add);
+    host.appendChild(card);
+
+    /* --- info-Karte --- */
+    var infoNamen = Object.keys(imInfo);
+    if (infoNamen.length) {
+      var ic = el('div', 'card infod');
+      var ich = el('div', 'ch');
+      ich.appendChild(el('span', 'typ', 'info'));
+      ich.appendChild(el('span', 'chip mut', tr('info.countedSeparately')));
+      ic.appendChild(ich);
+      var ie = el('div', 'infoerkl');
+      ie.style.padding = '10px 15px 12px';
+      ie.style.fontSize = '11.5px';
+      ie.style.color = 'var(--ink-3)';
+      ie.style.lineHeight = '1.6';
+      ie.appendChild(el('b', null, tr('info.sameDatapoints', infoNamen.join(', '))));
+      ie.appendChild(document.createTextNode(tr('info.explain', e.want || '')));
+      ic.appendChild(ie);
+      host.appendChild(ic);
+    }
+
+    /* --- Änderungen gegenüber dem, was gespeichert ist --- */
+    var diff = unterschiede(e);
+    if (diff.length) {
+      var dc = el('div', 'card');
+      var dch = el('div', 'ch');
+      var gibtsSchon = !!objects[e.ziel || e.kanal];
+      dch.appendChild(el('span', 'typ', gibtsSchon ? tr('diff.changes') : tr('diff.deviations')));
+      dch.appendChild(el('span', 'chip warn', gibtsSchon ? tr('diff.open', diff.length) : tr('diff.points', diff.length)));
+      dch.appendChild(el('span', 'chip mut', gibtsSchon ? tr('diff.againstStored') : tr('diff.nothingExists')));
+      dc.appendChild(dch);
+      diff.forEach(function (z) {
+        var r = el('div', 'slot');
+        r.style.gridTemplateColumns = '15px 150px 1fr';
+        r.appendChild(el('span', 'mk', '•'));
+        r.appendChild(el('span', 'sn', z.n));
+        r.appendChild(el('span', 'who', z.was));
+        dc.appendChild(r);
+      });
+      host.appendChild(dc);
+    }
+
+    /* --- Prüfungen --- */
+    baueChecks(e, haupt, pflichtFehlt);
+
+    $('#foot').textContent = tr('app.objectsCount', keysSorted.length) + '  ·  ' +
+      (haupt ? haupt.type : tr('pattern.notDetected')) + (infoNamen.length ? ' + info' : '');
+
+    /* Der Knopf soll sagen, was er tut — nicht, wie er es tut. */
+    var zielId2 = e.ziel || e.kanal;
+    var bd = $('#btn-dry');
+    var ba = $('#btn-dry-alle');
+    var mehr = e.instanzen && e.instanzen.length > 1;
+    if (bd) {
+      bd.disabled = false;
+      var tut = objects[zielId2] ? 'aktualisieren' : 'erzeugen';
+      /* Bei mehreren Ausgaengen den Ausgang beim Namen nennen — „für den
+         ausgewählten Ausgang" waere lang und sagt weniger. */
+      bd.textContent = mehr
+        ? (objects[zielId2] ? tr('write.updateNamed', e.zielName) : tr('write.createNamed', e.zielName))
+        : (objects[zielId2] ? tr('write.updateAlias') : tr('write.createAlias'));
+      bd.title = zielId2;
+    }
+    if (ba) {
+      ba.hidden = !mehr;
+      if (mehr) {
+        ba.textContent = tr('write.createAll', e.instanzen.length);
+        ba.title = e.instanzen.map(function (n) {
+          return (e.zielOrdner || '') + '.' + (e.kanalname || 'POWER' + n).replace(String(e.instanz), n);
+        }).join(String.fromCharCode(10));
+      }
+    }
+  }
+
+  /* Uebersicht ueber alle Geraete unterhalb eines Ordners. */
+  function zeichneOrdner(host, wurzel) {
+    var geraete = geraeteDarunter(wurzel);
+
+    var head = el('div', 'rhead');
+    var links = el('div');
+    links.appendChild(el('div', 'id', wurzel));
+    links.appendChild(el('div', 'sub', geraete.length + ' Geräte darunter  ·  ' +
+      kindZustaende(wurzel).length + ' Datenpunkte'));
+    head.appendChild(links);
+    host.appendChild(head);
+
+    if (!geraete.length) {
+      host.appendChild(el('div', 'empty', tr('folder.nothingHere')));
+      $('#foot').textContent = tr('app.objectsCount', keysSorted.length);
+      $('#btn-dry').disabled = true;
+      return;
+    }
+
+    var mitAlias = 0, ohneVorlage = 0;
+    var card = el('div', 'card');
+    var ch = el('div', 'ch');
+    ch.appendChild(el('span', 'typ', tr('folder.devices')));
+    var zaehler = el('span', 'chip mut', tr('folder.found', geraete.length));
+    ch.appendChild(zaehler);
+    card.appendChild(ch);
+
+    var cap = el('div', 'lhead');
+    cap.style.gridTemplateColumns = '1fr 190px 130px 12px';
+    [tr('folder.colSource'), tr('folder.colDetected'), tr('folder.colAlias'), ''].forEach(function (t) { cap.appendChild(el('span', null, t)); });
+    card.appendChild(cap);
+
+    geraete.forEach(function (g) {
+      var vorhanden = aliasFuer(g.id);
+      if (vorhanden) { mitAlias++; }
+      if (!g.vorlage) { ohneVorlage++; }
+
+      var row = el('div', 'erow');
+      row.style.gridTemplateColumns = '1fr 190px 130px 12px';
+      row.tabIndex = 0;
+
+      var nm = el('span', 'nm3', g.id.slice(wurzel.length + 1));
+      row.appendChild(nm);
+
+      var vl = el('span', 'ro2');
+      if (g.vorlage) { vl.textContent = sprachtext(g.vorlage.name); }
+      else { vl.textContent = tr('tpl.none'); vl.style.color = 'var(--warn)'; }
+      row.appendChild(vl);
+
+      var al = el('span');
+      al.style.textAlign = 'right';
+      al.appendChild(el('span', 'chip ' + (vorhanden ? 'ok' : 'mut'), vorhanden ? tr('folder.aliasThere') : tr('folder.aliasMissing')));
+      row.appendChild(al);
+      row.appendChild(el('span', 'ca2', '›'));
+
+      var geh = function () { waehle(g.id); };
+      row.addEventListener('click', geh);
+      row.addEventListener('keydown', function (ev) {
+        if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); geh(); }
+      });
+      card.appendChild(row);
+    });
+
+    ch.appendChild(el('span', 'chip ' + (mitAlias === geraete.length ? 'ok' : 'warn'),
+      tr('folder.withAlias', mitAlias)));
+    if (ohneVorlage) { ch.appendChild(el('span', 'chip warn', tr('folder.withoutTemplate', ohneVorlage))); }
+    host.appendChild(card);
+
+    var hin = el('div', 'aside');
+    hin.appendChild(el('b', null, tr('folder.clickHint')));
+    hin.appendChild(document.createTextNode(tr('folder.clickHintText')));
+    host.appendChild(hin);
+
+    $('#foot').textContent = tr('app.objectsCount', keysSorted.length) + '  ·  ' + geraete.length + ' ' + tr('folder.devices');
+    var bd = $('#btn-dry');
+    if (bd) { bd.disabled = true; bd.textContent = 'Alias erzeugen …'; bd.title = tr('write.pickDeviceFirst'); }
+    var chip = $('#checkchip');
+    if (chip) { chip.className = 'chip mut'; chip.textContent = ''; }
+  }
+
+  function unterschiede(e) {
+    var raus = [];
+    var mu = e.want && D.patterns[e.want];
+    function hatPlatz(rolle) {
+      if (!mu || !rolle) { return false; }
+      return mu.states.some(function (st) {
+        if (!st.role) { return false; }
+        try { return new RegExp(st.role.source || st.role).test(rolle); } catch (x) { return false; }
+      });
+    }
+    e.states.forEach(function (s) {
+      if (s.manuell) { raus.push({ n: s.n || '(ohne Namen)', was: tr('diff.newByHand') }); return; }
+      if (!s.on) {
+        raus.push({ n: s.n, was: hatPlatz(s.role) ? tr('diff.deselectedWithPlace', e.want) : tr('diff.deselectedNoPlace', e.want) });
+        return;
+      }
+      var o = objects[s.urId];
+      if (!o) { return; }
+      var c = o.common || {}, a = c.alias || {}, q = aliasQuellen(o);
+      if ((c.role || '') !== s.role) { raus.push({ n: s.n, was: tr('diff.roleChange', c.role || '—', s.role) }); }
+      if ((c.unit || '') !== s.unit) { raus.push({ n: s.n, was: tr('diff.unitChange', c.unit || '—', s.unit || '—') }); }
+      var altF = (typeof a.read === 'string') ? a.read : '';
+      if (altF !== s.f) { raus.push({ n: s.n, was: tr('diff.formulaChange', altF || '—', s.f || '—') }); }
+      var altR = q.read || '';
+      if (altR !== s.srcR) { raus.push({ n: s.n, was: tr('diff.sourceChange', altR || '—', s.srcR || '—') }); }
+    });
+    return raus;
+  }
+
+  function baueChecks(e, haupt, pflichtFehlt) {
+    var an = e.states.filter(function (s) { return s.on; });
+    var ohneQuelle = an.filter(function (s) { return s.srcR && !objects[s.srcR]; });
+    var ohneWert = an.filter(function (s) { return s.srcR && objects[s.srcR] && !werte[s.srcR]; });
+    var formelKaputt = an.filter(function (s) { var a = wertVon(s); return s.srcR && !a.ok && (a.fehler || a.leer); });
+
+    var items = [
+      { s: ohneQuelle.length ? 'bad' : 'ok', t: tr('check.sourceExists'),
+        d: ohneQuelle.length ? ohneQuelle.map(function (x) { return x.n; }).join(', ') : tr('check.checked', an.length) },
+      { s: ohneWert.length ? 'bad' : 'ok', t: tr('check.sourceHasValue'),
+        d: ohneWert.length ? ohneWert.map(function (x) { return x.n; }).join(', ') : tr('check.allDeliver') },
+      { s: formelKaputt.length ? 'bad' : 'ok', t: tr('check.formulaYields'),
+        d: formelKaputt.length ? formelKaputt.map(function (x) { return x.n; }).join(', ') : tr('check.allFine') },
+      { s: haupt && !pflichtFehlt.length ? 'ok' : 'bad', t: tr('check.rolesMakeDevice'),
+        d: haupt ? (pflichtFehlt.length ? pflichtFehlt.map(function (x) { return x.name; }).join(', ') + ' fehlt' : haupt.type) : tr('check.noPatternFits') },
+      { s: 'mut', t: tr('check.publish'), d: tr('check.notCheckedYet') }
+    ];
+
+    var ul = $('#checklist');
+    ul.textContent = '';
+    var schlecht = 0;
+    items.forEach(function (c) {
+      if (c.s === 'bad') { schlecht++; }
+      var li = el('li');
+      li.appendChild(el('span', 'm ' + c.s, c.s === 'ok' ? '✓' : (c.s === 'mut' ? '·' : '✕')));
+      li.appendChild(el('span', null, c.t));
+      li.appendChild(el('span', 'det', c.d));
+      ul.appendChild(li);
+    });
+    var chip = $('#checkchip');
+    chip.className = 'chip ' + (schlecht ? 'bad' : 'ok');
+    chip.textContent = schlecht ? tr('check.openCount', schlecht) : tr('check.allOk', 4);
+  }
+
+  /* ================== Aufgeklappte Zeile: hier wird bearbeitet ================== */
+  function detailZeile(e, s, idx) {
+    var d = el('div', 'detail');
+    var quellen = quellenAuswahl(e);
+
+    function zeile(k, inhalt, cls) {
+      var r = el('div', 'dr');
+      r.appendChild(el('div', 'k', k));
+      if (inhalt === undefined || inhalt === null) {
+        r.appendChild(el('div', cls || null, '—'));
+      } else if (typeof inhalt === 'string' || typeof inhalt === 'number') {
+        r.appendChild(el('div', cls || null, String(inhalt)));
+      } else {
+        r.appendChild(inhalt);
+      }
+      d.appendChild(r);
+      return r;
+    }
+
+    function neu() { s.geaendert = true; zeichneErgebnis(); }
+
+    /* --- Name, nur bei selbst angelegten --- */
+    if (s.manuell) {
+      var iN = el('input', 'tx w');
+      iN.type = 'text';
+      iN.value = s.n;
+      iN.placeholder = tr('detail.namePlaceholder');
+      if (!s.n) { iN.className += ' miss'; }
+      iN.addEventListener('click', function (ev) { ev.stopPropagation(); });
+      iN.addEventListener('change', function () {
+        s.n = iN.value.trim().toUpperCase().replace(/\s+/g, '_');
+        neu();
+      });
+      zeile(tr('detail.name'), iN);
+    } else if (s.urId) {
+      zeile(tr('detail.objectId'), s.urId);
+    } else {
+      zeile(tr('detail.willBecome'), (e.ziel || e.kanal) + '.' + s.n);
+    }
+
+    /* --- Quelle lesen + JSON-Feld --- */
+    var qf = el('div', 'fields');
+
+    var selR = el('select', 'tx');
+    selR.style.width = '260px';
+    selR.appendChild(opt('', quellen.length ? tr('detail.pickOne') : tr('detail.noSource')));
+    quellen.forEach(function (id) { selR.appendChild(opt(id, id.split('.').slice(2).join('.'))); });
+    if (s.srcR && quellen.indexOf(s.srcR) === -1) { selR.appendChild(opt(s.srcR, s.srcR + '   ' + tr('detail.elsewhere'))); }
+    selR.appendChild(opt('__frei__', tr('detail.otherObject')));
+    selR.value = s.srcR || '';
+    if (!s.srcR) { selR.className += ' miss'; }
+    selR.addEventListener('click', function (ev) { ev.stopPropagation(); });
+    selR.addEventListener('change', function () {
+      if (selR.value === '__frei__') { s.frei = true; s.srcR = ''; }
+      else { s.frei = false; s.srcR = selR.value; }
+      if (s.srcR && !werte[s.srcR]) {
+        socket.emit('getState', s.srcR, function (err, st) {
+          if (!err && st) { werte[s.srcR] = st; zeichneErgebnis(); }
+        });
+      }
+      neu();
+    });
+    var lR = el('label', 'fld');
+    lR.appendChild(el('span', null, tr('detail.datapoint')));
+    lR.appendChild(selR);
+    qf.appendChild(lR);
+
+    var felder = s.srcR ? jsonFelder(s.srcR) : null;
+    if (felder && felder.length) {
+      var selF = el('select', 'tx');
+      selF.style.width = '180px';
+      selF.appendChild(opt('', tr('detail.ownFormula')));
+      felder.forEach(function (f) { selF.appendChild(opt(f, f)); });
+      selF.value = feldAusFormel(s.f);
+      selF.addEventListener('click', function (ev) { ev.stopPropagation(); });
+      selF.addEventListener('change', function () {
+        s.f = selF.value ? ('JSON.parse(val).' + selF.value) : '';
+        if (selF.value) { s.typ = 'number'; }
+        neu();
+      });
+      var lF = el('label', 'fld');
+      lF.appendChild(el('span', null, tr('detail.jsonField')));
+      lF.appendChild(selF);
+      qf.appendChild(lF);
+    }
+    zeile(tr('detail.readsFrom'), qf);
+
+    if (s.frei) {
+      var iFrei = el('input', 'tx w');
+      iFrei.type = 'text';
+      iFrei.value = s.srcR || '';
+      iFrei.placeholder = '0_userdata.0.…';
+      iFrei.addEventListener('click', function (ev) { ev.stopPropagation(); });
+      iFrei.addEventListener('change', function () { s.srcR = iFrei.value.trim(); neu(); });
+      zeile('Objekt-ID', iFrei);
+    }
+
+    /* --- Quelle schreiben --- */
+    var wf = el('div', 'fields');
+    var selW = el('select', 'tx');
+    selW.style.width = '260px';
+    selW.appendChild(opt('', tr('detail.sameAsRead')));
+    quellen.forEach(function (id) { selW.appendChild(opt(id, id.split('.').slice(2).join('.'))); });
+    if (s.srcW && quellen.indexOf(s.srcW) === -1) { selW.appendChild(opt(s.srcW, s.srcW)); }
+    selW.value = s.srcW || '';
+    selW.addEventListener('click', function (ev) { ev.stopPropagation(); });
+    selW.addEventListener('change', function () { s.srcW = selW.value; neu(); });
+    var lW = el('label', 'fld');
+    lW.appendChild(el('span', null, 'Datenpunkt'));
+    lW.appendChild(selW);
+    wf.appendChild(lW);
+    if (s.srcW) {
+      wf.appendChild(el('div', 'sugg', tr('detail.separateHint')));
+    }
+    zeile(tr('detail.writesTo'), wf);
+
+    /* --- Leseformel --- */
+    var fb = el('div');
+    var iF = el('input', 'tx w');
+    iF.type = 'text';
+    iF.value = s.f || '';
+    iF.placeholder = tr('detail.formulaPlaceholder');
+    iF.addEventListener('click', function (ev) { ev.stopPropagation(); });
+    iF.addEventListener('change', function () { s.f = iF.value.trim(); neu(); });
+    fb.appendChild(iF);
+    fb.appendChild(el('div', 'sugg', tr('detail.formulaHint')));
+    zeile(tr('detail.formula'), fb);
+
+    if (s.srcW) {
+      var wb = el('div');
+      var iW = el('input', 'tx w');
+      iW.type = 'text';
+      iW.value = s.fw || '';
+      iW.placeholder = tr('detail.writeFormulaPlaceholder');
+      iW.addEventListener('click', function (ev) { ev.stopPropagation(); });
+      iW.addEventListener('change', function () { s.fw = iW.value.trim(); neu(); });
+      wb.appendChild(iW);
+      wb.appendChild(el('div', 'sugg', tr('detail.writeFormulaHint')));
+      zeile(tr('detail.writeFormula'), wb);
+    }
+
+    /* --- Rolle, mit Begründung --- */
+    var rb = el('div');
+    var selRole = el('select', 'tx');
+    selRole.style.width = '300px';
+    var passend = plaetzeFuerRollen(e.want);
+    var rl = ROLLEN.slice();
+    if (s.role && rl.indexOf(s.role) === -1) { rl.unshift(s.role); }
+
+    /* Zuerst die Rollen, die im gewaehlten Muster wirklich einen Platz
+       haben — danach alle uebrigen nach Familie geordnet. */
+    var mitPlatz = rl.filter(function (r) { return passend[r]; });
+    if (mitPlatz.length) {
+      var g0 = document.createElement('optgroup');
+      g0.label = 'findet einen Platz im ' + e.want + '-Muster';
+      mitPlatz.forEach(function (r) { g0.appendChild(opt(r, r + '   → ' + passend[r])); });
+      selRole.appendChild(g0);
+    }
+    var fam = {};
+    rl.forEach(function (r) {
+      if (passend[r]) { return; }
+      var f = r.split('.')[0];
+      (fam[f] = fam[f] || []).push(r);
+    });
+    Object.keys(fam).sort().forEach(function (f) {
+      var g = document.createElement('optgroup');
+      g.label = f + '  (' + fam[f].length + ')';
+      fam[f].forEach(function (r) { g.appendChild(opt(r, r)); });
+      selRole.appendChild(g);
+    });
+    selRole.value = s.role;
+    selRole.addEventListener('click', function (ev) { ev.stopPropagation(); });
+    selRole.addEventListener('change', function () { s.role = selRole.value; neu(); });
+    rb.appendChild(selRole);
+
+    var must = e.want && D.patterns[e.want];
+    if (must) {
+      var treffer = null;
+      must.states.forEach(function (p) {
+        if (!treffer && p.role && new RegExp(p.role.source ? p.role.source : p.role).test(s.role)) { treffer = p; }
+      });
+      var hin = el('div', 'sugg');
+      if (treffer) {
+        hin.appendChild(document.createTextNode(tr('pattern.fitsOn')));
+        hin.appendChild(el('b', null, String(treffer.role)));
+        hin.appendChild(document.createTextNode(tr('pattern.toSlot', treffer.name, e.want)));
+      } else {
+        hin.textContent = tr('pattern.noPlaceLong', e.want);
+      }
+      rb.appendChild(hin);
+    }
+    zeile(tr('detail.role'), rb);
+
+    /* --- Typ und Anzeige --- */
+    var af = el('div', 'fields');
+
+    var selT = el('select', 'tx');
+    ['boolean', 'number', 'string', 'mixed'].forEach(function (t) { selT.appendChild(opt(t, t)); });
+    selT.value = s.typ || 'number';
+    selT.addEventListener('click', function (ev) { ev.stopPropagation(); });
+    selT.addEventListener('change', function () { s.typ = selT.value; neu(); });
+    var lT = el('label', 'fld');
+    lT.appendChild(el('span', null, tr('detail.type')));
+    lT.appendChild(selT);
+    af.appendChild(lT);
+
+    var iU = el('input', 'tx');
+    iU.type = 'text';
+    iU.style.width = '70px';
+    iU.value = s.unit || '';
+    iU.placeholder = '—';
+    iU.addEventListener('click', function (ev) { ev.stopPropagation(); });
+    iU.addEventListener('input', function () { s.unit = iU.value; s.geaendert = true; });
+    iU.addEventListener('change', function () { neu(); });
+    var lU = el('label', 'fld');
+    lU.appendChild(el('span', null, tr('detail.unit')));
+    lU.appendChild(iU);
+    af.appendChild(lU);
+
+    var selD = el('select', 'tx');
+    [['', tr('detail.asDelivered')], ['0', '0'], ['1', '1'], ['2', '2'], ['3', '3']].forEach(function (o) {
+      selD.appendChild(opt(o[0], o[1]));
+    });
+    selD.value = (s.dec === undefined ? '' : s.dec);
+    selD.addEventListener('click', function (ev) { ev.stopPropagation(); });
+    selD.addEventListener('change', function () { s.dec = selD.value; neu(); });
+    var lD = el('label', 'fld');
+    lD.appendChild(el('span', null, tr('detail.decimals')));
+    lD.appendChild(selD);
+    af.appendChild(lD);
+
+    var iC = el('input', 'tx');
+    iC.type = 'text';
+    iC.style.width = '150px';
+    iC.value = s.caption || '';
+    iC.placeholder = s.n;
+    iC.addEventListener('click', function (ev) { ev.stopPropagation(); });
+    iC.addEventListener('input', function () { s.caption = iC.value; s.geaendert = true; });
+    var lC = el('label', 'fld');
+    lC.appendChild(el('span', null, tr('detail.caption')));
+    lC.appendChild(iC);
+    af.appendChild(lC);
+
+    zeile(tr('detail.display'), af);
+
+    /* --- Rohwert und Ergebnis --- */
+    var a = wertVon(s);
+    zeile(tr('detail.rawValue'), a.roh === undefined ? tr('detail.rawNothing')
+      : (typeof a.roh === 'object' ? JSON.stringify(a.roh) : String(a.roh)), 'raw');
+
+    if (s.srcR && !objects[s.srcR]) {
+      var wbox = el('div');
+      wbox.appendChild(el('span', 'chip bad', tr('detail.sourceGone')));
+      zeile(tr('detail.attention'), wbox);
+    }
+
+    var box = el('div');
+    var rv = el('span', 'res', a.ok
+      ? (typeof a.val === 'object' ? JSON.stringify(a.val) : String(a.val)) + (s.unit ? ' ' + s.unit : '')
+      : a.txt);
+    if (!a.ok) { rv.style.color = 'var(--bad)'; }
+    box.appendChild(rv);
+    box.appendChild(document.createTextNode('  '));
+    if (a.ok) {
+      var t = typeof a.val;
+      var passt = !s.typ || s.typ === t || s.typ === 'mixed';
+      box.appendChild(el('span', 'chip ' + (passt ? 'ok' : 'warn'),
+        (passt ? '✓ ' : '≠ ') + (t === 'number' ? 'Zahl' : (t === 'boolean' ? 'boolean' : t))));
+      if (a.gewandelt) {
+        box.appendChild(document.createTextNode('  '));
+        box.appendChild(el('span', 'chip mut', tr('detail.converted')));
+      }
+      if (!passt) {
+        box.appendChild(document.createTextNode('  '));
+        box.appendChild(el('span', 'chip warn', tr('detail.expects', s.typ)));
+      }
+      var ist = s.urId ? werte[s.urId] : null;
+      if (ist && ist.val !== undefined && ist.val !== null) {
+        var gleich = String(ist.val) === String(a.val);
+        box.appendChild(document.createTextNode('  '));
+        box.appendChild(el('span', 'chip ' + (gleich ? 'ok' : 'warn'),
+          gleich ? tr('detail.matchesState') : tr('detail.stateSays', String(ist.val))));
+      }
+    } else if (a.fehler) {
+      box.appendChild(el('span', 'chip bad', tr('detail.formulaBroken')));
+    } else {
+      box.appendChild(el('span', 'chip bad', tr('detail.yieldsNothing')));
+    }
+    zeile(tr('detail.yields'), box);
+
+    if (s.manuell) {
+      var db = el('div');
+      var del = el('button', 'btn', tr('detail.removePoint'));
+      del.style.fontSize = '11.5px';
+      del.style.borderColor = 'var(--bad)';
+      del.style.color = 'var(--bad)';
+      del.addEventListener('click', function (ev) {
+        ev.stopPropagation();
+        e.states.splice(idx, 1);
+        openRow = null;
+        zeichneErgebnis();
+      });
+      db.appendChild(del);
+      zeile('', db);
+    }
+
+    return d;
+  }
+
+
+  /* ================== Objekte bauen, prüfen, schreiben ================== */
+
+  /* Aus dem Entwurf die Objekte machen, die entstehen wuerden. */
+  function baueObjekte(e) {
+    var ziel = e.ziel || e.kanal;
+    var raus = [];
+
+    /* Ordner darueber, falls es ihn noch nicht gibt */
+    var teile = ziel.split('.');
+    /* Jede fehlende Ebene zwischen alias.0 und dem Geraet anlegen. */
+    for (var i = 3; i < teile.length; i++) {
+      var pfad = teile.slice(0, i).join('.');
+      if (!objects[pfad]) {
+        raus.push({ id: pfad, neu: true, obj: {
+          type: 'folder',
+          common: { name: teile[i - 1] },
+          native: {}
+        } });
+      }
+    }
+
+    /* Der Kanal — hier wird die Vorlage vermerkt, damit ein spaeteres
+       Nachziehen weiss, woraus das Geraet entstanden ist. */
+    var kanalNative = { quelle: e.kanal };
+    if (e.vorlage) {
+      kanalNative.vorlage = e.vorlage;
+      kanalNative.vorlageVersion = e.vorlageVersion;
+      kanalNative.geraetetyp = e.want;
+      if (e.want !== e.wantAuto) { kanalNative.musterVonHand = true; }
+    }
+    raus.push({ id: ziel, neu: !objects[ziel], obj: {
+      type: 'channel',
+      common: { name: teile[teile.length - 1] },
+      native: kanalNative
+    } });
+
+    e.states.forEach(function (s) {
+      if (!s.on || !s.n || !s.srcR) { return; }
+      var id = ziel + '.' + s.n;
+
+      var alias = {};
+      if (s.srcW && s.srcW !== s.srcR) { alias.id = { read: s.srcR, write: s.srcW }; }
+      else { alias.id = s.srcR; }
+      if (s.f)  { alias.read = s.f; }
+      if (s.fw && s.srcW) { alias.write = s.fw; }
+
+      var common = {
+        name: s.caption || s.n,
+        role: s.role,
+        type: s.typ || 'mixed',
+        read: true,
+        write: !!s.srcW,
+        alias: alias
+      };
+      if (s.unit) { common.unit = s.unit; }
+
+      var nat = {};
+      if (s.manuell) { nat.vonHand = true; }
+      else if (e.vorlage) { nat.vorlage = e.vorlage; nat.ausZustand = s.ausVorlage || s.n; }
+
+      raus.push({ id: id, neu: !objects[id], obj: { type: 'state', common: common, native: nat } });
+    });
+
+    return raus;
+  }
+
+  /* Was im Ziel liegt, aber nicht mehr im Entwurf vorkommt.
+     „abgewaehlt" = du hast das Haekchen entfernt, also gewollt.
+     „nicht im Vorschlag" = existiert nur im Alias, etwa von Hand ergaenzt —
+     das wird nicht ungefragt geloescht. */
+  function verwaiste(e) {
+    var ziel = e.ziel || e.kanal;
+    if (!objects[ziel]) { return []; }
+    var behalten = {};
+    e.states.forEach(function (st) {
+      if (st.on && st.n) { behalten[ziel + '.' + st.n] = 1; }
+    });
+    var imEntwurf = {};
+    e.states.forEach(function (st) { if (st.n) { imEntwurf[ziel + '.' + st.n] = 1; } });
+
+    var pre = ziel + '.';
+    return keysSorted.filter(function (k) {
+      return k.indexOf(pre) === 0 && objects[k] && objects[k].type === 'state' && !behalten[k];
+    }).map(function (k) {
+      var abgewaehlt = !!imEntwurf[k];
+      return { id: k, grund: abgewaehlt ? tr('write.deselected') : tr('write.notInProposal'), vorgabe: abgewaehlt };
+    });
+  }
+
+  /* Was dem Schreiben im Weg steht. */
+  function pruefeSchreiben(e) {
+    var probleme = [];
+    var an = e.states.filter(function (s) { return s.on; });
+    if (!an.length) { probleme.push(tr('write.noneSelected')); }
+
+    var namen = {};
+    an.forEach(function (s) {
+      if (!s.n) { probleme.push(tr('write.noName')); return; }
+      if (namen[s.n]) { probleme.push(tr('write.duplicateName', s.n)); }
+      namen[s.n] = 1;
+
+      if (!s.srcR) {
+        probleme.push(tr('write.noSourceChosen', s.n));
+      } else if (!objects[s.srcR]) {
+        /* Der teuerste Fehler: der js-controller merkt sich „Quelle fehlt"
+           dauerhaft und korrigiert das nie. Nur loeschen und neu anlegen
+           hilft. Deshalb hier hart sperren. */
+        probleme.push(tr('write.sourceMissing', s.n, s.srcR));
+      }
+      if (s.srcW && !objects[s.srcW]) {
+        probleme.push(tr('write.writeSourceMissing', s.n, s.srcW));
+      }
+    });
+    return probleme;
+  }
+
+  /* Trockenlauf zeigen */
+  var trockenAlle = false;
+
+  /* Welche Entwuerfe geschrieben werden. Bei mehreren Ausgaengen wahlweise
+     nur der gezeigte oder alle — die uebrigen kommen frisch aus der Vorlage,
+     Aenderungen von Hand gelten nur fuer den gezeigten Ausgang. */
+  function zuSchreiben(alleAusgaenge) {
+    if (!alleAusgaenge || !entwurf.instanzen || entwurf.instanzen.length < 2) { return [entwurf]; }
+    return entwurf.instanzen.map(function (n) {
+      if (String(n) === String(entwurf.instanz)) { return entwurf; }
+      var v = vorschlag(current, entwurf.vorlage, n);
+      if (v) {
+        v.zielOrdner = entwurf.zielOrdner;
+        v.zielName = v.kanalname || ('POWER' + n);
+        v.ziel = v.zielOrdner + '.' + v.zielName;
+      }
+      return v;
+    }).filter(Boolean);
+  }
+
+  function zeigeTrockenlauf(alleAusgaenge) {
+    if (!entwurf) { return; }
+    trockenAlle = !!alleAusgaenge;
+    var entwuerfe = zuSchreiben(trockenAlle);
+    var liste = [];
+    var probleme = [];
+    entwuerfe.forEach(function (en) {
+      baueObjekte(en).forEach(function (o) {
+        if (!liste.some(function (x) { return x.id === o.id; })) { liste.push(o); }
+      });
+      pruefeSchreiben(en).forEach(function (pr) { probleme.push(pr); });
+    });
+    var weg = [];
+    entwuerfe.forEach(function (en) {
+      verwaiste(en).forEach(function (v) {
+        if (!weg.some(function (x) { return x.id === v.id; })) { weg.push(v); }
+      });
+    });
+    loeschListe = weg;
+    var body = $('#dry-body');
+    body.textContent = '';
+
+    var kopf = el('div');
+    kopf.style.marginBottom = '11px';
+    kopf.style.fontSize = '12.5px';
+    kopf.appendChild(el('b', null, tr('app.objectsCount', liste.length)));
+    var neu = liste.filter(function (x) { return x.neu; }).length;
+    kopf.appendChild(document.createTextNode('  —  ' + tr('write.summaryTail', neu, liste.length - neu)));
+    if (weg.length) {
+      kopf.appendChild(document.createTextNode(', '));
+      var wc = el('b', null, tr('write.leftOver', weg.length));
+      wc.style.color = 'var(--bad)';
+      kopf.appendChild(wc);
+    }
+    body.appendChild(kopf);
+
+    if (weg.length) {
+      var wk = el('div', 'card');
+      wk.style.marginBottom = '11px';
+      wk.style.borderColor = 'var(--bad)';
+      var wch = el('div', 'ch');
+      wch.appendChild(el('span', 'typ', tr('write.remove')));
+      wch.appendChild(el('span', 'chip bad', tr('write.removeCount', weg.length)));
+      wch.appendChild(el('span', 'chip mut', tr('write.removeHint')));
+      wk.appendChild(wch);
+      weg.forEach(function (v, i) {
+        var r = el('div', 'slot');
+        r.style.gridTemplateColumns = '19px 1fr 150px';
+        var cbw = el('span');
+        var cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.checked = v.vorgabe;
+        cb.addEventListener('change', function () { loeschListe[i].vorgabe = cb.checked; });
+        cbw.appendChild(cb);
+        r.appendChild(cbw);
+        r.appendChild(el('span', 'sn', v.id.slice((entwurf.ziel || entwurf.kanal).length + 1)));
+        var g = el('span', 'rx', v.grund);
+        if (!v.vorgabe) { g.style.color = 'var(--warn)'; }
+        r.appendChild(g);
+        wk.appendChild(r);
+      });
+      body.appendChild(wk);
+    }
+
+    if (probleme.length) {
+      var pw = el('div', 'aside w');
+      pw.style.marginBottom = '11px';
+      pw.appendChild(el('b', null, tr('write.cannotWrite')));
+      var ul = el('ul');
+      ul.style.margin = '6px 0 0';
+      ul.style.paddingLeft = '18px';
+      probleme.forEach(function (t) { ul.appendChild(el('li', null, t)); });
+      pw.appendChild(ul);
+      body.appendChild(pw);
+    }
+
+    liste.forEach(function (x) {
+      var k = el('div', 'card');
+      k.style.marginBottom = '9px';
+      var ch = el('div', 'ch');
+      ch.appendChild(el('span', 'chip ' + (x.neu ? 'ok' : 'warn'), x.neu ? tr('write.new') : tr('write.overwrites')));
+      var idl = el('span', null, x.id);
+      idl.style.fontFamily = 'var(--mono)';
+      idl.style.fontSize = '12px';
+      idl.style.fontWeight = '600';
+      ch.appendChild(idl);
+      ch.appendChild(el('span', 'chip mut', x.obj.type));
+      k.appendChild(ch);
+      var pre = el('div', 'raw');
+      pre.style.margin = '9px 12px 11px';
+      pre.style.whiteSpace = 'pre';
+      pre.style.maxHeight = 'none';
+      pre.textContent = JSON.stringify(x.obj, null, 2);
+      k.appendChild(pre);
+      body.appendChild(k);
+    });
+
+    var zt = $('#dry-titel');
+    if (zt) {
+      var zielName = entwurf.ziel || entwurf.kanal;
+      zt.textContent = (objects[zielName] ? tr('write.dryTitleUpdate') : tr('write.dryTitleCreate')) +
+        (entwuerfe.length > 1 ? tr('write.dryOutputs', entwuerfe.length) : '');
+    }
+    $('#btn-dry-write').disabled = probleme.length > 0;
+    $('#btn-dry-write').textContent = objects[entwurf.ziel || entwurf.kanal] ? tr('write.nowUpdate') : tr('write.now');
+    $('#dlg-dry').showModal();
+  }
+
+  /* Wirklich schreiben — nur aus dem Trockenlauf heraus erreichbar. */
+  var loeschListe = [];
+
+  function schreibeObjekte() {
+    if (!entwurf) { return; }
+    var entwuerfe2 = zuSchreiben(trockenAlle);
+    var liste = [];
+    var schlecht = 0;
+    entwuerfe2.forEach(function (en) {
+      baueObjekte(en).forEach(function (o) {
+        if (!liste.some(function (x) { return x.id === o.id; })) { liste.push(o); }
+      });
+      schlecht += pruefeSchreiben(en).length;
+    });
+    if (schlecht) { return; }
+
+    var body = $('#dry-body');
+    var offen = liste.length;
+    var fehler = [];
+    var fertig = 0;
+
+    $('#btn-dry-write').disabled = true;
+    $('#btn-dry-write').textContent = tr('write.writing');
+
+    var loeschen = loeschListe.filter(function (v) { return v.vorgabe; });
+    offen += loeschen.length;
+    loeschen.forEach(function (v) {
+      socket.emit('delObject', v.id, function (err) {
+        if (err) { fehler.push(v.id + ': ' + err); } else { fertig++; }
+        if (--offen === 0) { abschluss(); }
+      });
+    });
+
+    liste.forEach(function (x) {
+      socket.emit('setObject', x.id, x.obj, function (err) {
+        if (err) { fehler.push(x.id + ': ' + err); } else { fertig++; }
+        if (--offen === 0) { abschluss(); }
+      });
+    });
+
+    function abschluss() {
+      body.textContent = '';
+      var m = el('div');
+      m.style.fontSize = '13px';
+      if (fehler.length) {
+        m.appendChild(el('b', null, tr('write.failed', fehler.length)));
+        var ul = el('ul');
+        fehler.forEach(function (t) { ul.appendChild(el('li', null, t)); });
+        m.appendChild(ul);
+      } else {
+        m.appendChild(el('b', null, fertig + ' Objekte geschrieben' +
+          (loeschen.length ? ', ' + loeschen.length + ' entfernt' : '') + '.'));
+        m.appendChild(el('div', null, tr('write.aliasNowAt', entwurf.ziel || entwurf.kanal)));
+      }
+      body.appendChild(m);
+      $('#btn-dry-write').textContent = tr('write.now');
+      loeschListe = [];
+      /* Objektliste neu einlesen, damit Baum und Bericht stimmen */
+      ladeObjekte();
+    }
+  }
+
+  /* ================== Dialoge ================== */
+  /* Die <dialog>-Blöcke stehen im HTML hinter diesem Skript. Zur Laufzeit
+     des Skripts gibt es sie noch nicht — erst nach DOMContentLoaded
+     verkabeln, sonst wirft der erste Zugriff und alles danach fällt aus. */
+  function verkabeleDialoge() {
+    var bc = $('#btn-checks'), bd = $('#btn-dry'), bw = $('#btn-dry-write');
+    if (bc) { bc.addEventListener('click', function () { $('#dlg-checks').showModal(); }); }
+    if (bd) { bd.addEventListener('click', function () { zeigeTrockenlauf(false); }); }
+    var ba2 = $('#btn-dry-alle');
+    if (ba2) { ba2.addEventListener('click', function () { zeigeTrockenlauf(true); }); }
+    if (bw) { bw.addEventListener('click', schreibeObjekte); }
+    document.querySelectorAll('dialog [data-close]').forEach(function (b) {
+      b.addEventListener('click', function () { b.closest('dialog').close(); });
+    });
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', verkabeleDialoge);
+  } else {
+    verkabeleDialoge();
+  }
+})();
+</script>
+<dialog id="dlg-dry" style="max-width:760px;">
+  <h3 id="dry-titel">Alias erzeugen &mdash; das w&uuml;rde entstehen</h3>
+  <div class="dbody" id="dry-body"></div>
+  <div class="dfoot">
+    <button class="btn" data-close>Schlie&szlig;en</button>
+    <button class="btn primary" id="btn-dry-write">Jetzt anlegen</button>
+  </div>
+</dialog>
+
+<dialog id="dlg-checks">
+  <h3>Pr&uuml;fungen &mdash; laufen immer mit, fassen nichts an</h3>
+  <div class="dbody"><ul class="checks" id="checklist"></ul></div>
+  <div class="dfoot"><button class="btn" data-close>Schlie&szlig;en</button></div>
+</dialog>
+
+</body>
+</html>

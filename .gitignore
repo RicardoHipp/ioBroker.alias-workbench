@@ -1,0 +1,15 @@
+node_modules/
+*.log
+*.tar.gz
+.DS_Store
+Thumbs.db
+
+# Nur das gebündelte Ergebnis wird ausgeliefert, gebaut wird mit npm run build
+# admin/detector.js bleibt bewusst eingecheckt, damit der Adapter ohne
+# Bauschritt lauffähig ist.
+
+# Arbeitsreste
+*.bak
+*.part
+t.js
+i18n-umbau.py

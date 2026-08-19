@@ -1,0 +1,64 @@
+{
+  "common": {
+    "name": "alias-workbench",
+    "version": "0.0.1",
+    "news": {
+      "0.0.1": {
+        "en": "First read-only version: detector report and live values for any channel",
+        "de": "Erste Fassung, nur lesend: Detektor-Bericht und Live-Werte für jeden Kanal"
+      }
+    },
+    "titleLang": {
+      "en": "Alias Workbench",
+      "de": "Alias-Werkbank"
+    },
+    "desc": {
+      "en": "Shows what the type-detector makes of a channel, with live values. Build aliases from templates and see whether they work.",
+      "de": "Zeigt, was der type-detector aus einem Kanal macht, mit echten Werten. Aliase aus Vorlagen bauen und sehen, ob sie funktionieren."
+    },
+    "authors": [
+      "Ricardo"
+    ],
+    "license": "MIT",
+    "platform": "Javascript/Node.js",
+    "mode": "none",
+    "onlyWWW": true,
+    "singleton": true,
+    "type": "general",
+    "icon": "alias-workbench.png",
+    "enabled": true,
+    "compact": true,
+    "connectionType": "local",
+    "dataSource": "push",
+    "adminUI": {
+      "config": "none",
+      "tab": "materialize"
+    },
+    "adminTab": {
+      "name": {
+        "en": "Alias Workbench",
+        "de": "Alias-Werkbank"
+      },
+      "singleton": true,
+      "link": "/adapter/alias-workbench/tab.html?%instance%&noFooter"
+    },
+    "keywords": [
+      "alias",
+      "type-detector"
+    ],
+    "readme": "https://github.com/ricardo/ioBroker.alias-workbench/blob/main/README.md",
+    "dependencies": [
+      {
+        "js-controller": ">=5.0.0"
+      }
+    ],
+    "globalDependencies": [
+      {
+        "admin": ">=6.0.0"
+      }
+    ]
+  },
+  "native": {},
+  "objects": [],
+  "instanceObjects": []
+}

@@ -1,0 +1,113 @@
+{
+  "id": "tasmota-lampe",
+  "version": 1,
+  "rang": 10,
+  "name": {
+    "de": "Tasmota-Lampe",
+    "en": "Tasmota light"
+  },
+  "geraetetyp": "light",
+  "erkennung": {
+    "erforderlich": [
+      "stat.POWER",
+      "cmnd.POWER"
+    ],
+    "namenshinweis": "licht|lampe|light|led|leuchte|strahler"
+  },
+  "zustaende": [
+    {
+      "name": "SET",
+      "rolle": "switch.light",
+      "typ": "boolean",
+      "lesen": "stat.POWER",
+      "schreiben": "cmnd.POWER",
+      "schreibformel": "val ? \"ON\" : \"OFF\""
+    },
+    {
+      "name": "ON_ACTUAL",
+      "rolle": "sensor.light",
+      "typ": "boolean",
+      "lesen": "stat.POWER",
+      "hinweis": "beim light heisst die Rueckmeldung ON_ACTUAL, nicht ACTUAL"
+    },
+    {
+      "name": "ELECTRIC_POWER",
+      "rolle": "value.power",
+      "typ": "number",
+      "einheit": "W",
+      "lesen": "tele.SENSOR",
+      "feld": "ENERGY.Power",
+      "optional": true
+    },
+    {
+      "name": "CONSUMPTION",
+      "rolle": "value.power.consumption",
+      "typ": "number",
+      "einheit": "kWh",
+      "lesen": "tele.SENSOR",
+      "feld": "ENERGY.Total",
+      "optional": true
+    },
+    {
+      "name": "VOLTAGE",
+      "rolle": "value.voltage",
+      "typ": "number",
+      "einheit": "V",
+      "lesen": "tele.SENSOR",
+      "feld": "ENERGY.Voltage",
+      "optional": true
+    },
+    {
+      "name": "CURRENT",
+      "rolle": "value.current",
+      "typ": "number",
+      "einheit": "A",
+      "lesen": "tele.SENSOR",
+      "feld": "ENERGY.Current",
+      "optional": true
+    },
+    {
+      "name": "TODAY",
+      "rolle": "value",
+      "typ": "number",
+      "einheit": "kWh",
+      "lesen": "tele.SENSOR",
+      "feld": "ENERGY.Today",
+      "optional": true,
+      "vorgabeAus": true
+    },
+    {
+      "name": "YESTERDAY",
+      "rolle": "value",
+      "typ": "number",
+      "einheit": "kWh",
+      "lesen": "tele.SENSOR",
+      "feld": "ENERGY.Yesterday",
+      "optional": true,
+      "vorgabeAus": true
+    },
+    {
+      "name": "UNREACH",
+      "rolle": "indicator.maintenance.unreach",
+      "typ": "boolean",
+      "lesen": "tele.LWT",
+      "leseformel": "val !== \"Online\"",
+      "optional": true
+    },
+    {
+      "name": "RSSI",
+      "rolle": "value.rssi",
+      "typ": "number",
+      "einheit": "dBm",
+      "lesen": "tele.STATE",
+      "feld": "Wifi.Signal",
+      "optional": true
+    }
+  ],
+  "nebenwirkungen": [
+    {
+      "art": "mqtt-publish",
+      "punkt": "cmnd.POWER"
+    }
+  ]
+}

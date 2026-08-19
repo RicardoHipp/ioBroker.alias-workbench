@@ -1,0 +1,82 @@
+{
+  "id": "tasmota-mehrfach",
+  "version": 1,
+  "rang": 30,
+  "name": {
+    "de": "Tasmota mit mehreren Ausgängen",
+    "en": "Tasmota with multiple outputs"
+  },
+  "geraetetyp": "socket",
+  "hinweis": {
+    "de": "Steckdosenleiste, Ventilinsel, Relaisplatine. Je Ausgang entsteht ein eigenes Gerät, weil ein socket genau ein SET hat. %N% steht für die Ausgangsnummer und wird aus dem Bestand gelesen — Lücken sind erlaubt.",
+    "en": "Power strip, valve manifold, relay board. Each output becomes its own device because a socket has exactly one SET. %N% stands for the output number and is read from what exists — gaps are allowed."
+  },
+  "mehrfach": {
+    "platzhalter": "%N%"
+  },
+  "kanalname": "POWER%N%",
+  "erkennung": {
+    "erforderlich": [
+      "stat.POWER%N%",
+      "cmnd.POWER%N%"
+    ]
+  },
+  "zustaende": [
+    {
+      "name": "SET",
+      "rolle": "switch",
+      "typ": "boolean",
+      "lesen": "stat.POWER%N%",
+      "schreiben": "cmnd.POWER%N%",
+      "schreibformel": "val ? \"ON\" : \"OFF\""
+    },
+    {
+      "name": "ACTUAL",
+      "rolle": "sensor.switch",
+      "typ": "boolean",
+      "lesen": "stat.POWER%N%"
+    },
+    {
+      "name": "ELECTRIC_POWER",
+      "rolle": "value.power",
+      "typ": "number",
+      "einheit": "W",
+      "lesen": "tele.SENSOR",
+      "feld": "ENERGY.Power",
+      "optional": true,
+      "hinweis": "gemeinsamer Messblock — alle Ausgänge teilen sich einen"
+    },
+    {
+      "name": "CONSUMPTION",
+      "rolle": "value.power.consumption",
+      "typ": "number",
+      "einheit": "kWh",
+      "lesen": "tele.SENSOR",
+      "feld": "ENERGY.Total",
+      "optional": true
+    },
+    {
+      "name": "UNREACH",
+      "rolle": "indicator.maintenance.unreach",
+      "typ": "boolean",
+      "lesen": "tele.LWT",
+      "leseformel": "val !== \"Online\"",
+      "optional": true
+    },
+    {
+      "name": "RSSI",
+      "rolle": "value.rssi",
+      "typ": "number",
+      "einheit": "dBm",
+      "lesen": "tele.STATE",
+      "feld": "Wifi.Signal",
+      "optional": true
+    }
+  ],
+  "nebenwirkungen": [
+    {
+      "art": "mqtt-publish",
+      "punkt": "cmnd.POWER%N%"
+    }
+  ]
+}

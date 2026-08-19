@@ -1,0 +1,115 @@
+{
+  "id": "tasmota-steckdose",
+  "version": 1,
+  "rang": 20,
+  "name": {
+    "de": "Tasmota-Steckdose",
+    "en": "Tasmota socket"
+  },
+  "geraetetyp": "socket",
+  "erkennung": {
+    "erforderlich": [
+      "stat.POWER",
+      "cmnd.POWER"
+    ],
+    "namenshinweis": "steckdose|dose|stecker|plug|socket"
+  },
+  "zustaende": [
+    {
+      "name": "SET",
+      "rolle": "switch",
+      "typ": "boolean",
+      "lesen": "stat.POWER",
+      "schreiben": "cmnd.POWER",
+      "schreibformel": "val ? \"ON\" : \"OFF\"",
+      "hinweis": "getrennte Quellen: sonst zeigt der Schalter den Befehl statt des Zustands"
+    },
+    {
+      "name": "ACTUAL",
+      "rolle": "sensor.switch",
+      "typ": "boolean",
+      "lesen": "stat.POWER",
+      "hinweis": "type-detector 6 verlangt sensor.switch oder state.active, blankes state passt nicht mehr"
+    },
+    {
+      "name": "ELECTRIC_POWER",
+      "rolle": "value.power",
+      "typ": "number",
+      "einheit": "W",
+      "lesen": "tele.SENSOR",
+      "feld": "ENERGY.Power",
+      "optional": true
+    },
+    {
+      "name": "CONSUMPTION",
+      "rolle": "value.power.consumption",
+      "typ": "number",
+      "einheit": "kWh",
+      "lesen": "tele.SENSOR",
+      "feld": "ENERGY.Total",
+      "optional": true
+    },
+    {
+      "name": "VOLTAGE",
+      "rolle": "value.voltage",
+      "typ": "number",
+      "einheit": "V",
+      "lesen": "tele.SENSOR",
+      "feld": "ENERGY.Voltage",
+      "optional": true
+    },
+    {
+      "name": "CURRENT",
+      "rolle": "value.current",
+      "typ": "number",
+      "einheit": "A",
+      "lesen": "tele.SENSOR",
+      "feld": "ENERGY.Current",
+      "optional": true
+    },
+    {
+      "name": "TODAY",
+      "rolle": "value",
+      "typ": "number",
+      "einheit": "kWh",
+      "lesen": "tele.SENSOR",
+      "feld": "ENERGY.Today",
+      "optional": true,
+      "vorgabeAus": true,
+      "hinweis": "hat in keinem Muster einen Platz und landet im info-Gerät"
+    },
+    {
+      "name": "YESTERDAY",
+      "rolle": "value",
+      "typ": "number",
+      "einheit": "kWh",
+      "lesen": "tele.SENSOR",
+      "feld": "ENERGY.Yesterday",
+      "optional": true,
+      "vorgabeAus": true
+    },
+    {
+      "name": "UNREACH",
+      "rolle": "indicator.maintenance.unreach",
+      "typ": "boolean",
+      "lesen": "tele.LWT",
+      "leseformel": "val !== \"Online\"",
+      "optional": true
+    },
+    {
+      "name": "RSSI",
+      "rolle": "value.rssi",
+      "typ": "number",
+      "einheit": "dBm",
+      "lesen": "tele.STATE",
+      "feld": "Wifi.Signal",
+      "optional": true
+    }
+  ],
+  "nebenwirkungen": [
+    {
+      "art": "mqtt-publish",
+      "punkt": "cmnd.POWER"
+    }
+  ]
+}

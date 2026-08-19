@@ -1,0 +1,87 @@
+{
+  "id": "messpunkt",
+  "version": 1,
+  "rang": 5,
+  "name": {
+    "de": "Reiner Messpunkt",
+    "en": "Measurement point only"
+  },
+  "geraetetyp": "info",
+  "hinweis": {
+    "de": "Kein SET, also bewusst kein schaltbares Gerät. Für Tasmota-Geräte, die nur messen oder deren stat/cmnd noch nie gesendet haben.",
+    "en": "No SET, so deliberately not a switchable device. For Tasmota devices that only measure or whose stat/cmnd topics have never been sent."
+  },
+  "erkennung": {
+    "erforderlich": [
+      "tele.SENSOR"
+    ],
+    "inhalt": {
+      "tele.SENSOR": "ENERGY"
+    }
+  },
+  "zustaende": [
+    {
+      "name": "ELECTRIC_POWER",
+      "rolle": "value.power",
+      "typ": "number",
+      "einheit": "W",
+      "lesen": "tele.SENSOR",
+      "feld": "ENERGY.Power",
+      "optional": true
+    },
+    {
+      "name": "CONSUMPTION",
+      "rolle": "value.power.consumption",
+      "typ": "number",
+      "einheit": "kWh",
+      "lesen": "tele.SENSOR",
+      "feld": "ENERGY.Total",
+      "optional": true
+    },
+    {
+      "name": "VOLTAGE",
+      "rolle": "value.voltage",
+      "typ": "number",
+      "einheit": "V",
+      "lesen": "tele.SENSOR",
+      "feld": "ENERGY.Voltage",
+      "optional": true
+    },
+    {
+      "name": "CURRENT",
+      "rolle": "value.current",
+      "typ": "number",
+      "einheit": "A",
+      "lesen": "tele.SENSOR",
+      "feld": "ENERGY.Current",
+      "optional": true
+    },
+    {
+      "name": "TODAY",
+      "rolle": "value",
+      "typ": "number",
+      "einheit": "kWh",
+      "lesen": "tele.SENSOR",
+      "feld": "ENERGY.Today",
+      "optional": true,
+      "vorgabeAus": true
+    },
+    {
+      "name": "UNREACH",
+      "rolle": "indicator.maintenance.unreach",
+      "typ": "boolean",
+      "lesen": "tele.LWT",
+      "leseformel": "val !== \"Online\"",
+      "optional": true
+    },
+    {
+      "name": "RSSI",
+      "rolle": "value.rssi",
+      "typ": "number",
+      "einheit": "dBm",
+      "lesen": "tele.STATE",
+      "feld": "Wifi.Signal",
+      "optional": true
+    }
+  ]
+}
