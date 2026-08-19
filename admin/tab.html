@@ -304,6 +304,7 @@
   dialog::backdrop { background:rgba(8,14,16,.55); }
   dialog h3 { margin:0; padding:11px 15px; font-size:13.5px; border-bottom:1px solid var(--line); background:var(--surface-2); }
   dialog .dbody { padding:15px; font-size:13px; max-height:60vh; overflow:auto; }
+  .hint { font-size:10.5px; color:var(--ink-3); line-height:1.45; }
   dialog .dfoot { padding:11px 15px; border-top:1px solid var(--line); display:flex; gap:8px;
                   justify-content:flex-end; background:var(--surface-2); }
   ul.checks { list-style:none; margin:0; padding:0; font-size:12.5px; }
@@ -481,8 +482,9 @@
       <div class="empty">Links einen Kanal, ein Gerät oder einen Ordner wählen.</div>
     </div></div>
     <div class="footbar">
-      <button class="btn primary" id="btn-dry">Alias erzeugen &hellip;</button>
+      <button class="btn primary" id="btn-dry" disabled>Alias erzeugen &hellip;</button>
       <button class="btn primary" id="btn-dry-alle" hidden>Alle erzeugen &hellip;</button>
+      <button class="btn" id="btn-tpl" disabled>Als Vorlage speichern &hellip;</button>
       <button class="btn" id="btn-checks">Pr&uuml;fungen <span id="checkchip"></span></button>
       <span class="sp" style="flex:1"></span>
       <span class="footnote" id="foot"></span>
@@ -568,6 +570,9 @@
     var bc = $('#btn-checks');
     if (bc) { bc.childNodes[0].nodeValue = tr('check.button') + ' '; }
     setz('#dry-titel', tr('write.dryTitleCreate'));
+    setz('#btn-tpl', tr('tpls.button'));
+    setz('#tpl-titel', tr('tpls.title', ''));
+    setz('#btn-tpl-save', tr('tpls.saveNew'));
     setz('#tree .empty', tr('tree.loading'));
     setz('#res .empty', tr('result.pickSomething'));
     setz('#btn-dry-write', tr('write.now'));
@@ -944,10 +949,17 @@
      kein einziges Geraet — alles Geraetewissen steckt in den Dateien. */
   var VORLAGEN = [];
 
+  /* Welche Instanz — der Reiter wird mit ?<instanz>&noFooter geladen. */
+  var INSTANZ = (function () {
+    var s = (location.search || '').replace(/^\?/, '').split('&')[0];
+    return /^\d+$/.test(s) ? s : '0';
+  })();
+  var INSTANZ_ID = 'system.adapter.alias-workbench.' + INSTANZ;
+
   function ladeVorlagen(fertig) {
     fetch('./vorlagen/index.json').then(function (r) { return r.json(); }).then(function (ix) {
       var offen = ix.vorlagen.length;
-      if (!offen) { return fertig(); }
+      if (!offen) { return dazu([]); }
       /* Reihenfolge aus index.json festhalten. Vorher entschied bei
          gleichwertigen Vorlagen, welche Datei zufaellig zuerst fertig
          geladen war — dasselbe Geraet wurde mal Lampe, mal Steckdose. */
@@ -956,10 +968,63 @@
         fetch('./vorlagen/' + datei).then(function (r) { return r.json(); }).then(function (v) {
           v._datei = datei;
           platz[i] = v;
-          if (--offen === 0) { VORLAGEN = platz.filter(Boolean); fertig(); }
-        }).catch(function () { if (--offen === 0) { VORLAGEN = platz.filter(Boolean); fertig(); } });
+          if (--offen === 0) { dazu(platz.filter(Boolean)); }
+        }).catch(function () { if (--offen === 0) { dazu(platz.filter(Boolean)); } });
       });
-    }).catch(function () { fertig(); });
+    }).catch(function () { dazu([]); });
+
+    /* Dazu die selbstgebauten aus der Instanzkonfiguration. Der Paketordner
+       wird von `iobroker upload` geleert, native bleibt und steckt im
+       Backup. Bei gleicher id gewinnt die eigene — sie steht dann an der
+       Stelle der Paketvorlage, damit die Reihenfolge fest bleibt. */
+    function dazu(paket) {
+      paket.forEach(function (v) { v._quelle = 'paket'; });
+      var durch = false;
+      var schluss = function (eigene) {
+        if (durch) { return; }
+        durch = true;
+        var zus = paket.slice();
+        (eigene || []).forEach(function (v) {
+          if (!v || !v.id) { return; }
+          v._quelle = 'benutzer';
+          var i = -1;
+          zus.forEach(function (p, k) { if (p.id === v.id) { i = k; } });
+          if (i > -1) { zus[i] = v; } else { zus.push(v); }
+        });
+        VORLAGEN = zus;
+        fertig();
+      };
+      setTimeout(function () { schluss([]); }, 2500);
+      socket.emit('getObject', INSTANZ_ID, function (err, o) {
+        schluss((o && o.native && o.native.vorlagen) || []);
+      });
+    }
+  }
+
+  /* Eigene Vorlagen ablegen.
+
+     Bewusst lesen–aendern–ganz zurueckschreiben statt extendObject:
+     extendObject fuehrt Listen *feldweise* zusammen. Eine kuerzer
+     gewordene Liste bliebe damit unveraendert, und schlimmer noch —
+     schreibt man an Platz 0 eine andere Vorlage, verschmelzen beide
+     zu einem Zwitter aus neuem Namen und alten Zustaenden. Gemessen,
+     nicht vermutet. */
+  function speichereVorlagen(liste, fertig) {
+    socket.emit('getObject', INSTANZ_ID, function (err, o) {
+      if (err || !o) { return fertig(err || tr('tpls.noInstance', INSTANZ_ID)); }
+      o.native = o.native || {};
+      o.native.vorlagen = liste;
+      socket.emit('setObject', INSTANZ_ID, o, function (e2) { fertig(e2 || null); });
+    });
+  }
+
+  function eigeneVorlagen() {
+    return VORLAGEN.filter(function (v) { return v._quelle === 'benutzer'; })
+      .map(function (v) {
+        var k = {};
+        Object.keys(v).forEach(function (s) { if (s.charAt(0) !== '_') { k[s] = v[s]; } });
+        return k;
+      });
   }
 
   function kurz(id, kanal) { return id.slice(kanal.length + 1); }
@@ -1088,9 +1153,9 @@
     (erk.erforderlich || []).map(auf).forEach(function (e) {
       if (fehlt.indexOf(e) === -1) { gruende.push(tr('tpl.presentIn', e)); }
     });
+    var ausgaenge = v.mehrfach ? instanzenVon(v, kanal) : [];
     if (v.mehrfach) {
-      var liste = instanzenVon(v, kanal);
-      gruende.push(tr('tpl.outputsFound', liste.join(', ')));
+      gruende.push(tr('tpl.outputsFound', ausgaenge.join(', ')));
     }
 
     if (erk.inhalt) {
@@ -1112,21 +1177,28 @@
       return { vorlage: v, passt: false, fehler: einmal };
     }
 
-    /* Namenshinweis entscheidet nur zwischen sonst gleichwertigen Vorlagen. */
-    /* Bewertung, damit bei mehreren passenden Vorlagen nachvollziehbar
-       eine gewinnt: Namenshinweis schlaegt alles, dann die genauere
-       Erkennung, zuletzt der Rang aus der Vorlagendatei. */
-    var punkte = 0;
+    /* Bewertung. Zuerst zaehlt, was die Vorlage am Geraet wirklich
+       nachgewiesen hat — jeder gefundene Pflichtpunkt, bei mehreren
+       Ausgaengen je Ausgang, dazu jede aufgegangene Inhaltspruefung.
+       Erst danach der Namenshinweis, und der entscheidet damit wirklich
+       nur zwischen gleich gut belegten Vorlagen. Frueher schlug er alles:
+       eine selbstgebaute Vorlage verlor gegen eine mitgelieferte, bloss
+       weil deren Wort zufaellig im Geraetenamen stand. Die Abstaende sind
+       so gross, dass sich die Stufen nie ueberholen koennen. */
     var name = kanal.split('.').pop();
-    if (erk.namenshinweis && new RegExp(erk.namenshinweis, 'i').test(name)) {
-      punkte += 1000;
-      gruende.push(tr('tpl.nameHint', sprachtext(v.name)));
-    }
-    punkte += (erk.erforderlich || []).length * 100;
-    punkte += Object.keys(erk.inhalt || {}).length * 100;
-    punkte += (v.rang || 0);
+    var belege = (erk.erforderlich || []).length *
+                 (v.mehrfach ? Math.max(1, ausgaenge.length) : 1) +
+                 Object.keys(erk.inhalt || {}).length;
+    var namenstreffer = !!(erk.namenshinweis && new RegExp(erk.namenshinweis, 'i').test(name));
+    if (namenstreffer) { gruende.push(tr('tpl.nameHint', sprachtext(v.name))); }
+    var eigen = v._quelle === 'benutzer';
+    var punkte = belege * 1000000 +
+                 (namenstreffer ? 10000 : 0) +
+                 (eigen ? 1000 : 0) +
+                 Math.min(v.rang || 0, 999);
     return { vorlage: v, passt: true, punkte: punkte, gruende: gruende, fehler: [],
-             instanz: inst, instanzen: v.mehrfach ? instanzenVon(v, kanal) : [] };
+             belege: belege, namenstreffer: namenstreffer, eigen: eigen,
+             instanz: inst, instanzen: ausgaenge };
   }
 
   /* Vorlage auf einen Kanal anwenden → Entwurf. */
@@ -1143,7 +1215,15 @@
               kanalname: v.mehrfach ? auf(v.kanalname || 'POWER%N%') : null };
 
     (v.zustaende || []).forEach(function (z) {
-      var quelle = hatPunkt(kanal, auf(z.lesen));
+      /* Ein absolut gespeicherter Punkt zeigt auf ein festes Objekt und
+         wird nicht unter dem Kanal gesucht — etwa ein gemeinsamer
+         Sollwert in 0_userdata. */
+      var finde = function (pfad) {
+        if (!pfad) { return null; }
+        if (z.absolut) { return objects[pfad] ? pfad : null; }
+        return hatPunkt(kanal, auf(pfad));
+      };
+      var quelle = finde(z.lesen);
       if (!quelle) {
         if (!z.optional) { e.uebersprungen.push(tr('tpl.skippedSource', z.name, auf(z.lesen))); }
         return;
@@ -1169,10 +1249,11 @@
         unit: z.einheit || '',
         wr: !!z.schreiben,
         srcR: quelle,
-        srcW: z.schreiben ? (hatPunkt(kanal, auf(z.schreiben)) || '') : '',
+        srcW: z.schreiben ? (finde(z.schreiben) || '') : '',
         f: formel,
         fw: z.schreibformel || '',
-        caption: '',
+        caption: z.beschriftung || '',
+        dec: z.nachkommastellen === undefined ? undefined : String(z.nachkommastellen),
         manuell: false,
         ausVorlage: z.name,
         hinweis: z.hinweis || ''
@@ -1205,7 +1286,7 @@
     if (!e) { return null; }
     if (!vorlagenId && gewaehlt.passt) {
       var gleichAuf = treffer.filter(function (t) { return t.punkte === gewaehlt.punkte; });
-      var ohneHinweis = gewaehlt.punkte < 1000;
+      var ohneHinweis = !gewaehlt.namenstreffer;
       if (gleichAuf.length > 1 || (ohneHinweis && treffer.length > 1)) {
         e.grund.push(tr('tpl.noNameHint', sprachtext(gewaehlt.vorlage.name)));
       }
@@ -1309,12 +1390,33 @@
       if (s.srcR) { quellen.push(s.srcR); }
       if (s.srcW) { quellen.push(s.srcW); }
     });
+    /* Vorlagen duerfen aus festen Objekten ausserhalb des Kanals lesen.
+       Deren Werte muessen vorliegen, bevor die Vorlage geprueft wird —
+       sonst faellt ein JSON-Feld durch, bloss weil noch nichts da war. */
+    VORLAGEN.forEach(function (v) {
+      (v.zustaende || []).forEach(function (z) {
+        if (z.absolut && z.lesen && objects[z.lesen]) { quellen.push(z.lesen); }
+      });
+    });
 
     holeWerte(id, quellen, function () {
       if (id !== current) { return; }
       if (id.indexOf('alias.') !== 0) {
-        var v = vorschlag(id);
-        if (v) { v.ziel = zielId(id); entwurf = v; }
+        /* Gibt es fuer diese Quelle schon einen Alias, bleibt es bei der
+           Vorlage, aus der er entstanden ist. Sonst koennte eine spaeter
+           angelegte Vorlage ein fertiges Geraet still uebernehmen. */
+        var fest = null;
+        var vorh = aliasFuer(id);
+        if (vorh && objects[vorh] && objects[vorh].native && objects[vorh].native.vorlage) {
+          var gid = objects[vorh].native.vorlage;
+          if (VORLAGEN.some(function (x) { return x.id === gid; })) { fest = gid; }
+        }
+        var v = vorschlag(id, fest);
+        if (v) {
+          v.ziel = zielId(id);
+          if (fest) { v.vonHandGewaehlt = false; v.ausBestand = true; }
+          entwurf = v;
+        }
       }
       var nach = [];
       entwurf.states.forEach(function (s) {
@@ -1586,6 +1688,7 @@
       $('#foot').textContent = tr('app.objectsCount', keysSorted.length) + '  ·  ' + tr('diff.points', e.states.length);
       var bd0 = $('#btn-dry');
       if (bd0) { bd0.disabled = true; }
+      tplKnopf(false);
       var ba0 = $('#btn-dry-alle');
       if (ba0) { ba0.hidden = true; }
       return;
@@ -1917,6 +2020,20 @@
         vh.style.marginLeft = '7px';
         hd.appendChild(vh);
       }
+      if (e.ausBestand) {
+        var ab = el('span', 'chip mut', tr('tpl.remembered'));
+        ab.style.marginLeft = '7px';
+        ab.title = tr('tpl.rememberedHint');
+        hd.appendChild(ab);
+      }
+      /* Woher die Vorlage kommt — mitgeliefert oder selbst gebaut. */
+      var vq = null;
+      VORLAGEN.forEach(function (v) { if (v.id === e.vorlage) { vq = v; } });
+      if (vq && vq._quelle === 'benutzer') {
+        var qc = el('span', 'chip ok', tr('tpl.own'));
+        qc.style.marginLeft = '7px';
+        hd.appendChild(qc);
+      }
       sg.appendChild(hd);
       /* Begruendung nicht mehr als Liste, sondern hinter einem kleinen i. */
       var zeilen = [];
@@ -1994,7 +2111,8 @@
         /* Auch nicht passende bleiben waehlbar — mit Grund daneben. Sonst
            steht man bei einem Geraet, das noch nichts gesendet hat, ohne
            jede Moeglichkeit da. */
-        var o = opt(v.id, sprachtext(v.name) + '  v' + v.version + '   ' +
+        var o = opt(v.id, (v._quelle === 'benutzer' ? '★ ' : '') +
+          sprachtext(v.name) + '  v' + v.version + '   ' +
           (t.passt ? tr('tpl.fits') : tr('tpl.fitsNot', t.fehler.join(', '))));
         if (v.id === e.vorlage) { o.selected = true; }
         selV.appendChild(o);
@@ -2279,9 +2397,9 @@
     var bd = $('#btn-dry');
     var ba = $('#btn-dry-alle');
     var mehr = e.instanzen && e.instanzen.length > 1;
+    tplKnopf(true);
     if (bd) {
       bd.disabled = false;
-      var tut = objects[zielId2] ? 'aktualisieren' : 'erzeugen';
       /* Bei mehreren Ausgaengen den Ausgang beim Namen nennen — „für den
          ausgewählten Ausgang" waere lang und sagt weniger. */
       bd.textContent = mehr
@@ -2316,6 +2434,7 @@
       host.appendChild(el('div', 'empty', tr('folder.nothingHere')));
       $('#foot').textContent = tr('app.objectsCount', keysSorted.length);
       $('#btn-dry').disabled = true;
+      tplKnopf(false);
       return;
     }
 
@@ -2375,7 +2494,8 @@
 
     $('#foot').textContent = tr('app.objectsCount', keysSorted.length) + '  ·  ' + geraete.length + ' ' + tr('folder.devices');
     var bd = $('#btn-dry');
-    if (bd) { bd.disabled = true; bd.textContent = 'Alias erzeugen …'; bd.title = tr('write.pickDeviceFirst'); }
+    if (bd) { bd.disabled = true; bd.textContent = tr('write.createAlias'); bd.title = tr('write.pickDeviceFirst'); }
+    tplKnopf(false);
     var chip = $('#checkchip');
     if (chip) { chip.className = 'chip mut'; chip.textContent = ''; }
   }
@@ -3047,8 +3167,9 @@
         fehler.forEach(function (t) { ul.appendChild(el('li', null, t)); });
         m.appendChild(ul);
       } else {
-        m.appendChild(el('b', null, fertig + ' Objekte geschrieben' +
-          (loeschen.length ? ', ' + loeschen.length + ' entfernt' : '') + '.'));
+        m.appendChild(el('b', null, loeschen.length
+          ? tr('write.doneWithRemoved', fertig, loeschen.length)
+          : tr('write.done', fertig)));
         m.appendChild(el('div', null, tr('write.aliasNowAt', entwurf.ziel || entwurf.kanal)));
       }
       body.appendChild(m);
@@ -3057,6 +3178,556 @@
       /* Objektliste neu einlesen, damit Baum und Bericht stimmen */
       ladeObjekte();
     }
+  }
+
+  /* ================== Aus einem Geraet eine Vorlage machen ==================
+     Die Gegenrichtung zu wendeAn. Ableitbar ist, welche Punkte benutzt
+     werden und wie sie gelesen werden. Nicht ableitbar ist, welche davon
+     ein Geraet zu diesem Geraetetyp machen und woran man es am Namen
+     erkennt — danach fragt der Dialog. */
+
+  var tplZ = null;              /* Arbeitsstand des Vorlagendialogs */
+
+  function textIn(n, l) {
+    if (!n) { return ''; }
+    if (typeof n === 'string') { return n; }
+    return n[l] || n.en || n.de || '';
+  }
+
+  function relZu(id, kanal) {
+    if (id && id.indexOf(kanal + '.') === 0) { return { p: kurz(id, kanal), abs: false }; }
+    return { p: id || '', abs: true };
+  }
+
+  /* stat.POWER1 → stat.POWER%N%. Ersetzt wird nur am Ende eines
+     Abschnitts und nur, wenn davor noch etwas steht — sonst wuerde aus
+     ENERGY.Power beim Speichern Unsinn. */
+  function zuPlatzhalter(pfad, inst) {
+    var i = (inst === null || inst === undefined) ? '' : String(inst);
+    if (!i) { return pfad; }
+    return String(pfad).split('.').map(function (t) {
+      return (t.length > i.length && t.slice(-i.length) === i) ? t.slice(0, -i.length) + '%N%' : t;
+    }).join('.');
+  }
+
+  function schluesselAus(text) {
+    return String(text || '').toLowerCase()
+      .split('ä').join('ae').split('ö').join('oe').split('ü').join('ue').split('ß').join('ss')
+      .replace(/[^a-z0-9]+/g, '-').replace(/^-+/, '').replace(/-+$/, '') || 'vorlage';
+  }
+
+  function freierSchluessel(basis) {
+    var da = {};
+    VORLAGEN.forEach(function (v) { da[v.id] = 1; });
+    if (!da[basis]) { return basis; }
+    for (var i = 2; i < 99; i++) { if (!da[basis + '-' + i]) { return basis + '-' + i; } }
+    return basis + '-neu';
+  }
+
+  function vorlagenVorbereiten(e) {
+    var quelle = null;
+    VORLAGEN.forEach(function (v) { if (v.id === e.vorlage) { quelle = v; } });
+    var maxRang = 0;
+    VORLAGEN.forEach(function (v) { if ((v.rang || 0) > maxRang) { maxRang = v.rang || 0; } });
+
+    var mehrfach = !!(quelle && quelle.mehrfach);
+    var inst = mehrfach ? e.instanz : null;
+
+    var zeilen = [];
+    e.states.forEach(function (s) {
+      if (!s.n || !s.srcR) { return; }
+      var r = relZu(s.srcR, e.kanal);
+      var w = (s.srcW && s.srcW !== s.srcR) ? relZu(s.srcW, e.kanal) : null;
+      var zv = null;
+      if (quelle && s.ausVorlage) {
+        (quelle.zustaende || []).forEach(function (z) { if (z.name === s.ausVorlage) { zv = z; } });
+      }
+      zeilen.push({
+        s: s,
+        name: s.n,
+        lesen: (mehrfach && !r.abs) ? zuPlatzhalter(r.p, inst) : r.p,
+        lesenAbs: r.abs,
+        schreiben: w ? ((mehrfach && !w.abs) ? zuPlatzhalter(w.p, inst) : w.p) : '',
+        schreibenAbs: w ? w.abs : false,
+        aus: !s.on,
+        /* Vorschlag: was einen Schreibweg hat, traegt das Geraet. Was aus
+           einer Vorlage kam, erbt deren Einstufung. Von Hand ergaenzte
+           Punkte bleiben freiwillig — jeder Pflichtpunkt macht die
+           Vorlage genauer und zugleich sproeder. */
+        pflicht: r.abs ? false : (zv ? !zv.optional : !!w)
+      });
+    });
+
+    var inhalte = [];
+    zeilen.forEach(function (z) {
+      var f = feldAusFormel(z.s.f);
+      if (!f || z.lesenAbs) { return; }
+      var oben = f.split('.')[0];
+      var da = false;
+      inhalte.forEach(function (x) { if (x.punkt === z.lesen && x.feld === oben) { da = true; } });
+      if (!da) { inhalte.push({ punkt: z.lesen, feld: oben, an: false }); }
+    });
+    if (quelle && quelle.erkennung && quelle.erkennung.inhalt) {
+      Object.keys(quelle.erkennung.inhalt).forEach(function (p) {
+        var da = false;
+        inhalte.forEach(function (x) {
+          if (x.punkt === p) { da = true; x.an = true; x.feld = quelle.erkennung.inhalt[p]; }
+        });
+        if (!da) { inhalte.push({ punkt: p, feld: quelle.erkennung.inhalt[p], an: true }); }
+      });
+    }
+
+    var geraetName = (e.kanal || '').split('.').pop();
+    return {
+      e: e,
+      zeilen: zeilen,
+      inhalte: inhalte,
+      kopf: {
+        modus: quelle ? 'update' : 'neu',
+        quelle: quelle,
+        id: quelle ? quelle.id : freierSchluessel(schluesselAus(geraetName)),
+        nameDe: quelle ? textIn(quelle.name, 'de') : geraetName,
+        nameEn: quelle ? textIn(quelle.name, 'en') : geraetName,
+        geraetetyp: e.want || (quelle ? quelle.geraetetyp : '') || '',
+        namenshinweis: quelle ? ((quelle.erkennung || {}).namenshinweis || '') : '',
+        rang: quelle ? (quelle.rang || 0) : maxRang + 10,
+        maxRang: maxRang,
+        mehrfach: mehrfach,
+        kanalname: (quelle && quelle.kanalname) ? quelle.kanalname : '',
+        geraetName: geraetName
+      }
+    };
+  }
+
+  /* Der Entwurf als Vorlagenobjekt — genau das, was gespeichert wird. */
+  function baueVorlage(z) {
+    var k = z.kopf;
+    var v = {
+      id: k.id,
+      version: k.modus === 'update' && k.quelle ? (k.quelle.version || 1) + 1 : 1,
+      rang: Number(k.rang) || 0,
+      name: { de: k.nameDe || k.id, en: k.nameEn || k.nameDe || k.id },
+      geraetetyp: k.geraetetyp || undefined,
+      erkennung: {}
+    };
+
+    var erf = [];
+    z.zeilen.forEach(function (r) {
+      if (!r.pflicht || r.lesenAbs) { return; }
+      if (erf.indexOf(r.lesen) === -1) { erf.push(r.lesen); }
+      if (r.schreiben && !r.schreibenAbs && erf.indexOf(r.schreiben) === -1) { erf.push(r.schreiben); }
+    });
+    v.erkennung.erforderlich = erf;
+
+    var inh = {};
+    z.inhalte.forEach(function (x) { if (x.an) { inh[x.punkt] = x.feld; } });
+    if (Object.keys(inh).length) { v.erkennung.inhalt = inh; }
+    if (k.namenshinweis) { v.erkennung.namenshinweis = k.namenshinweis; }
+
+    if (k.mehrfach) {
+      v.mehrfach = { platzhalter: '%N%' };
+      v.kanalname = k.kanalname || 'POWER%N%';
+    }
+
+    v.zustaende = z.zeilen.map(function (r) {
+      var s = r.s;
+      var f = feldAusFormel(s.f);
+      var zu = {
+        name: r.name,
+        rolle: s.role || undefined,
+        typ: s.typ || undefined,
+        einheit: s.unit || undefined,
+        lesen: r.lesen
+      };
+      if (r.lesenAbs) { zu.absolut = true; }
+      if (r.schreiben) { zu.schreiben = r.schreiben; }
+      if (f) { zu.feld = f; } else if (s.f) { zu.leseformel = s.f; }
+      if (s.fw && r.schreiben) { zu.schreibformel = s.fw; }
+      if (!r.pflicht) { zu.optional = true; }
+      if (r.aus) { zu.vorgabeAus = true; }
+      if (s.caption) { zu.beschriftung = s.caption; }
+      if (s.dec !== undefined && s.dec !== '') { zu.nachkommastellen = Number(s.dec); }
+      if (s.hinweis) { zu.hinweis = s.hinweis; }
+      return zu;
+    });
+
+    /* Was die Ursprungsvorlage sonst noch mitbringt — etwa
+       nebenwirkungen — bleibt erhalten. Sonst fiele beim Aktualisieren
+       still unter den Tisch, was der Dialog gar nicht anzeigt. */
+    var bekannt = { id: 1, version: 1, rang: 1, name: 1, geraetetyp: 1,
+                    erkennung: 1, mehrfach: 1, kanalname: 1, zustaende: 1 };
+    if (k.modus === 'update' && k.quelle) {
+      Object.keys(k.quelle).forEach(function (feld) {
+        if (feld.charAt(0) === '_' || bekannt[feld]) { return; }
+        v[feld] = k.quelle[feld];
+      });
+    }
+
+    return JSON.parse(JSON.stringify(v));      /* undefined weg */
+  }
+
+  /* Kandidaten fuer den Probelauf. Nicht jeder Knoten im Baum — nur die,
+     unter denen der erste Pflichtpunkt ueberhaupt vorkommt. Sonst muesste
+     hatPunkt fuer tausende Knoten die Kleinschreibkarte aufbauen, und das
+     dauert auf einer grossen Anlage sichtbar lange. */
+  function kandidatenFuer(v) {
+    var erf = (v.erkennung || {}).erforderlich || [];
+    if (!erf.length) { return []; }
+    var ph = v.mehrfach ? (v.mehrfach.platzhalter || '%N%') : null;
+    var vorn = ph ? String(erf[0]).split(ph)[0] : String(erf[0]);
+    if (!vorn) { return []; }
+    var suche = ('.' + vorn).toLowerCase();
+    var raus = {};
+    keysSorted.forEach(function (id) {
+      if (id.indexOf('alias.') === 0) { return; }
+      if (!objects[id] || objects[id].type !== 'state') { return; }
+      var i = id.toLowerCase().indexOf(suche);
+      if (i < 1) { return; }
+      var kanal = id.slice(0, i);
+      if (kanal.split('.').length >= 3) { raus[kanal] = 1; }
+    });
+    return Object.keys(raus).sort();
+  }
+
+  /* Was faengt diese Vorlage, und wer gewinnt dort heute? */
+  function probelauf(vorlage) {
+    /* Nie am Original arbeiten — sonst stuende hinterher _quelle im
+       gespeicherten JSON. */
+    var neu = JSON.parse(JSON.stringify(vorlage));
+    neu._quelle = 'benutzer';
+    var raus = [];
+    kandidatenFuer(neu).forEach(function (p) {
+      var t = pruefeVorlage(neu, p);
+      if (!t.passt) { return; }
+
+      /* Wer gewinnt hier heute, mit dem Bestand wie er ist? Beim
+         Aktualisieren ist das oft die Vorlage selbst — dann wechselt
+         nichts, auch wenn sie den Vergleich gegen alle anderen gewinnt. */
+      var jetzt = null, andere = null;
+      VORLAGEN.forEach(function (v) {
+        var x = pruefeVorlage(v, p);
+        if (!x.passt) { return; }
+        if (!jetzt || x.punkte > jetzt.punkte) { jetzt = x; }
+        if (v.id !== neu.id && (!andere || x.punkte > andere.punkte)) { andere = x; }
+      });
+      raus.push({
+        id: p, eigen: t, gegner: andere,
+        gewinnt: !andere || t.punkte > andere.punkte,
+        wechsel: !!(jetzt && jetzt.vorlage.id !== neu.id &&
+                    (!andere || t.punkte > andere.punkte))
+      });
+    });
+    return raus;
+  }
+
+  function tplKnopf(an) {
+    var b = $('#btn-tpl');
+    if (b) {
+      b.disabled = !an;
+      b.title = an ? '' : tr('tpls.pickDeviceFirst');
+    }
+  }
+
+  function zeigeVorlagenDialog() {
+    if (!entwurf || !current) { return; }
+    tplZ = vorlagenVorbereiten(entwurf);
+    var b = $('#btn-tpl-save');
+    if (b) { b.hidden = false; b.disabled = false; }
+    zeichneVorlagenDialog();
+    $('#dlg-tpl').showModal();
+  }
+
+  function tplFeld(label, wert, aendern, breit) {
+    var l = el('label', 'feld');
+    l.appendChild(el('span', 'feldlabel', label));
+    var i = document.createElement('input');
+    i.className = 'tx';
+    i.type = 'text';
+    i.value = wert === undefined || wert === null ? '' : String(wert);
+    if (breit) { i.style.minWidth = breit; }
+    i.addEventListener('input', function () { aendern(i.value); });
+    i.addEventListener('change', function () { aendern(i.value); zeichneVorlagenDialog(); });
+    l.appendChild(i);
+    return l;
+  }
+
+  function zeichneVorlagenDialog() {
+    var z = tplZ;
+    if (!z) { return; }
+    var k = z.kopf;
+    var body = $('#tpl-body');
+    body.textContent = '';
+
+    /* --- aktualisieren oder neu --- */
+    if (k.quelle) {
+      var wahl = el('div', 'card');
+      wahl.style.marginBottom = '11px';
+      var wh = el('div', 'ch');
+      wh.appendChild(el('span', 'typ', tr('tpls.whatToDo')));
+      wahl.appendChild(wh);
+      var wb = el('div');
+      wb.style.padding = '9px 12px 11px';
+      [['update', tr('tpls.updateIt', textIn(k.quelle.name, sprache), (k.quelle.version || 1) + 1),
+        k.quelle._quelle === 'paket' ? tr('tpls.shadowsPackage') : ''],
+       ['neu', tr('tpls.saveAsNew'), tr('tpls.saveAsNewHint')]].forEach(function (w) {
+        var r = el('label');
+        r.style.display = 'block';
+        r.style.margin = '3px 0';
+        r.style.fontSize = '12.5px';
+        var rb = document.createElement('input');
+        rb.type = 'radio';
+        rb.name = 'tplmodus';
+        rb.checked = k.modus === w[0];
+        rb.addEventListener('change', function () {
+          if (!rb.checked) { return; }
+          k.modus = w[0];
+          if (w[0] === 'neu') {
+            k.id = freierSchluessel(schluesselAus(k.nameDe || k.geraetName));
+            k.rang = k.maxRang + 10;
+          } else {
+            k.id = k.quelle.id;
+            k.rang = k.quelle.rang || 0;
+          }
+          zeichneVorlagenDialog();
+        });
+        r.appendChild(rb);
+        r.appendChild(document.createTextNode(' ' + w[1]));
+        if (w[2]) {
+          var hn = el('span', 'chip mut', w[2]);
+          hn.style.marginLeft = '6px';
+          r.appendChild(hn);
+        }
+        wb.appendChild(r);
+      });
+      wahl.appendChild(wb);
+      body.appendChild(wahl);
+    }
+
+    /* --- Kopfdaten --- */
+    var kk = el('div', 'card');
+    kk.style.marginBottom = '11px';
+    var kh = el('div', 'ch');
+    kh.appendChild(el('span', 'typ', tr('tpls.head')));
+    kh.appendChild(el('span', 'chip mut', k.id));
+    kk.appendChild(kh);
+    var kb = el('div');
+    kb.style.padding = '9px 12px 11px';
+    kb.style.display = 'flex';
+    kb.style.flexWrap = 'wrap';
+    kb.style.gap = '9px 14px';
+
+    kb.appendChild(tplFeld(tr('tpls.nameDe'), k.nameDe, function (x) { k.nameDe = x; }, '150px'));
+    kb.appendChild(tplFeld(tr('tpls.nameEn'), k.nameEn, function (x) { k.nameEn = x; }, '150px'));
+    kb.appendChild(tplFeld(tr('tpls.id'), k.id, function (x) { k.id = schluesselAus(x); }, '150px'));
+
+    var lt = el('label', 'feld');
+    lt.appendChild(el('span', 'feldlabel', tr('tpls.deviceType')));
+    var st = el('select', 'tx');
+    st.appendChild(opt('', tr('tpls.noType')));
+    (D ? Object.keys(D.patterns).sort() : []).forEach(function (m) {
+      var o = opt(m, m);
+      if (m === k.geraetetyp) { o.selected = true; }
+      st.appendChild(o);
+    });
+    st.addEventListener('change', function () { k.geraetetyp = st.value; zeichneVorlagenDialog(); });
+    lt.appendChild(st);
+    kb.appendChild(lt);
+
+    kb.appendChild(tplFeld(tr('tpls.rank'), k.rang, function (x) { k.rang = x; }, '60px'));
+    kk.appendChild(kb);
+
+    var nh = el('div');
+    nh.style.padding = '0 12px 11px';
+    var nf = tplFeld(tr('tpls.nameHint'), k.namenshinweis, function (x) { k.namenshinweis = x; }, '260px');
+    nh.appendChild(nf);
+    var nt = el('div', 'hint', tr('tpls.nameHintHelp', k.geraetName));
+    nt.style.marginTop = '4px';
+    nh.appendChild(nt);
+    kk.appendChild(nh);
+    body.appendChild(kk);
+
+    /* --- Zustaende --- */
+    var zk = el('div', 'card');
+    zk.style.marginBottom = '11px';
+    var zh = el('div', 'ch');
+    zh.appendChild(el('span', 'typ', tr('tpls.states')));
+    zh.appendChild(el('span', 'chip mut', tr('tpls.statesCount', z.zeilen.length)));
+    zk.appendChild(zh);
+
+    var kopfz = el('div', 'slot');
+    kopfz.style.gridTemplateColumns = '80px 1fr 1.2fr 60px';
+    kopfz.style.fontWeight = '600';
+    kopfz.style.opacity = '.7';
+    [tr('tpls.colRequired'), tr('tpls.colName'), tr('tpls.colPath'), tr('tpls.colOff')]
+      .forEach(function (t) { kopfz.appendChild(el('span', 'rx', t)); });
+    zk.appendChild(kopfz);
+
+    var absDa = false;
+    z.zeilen.forEach(function (r) {
+      if (r.lesenAbs) { absDa = true; }
+      var row = el('div', 'slot');
+      row.style.gridTemplateColumns = '80px 1fr 1.2fr 60px';
+
+      var cw = el('span');
+      var cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = r.pflicht;
+      cb.disabled = r.lesenAbs;
+      cb.addEventListener('change', function () { r.pflicht = cb.checked; zeichneVorlagenDialog(); });
+      cw.appendChild(cb);
+      row.appendChild(cw);
+
+      row.appendChild(el('span', 'sn', r.name));
+
+      var pw = el('span', 'rx');
+      pw.style.fontFamily = 'var(--mono)';
+      pw.appendChild(document.createTextNode(r.lesen));
+      if (r.schreiben) { pw.appendChild(el('span', 'chip mut', '→ ' + r.schreiben)); }
+      if (r.lesenAbs) { pw.appendChild(el('span', 'chip warn', tr('tpls.absolute'))); }
+      row.appendChild(pw);
+
+      row.appendChild(el('span', 'rx', r.aus ? tr('tpls.offByDefault') : ''));
+      zk.appendChild(row);
+    });
+    body.appendChild(zk);
+
+    if (absDa) {
+      var aw = el('div', 'aside w');
+      aw.style.marginBottom = '11px';
+      aw.appendChild(el('b', null, tr('tpls.absoluteTitle')));
+      aw.appendChild(document.createTextNode(tr('tpls.absoluteText')));
+      body.appendChild(aw);
+    }
+
+    /* --- Inhaltspruefungen --- */
+    if (z.inhalte.length) {
+      var ik = el('div', 'card');
+      ik.style.marginBottom = '11px';
+      var ih = el('div', 'ch');
+      ih.appendChild(el('span', 'typ', tr('tpls.content')));
+      ik.appendChild(ih);
+      var ib = el('div');
+      ib.style.padding = '9px 12px 11px';
+      z.inhalte.forEach(function (x) {
+        var r = el('label');
+        r.style.display = 'block';
+        r.style.margin = '3px 0';
+        r.style.fontSize = '12.5px';
+        var cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.checked = x.an;
+        cb.addEventListener('change', function () { x.an = cb.checked; zeichneVorlagenDialog(); });
+        r.appendChild(cb);
+        var t = el('span', null, ' ' + tr('tpls.contentRow', x.punkt, x.feld));
+        t.style.fontFamily = 'var(--mono)';
+        r.appendChild(t);
+        ib.appendChild(r);
+      });
+      ib.appendChild(el('div', 'hint', tr('tpls.contentHelp')));
+      ik.appendChild(ib);
+      body.appendChild(ik);
+    }
+
+    /* --- Probelauf --- */
+    var neu = baueVorlage(z);
+    var pk = el('div', 'card');
+    pk.style.marginBottom = '11px';
+    var ph = el('div', 'ch');
+    ph.appendChild(el('span', 'typ', tr('tpls.tryout')));
+    var treffer = [];
+    var fehlerErk = !neu.erkennung.erforderlich.length;
+    if (!fehlerErk) { treffer = probelauf(neu); }
+    var gew = treffer.filter(function (t) { return t.gewinnt; }).length;
+    var wech = treffer.filter(function (t) { return t.wechsel; }).length;
+    ph.appendChild(el('span', 'chip ' + (gew ? 'ok' : 'warn'), tr('tpls.hits', treffer.length, gew)));
+    if (wech) { ph.appendChild(el('span', 'chip warn', tr('tpls.takesOver', wech))); }
+    pk.appendChild(ph);
+    var pb = el('div');
+    pb.style.padding = '9px 12px 11px';
+    if (fehlerErk) {
+      pb.appendChild(el('div', 'hint', tr('tpls.noRequired')));
+    } else if (!treffer.length) {
+      pb.appendChild(el('div', 'hint', tr('tpls.noHits')));
+    } else {
+      treffer.slice(0, 40).forEach(function (t) {
+        var r = el('div', 'slot');
+        r.style.gridTemplateColumns = '1fr 150px 130px';
+        var idl = el('span', 'sn', t.id);
+        idl.style.fontFamily = 'var(--mono)';
+        if (t.id === (z.e.kanal || '')) { idl.style.fontWeight = '700'; }
+        r.appendChild(idl);
+        r.appendChild(el('span', 'rx', tr('tpls.evidence', t.eigen.belege)));
+        var w = el('span', 'chip ' + (t.gewinnt ? 'ok' : 'bad'),
+          t.gewinnt ? (t.gegner ? tr('tpls.beats', textIn(t.gegner.vorlage.name, sprache)) : tr('tpls.onlyOne'))
+                    : tr('tpls.losesTo', textIn(t.gegner.vorlage.name, sprache)));
+        r.appendChild(w);
+        pb.appendChild(r);
+      });
+      if (treffer.length > 40) {
+        pb.appendChild(el('div', 'hint', tr('tpls.andMore', treffer.length - 40)));
+      }
+    }
+    pk.appendChild(pb);
+    body.appendChild(pk);
+
+    /* --- das fertige JSON --- */
+    var jk = el('div', 'card');
+    var jh = el('div', 'ch');
+    jh.appendChild(el('span', 'typ', tr('tpls.json')));
+    jh.appendChild(el('span', 'chip mut', 'v' + neu.version));
+    jk.appendChild(jh);
+    var pre = el('div', 'raw');
+    pre.style.margin = '9px 12px 11px';
+    pre.style.whiteSpace = 'pre';
+    pre.style.maxHeight = 'none';
+    pre.textContent = JSON.stringify(neu, null, 2);
+    jk.appendChild(pre);
+    body.appendChild(jk);
+
+    var b = $('#btn-tpl-save');
+    if (b) {
+      b.disabled = fehlerErk || !k.id || !z.zeilen.length;
+      b.textContent = k.modus === 'update' ? tr('tpls.saveUpdate') : tr('tpls.saveNew');
+    }
+    var tt = $('#tpl-titel');
+    if (tt) { tt.textContent = tr('tpls.title', z.e.kanal.split('.').pop()); }
+  }
+
+  function speichereVorlageAusDialog() {
+    if (!tplZ) { return; }
+    var neu = baueVorlage(tplZ);
+    var liste = eigeneVorlagen();
+    var i = -1;
+    liste.forEach(function (v, n) { if (v.id === neu.id) { i = n; } });
+    if (i > -1) { liste[i] = neu; } else { liste.push(neu); }
+
+    var b = $('#btn-tpl-save');
+    if (b) { b.disabled = true; b.textContent = tr('tpls.saving'); }
+
+    speichereVorlagen(liste, function (err) {
+      var body = $('#tpl-body');
+      if (err) {
+        body.textContent = '';
+        var w = el('div', 'aside w');
+        w.appendChild(el('b', null, tr('tpls.failed')));
+        w.appendChild(document.createTextNode(' ' + err));
+        body.appendChild(w);
+        if (b) { b.disabled = false; b.textContent = tr('tpls.saveNew'); }
+        return;
+      }
+      ladeVorlagen(function () {
+        $('#meta').textContent = tr('app.patternsCount', D ? Object.keys(D.patterns).length : 0) +
+          '  ·  ' + tr('app.templatesCount', VORLAGEN.length);
+        body.textContent = '';
+        var m = el('div');
+        m.style.fontSize = '13px';
+        m.appendChild(el('b', null, tr('tpls.saved', neu.id, neu.version)));
+        m.appendChild(el('div', null, tr('tpls.savedWhere', INSTANZ_ID)));
+        body.appendChild(m);
+        if (b) { b.hidden = true; }
+        if (current) { zeichneErgebnis(); }
+      });
+    });
   }
 
   /* ================== Dialoge ================== */
@@ -3070,6 +3741,9 @@
     var ba2 = $('#btn-dry-alle');
     if (ba2) { ba2.addEventListener('click', function () { zeigeTrockenlauf(true); }); }
     if (bw) { bw.addEventListener('click', schreibeObjekte); }
+    var bt = $('#btn-tpl'), bts = $('#btn-tpl-save');
+    if (bt) { bt.addEventListener('click', zeigeVorlagenDialog); }
+    if (bts) { bts.addEventListener('click', speichereVorlageAusDialog); }
     document.querySelectorAll('dialog [data-close]').forEach(function (b) {
       b.addEventListener('click', function () { b.closest('dialog').close(); });
     });
@@ -3087,6 +3761,15 @@
   <div class="dfoot">
     <button class="btn" data-close>Schlie&szlig;en</button>
     <button class="btn primary" id="btn-dry-write">Jetzt anlegen</button>
+  </div>
+</dialog>
+
+<dialog id="dlg-tpl" style="max-width:820px;">
+  <h3 id="tpl-titel">Als Vorlage speichern</h3>
+  <div class="dbody" id="tpl-body"></div>
+  <div class="dfoot">
+    <button class="btn" data-close>Schlie&szlig;en</button>
+    <button class="btn primary" id="btn-tpl-save">Speichern</button>
   </div>
 </dialog>
 

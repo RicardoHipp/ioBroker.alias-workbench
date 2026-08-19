@@ -35,6 +35,13 @@ device. Templates are plain JSON files, one per template — see
 [Template format](#template-format). Shipped with the adapter:
 Tasmota socket, Tasmota light, Tasmota with multiple outputs, measurement point.
 
+**Your own templates.** Build a device — by hand or by adapting a shipped
+template — and save it as a template of your own. What can be derived is
+derived; what cannot be derived is asked. Before anything is stored, a try-out
+runs the new template against every device in the system and shows which ones it
+matches, which template wins there, and which devices would change hands. See
+[Saving your own templates](#saving-your-own-templates).
+
 **Devices with several outputs.** A power strip or valve manifold has
 `POWER1`, `POWER2`, … Since a `socket` pattern has exactly one `SET`, each
 output becomes its own channel, grouped under one folder. The output numbers are
@@ -53,8 +60,9 @@ Early. Usable, but not finished.
 - Works as an admin tab; the adapter itself runs no process (`mode: none`)
 - German and English
 - Not published on npm yet — install from GitHub
-- Missing: creating and saving your own templates, mass creation,
-  "who uses this alias", template versioning and re-applying
+- Missing: a template manager (list, rename, delete, import/export), mass
+  creation, "who uses this alias", re-applying a changed template to the
+  devices built from it
 
 ## How it works
 
@@ -117,10 +125,55 @@ One JSON file per template under `admin/vorlagen/`. Example:
 | `vorgabeAus` | proposed but unchecked — used for values no pattern has a slot for |
 | `feld` | builds the read function `JSON.parse(val).<field>` |
 | `mehrfach` + `%N%` | one device per output; the numbers are read from what exists |
+| `absolut` | `lesen` is a full object id, not relative to the device — the same object for every device |
+| `beschriftung` | the datapoint's display name, if it should differ from its slot name |
+| `nachkommastellen` | decimals for the value display |
 
 Datapoint names are matched case-insensitively as a fallback, because MQTT keeps
 whatever casing was published — the same device family sends `cmnd.POWER` on one
 unit and `cmnd.power` on the next.
+
+## Saving your own templates
+
+The **Save as template …** button turns the device you are looking at back into
+a template. Paths become relative to the device, `JSON.parse(val).ENERGY.Power`
+becomes `feld: "ENERGY.Power"` again, and roles, units and formulas are kept.
+
+What a template cannot know by itself is **which datapoints make a device this
+kind of device**. That is a statement about all future devices, so the dialog
+asks:
+
+- **required datapoints** — proposed (anything with a write path is required by
+  default), decided by you with a tick per row. Every extra required point makes
+  the template more precise and more brittle at the same time.
+- **content checks** — proposed wherever a JSON field is read. This is what
+  separates "socket" from "socket with metering", so it is offered but not
+  ticked.
+- **name hint** — never derived. It only breaks ties between templates that fit
+  equally well; MQTT cannot tell a lamp from a PC.
+
+Then the try-out shows what the detection actually catches, before anything is
+saved.
+
+Your templates live in `native.vorlagen` of the instance object, so they survive
+`iobroker upload` and adapter updates and are part of a Backitup backup. A
+template of yours with the same `id` as a shipped one shadows it. Storage and
+exchange format are the same JSON, so a template that turned out well can move
+into the package unchanged.
+
+### How a template is picked
+
+When several templates fit, the winner is decided in this order:
+
+1. **how many datapoints the template actually verified** — required points, per
+   output for multi-output devices, plus content checks that came out true
+2. **the name hint**, if it matches
+3. **your own template** over a shipped one
+4. **`rang`**, so the same device is always detected the same way
+
+Order matters. Counting evidence first is what keeps a template you built on
+purpose from losing to a shipped one whose word happens to appear in the device
+name.
 
 ## Installation
 
@@ -155,6 +208,13 @@ entry in `SPRACHEN` in `admin/tab.html` — nothing else.
 
 ## Changelog
 
+### 0.0.2
+
+- Save your own templates, stored in the instance configuration
+- Templates are picked by verified evidence first, name hint only as a tie-break
+- A device remembers the template it was built from
+- New template keys: `absolut`, `beschriftung`, `nachkommastellen`
+
 ### 0.0.1
 
 - First version. Detector report, live value preview, templates, devices with
@@ -179,4 +239,6 @@ geschrieben wird ausschließlich über einen Trockenlauf, der jedes Objekt vorhe
 als JSON zeigt.
 
 Gerätewissen steckt in Vorlagen — JSON-Dateien, keine Programmzeilen. Eine neue
-Gerätefamilie ist eine neue Datei.
+Gerätefamilie ist eine neue Datei. Ein fertig gebautes Gerät lässt sich als
+eigene Vorlage sichern; was sich ableiten lässt, wird abgeleitet, der Rest wird
+gefragt — und ein Probelauf zeigt vorher, welche Geräte die neue Vorlage fängt.
