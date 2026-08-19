@@ -29,5 +29,13 @@
     "LICENSE"
   ],
   "main": "io-package.json",
-  "readmeFilename": "README.md"
+  "readmeFilename": "README.md",
+  "homepage": "https://github.com/RicardoHipp/ioBroker.alias-workbench",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RicardoHipp/ioBroker.alias-workbench.git"
+  },
+  "bugs": {
+    "url": "https://github.com/RicardoHipp/ioBroker.alias-workbench/issues"
+  }
 }
