@@ -155,6 +155,15 @@
   .slot .who { color:var(--ink-2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .slot .v { font-variant-numeric:tabular-nums; white-space:nowrap; color:var(--ink); }
   .slot .rx { font-size:10px; color:var(--ink-3); }
+  /* Vorlagentabelle: erst die drei Entscheidungen, dann der Text. Ein
+     langer Name darf nichts mehr verschieben — deshalb feste Spalten
+     zuerst, und die Textspalten duerfen schrumpfen (min-width:0). */
+  .vzeile { grid-template-columns:66px 58px 84px minmax(0,1.4fr) minmax(0,1fr); }
+  .vzeile > * { min-width:0; }
+  .vzeile .sn { word-break:break-all; font-weight:600; }
+  .vzeile .pf { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .vkopf { font-weight:600; opacity:.7; }
+  .vkopf > span { font-size:10px; color:var(--ink-3); }
 
   .stlist .row {
     display:grid; grid-template-columns:1fr 170px 110px 13px; gap:9px; align-items:center;
@@ -4280,67 +4289,59 @@
       zk.appendChild(az);
     }
 
-    var SPALTEN = '80px 1fr 1.2fr 66px 92px';
-    var kopfz = el('div', 'slot');
-    kopfz.style.gridTemplateColumns = SPALTEN;
-    kopfz.style.fontWeight = '600';
-    kopfz.style.opacity = '.7';
-    [tr('tpls.colInTemplate'), tr('tpls.colName'), tr('tpls.colPath'),
-     tr('tpls.colDefault'), tr('tpls.colRequired')]
-      .forEach(function (t) { kopfz.appendChild(el('span', 'rx', t)); });
+    var kopfz = el('div', 'slot vzeile vkopf');
+    [tr('tpls.colInTemplate'), tr('tpls.colDefault'), tr('tpls.colRequired'),
+     tr('tpls.colName'), tr('tpls.colPath')]
+      .forEach(function (t) { kopfz.appendChild(el('span', null, t)); });
     zk.appendChild(kopfz);
 
     var absDa = false;
     z.zeilen.forEach(function (r) {
       if (!r.weg && r.lesenAbs) { absDa = true; }
-      var row = el('div', 'slot');
-      row.style.gridTemplateColumns = SPALTEN;
+      var row = el('div', 'slot vzeile');
       if (r.weg) { row.style.opacity = '.45'; }
 
+      var haken = function (an, gesperrt, titel, tut) {
+        var w = el('span');
+        var c = document.createElement('input');
+        c.type = 'checkbox';
+        c.checked = an;
+        c.disabled = !!gesperrt;
+        c.title = titel;
+        c.addEventListener('change', function () { tut(c.checked); });
+        w.appendChild(c);
+        return w;
+      };
+
       /* 1. Kommt der Punkt ueberhaupt in die Vorlage? */
-      var cw = el('span');
-      var cbIn = document.createElement('input');
-      cbIn.type = 'checkbox';
-      cbIn.checked = !r.weg;
-      cbIn.addEventListener('change', function () {
-        r.weg = !cbIn.checked;
+      row.appendChild(haken(!r.weg, false, tr('tpls.colInTemplate'), function (an) {
+        r.weg = !an;
         if (r.weg) { r.pflicht = false; }
         zeichneVorlagenDialog();
-      });
-      cw.appendChild(cbIn);
-      row.appendChild(cw);
+      }));
+
+      /* 2. Ist er beim naechsten Geraet vorgehakt? Kommt vom Haken am
+            Geraet, laesst sich hier aber noch drehen. */
+      row.appendChild(haken(!r.aus, r.weg, tr('tpls.colDefault'), function (an) {
+        r.aus = !an;
+        zeichneVorlagenDialog();
+      }));
+
+      /* 3. Muss er da sein, damit die Vorlage ueberhaupt greift? */
+      row.appendChild(haken(r.pflicht, r.lesenAbs || r.weg, tr('tpls.colRequired'), function (an) {
+        r.pflicht = an;
+        zeichneVorlagenDialog();
+      }));
 
       row.appendChild(el('span', 'sn', r.name));
 
-      var pw = el('span', 'rx');
+      var pw = el('span', 'rx pf');
       pw.style.fontFamily = 'var(--mono)';
+      pw.title = zPfad(r, k, false) + (r.schreibenRoh ? '  → ' + zPfad(r, k, true) : '');
       pw.appendChild(document.createTextNode(zPfad(r, k, false)));
       if (r.schreibenRoh) { pw.appendChild(el('span', 'chip mut', '→ ' + zPfad(r, k, true))); }
       if (r.lesenAbs) { pw.appendChild(el('span', 'chip warn', tr('tpls.absolute'))); }
       row.appendChild(pw);
-
-      /* 2. Ist er beim naechsten Geraet vorgehakt? Kommt vom Haken am
-            Geraet, laesst sich hier aber noch drehen. Auch ein Haken —
-            es ist ein Ja/Nein wie die anderen beiden, und ein Knopf
-            sieht nach Handlung aus statt nach Zustand. */
-      var vz = el('span');
-      var cbV = document.createElement('input');
-      cbV.type = 'checkbox';
-      cbV.checked = !r.aus;
-      cbV.disabled = r.weg;
-      cbV.addEventListener('change', function () { r.aus = !cbV.checked; zeichneVorlagenDialog(); });
-      vz.appendChild(cbV);
-      row.appendChild(vz);
-
-      /* 3. Muss er da sein, damit die Vorlage ueberhaupt greift? */
-      var pz = el('span');
-      var cb = document.createElement('input');
-      cb.type = 'checkbox';
-      cb.checked = r.pflicht;
-      cb.disabled = r.lesenAbs || r.weg;
-      cb.addEventListener('change', function () { r.pflicht = cb.checked; zeichneVorlagenDialog(); });
-      pz.appendChild(cb);
-      row.appendChild(pz);
 
       zk.appendChild(row);
     });
