@@ -2332,8 +2332,15 @@
       cbw.appendChild(cb);
       row.appendChild(cbw);
 
-      var mk = el('span', 'mk2 ' + (!s.on ? 'out' : (unfertig ? 'bad' : (pl ? 'ok' : 'out'))));
-      mk.textContent = !s.on ? '' : (unfertig ? '!' : (pl ? '✓' : '·'));
+      /* Nur noch bei einem Problem ein Zeichen. Vorher stand hier ein
+         Haken, sobald der Punkt angehakt war und einen Platz im Muster
+         hatte — das las sich wie eine Wiederholung des Kaestchens
+         daneben, und den Platz nennt die Zeile ohnehin im Klartext
+         („ACTUAL" hinter dem Namen). Uebrig bleibt, was man beim
+         Ueberfliegen wirklich sucht: wo klemmt es. */
+      var mk = el('span', 'mk2 bad');
+      mk.textContent = (s.on && unfertig) ? '!' : '';
+      if (mk.textContent) { mk.title = !s.n ? tr('list.nameMissing') : tr('list.sourceMissing'); }
       row.appendChild(mk);
 
       var n3 = el('span', 'nm3', s.n || tr('list.newPoint'));
