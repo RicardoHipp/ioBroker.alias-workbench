@@ -1,8 +1,12 @@
 {
   "common": {
     "name": "alias-workbench",
-    "version": "0.0.8",
+    "version": "0.0.9",
     "news": {
+      "0.0.9": {
+        "en": "Tasmota templates cover apparent power, reactive power and power factor",
+        "de": "Tasmota-Vorlagen decken Schein- und Blindleistung und den Leistungsfaktor ab"
+      },
       "0.0.8": {
         "en": "Slots that need a value list (EFFECT) can be filled again",
         "de": "Plätze mit Werteliste (EFFECT) lassen sich wieder belegen"

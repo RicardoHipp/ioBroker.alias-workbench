@@ -252,6 +252,20 @@ entry in `SPRACHEN` in `admin/tab.html` — nothing else.
 
 ## Changelog
 
+### 0.0.9
+
+- Tasmota templates cover apparent power, reactive power and power factor,
+  proposed but unticked
+
+### 0.0.8
+
+- Slots that require a value list (EFFECT) can be filled again; slots whose
+  type is given as a list no longer produce an invalid `common.type`
+
+### 0.0.7
+
+- Editing a datapoint looks and works the same on a device and on a template
+
 ### 0.0.6
 
 - Templates of your own are fully editable in the Templates view, datapoints

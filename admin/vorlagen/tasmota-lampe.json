@@ -1,6 +1,6 @@
 {
   "id": "tasmota-lampe",
-  "version": 1,
+  "version": 2,
   "rang": 10,
   "name": {
     "de": "Tasmota-Lampe",
@@ -85,6 +85,38 @@
       "feld": "ENERGY.Yesterday",
       "optional": true,
       "vorgabeAus": true
+    },
+    {
+      "name": "APPARENT_POWER",
+      "rolle": "value",
+      "typ": "number",
+      "einheit": "VA",
+      "lesen": "tele.SENSOR",
+      "feld": "ENERGY.ApparentPower",
+      "optional": true,
+      "vorgabeAus": true,
+      "hinweis": "Scheinleistung. Kein Platz in socket oder light — landet wie TODAY im info-Geraet."
+    },
+    {
+      "name": "REACTIVE_POWER",
+      "rolle": "value",
+      "typ": "number",
+      "einheit": "var",
+      "lesen": "tele.SENSOR",
+      "feld": "ENERGY.ReactivePower",
+      "optional": true,
+      "vorgabeAus": true,
+      "hinweis": "Blindleistung."
+    },
+    {
+      "name": "POWER_FACTOR",
+      "rolle": "value",
+      "typ": "number",
+      "lesen": "tele.SENSOR",
+      "feld": "ENERGY.Factor",
+      "optional": true,
+      "vorgabeAus": true,
+      "hinweis": "Leistungsfaktor cos phi, 0 bis 1 — ohne Einheit."
     },
     {
       "name": "UNREACH",
