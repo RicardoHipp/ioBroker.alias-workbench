@@ -1,8 +1,12 @@
 {
   "common": {
     "name": "alias-workbench",
-    "version": "0.0.2",
+    "version": "0.0.3",
     "news": {
+      "0.0.3": {
+        "en": "Templates view: manage, duplicate, delete, import and export templates",
+        "de": "Sicht Vorlagen: verwalten, duplizieren, löschen, ein- und ausgeben"
+      },
       "0.0.2": {
         "en": "Save your own templates; detection weighs verified evidence first",
         "de": "Eigene Vorlagen speichern; Erkennung wertet zuerst die Belege"

@@ -469,9 +469,11 @@
   <div class="pickpane">
     <div class="panehead">
       <span class="umschalter">
-        <button id="m-quellen" class="an">Quellen</button><button id="m-aliase">Aliase</button>
+        <button id="m-quellen" class="an">Quellen</button><button id="m-aliase">Aliase</button><button id="m-vorlagen">Vorlagen</button>
       </span>
       <input class="search" id="q" type="search" placeholder="filtern …" aria-label="Objekte filtern">
+      <button class="btn schmal" id="btn-einlesen" hidden>Einlesen &hellip;</button>
+      <input type="file" id="datei-einlesen" accept=".json,application/json" hidden>
     </div>
     <div class="scroll"><div class="tree" id="tree"><div class="empty">lade Objekte …</div></div></div>
   </div>
@@ -562,6 +564,7 @@
     setz('header.top h1', tr('app.title'));
     setz('#m-quellen', tr('tree.sources'));
     setz('#m-aliase', tr('tree.aliases'));
+    setz('#m-vorlagen', tr('tree.templates'));
     setz('.pickpane .panehead .lbl', tr('app.objectsCount', '').trim());
     setz('.respane .panehead .lbl', tr('result.header'));
     var q = $('#q'); if (q) { q.placeholder = tr('tree.filter'); }
@@ -709,6 +712,7 @@
   var baum = null;
 
   function zeichneBaum() {
+    if (baumModus === 'vorlagen') { return zeichneVorlagenListe(); }
     baum = baueBaum();
     zaehleZustaende(baum, null);
 
@@ -827,10 +831,24 @@
     baumModus = m;
     $('#m-quellen').className = (m === 'quellen') ? 'an' : '';
     $('#m-aliase').className = (m === 'aliase') ? 'an' : '';
+    $('#m-vorlagen').className = (m === 'vorlagen') ? 'an' : '';
+    var lbl = document.querySelector('.respane .panehead .lbl');
+    if (lbl) { lbl.textContent = (m === 'vorlagen') ? tr('tv.paneHead') : tr('result.header'); }
+    var ein = document.querySelector('#btn-einlesen');
+    if (ein) { ein.hidden = (m !== 'vorlagen'); }
     zeichneBaum();
+    zeichneErgebnis();
   }
   $('#m-quellen').addEventListener('click', function () { setzeModus('quellen'); });
   $('#m-aliase').addEventListener('click', function () { setzeModus('aliase'); });
+  $('#m-vorlagen').addEventListener('click', function () { setzeModus('vorlagen'); });
+
+  $('#btn-einlesen').addEventListener('click', function () { $('#datei-einlesen').click(); });
+  $('#datei-einlesen').addEventListener('change', function () {
+    var f = this.files && this.files[0];
+    this.value = '';                 /* dieselbe Datei soll erneut gehen */
+    if (f) { vEinlesenDatei(f); }
+  });
 
   /* ================== Entwurf ==================
      Alles, was du aenderst, lebt hier im Speicher. Geschrieben wird nichts.
@@ -1653,6 +1671,9 @@
   function zeichneErgebnis() {
     var host = $('#res');
     host.textContent = '';
+    if (baumModus === 'vorlagen') { return zeichneVorlagenBlatt(host); }
+    var bck = $('#btn-checks');
+    if (bck) { bck.disabled = false; }
     if (!current || !entwurf) {
       host.appendChild(el('div', 'empty', tr('result.pickSomething')));
       return;
@@ -3178,6 +3199,488 @@
       /* Objektliste neu einlesen, damit Baum und Bericht stimmen */
       ladeObjekte();
     }
+  }
+
+  /* ================== Vorlagen verwalten ==================
+     Dritte Sicht neben Quellen und Aliasen: links die Vorlagen, rechts
+     die gewaehlte mit Probelauf. Paketvorlagen sind nur zu lesen —
+     wer eine aendern will, dupliziert sie, und die Kopie verdeckt das
+     Original. Damit bleibt das Paket immer der Auslieferungszustand. */
+
+  var vGewaehlt = null;        /* id der gewaehlten Vorlage */
+  var vEinlesen = null;        /* eingelesene, noch nicht gespeicherte Vorlage */
+  var vEntwurf = null;         /* Arbeitskopie beim Bearbeiten */
+  var vLoeschFrage = false;
+  var vJsonAuf = false;
+
+  function vorlageMitId(id) {
+    var t = null;
+    VORLAGEN.forEach(function (v) { if (v.id === id) { t = v; } });
+    return t;
+  }
+
+  function ohneUnterstrich(v) {
+    var k = {};
+    Object.keys(v).forEach(function (f) { if (f.charAt(0) !== '_') { k[f] = v[f]; } });
+    return k;
+  }
+
+  function zeichneVorlagenListe() {
+    var host = $('#tree');
+    host.textContent = '';
+    var filter = ($('#q').value || '').trim().toLowerCase();
+
+    var liste = VORLAGEN.filter(function (v) {
+      if (!filter) { return true; }
+      return (v.id + ' ' + sprachtext(v.name)).toLowerCase().indexOf(filter) > -1;
+    });
+
+    if (vEinlesen) {
+      host.appendChild(vListenZeile(vEinlesen, true));
+    }
+    if (!liste.length && !vEinlesen) {
+      host.appendChild(el('div', 'empty', tr('tree.nothingFound')));
+      return;
+    }
+    liste.forEach(function (v) { host.appendChild(vListenZeile(v, false)); });
+  }
+
+  function vListenZeile(v, eingelesen) {
+    var d = el('div', 'node' + ((!eingelesen && v.id === vGewaehlt && !vEinlesen) ||
+                                (eingelesen && vEinlesen) ? ' pick' : ''));
+    d.style.cursor = 'pointer';
+    d.style.gap = '6px';
+    var eigen = v._quelle === 'benutzer';
+    d.appendChild(el('span', 'chip ' + (eingelesen ? 'warn' : (eigen ? 'ok' : 'mut')),
+      eingelesen ? tr('tv.imported') : (eigen ? tr('tpl.own') : tr('tv.package'))));
+    var nm = el('span', 'nm', sprachtext(v.name));
+    d.appendChild(nm);
+    var meta = el('span', null, v.id + '  v' + (v.version || 1));
+    meta.style.fontFamily = 'var(--mono)';
+    meta.style.fontSize = '10px';
+    meta.style.color = 'var(--ink-3)';
+    meta.style.marginLeft = 'auto';
+    d.appendChild(meta);
+    d.addEventListener('click', function () {
+      if (!eingelesen) { vEinlesen = null; vGewaehlt = v.id; }
+      vEntwurf = null;
+      vLoeschFrage = false;
+      zeichneVorlagenListe();
+      zeichneErgebnis();
+    });
+    return d;
+  }
+
+  /* Beim Bearbeiten wird auf einer Kopie gearbeitet — erst Speichern
+     macht sie echt. Gleiche Regel wie beim Entwurf eines Geraets. */
+  function vArbeitsstand() {
+    if (vEinlesen) { return vEinlesen; }
+    if (vEntwurf) { return vEntwurf; }
+    return vorlageMitId(vGewaehlt);
+  }
+
+  function vAendern(feld, wert) {
+    if (!vEinlesen && !vEntwurf) {
+      var o = vorlageMitId(vGewaehlt);
+      if (!o) { return; }
+      vEntwurf = JSON.parse(JSON.stringify(ohneUnterstrich(o)));
+      vEntwurf._quelle = o._quelle;
+    }
+    feld(vEinlesen || vEntwurf, wert);
+    zeichneErgebnis();
+  }
+
+  function zeichneVorlagenBlatt(host) {
+    /* Die Knoepfe unten gehoeren zum Geraet, nicht zur Vorlage. In dieser
+       Sicht waeren sie sonst noch auf das Geraet scharf, das vor dem
+       Umschalten gewaehlt war. */
+    ['#btn-dry', '#btn-tpl', '#btn-checks'].forEach(function (w) {
+      var b = $(w);
+      if (b) { b.disabled = true; }
+    });
+    var ba0 = $('#btn-dry-alle');
+    if (ba0) { ba0.hidden = true; }
+
+    var v = vArbeitsstand();
+    if (!v) {
+      host.appendChild(el('div', 'empty', tr('tv.pickTemplate')));
+      $('#foot').textContent = tr('app.templatesCount', VORLAGEN.length);
+      return;
+    }
+    var eigen = v._quelle === 'benutzer' || !!vEinlesen;
+    var vorhanden = vorlageMitId(v.id);
+    var geaendert = !!vEntwurf || !!vEinlesen;
+
+    /* --- Kopf --- */
+    var head = el('div', 'reshead');
+    var links = el('div');
+    links.appendChild(el('div', 'ziel', sprachtext(v.name)));
+    var unter = el('div', 'unter');
+    unter.appendChild(el('span', 'chip ' + (eigen ? 'ok' : 'mut'),
+      vEinlesen ? tr('tv.imported') : (eigen ? tr('tpl.own') : tr('tv.package'))));
+    unter.appendChild(el('span', null, v.id + '  v' + (v.version || 1) +
+      '  ·  ' + tr('tv.rank', v.rang || 0)));
+    links.appendChild(unter);
+    head.appendChild(links);
+    host.appendChild(head);
+
+    /* --- Was das Einlesen bewirken wuerde --- */
+    if (vEinlesen) {
+      var iw = el('div', 'aside w');
+      iw.style.marginBottom = '11px';
+      iw.appendChild(el('b', null, tr('tv.importTitle')));
+      var was;
+      if (!vorhanden) { was = tr('tv.importNew', v.id); }
+      else if (vorhanden._quelle === 'benutzer') {
+        was = tr('tv.importReplaces', v.id, vorhanden.version || 1, v.version || 1);
+      } else { was = tr('tv.importShadows', v.id); }
+      iw.appendChild(document.createTextNode(' ' + was));
+      host.appendChild(iw);
+    } else if (!eigen) {
+      var pw = el('div', 'aside');
+      pw.style.marginBottom = '11px';
+      pw.appendChild(el('b', null, tr('tv.packageTitle')));
+      pw.appendChild(document.createTextNode(' ' + tr('tv.packageText')));
+      host.appendChild(pw);
+    }
+
+    /* --- Knoepfe. Ganz oben, weil man dort zuerst hinschaut. --- */
+    var bar = el('div');
+    bar.style.display = 'flex';
+    bar.style.gap = '8px';
+    bar.style.flexWrap = 'wrap';
+    bar.style.alignItems = 'center';
+    bar.style.margin = '0 0 12px';
+
+    if (geaendert) {
+      var bs = el('button', 'btn primary', vEinlesen ? tr('tv.importAndSave') : tr('tv.save'));
+      bs.addEventListener('click', vSpeichern);
+      bar.appendChild(bs);
+      var bv = el('button', 'btn', tr('tv.discard'));
+      bv.addEventListener('click', function () {
+        vEinlesen = null; vEntwurf = null; vLoeschFrage = false;
+        zeichneVorlagenListe(); zeichneErgebnis();
+      });
+      bar.appendChild(bv);
+    }
+
+    /* Zwei verschiedene Absichten, deshalb zwei Beschriftungen: eine
+       mitgelieferte Vorlage will man meist *aendern* — dann behaelt die
+       Kopie die Kennung und verdeckt das Original. Eine eigene Vorlage
+       will man meist *abwandeln* — dann braucht die Kopie eine neue
+       Kennung, sonst ueberschriebe sie das Vorbild. */
+    var bd2 = el('button', 'btn', eigen ? tr('tv.duplicate') : tr('tv.makeOwn'));
+    bd2.addEventListener('click', function () { vDuplizieren(v, !eigen); });
+    bar.appendChild(bd2);
+
+    var ba = el('button', 'btn', tr('tv.export'));
+    ba.addEventListener('click', function () { vAusgeben(v); });
+    bar.appendChild(ba);
+
+    if (eigen && !vEinlesen && vorhanden && vorhanden._quelle === 'benutzer') {
+      var bl = el('button', 'btn', vLoeschFrage ? tr('tv.deleteSure') : tr('tv.delete'));
+      if (vLoeschFrage) {
+        bl.style.background = 'var(--bad)';
+        bl.style.borderColor = 'var(--bad)';
+        bl.style.color = '#fff';
+      }
+      bl.addEventListener('click', function () {
+        if (!vLoeschFrage) { vLoeschFrage = true; zeichneErgebnis(); return; }
+        vLoeschen(v.id);
+      });
+      bar.appendChild(bl);
+      /* Verdeckt sie eine mitgelieferte, kommt die wieder zum Vorschein. */
+      if (vLoeschFrage) { bar.appendChild(el('span', 'hint', tr('tv.deleteHint'))); }
+    }
+    host.appendChild(bar);
+
+    /* --- Kopfdaten --- */
+    var kk = el('div', 'card');
+    kk.style.marginBottom = '11px';
+    var kh = el('div', 'ch');
+    kh.appendChild(el('span', 'typ', tr('tpls.head')));
+    if (geaendert) { kh.appendChild(el('span', 'chip warn', tr('tv.unsaved'))); }
+
+    kk.appendChild(kh);
+    var kb = el('div');
+    kb.style.padding = '9px 12px 11px';
+    kb.style.display = 'flex';
+    kb.style.flexWrap = 'wrap';
+    kb.style.gap = '9px 14px';
+
+    function feld(label, wert, setzen, breit) {
+      var l = el('label', 'feld');
+      l.appendChild(el('span', 'feldlabel', label));
+      var i = document.createElement('input');
+      i.className = 'tx';
+      i.type = 'text';
+      i.value = wert === undefined || wert === null ? '' : String(wert);
+      i.disabled = !eigen;
+      if (breit) { i.style.minWidth = breit; }
+      i.addEventListener('change', function () { vAendern(setzen, i.value); });
+      l.appendChild(i);
+      return l;
+    }
+
+    kb.appendChild(feld(tr('tpls.nameDe'), textIn(v.name, 'de'),
+      function (x, w) { if (typeof x.name === 'string') { x.name = { de: x.name, en: x.name }; } x.name.de = w; }, '140px'));
+    kb.appendChild(feld(tr('tpls.nameEn'), textIn(v.name, 'en'),
+      function (x, w) { if (typeof x.name === 'string') { x.name = { de: x.name, en: x.name }; } x.name.en = w; }, '140px'));
+    kb.appendChild(feld(tr('tpls.rank'), v.rang || 0,
+      function (x, w) { x.rang = Number(w) || 0; }, '60px'));
+
+    var lt = el('label', 'feld');
+    lt.appendChild(el('span', 'feldlabel', tr('tpls.deviceType')));
+    var st = el('select', 'tx');
+    st.disabled = !eigen;
+    st.appendChild(opt('', tr('tpls.noType')));
+    (D ? Object.keys(D.patterns).sort() : []).forEach(function (m) {
+      var o = opt(m, m);
+      if (m === v.geraetetyp) { o.selected = true; }
+      st.appendChild(o);
+    });
+    st.addEventListener('change', function () {
+      vAendern(function (x, w) { x.geraetetyp = w || undefined; }, st.value);
+    });
+    lt.appendChild(st);
+    kb.appendChild(lt);
+    kk.appendChild(kb);
+
+    var nb = el('div');
+    nb.style.padding = '0 12px 11px';
+    nb.appendChild(feld(tr('tpls.nameHint'), (v.erkennung || {}).namenshinweis || '',
+      function (x, w) { x.erkennung = x.erkennung || {}; if (w) { x.erkennung.namenshinweis = w; } else { delete x.erkennung.namenshinweis; } }, '260px'));
+    nb.appendChild(el('div', 'hint', tr('tv.nameHintShort')));
+    kk.appendChild(nb);
+    host.appendChild(kk);
+
+    /* --- Erkennung --- */
+    var ek = el('div', 'card');
+    ek.style.marginBottom = '11px';
+    var eh = el('div', 'ch');
+    eh.appendChild(el('span', 'typ', tr('tv.detection')));
+    var erf = (v.erkennung || {}).erforderlich || [];
+    eh.appendChild(el('span', 'chip mut', tr('tv.requiredCount', erf.length)));
+    ek.appendChild(eh);
+    var eb = el('div');
+    eb.style.padding = '9px 12px 11px';
+    if (!erf.length) {
+      eb.appendChild(el('div', 'hint', tr('tpls.noRequired')));
+    } else {
+      erf.forEach(function (x) {
+        var z = el('div');
+        z.style.fontFamily = 'var(--mono)';
+        z.style.fontSize = '11.5px';
+        z.textContent = x;
+        eb.appendChild(z);
+      });
+    }
+    var inh = (v.erkennung || {}).inhalt || {};
+    Object.keys(inh).forEach(function (punkt) {
+      var z = el('div', 'hint', tr('tpls.contentRow', punkt, inh[punkt]));
+      z.style.fontFamily = 'var(--mono)';
+      eb.appendChild(z);
+    });
+    if (v.mehrfach) {
+      eb.appendChild(el('div', 'hint', tr('tv.multi', v.kanalname || 'POWER%N%')));
+    }
+    ek.appendChild(eb);
+    host.appendChild(ek);
+
+    /* --- Datenpunkte --- */
+    var zk = el('div', 'card');
+    zk.style.marginBottom = '11px';
+    var zh = el('div', 'ch');
+    zh.appendChild(el('span', 'typ', tr('tpls.states')));
+    zh.appendChild(el('span', 'chip mut', tr('tpls.statesCount', (v.zustaende || []).length)));
+    zk.appendChild(zh);
+    (v.zustaende || []).forEach(function (z) {
+      var r = el('div', 'slot');
+      r.style.gridTemplateColumns = '1fr 1.1fr 1.2fr 90px';
+      r.appendChild(el('span', 'sn', z.name));
+      r.appendChild(el('span', 'rx', z.rolle || '—'));
+      var pw = el('span', 'rx');
+      pw.style.fontFamily = 'var(--mono)';
+      pw.appendChild(document.createTextNode(z.lesen + (z.feld ? ' · ' + z.feld : '')));
+      if (z.schreiben) { pw.appendChild(el('span', 'chip mut', '→ ' + z.schreiben)); }
+      if (z.absolut) { pw.appendChild(el('span', 'chip warn', tr('tpls.absolute'))); }
+      r.appendChild(pw);
+      r.appendChild(el('span', 'rx', (z.optional ? tr('tv.optional') : tr('tv.required')) +
+        (z.vorgabeAus ? ' · ' + tr('tpls.offByDefault') : '')));
+      zk.appendChild(r);
+    });
+    host.appendChild(zk);
+
+    /* --- Probelauf --- */
+    var pk = el('div', 'card');
+    pk.style.marginBottom = '11px';
+    var ph2 = el('div', 'ch');
+    ph2.appendChild(el('span', 'typ', tr('tpls.tryout')));
+    var treffer = erf.length ? probelauf(ohneUnterstrich(v)) : [];
+    var gew = treffer.filter(function (t) { return t.gewinnt; }).length;
+    ph2.appendChild(el('span', 'chip ' + (gew ? 'ok' : 'warn'), tr('tpls.hits', treffer.length, gew)));
+    pk.appendChild(ph2);
+    var pb2 = el('div');
+    pb2.style.padding = '9px 12px 11px';
+    if (!treffer.length) {
+      pb2.appendChild(el('div', 'hint', erf.length ? tr('tpls.noHits') : tr('tpls.noRequired')));
+    } else {
+      treffer.slice(0, 40).forEach(function (t) {
+        var r = el('div', 'slot');
+        r.style.gridTemplateColumns = '1fr 110px 150px';
+        var idl = el('span', 'sn', t.id);
+        idl.style.fontFamily = 'var(--mono)';
+        r.appendChild(idl);
+        r.appendChild(el('span', 'rx', tr('tpls.evidence', t.eigen.belege)));
+        r.appendChild(el('span', 'chip ' + (t.gewinnt ? 'ok' : 'bad'),
+          t.gewinnt ? (t.gegner ? tr('tpls.beats', textIn(t.gegner.vorlage.name, sprache)) : tr('tpls.onlyOne'))
+                    : tr('tpls.losesTo', textIn(t.gegner.vorlage.name, sprache))));
+        pb2.appendChild(r);
+      });
+      if (treffer.length > 40) {
+        pb2.appendChild(el('div', 'hint', tr('tpls.andMore', treffer.length - 40)));
+      }
+    }
+    pk.appendChild(pb2);
+    host.appendChild(pk);
+
+    /* --- das JSON, zugeklappt: bei 16 Datenpunkten sind das 200 Zeilen,
+           und darunter faende niemand mehr die Knoepfe --- */
+    var jk = el('div', 'card');
+    jk.style.marginBottom = '11px';
+    var jh = el('div', 'ch');
+    jh.appendChild(el('span', 'typ', tr('tv.json')));
+    jh.appendChild(el('span', 'luecke'));
+    var jb = el('button', 'btn schmal', vJsonAuf ? tr('tv.hide') : tr('tv.show'));
+    jb.addEventListener('click', function () { vJsonAuf = !vJsonAuf; zeichneErgebnis(); });
+    jh.appendChild(jb);
+    jk.appendChild(jh);
+    if (vJsonAuf) {
+      var pre = el('div', 'raw');
+      pre.style.margin = '9px 12px 11px';
+      pre.style.whiteSpace = 'pre';
+      pre.style.maxHeight = 'none';
+      pre.textContent = JSON.stringify(ohneUnterstrich(v), null, 2);
+      jk.appendChild(pre);
+    }
+    host.appendChild(jk);
+
+    $('#foot').textContent = tr('app.templatesCount', VORLAGEN.length) + '  ·  ' +
+      tr('tpls.hits', treffer.length, gew);
+  }
+
+  function vDuplizieren(v, gleicheKennung) {
+    var k = JSON.parse(JSON.stringify(ohneUnterstrich(v)));
+    if (gleicheKennung) {
+      /* Uebernehmen statt abwandeln: gleiche Kennung, eine Version
+         weiter — damit verdeckt sie die mitgelieferte. */
+      k.version = (k.version || 1) + 1;
+    } else {
+      k.id = freierSchluessel(k.id + '-kopie');
+      k.version = 1;
+      var maxRang = 0;
+      VORLAGEN.forEach(function (x) { if ((x.rang || 0) > maxRang) { maxRang = x.rang || 0; } });
+      k.rang = maxRang + 10;
+      k.name = { de: textIn(k.name, 'de') + ' (Kopie)', en: textIn(k.name, 'en') + ' (copy)' };
+    }
+    if (typeof k.name === 'string') { k.name = { de: k.name, en: k.name }; }
+    vEinlesen = null;
+    vEntwurf = k;
+    vEntwurf._quelle = 'benutzer';
+    vGewaehlt = k.id;
+    vLoeschFrage = false;
+    zeichneVorlagenListe();
+    zeichneErgebnis();
+  }
+
+  /* Ausgeben als Datei — dasselbe Format wie admin/vorlagen/*.json, damit
+     eine gut gewordene Vorlage ohne Umbau ins Paket wandern kann. */
+  function vAusgeben(v) {
+    var text = JSON.stringify(ohneUnterstrich(v), null, 2) + '\n';
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+    a.download = v.id + '.json';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+  }
+
+  function vEinlesenDatei(datei) {
+    var leser = new FileReader();
+    leser.onload = function () {
+      var roh;
+      try { roh = JSON.parse(String(leser.result)); } catch (e) { roh = null; }
+      var fehler = vPruefeEingelesen(roh);
+      if (fehler) {
+        vEinlesen = null;
+        var host = $('#res');
+        host.textContent = '';
+        var w = el('div', 'aside w');
+        w.appendChild(el('b', null, tr('tv.importBad')));
+        w.appendChild(document.createTextNode(' ' + fehler));
+        host.appendChild(w);
+        return;
+      }
+      vEinlesen = ohneUnterstrich(roh);
+      vEinlesen._quelle = 'benutzer';
+      vEntwurf = null;
+      vLoeschFrage = false;
+      zeichneVorlagenListe();
+      zeichneErgebnis();
+    };
+    leser.readAsText(datei);
+  }
+
+  function vPruefeEingelesen(o) {
+    if (!o || typeof o !== 'object' || Array.isArray(o)) { return tr('tv.badNotObject'); }
+    if (!o.id || typeof o.id !== 'string') { return tr('tv.badNoId'); }
+    if (!Array.isArray(o.zustaende) || !o.zustaende.length) { return tr('tv.badNoStates'); }
+    var schlecht = o.zustaende.filter(function (z) { return !z || !z.name || !z.lesen; });
+    if (schlecht.length) { return tr('tv.badState', schlecht.length); }
+    return null;
+  }
+
+  function vSpeichern() {
+    var v = vArbeitsstand();
+    if (!v) { return; }
+    var rein = ohneUnterstrich(v);
+    var liste = eigeneVorlagen();
+    var i = -1;
+    liste.forEach(function (x, n) { if (x.id === rein.id) { i = n; } });
+    if (i > -1) { liste[i] = rein; } else { liste.push(rein); }
+    speichereVorlagen(liste, function (err) {
+      if (err) { return vMeldung(tr('tpls.failed') + ' ' + err, true); }
+      ladeVorlagen(function () {
+        vEinlesen = null; vEntwurf = null; vGewaehlt = rein.id;
+        $('#meta').textContent = tr('app.patternsCount', D ? Object.keys(D.patterns).length : 0) +
+          '  ·  ' + tr('app.templatesCount', VORLAGEN.length);
+        zeichneVorlagenListe();
+        zeichneErgebnis();
+      });
+    });
+  }
+
+  function vLoeschen(id) {
+    var liste = eigeneVorlagen().filter(function (x) { return x.id !== id; });
+    speichereVorlagen(liste, function (err) {
+      if (err) { return vMeldung(tr('tpls.failed') + ' ' + err, true); }
+      ladeVorlagen(function () {
+        vEinlesen = null; vEntwurf = null; vLoeschFrage = false;
+        vGewaehlt = vorlageMitId(id) ? id : null;
+        $('#meta').textContent = tr('app.patternsCount', D ? Object.keys(D.patterns).length : 0) +
+          '  ·  ' + tr('app.templatesCount', VORLAGEN.length);
+        zeichneVorlagenListe();
+        zeichneErgebnis();
+      });
+    });
+  }
+
+  function vMeldung(text, schlecht) {
+    var host = $('#res');
+    host.textContent = '';
+    var w = el('div', 'aside' + (schlecht ? ' w' : ''));
+    w.appendChild(el('b', null, text));
+    host.appendChild(w);
   }
 
   /* ================== Aus einem Geraet eine Vorlage machen ==================

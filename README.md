@@ -60,9 +60,8 @@ Early. Usable, but not finished.
 - Works as an admin tab; the adapter itself runs no process (`mode: none`)
 - German and English
 - Not published on npm yet — install from GitHub
-- Missing: a template manager (list, rename, delete, import/export), mass
-  creation, "who uses this alias", re-applying a changed template to the
-  devices built from it
+- Missing: mass creation, "who uses this alias", re-applying a changed template
+  to the devices built from it
 
 ## How it works
 
@@ -155,6 +154,24 @@ asks:
 Then the try-out shows what the detection actually catches, before anything is
 saved.
 
+### Managing them
+
+The third view next to **Sources** and **Aliases** is **Templates**: every
+template with its detection, its datapoints, a permanent try-out and the raw
+JSON. From there you can rename a template, change its rank and name hint,
+duplicate it, export it to a file and delete it.
+
+Shipped templates cannot be edited — that way they always stay the state they
+were delivered in. *Make an editable copy* gives you a copy under the same id
+that shadows the original; delete that copy and the shipped one reappears.
+*Duplicate* on a template of your own gives it a new id, for a variant that
+stands next to the original rather than replacing it.
+
+Import accepts one template per file, in exactly the format under
+`admin/vorlagen/`. Nothing is stored on import: the file appears as a preview
+first, with a line saying what saving would do — create, replace your own
+version, or shadow a shipped one.
+
 Your templates live in `native.vorlagen` of the instance object, so they survive
 `iobroker upload` and adapter updates and are part of a Backitup backup. A
 template of yours with the same `id` as a shipped one shadows it. Storage and
@@ -208,6 +225,11 @@ entry in `SPRACHEN` in `admin/tab.html` — nothing else.
 
 ## Changelog
 
+### 0.0.3
+
+- Templates view: list, edit, duplicate, delete, import and export
+- Shipped templates are read-only; an editable copy shadows them
+
 ### 0.0.2
 
 - Save your own templates, stored in the instance configuration
@@ -242,3 +264,5 @@ Gerätewissen steckt in Vorlagen — JSON-Dateien, keine Programmzeilen. Eine ne
 Gerätefamilie ist eine neue Datei. Ein fertig gebautes Gerät lässt sich als
 eigene Vorlage sichern; was sich ableiten lässt, wird abgeleitet, der Rest wird
 gefragt — und ein Probelauf zeigt vorher, welche Geräte die neue Vorlage fängt.
+Die dritte Sicht **Vorlagen** verwaltet sie: ansehen, ändern, duplizieren,
+löschen, aus- und einlesen.
