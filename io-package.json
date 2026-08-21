@@ -1,8 +1,12 @@
 {
   "common": {
     "name": "alias-workbench",
-    "version": "0.0.7",
+    "version": "0.0.8",
     "news": {
+      "0.0.8": {
+        "en": "Slots that need a value list (EFFECT) can be filled again",
+        "de": "Plätze mit Werteliste (EFFECT) lassen sich wieder belegen"
+      },
       "0.0.7": {
         "en": "Editing a datapoint looks the same on a device and on a template",
         "de": "Ein Datenpunkt sieht am Gerät und an der Vorlage gleich aus"

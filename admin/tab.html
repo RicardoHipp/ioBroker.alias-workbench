@@ -959,7 +959,10 @@
         type: s.typ || undefined,
         unit: s.unit || undefined,
         read: true,
-        write: !!(s.wr || s.srcW)
+        write: !!(s.wr || s.srcW),
+        /* Manche Plaetze verlangen eine Werteliste — light.EFFECT etwa
+           wird ohne common.states gar nicht erkannt (statesDefined). */
+        states: s.states || undefined
       } };
     });
     return m;
@@ -2408,8 +2411,18 @@
             n: st.name,
             on: true,
             role: st.defaultRole || '',
-            typ: st.type || '',
+            /* Manche Plaetze lassen mehrere Typen zu und nennen sie als
+               Liste — light.EFFECT etwa [number, string]. Ungefiltert
+               landete die Liste in common.type, der Detektor lehnte den
+               Punkt ab, der Platz blieb frei und liess sich endlos
+               nochmal hinzufuegen. Der erste Eintrag ist der gemeinte. */
+            typ: (Array.isArray(st.type) ? st.type[0] : st.type) || '',
             unit: st.defaultUnit || '',
+            /* statesDefined heisst: ohne Werteliste bleibt der Platz leer,
+               egal wie gut Rolle und Typ passen. Also die Vorgabe aus dem
+               Muster mitnehmen, sonst legt man den Punkt an und der Platz
+               gilt weiter als frei — beliebig oft. */
+            states: st.statesDefined ? (st.defaultStates || { 0: 'None' }) : undefined,
             wr: !!st.write,
             srcR: '', srcW: '', f: '', fw: '',
             caption: '', manuell: true, ausPlatz: st.name
@@ -3007,6 +3020,9 @@
         alias: alias
       };
       if (s.unit) { common.unit = s.unit; }
+      /* Ohne Werteliste erkennt der Detektor den fertigen Alias spaeter
+         nicht wieder — dieselbe Bedingung wie im Abbild. */
+      if (s.states) { common.states = s.states; }
 
       var nat = {};
       if (s.manuell) { nat.vonHand = true; }
