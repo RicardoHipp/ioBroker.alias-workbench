@@ -2640,19 +2640,7 @@
     var d = el('div', 'detail');
     var quellen = quellenAuswahl(e);
 
-    function zeile(k, inhalt, cls) {
-      var r = el('div', 'dr');
-      r.appendChild(el('div', 'k', k));
-      if (inhalt === undefined || inhalt === null) {
-        r.appendChild(el('div', cls || null, '—'));
-      } else if (typeof inhalt === 'string' || typeof inhalt === 'number') {
-        r.appendChild(el('div', cls || null, String(inhalt)));
-      } else {
-        r.appendChild(inhalt);
-      }
-      d.appendChild(r);
-      return r;
-    }
+    function zeile(k, inhalt, cls) { return dtZeile(d, k, inhalt, cls); }
 
     function neu() { s.geaendert = true; zeichneErgebnis(); }
 
@@ -3674,6 +3662,133 @@
   /* Ein Datenpunkt zum Aufklappen. Bewusst ohne Werte und ohne
      Detektor-Bericht: hier gibt es kein Geraet, an dem man das messen
      koennte. Was die Aenderung bewirkt, zeigt der Probelauf darunter. */
+  /* ============ Bausteine, die beide Detailansichten teilen ============
+     Der Block am Geraet und der an der Vorlage sollen gleich aussehen und
+     gleich bedienbar sein. Wo sie dasselbe zeigen, bauen sie es jetzt aus
+     denselben Funktionen — sonst laufen die beiden auseinander, sobald man
+     an einer Stelle etwas verbessert. */
+
+  /* Eine Zeile Beschriftung + Inhalt, wie im Detail am Geraet. */
+  function dtZeile(d, k, inhalt, cls) {
+    var r = el('div', 'dr');
+    r.appendChild(el('div', 'k', k));
+    if (inhalt === undefined || inhalt === null) {
+      r.appendChild(el('div', cls || null, '\u2014'));
+    } else if (typeof inhalt === 'string' || typeof inhalt === 'number') {
+      r.appendChild(el('div', cls || null, String(inhalt)));
+    } else {
+      r.appendChild(inhalt);
+    }
+    d.appendChild(r);
+    return r;
+  }
+
+  function dtFeld(beschriftung, element) {
+    var l = el('label', 'fld');
+    l.appendChild(el('span', null, beschriftung));
+    l.appendChild(element);
+    return l;
+  }
+
+  /* Rollenauswahl samt Begruendung. geraetetyp darf leer sein — dann
+     entfaellt nur der Hinweis, welchen Platz die Rolle traefe. */
+  function rollenBlock(rolle, geraetetyp, setzen) {
+    var rb = el('div');
+    var selRole = el('select', 'tx');
+    selRole.style.width = '300px';
+    var passend = plaetzeFuerRollen(geraetetyp);
+    var rl = ROLLEN.slice();
+    if (rolle && rl.indexOf(rolle) === -1) { rl.unshift(rolle); }
+
+    selRole.appendChild(opt('', tr('list.noRole')));
+    var mitPlatz = rl.filter(function (r) { return passend[r]; });
+    if (mitPlatz.length) {
+      var g0 = document.createElement('optgroup');
+      g0.label = tr('pattern.label') + '  ' + geraetetyp;
+      mitPlatz.forEach(function (r) { g0.appendChild(opt(r, r)); });
+      selRole.appendChild(g0);
+    }
+    var fam = {};
+    rl.filter(function (r) { return !passend[r]; }).forEach(function (r) {
+      var f = String(r).split('.')[0];
+      (fam[f] = fam[f] || []).push(r);
+    });
+    Object.keys(fam).sort().forEach(function (f) {
+      var g = document.createElement('optgroup');
+      g.label = f + '  (' + fam[f].length + ')';
+      fam[f].forEach(function (r) { g.appendChild(opt(r, r)); });
+      selRole.appendChild(g);
+    });
+    selRole.value = rolle || '';
+    selRole.addEventListener('click', function (ev) { ev.stopPropagation(); });
+    selRole.addEventListener('change', function () { setzen(selRole.value); });
+    rb.appendChild(selRole);
+
+    var must = geraetetyp && D && D.patterns[geraetetyp];
+    if (must) {
+      var treffer = null;
+      must.states.forEach(function (pp) {
+        if (!treffer && pp.role && rolle &&
+            new RegExp(pp.role.source ? pp.role.source : pp.role).test(rolle)) { treffer = pp; }
+      });
+      var hin = el('div', 'sugg');
+      if (treffer) {
+        hin.appendChild(document.createTextNode(tr('pattern.fitsOn')));
+        hin.appendChild(el('b', null, String(treffer.role)));
+        hin.appendChild(document.createTextNode(tr('pattern.toSlot', treffer.name, geraetetyp)));
+      } else {
+        hin.textContent = tr('pattern.noPlaceLong', geraetetyp);
+      }
+      rb.appendChild(hin);
+    }
+    return rb;
+  }
+
+  /* Typ, Einheit, Nachkommastellen, Beschriftung — in dieser Reihenfolge
+     und mit denselben Auswahlmoeglichkeiten wie am Geraet. */
+  function anzeigeBlock(hole, setze, platzhalter) {
+    var af = el('div', 'fields');
+
+    var selT = el('select', 'tx');
+    [['', '\u2014'], ['boolean', 'boolean'], ['number', 'number'],
+     ['string', 'string'], ['mixed', 'mixed']].forEach(function (o) {
+      selT.appendChild(opt(o[0], o[1]));
+    });
+    selT.value = hole('typ') || '';
+    selT.addEventListener('click', function (ev) { ev.stopPropagation(); });
+    selT.addEventListener('change', function () { setze('typ', selT.value); });
+    af.appendChild(dtFeld(tr('detail.type'), selT));
+
+    var iU = el('input', 'tx');
+    iU.type = 'text';
+    iU.style.width = '70px';
+    iU.value = hole('einheit') || '';
+    iU.placeholder = '\u2014';
+    iU.addEventListener('click', function (ev) { ev.stopPropagation(); });
+    iU.addEventListener('change', function () { setze('einheit', iU.value); });
+    af.appendChild(dtFeld(tr('detail.unit'), iU));
+
+    var selD = el('select', 'tx');
+    [['', tr('detail.asDelivered')], ['0', '0'], ['1', '1'], ['2', '2'], ['3', '3']]
+      .forEach(function (o) { selD.appendChild(opt(o[0], o[1])); });
+    var dec = hole('dec');
+    selD.value = (dec === undefined || dec === null) ? '' : String(dec);
+    selD.addEventListener('click', function (ev) { ev.stopPropagation(); });
+    selD.addEventListener('change', function () { setze('dec', selD.value); });
+    af.appendChild(dtFeld(tr('detail.decimals'), selD));
+
+    var iC = el('input', 'tx');
+    iC.type = 'text';
+    iC.style.width = '150px';
+    iC.value = hole('caption') || '';
+    iC.placeholder = platzhalter || '';
+    iC.addEventListener('click', function (ev) { ev.stopPropagation(); });
+    iC.addEventListener('change', function () { setze('caption', iC.value); });
+    af.appendChild(dtFeld(tr('detail.caption'), iC));
+
+    return af;
+  }
+
   /* Zaehlt dieser Datenpunkt fuer die Erkennung? Nicht aus optional
      abgelesen, sondern aus der Pflichtliste — die ist die Wahrheit. */
   function istPflichtpunkt(v, z) {
@@ -3683,14 +3798,13 @@
 
   function vZeilenDetail(z, nr) {
     var v = vArbeitsstand();
-    var d = el('div');
-    d.style.padding = '10px 12px 12px 30px';
-    d.style.background = 'var(--surface-2)';
-    d.style.borderBottom = '1px solid var(--line)';
-    d.style.display = 'flex';
-    d.style.flexWrap = 'wrap';
-    d.style.gap = '9px 14px';
+    var d = el('div', 'detail');
 
+    /* Genau der Aufbau des Detailblocks am Geraet: Name, liest aus,
+       schreibt nach, Formel, Schreibformel, Rolle, Anzeige. Nur was ein
+       Geraet braucht, fehlt hier — Rohwert, Ergebnis und die Auswahl aus
+       vorhandenen Objekten. Es gibt kein Geraet, an dem man das messen
+       koennte. */
     var setz = function (feldname, wandeln) {
       return function (x, wert) {
         var zz = x.zustaende[nr];
@@ -3699,83 +3813,79 @@
         else { zz[feldname] = w; }
       };
     };
-
-    var txt = function (label, wert, feldname, breit, wandeln) {
-      var l = el('label', 'feld');
-      l.appendChild(el('span', 'feldlabel', label));
-      var i = document.createElement('input');
-      i.className = 'tx';
-      i.type = 'text';
-      i.value = wert === undefined || wert === null ? '' : String(wert);
-      if (breit) { i.style.minWidth = breit; }
-      i.addEventListener('change', function () { vAendern(setz(feldname, wandeln), i.value); });
-      l.appendChild(i);
-      return l;
+    var setzeFeld = function (feldname, wert, wandeln) {
+      vAendern(setz(feldname, wandeln), wert);
     };
 
-    d.appendChild(txt(tr('detail.name'), z.name, 'name', '130px'));
+    var eingabe = function (wert, feldname, breite, platzhalter, wandeln) {
+      var i = el('input', 'tx');
+      i.type = 'text';
+      i.value = wert === undefined || wert === null ? '' : String(wert);
+      if (breite) { i.style.width = breite; }
+      if (platzhalter) { i.placeholder = platzhalter; }
+      i.addEventListener('click', function (ev) { ev.stopPropagation(); });
+      i.addEventListener('change', function () { setzeFeld(feldname, i.value, wandeln); });
+      return i;
+    };
 
-    var lr = el('label', 'feld');
-    lr.appendChild(el('span', 'feldlabel', tr('detail.role')));
-    var sr = el('select', 'tx');
-    sr.appendChild(opt('', tr('list.noRole')));
-    ROLLEN.forEach(function (ro) {
-      var o = opt(ro, ro);
-      if (ro === z.rolle) { o.selected = true; }
-      sr.appendChild(o);
-    });
-    if (z.rolle && ROLLEN.indexOf(z.rolle) === -1) {
-      var oe = opt(z.rolle, z.rolle);
-      oe.selected = true;
-      sr.appendChild(oe);
+    dtZeile(d, tr('detail.name'), eingabe(z.name, 'name', '260px', tr('detail.namePlaceholder')));
+
+    /* --- liest aus, mit JSON-Feld daneben --- */
+    var qf = el('div', 'fields');
+    qf.appendChild(dtFeld(tr('detail.datapoint'),
+      eingabe(z.lesen, 'lesen', '260px', z.absolut ? '0_userdata.0.\u2026' : 'stat.POWER')));
+    qf.appendChild(dtFeld(tr('detail.jsonField'), eingabe(z.feld, 'feld', '150px', '\u2014')));
+    dtZeile(d, tr('detail.readsFrom'), qf);
+
+    dtZeile(d, tr('detail.writesTo'),
+      eingabe(z.schreiben, 'schreiben', '260px', tr('detail.sameAsRead')));
+
+    var fb = el('div');
+    fb.appendChild(eingabe(z.leseformel, 'leseformel', '100%', tr('detail.formulaPlaceholder')));
+    fb.appendChild(el('div', 'sugg', tr('detail.formulaHint')));
+    dtZeile(d, tr('detail.formula'), fb);
+
+    if (z.schreiben) {
+      var wb = el('div');
+      wb.appendChild(eingabe(z.schreibformel, 'schreibformel', '100%', tr('detail.writeFormulaPlaceholder')));
+      wb.appendChild(el('div', 'sugg', tr('detail.writeFormulaHint')));
+      dtZeile(d, tr('detail.writeFormula'), wb);
     }
-    sr.addEventListener('change', function () { vAendern(setz('rolle'), sr.value); });
-    lr.appendChild(sr);
-    d.appendChild(lr);
 
-    var lt = el('label', 'feld');
-    lt.appendChild(el('span', 'feldlabel', tr('detail.type')));
-    var st = el('select', 'tx');
-    ['', 'boolean', 'number', 'string', 'mixed'].forEach(function (t) {
-      var o = opt(t, t || '\u2014');
-      if (t === (z.typ || '')) { o.selected = true; }
-      st.appendChild(o);
-    });
-    st.addEventListener('change', function () { vAendern(setz('typ'), st.value); });
-    lt.appendChild(st);
-    d.appendChild(lt);
+    dtZeile(d, tr('detail.role'), rollenBlock(z.rolle, v.geraetetyp, function (neu) {
+      setzeFeld('rolle', neu);
+    }));
 
-    d.appendChild(txt(tr('detail.unit'), z.einheit, 'einheit', '60px'));
-    d.appendChild(txt(tr('tv.readPath'), z.lesen, 'lesen', '170px'));
-    d.appendChild(txt(tr('tv.writePath'), z.schreiben, 'schreiben', '170px'));
-    d.appendChild(txt(tr('detail.jsonField'), z.feld, 'feld', '130px'));
-    d.appendChild(txt(tr('detail.formula'), z.leseformel, 'leseformel', '170px'));
-    d.appendChild(txt(tr('detail.writeFormula'), z.schreibformel, 'schreibformel', '170px'));
-    d.appendChild(txt(tr('detail.caption'), z.beschriftung, 'beschriftung', '130px'));
-    d.appendChild(txt(tr('detail.decimals'), z.nachkommastellen, 'nachkommastellen', '50px',
-      function (w) { return w === '' ? '' : Number(w); }));
+    dtZeile(d, tr('detail.display'), anzeigeBlock(
+      function (was) {
+        if (was === 'einheit') { return z.einheit; }
+        if (was === 'dec') { return z.nachkommastellen; }
+        if (was === 'caption') { return z.beschriftung; }
+        return z.typ;
+      },
+      function (was, wert) {
+        if (was === 'einheit') { return setzeFeld('einheit', wert); }
+        if (was === 'dec') { return setzeFeld('nachkommastellen', wert, function (w) { return w === '' ? '' : Number(w); }); }
+        if (was === 'caption') { return setzeFeld('beschriftung', wert); }
+        setzeFeld('typ', wert);
+      }, z.name));
 
     var haken = function (label, an, tut) {
-      var l = el('label', 'feld');
+      var l = el('label', 'fld');
       l.style.flexDirection = 'row';
       l.style.alignItems = 'center';
       l.style.gap = '5px';
       var c = document.createElement('input');
       c.type = 'checkbox';
       c.checked = an;
+      c.addEventListener('click', function (ev) { ev.stopPropagation(); });
       c.addEventListener('change', function () { vAendern(function (x) { tut(x.zustaende[nr], c.checked); }); });
       l.appendChild(c);
-      l.appendChild(el('span', 'feldlabel', label));
+      l.appendChild(el('span', null, label));
       return l;
     };
 
-    var zeile2 = el('div');
-    zeile2.style.flexBasis = '100%';
-    zeile2.style.display = 'flex';
-    zeile2.style.gap = '16px';
-    zeile2.style.alignItems = 'center';
-    zeile2.style.marginTop = '4px';
-
+    var zeile2 = el('div', 'fields');
     /* Beide Haken laufen in dieselbe Richtung wie im Speichern-Dialog:
        angehakt heisst „ja". Vorher stand hier „freiwillig" und „Vorgabe
        aus" — also zweimal die Umkehrung, was niemand zusammenbringt. */
@@ -3807,16 +3917,16 @@
 
     zeile2.appendChild(haken(tr('tpls.absolute'), !!z.absolut,
       function (zz, an) { if (an) { zz.absolut = true; } else { delete zz.absolut; } }));
-    zeile2.appendChild(el('span', 'luecke'));
     var wb = el('button', 'btn schmal', tr('tv.removeState'));
     wb.addEventListener('click', function () {
       vAendern(function (x) { x.zustaende.splice(nr, 1); vOffeneZeile = null; });
     });
     zeile2.appendChild(wb);
-    d.appendChild(zeile2);
+    dtZeile(d, tr('tv.inTemplate'), zeile2);
 
-    d.appendChild(el('div', 'hint', tr('tv.stateHelp')));
-    d.appendChild(el('div', 'hint', tr('tv.flagsHelp')));
+    var hw = el('div', 'sugg');
+    hw.textContent = tr('tv.flagsHelp');
+    dtZeile(d, '', hw);
     return d;
   }
 

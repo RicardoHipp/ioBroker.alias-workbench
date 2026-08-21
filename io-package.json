@@ -1,8 +1,12 @@
 {
   "common": {
     "name": "alias-workbench",
-    "version": "0.0.6",
+    "version": "0.0.7",
     "news": {
+      "0.0.7": {
+        "en": "Editing a datapoint looks the same on a device and on a template",
+        "de": "Ein Datenpunkt sieht am Gerät und an der Vorlage gleich aus"
+      },
       "0.0.6": {
         "en": "Templates of your own are fully editable, datapoints included",
         "de": "Eigene Vorlagen lassen sich vollständig bearbeiten, samt Datenpunkten"
