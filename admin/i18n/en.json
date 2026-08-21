@@ -320,5 +320,8 @@
   "tv.forbidden": "Must not exist",
   "tv.forbiddenHelp": "These points must NOT be present on the device, otherwise the template does not match. This is what separates a single socket from a multi one. Separate several with commas. Absent points do not count as evidence.",
   "tpls.otherOutputs": "{0} points refer to other outputs ({1}).",
-  "tpls.otherOutputsText": "A template for several outputs always describes just one — the rest are derived from it. Deselect the foreign points on the device, otherwise the template will only ever fit this one device."
+  "tpls.otherOutputsText": "A template for several outputs always describes just one — the rest are derived from it. Deselect the foreign points on the device, otherwise the template will only ever fit this one device.",
+  "tpls.dropOthers": "Leave out the other outputs",
+  "tpls.droppedCount": "{0} points left out.",
+  "tpls.undrop": "undo"
 }

@@ -3775,7 +3775,7 @@
     var raus = { punkte: [], nummern: [] };
     if (!instanz) { return raus; }
     zeilen.forEach(function (r) {
-      if (r.lesenAbs) { return; }
+      if (r.weg || r.lesenAbs) { return; }
       var fremd = null;
       String(r.lesenRoh).split('.').forEach(function (t) {
         var m = /^(.*[^0-9])([0-9]{1,2})$/.exec(t);
@@ -3913,7 +3913,7 @@
 
     var erf = [];
     z.zeilen.forEach(function (r) {
-      if (!r.pflicht || r.lesenAbs) { return; }
+      if (r.weg || !r.pflicht || r.lesenAbs) { return; }
       var lp = zPfad(r, k, false);
       var sp = zPfad(r, k, true);
       if (erf.indexOf(lp) === -1) { erf.push(lp); }
@@ -3935,7 +3935,7 @@
       v.kanalname = k.kanalname || 'POWER%N%';
     }
 
-    v.zustaende = z.zeilen.map(function (r) {
+    v.zustaende = z.zeilen.filter(function (r) { return !r.weg; }).map(function (r) {
       var s = r.s;
       var f = feldAusFormel(s.f);
       var zu = {
@@ -4191,7 +4191,31 @@
         fw2.style.margin = '9px 0 0';
         fw2.appendChild(el('b', null, tr('tpls.otherOutputs', fremd.punkte.length, fremd.nummern.join(', '))));
         fw2.appendChild(document.createTextNode(' ' + tr('tpls.otherOutputsText')));
+        /* Nicht nur schimpfen, sondern es koennen: die fremden Zeilen
+           fliegen aus der Vorlage — das Geraet bleibt unangetastet. */
+        var fb = el('button', 'btn schmal', tr('tpls.dropOthers'));
+        fb.style.marginTop = '8px';
+        fb.addEventListener('click', function () {
+          z.zeilen.forEach(function (r) {
+            if (fremd.punkte.indexOf(r.name) > -1) { r.weg = true; }
+          });
+          zeichneVorlagenDialog();
+        });
+        fw2.appendChild(el('div', null, '')).appendChild(fb);
         mf.appendChild(fw2);
+      }
+      var weg = z.zeilen.filter(function (r) { return r.weg; });
+      if (weg.length) {
+        var wz = el('div', 'hint');
+        wz.style.marginTop = '7px';
+        wz.appendChild(document.createTextNode(tr('tpls.droppedCount', weg.length) + '  '));
+        var zb = el('button', 'btn schmal', tr('tpls.undrop'));
+        zb.addEventListener('click', function () {
+          z.zeilen.forEach(function (r) { r.weg = false; });
+          zeichneVorlagenDialog();
+        });
+        wz.appendChild(zb);
+        mf.appendChild(wz);
       }
     } else {
       mf.appendChild(el('div', 'hint', tr('tpls.multipleOff')));
@@ -4211,8 +4235,9 @@
     var zk = el('div', 'card');
     zk.style.marginBottom = '11px';
     var zh = el('div', 'ch');
+    var drin = z.zeilen.filter(function (r) { return !r.weg; });
     zh.appendChild(el('span', 'typ', tr('tpls.states')));
-    zh.appendChild(el('span', 'chip mut', tr('tpls.statesCount', z.zeilen.length)));
+    zh.appendChild(el('span', 'chip mut', tr('tpls.statesCount', drin.length)));
     zk.appendChild(zh);
 
     var kopfz = el('div', 'slot');
@@ -4224,7 +4249,7 @@
     zk.appendChild(kopfz);
 
     var absDa = false;
-    z.zeilen.forEach(function (r) {
+    drin.forEach(function (r) {
       if (r.lesenAbs) { absDa = true; }
       var row = el('div', 'slot');
       row.style.gridTemplateColumns = '80px 1fr 1.2fr 60px';
@@ -4347,7 +4372,8 @@
 
     var b = $('#btn-tpl-save');
     if (b) {
-      b.disabled = fehlerErk || !k.id || !z.zeilen.length;
+      b.disabled = fehlerErk || !k.id ||
+        !z.zeilen.filter(function (r) { return !r.weg; }).length;
       b.textContent = k.modus === 'update' ? tr('tpls.saveUpdate') : tr('tpls.saveNew');
     }
     var tt = $('#tpl-titel');

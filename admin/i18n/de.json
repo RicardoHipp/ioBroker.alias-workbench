@@ -320,5 +320,8 @@
   "tv.forbidden": "Darf es nicht geben",
   "tv.forbiddenHelp": "Diese Punkte dürfen am Gerät NICHT vorkommen, sonst passt die Vorlage nicht. So trennt sich eine einfache Steckdose von einer mehrfachen. Mehrere mit Komma trennen. Nicht vorhandene Punkte zählen nicht als Beleg.",
   "tpls.otherOutputs": "{0} Punkte zeigen auf andere Ausgänge ({1}).",
-  "tpls.otherOutputsText": "Eine Vorlage für mehrere Ausgänge beschreibt immer nur einen — die übrigen entstehen daraus. Nimm die fremden Punkte im Gerät heraus, sonst passt die Vorlage nur auf genau dieses eine Gerät."
+  "tpls.otherOutputsText": "Eine Vorlage für mehrere Ausgänge beschreibt immer nur einen — die übrigen entstehen daraus. Nimm die fremden Punkte im Gerät heraus, sonst passt die Vorlage nur auf genau dieses eine Gerät.",
+  "tpls.dropOthers": "Fremde Ausgänge weglassen",
+  "tpls.droppedCount": "{0} Punkte weggelassen.",
+  "tpls.undrop": "zurücknehmen"
 }
