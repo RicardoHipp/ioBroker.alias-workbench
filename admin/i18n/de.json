@@ -340,5 +340,6 @@
   "tv.stateHelp": "Pfade sind relativ zum Gerät, bei „festes Objekt\" die vollständige Objekt-ID. Ein Feld aus JSON wird beim Anwenden zu JSON.parse(val).<Feld> — Feld und Leseformel schließen sich aus.",
   "tv.clickRow": "Zeile anklicken, um den Punkt zu bearbeiten",
   "tv.flagsHelp": "„Vorgabe\" = beim nächsten Gerät vorgehakt. „muss da sein\" = ohne diesen Punkt passt die Vorlage gar nicht — er wandert dabei in die Pflichtliste oben. „festes Objekt\" = der Lesepfad ist keine Angabe relativ zum Gerät, sondern eine vollständige Objekt-ID, die bei jedem Gerät dieselbe bleibt.",
-  "tv.inTemplate": "in der Vorlage"
+  "tv.inTemplate": "in der Vorlage",
+  "pattern.slotName": "Der Punkt sitzt auf dem Platz „{0}\" des {1}-Musters. Diese Platznamen kommen aus dem type-detector und sind überall gleich — sie werden nicht übersetzt, weil der Datenpunkt im Alias genau so heißt."
 }

@@ -2244,6 +2244,15 @@
         if (x.id) { platzVon[x.id.slice(current.length + 1)] = x.name; }
       });
     }
+    /* Manche Muster haben einen Platz, der beliebig viele Punkte
+       aufnimmt — im info-Muster heisst jeder Punkt ACTUAL. Diesen Namen
+       an jede Zeile zu schreiben sagt nichts, es sieht nur aus wie ein
+       Uebersetzungsloch. Also nur zeigen, wenn er wirklich einen
+       bestimmten Punkt bezeichnet. */
+    var platzAnzahl = {};
+    Object.keys(platzVon).forEach(function (n) {
+      platzAnzahl[platzVon[n]] = (platzAnzahl[platzVon[n]] || 0) + 1;
+    });
     var infoFund = erkenneEntwurf(e, 'info');
     var imInfo = {};
     if (infoFund.length && haupt && haupt.type !== 'info') {
@@ -2348,8 +2357,11 @@
       if (s.geaendert) { n3.appendChild(el('span', 'geae', tr('list.changed'))); }
       if (s.on) {
         if (unfertig) { n3.appendChild(el('em', null, !s.n ? tr('list.nameMissing') : tr('list.sourceMissing'))); }
-        else if (pl) { n3.appendChild(el('em', null, pl)); }
-        else if (info) { n3.appendChild(el('em', null, tr('pattern.noPlaceIn', e.want || '?'))); }
+        else if (pl && pl !== s.n && platzAnzahl[pl] === 1) {
+          var pe = el('em', null, pl);
+          pe.title = tr('pattern.slotName', pl, e.want || '?');
+          n3.appendChild(pe);
+        } else if (info) { n3.appendChild(el('em', null, tr('pattern.noPlaceIn', e.want || '?'))); }
       }
       row.appendChild(n3);
 

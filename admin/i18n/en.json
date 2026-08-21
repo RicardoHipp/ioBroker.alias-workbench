@@ -340,5 +340,6 @@
   "tv.stateHelp": "Paths are relative to the device; with \"fixed object\" it is the full object id. A field from JSON becomes JSON.parse(val).<field> when applied — field and read function are mutually exclusive.",
   "tv.clickRow": "Click a row to edit the datapoint",
   "tv.flagsHelp": "\"Default\" = pre-ticked on the next device. \"must exist\" = without this point the template does not match at all — it moves into the required list above. \"fixed object\" = the read path is not relative to the device but a full object id, the same for every device.",
-  "tv.inTemplate": "in the template"
+  "tv.inTemplate": "in the template",
+  "pattern.slotName": "This point sits in slot \"{0}\" of the {1} pattern. Slot names come from the type-detector and are the same everywhere — they are not translated, because the alias datapoint is named exactly that."
 }
