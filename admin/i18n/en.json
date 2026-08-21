@@ -309,5 +309,16 @@
   "tv.hide": "hide",
   "tv.makeOwn": "Make an editable copy",
   "tv.rankOwn": "The rank only decides between your own templates. Against a shipped one yours always wins anyway — it needs no high rank for that.",
-  "tv.rankPackage": "The rank only decides between shipped templates, and even there only once evidence and name hint come out even."
+  "tv.rankPackage": "The rank only decides between shipped templates, and even there only once evidence and name hint come out even.",
+  "tpl.forbiddenThere": "{0} exists but must not",
+  "tpls.multiple": "This device has several outputs",
+  "tpls.whichNumber": "Number of this output",
+  "tpls.channelName": "Channel per output",
+  "tpls.multipleHelp": "The {0} in the paths is replaced by %N% — only at the end of a segment, so ENERGY.Power stays intact.",
+  "tpls.multipleNoNumber": "Enter which number in the paths is the output. Without it the template stays a single one.",
+  "tpls.multipleOff": "A device with POWER1, POWER2 … becomes a folder with one channel per output.",
+  "tv.forbidden": "Must not exist",
+  "tv.forbiddenHelp": "These points must NOT be present on the device, otherwise the template does not match. This is what separates a single socket from a multi one. Separate several with commas. Absent points do not count as evidence.",
+  "tpls.otherOutputs": "{0} points refer to other outputs ({1}).",
+  "tpls.otherOutputsText": "A template for several outputs always describes just one — the rest are derived from it. Deselect the foreign points on the device, otherwise the template will only ever fit this one device."
 }

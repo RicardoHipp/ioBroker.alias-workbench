@@ -309,5 +309,16 @@
   "tv.hide": "verbergen",
   "tv.makeOwn": "Eigene Kopie zum Bearbeiten",
   "tv.rankOwn": "Der Rang entscheidet nur zwischen deinen eigenen Vorlagen. Gegen eine mitgelieferte gewinnt deine ohnehin immer — dafür braucht sie keinen hohen Rang.",
-  "tv.rankPackage": "Der Rang entscheidet nur zwischen mitgelieferten Vorlagen, und auch dort erst, wenn Belege und Namenshinweis unentschieden sind."
+  "tv.rankPackage": "Der Rang entscheidet nur zwischen mitgelieferten Vorlagen, und auch dort erst, wenn Belege und Namenshinweis unentschieden sind.",
+  "tpl.forbiddenThere": "{0} ist vorhanden, darf aber nicht sein",
+  "tpls.multiple": "Dieses Gerät hat mehrere Ausgänge",
+  "tpls.whichNumber": "Nummer dieses Ausgangs",
+  "tpls.channelName": "Kanal je Ausgang",
+  "tpls.multipleHelp": "Die {0} in den Pfaden wird durch %N% ersetzt — nur am Ende eines Abschnitts, damit ENERGY.Power heil bleibt.",
+  "tpls.multipleNoNumber": "Trag ein, welche Zahl in den Pfaden der Ausgang ist. Ohne sie bleibt die Vorlage einfach.",
+  "tpls.multipleOff": "Ein Gerät mit POWER1, POWER2 … wird zu einem Ordner mit einem Kanal je Ausgang.",
+  "tv.forbidden": "Darf es nicht geben",
+  "tv.forbiddenHelp": "Diese Punkte dürfen am Gerät NICHT vorkommen, sonst passt die Vorlage nicht. So trennt sich eine einfache Steckdose von einer mehrfachen. Mehrere mit Komma trennen. Nicht vorhandene Punkte zählen nicht als Beleg.",
+  "tpls.otherOutputs": "{0} Punkte zeigen auf andere Ausgänge ({1}).",
+  "tpls.otherOutputsText": "Eine Vorlage für mehrere Ausgänge beschreibt immer nur einen — die übrigen entstehen daraus. Nimm die fremden Punkte im Gerät heraus, sonst passt die Vorlage nur auf genau dieses eine Gerät."
 }

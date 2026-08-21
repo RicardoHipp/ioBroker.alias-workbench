@@ -1143,8 +1143,10 @@
      Werte beantwortet sein muss. */
   function passtStrukturell(kanal) {
     return VORLAGEN.some(function (v) {
-      var erf = (v.erkennung || {}).erforderlich || [];
+      var erk = v.erkennung || {};
+      var erf = erk.erforderlich || [];
       if (!erf.length) { return false; }
+      if ((erk.verboten || []).some(function (e) { return hatPunkt(kanal, e); })) { return false; }
       if (v.mehrfach) { return instanzenVon(v, kanal).length > 0; }
       return erf.every(function (e) { return hatPunkt(kanal, e); });
     });
@@ -1165,6 +1167,14 @@
       inst = alle[0];
     }
     var auf = function (t) { return setzeInstanz(t, v, inst); };
+
+    /* Punkte, die es nicht geben darf. Das ist der ehrliche Unterschied
+       zwischen einer einfachen und einer mehrfachen Steckdose — vorher
+       liess sich das nur ueber den Rang erraten. Bewusst zaehlt ein
+       nicht vorhandener Punkt *nicht* als Beleg: sonst liesse sich die
+       Bewertung mit einer Liste erfundener Ausschluesse aufblasen. */
+    var verbotenDa = ((erk.verboten || []).map(auf)).filter(function (e) { return hatPunkt(kanal, e); });
+    verbotenDa.forEach(function (e) { fehler.push(tr('tpl.forbiddenThere', e)); });
 
     var fehlt = (erk.erforderlich || []).map(auf).filter(function (e) { return !hatPunkt(kanal, e); });
     fehlt.forEach(function (e) { fehler.push(tr('tpl.missingPoint', e)); });
@@ -3484,6 +3494,17 @@
       z.style.fontFamily = 'var(--mono)';
       eb.appendChild(z);
     });
+    var vb = el('div');
+    vb.style.marginTop = '9px';
+    vb.appendChild(feld(tr('tv.forbidden'), ((v.erkennung || {}).verboten || []).join(', '),
+      function (x, w) {
+        x.erkennung = x.erkennung || {};
+        var l = String(w).split(',').map(function (t) { return t.trim(); })
+          .filter(function (t) { return !!t; });
+        if (l.length) { x.erkennung.verboten = l; } else { delete x.erkennung.verboten; }
+      }, '280px'));
+    vb.appendChild(el('div', 'hint', tr('tv.forbiddenHelp')));
+    eb.appendChild(vb);
     if (v.mehrfach) {
       eb.appendChild(el('div', 'hint', tr('tv.multi', v.kanalname || 'POWER%N%')));
     }
@@ -3714,6 +3735,61 @@
     }).join('.');
   }
 
+  /* Welcher Pfad steht am Ende in der Vorlage? Bei einem Mehrfachgeraet
+     tritt der Platzhalter an die Stelle der Ausgangsnummer. */
+  function zPfad(r, k, schreibend) {
+    var roh = schreibend ? r.schreibenRoh : r.lesenRoh;
+    var abs = schreibend ? r.schreibenAbs : r.lesenAbs;
+    if (!roh) { return ''; }
+    if (!k.mehrfach || abs || !k.instanz) { return roh; }
+    return zuPlatzhalter(roh, k.instanz);
+  }
+
+  /* Endet die Nummer eines Ausgangs in den Pfaden? Haeufigste Zahl am
+     Ende eines Abschnitts gewinnt — cmnd.POWER1, stat.POWER1 sagen 1. */
+  function rateInstanz(zeilen, geraetName) {
+    var zaehler = {};
+    zeilen.forEach(function (r) {
+      if (r.lesenAbs) { return; }
+      String(r.lesenRoh).split('.').forEach(function (t) {
+        var m = /^(.*[^0-9])([0-9]{1,2})$/.exec(t);
+        if (m) { zaehler[m[2]] = (zaehler[m[2]] || 0) + 1; }
+      });
+    });
+    var mn = /^(.*[^0-9])([0-9]{1,2})$/.exec(geraetName || '');
+    if (mn) { zaehler[mn[2]] = (zaehler[mn[2]] || 0) + 1; }
+    var beste = '', wie = 0;
+    Object.keys(zaehler).forEach(function (n) {
+      if (zaehler[n] > wie || (zaehler[n] === wie && Number(n) < Number(beste))) {
+        beste = n; wie = zaehler[n];
+      }
+    });
+    return beste;
+  }
+
+  /* Eine Mehrfachvorlage beschreibt genau einen Ausgang — die anderen
+     entstehen daraus. Zeigt der Entwurf noch auf POWER2, POWER3 …, waere
+     die Vorlage an dieses eine Geraet gefesselt. Also einsammeln und
+     sagen, statt still etwas Falsches zu speichern. */
+  function andereAusgaenge(zeilen, instanz) {
+    var raus = { punkte: [], nummern: [] };
+    if (!instanz) { return raus; }
+    zeilen.forEach(function (r) {
+      if (r.lesenAbs) { return; }
+      var fremd = null;
+      String(r.lesenRoh).split('.').forEach(function (t) {
+        var m = /^(.*[^0-9])([0-9]{1,2})$/.exec(t);
+        if (m && m[2] !== String(instanz)) { fremd = m[2]; }
+      });
+      if (fremd) {
+        raus.punkte.push(r.name);
+        if (raus.nummern.indexOf(fremd) === -1) { raus.nummern.push(fremd); }
+      }
+    });
+    raus.nummern.sort(function (a, b) { return Number(a) - Number(b); });
+    return raus;
+  }
+
   function schluesselAus(text) {
     return String(text || '').toLowerCase()
       .split('ä').join('ae').split('ö').join('oe').split('ü').join('ue').split('ß').join('ss')
@@ -3762,9 +3838,13 @@
       zeilen.push({
         s: s,
         name: s.n,
-        lesen: (mehrfach && !r.abs) ? zuPlatzhalter(r.p, inst) : r.p,
+        /* Roh heisst: relativ zum Geraet, aber noch mit der konkreten
+           Ausgangsnummer. Der Platzhalter wird erst gesetzt, wenn er
+           gebraucht wird — sonst liesse sich der Haken „mehrere
+           Ausgaenge" nicht mehr umlegen. */
+        lesenRoh: r.p,
         lesenAbs: r.abs,
-        schreiben: w ? ((mehrfach && !w.abs) ? zuPlatzhalter(w.p, inst) : w.p) : '',
+        schreibenRoh: w ? w.p : '',
         schreibenAbs: w ? w.abs : false,
         aus: !s.on,
         /* Vorschlag: was einen Schreibweg hat, traegt das Geraet. Was aus
@@ -3781,8 +3861,8 @@
       if (!f || z.lesenAbs) { return; }
       var oben = f.split('.')[0];
       var da = false;
-      inhalte.forEach(function (x) { if (x.punkt === z.lesen && x.feld === oben) { da = true; } });
-      if (!da) { inhalte.push({ punkt: z.lesen, feld: oben, an: false }); }
+      inhalte.forEach(function (x) { if (x.punkt === z.lesenRoh && x.feld === oben) { da = true; } });
+      if (!da) { inhalte.push({ punkt: z.lesenRoh, feld: oben, an: false }); }
     });
     if (quelle && quelle.erkennung && quelle.erkennung.inhalt) {
       Object.keys(quelle.erkennung.inhalt).forEach(function (p) {
@@ -3810,7 +3890,10 @@
         rang: quelle ? (quelle.rang || 0) : maxRang + 10,
         maxRang: maxRang,
         mehrfach: mehrfach,
-        kanalname: (quelle && quelle.kanalname) ? quelle.kanalname : '',
+        instanz: mehrfach ? String(inst === null || inst === undefined ? '' : inst)
+                          : rateInstanz(zeilen, geraetName),
+        kanalname: (quelle && quelle.kanalname) ? quelle.kanalname : 'POWER%N%',
+        verboten: quelle ? (((quelle.erkennung || {}).verboten) || []).join(', ') : '',
         geraetName: geraetName
       }
     };
@@ -3831,17 +3914,23 @@
     var erf = [];
     z.zeilen.forEach(function (r) {
       if (!r.pflicht || r.lesenAbs) { return; }
-      if (erf.indexOf(r.lesen) === -1) { erf.push(r.lesen); }
-      if (r.schreiben && !r.schreibenAbs && erf.indexOf(r.schreiben) === -1) { erf.push(r.schreiben); }
+      var lp = zPfad(r, k, false);
+      var sp = zPfad(r, k, true);
+      if (erf.indexOf(lp) === -1) { erf.push(lp); }
+      if (sp && !r.schreibenAbs && erf.indexOf(sp) === -1) { erf.push(sp); }
     });
     v.erkennung.erforderlich = erf;
+
+    var verb = String(k.verboten || '').split(',').map(function (x) { return x.trim(); })
+      .filter(function (x) { return !!x; });
+    if (verb.length) { v.erkennung.verboten = verb; }
 
     var inh = {};
     z.inhalte.forEach(function (x) { if (x.an) { inh[x.punkt] = x.feld; } });
     if (Object.keys(inh).length) { v.erkennung.inhalt = inh; }
     if (k.namenshinweis) { v.erkennung.namenshinweis = k.namenshinweis; }
 
-    if (k.mehrfach) {
+    if (k.mehrfach && k.instanz) {
       v.mehrfach = { platzhalter: '%N%' };
       v.kanalname = k.kanalname || 'POWER%N%';
     }
@@ -3854,12 +3943,12 @@
         rolle: s.role || undefined,
         typ: s.typ || undefined,
         einheit: s.unit || undefined,
-        lesen: r.lesen
+        lesen: zPfad(r, k, false)
       };
       if (r.lesenAbs) { zu.absolut = true; }
-      if (r.schreiben) { zu.schreiben = r.schreiben; }
+      if (r.schreibenRoh) { zu.schreiben = zPfad(r, k, true); }
       if (f) { zu.feld = f; } else if (s.f) { zu.leseformel = s.f; }
-      if (s.fw && r.schreiben) { zu.schreibformel = s.fw; }
+      if (s.fw && r.schreibenRoh) { zu.schreibformel = s.fw; }
       if (!r.pflicht) { zu.optional = true; }
       if (r.aus) { zu.vorgabeAus = true; }
       if (s.caption) { zu.beschriftung = s.caption; }
@@ -4064,6 +4153,58 @@
     nt.style.marginTop = '4px';
     nh.appendChild(nt);
     kk.appendChild(nh);
+
+    /* --- mehrere Ausgaenge --- */
+    var mf = el('div');
+    mf.style.padding = '0 12px 12px';
+    var ml = el('label');
+    ml.style.display = 'block';
+    ml.style.fontSize = '12.5px';
+    var mcb = document.createElement('input');
+    mcb.type = 'checkbox';
+    mcb.checked = !!k.mehrfach;
+    mcb.addEventListener('change', function () {
+      k.mehrfach = mcb.checked;
+      if (k.mehrfach && !k.instanz) { k.instanz = rateInstanz(z.zeilen, k.geraetName); }
+      zeichneVorlagenDialog();
+    });
+    ml.appendChild(mcb);
+    ml.appendChild(document.createTextNode(' ' + tr('tpls.multiple')));
+    mf.appendChild(ml);
+
+    if (k.mehrfach) {
+      var mz = el('div');
+      mz.style.display = 'flex';
+      mz.style.flexWrap = 'wrap';
+      mz.style.gap = '9px 14px';
+      mz.style.marginTop = '6px';
+      mz.appendChild(tplFeld(tr('tpls.whichNumber'), k.instanz,
+        function (x) { k.instanz = String(x).trim(); }, '60px'));
+      mz.appendChild(tplFeld(tr('tpls.channelName'), k.kanalname,
+        function (x) { k.kanalname = x; }, '140px'));
+      mf.appendChild(mz);
+      mf.appendChild(el('div', 'hint',
+        k.instanz ? tr('tpls.multipleHelp', k.instanz) : tr('tpls.multipleNoNumber')));
+      var fremd = andereAusgaenge(z.zeilen, k.instanz);
+      if (fremd.punkte.length) {
+        var fw2 = el('div', 'aside w');
+        fw2.style.margin = '9px 0 0';
+        fw2.appendChild(el('b', null, tr('tpls.otherOutputs', fremd.punkte.length, fremd.nummern.join(', '))));
+        fw2.appendChild(document.createTextNode(' ' + tr('tpls.otherOutputsText')));
+        mf.appendChild(fw2);
+      }
+    } else {
+      mf.appendChild(el('div', 'hint', tr('tpls.multipleOff')));
+    }
+    kk.appendChild(mf);
+
+    /* --- Punkte, die es nicht geben darf --- */
+    var vf = el('div');
+    vf.style.padding = '0 12px 12px';
+    vf.appendChild(tplFeld(tr('tv.forbidden'), k.verboten, function (x) { k.verboten = x; }, '280px'));
+    vf.appendChild(el('div', 'hint', tr('tv.forbiddenHelp')));
+    kk.appendChild(vf);
+
     body.appendChild(kk);
 
     /* --- Zustaende --- */
@@ -4101,8 +4242,8 @@
 
       var pw = el('span', 'rx');
       pw.style.fontFamily = 'var(--mono)';
-      pw.appendChild(document.createTextNode(r.lesen));
-      if (r.schreiben) { pw.appendChild(el('span', 'chip mut', '→ ' + r.schreiben)); }
+      pw.appendChild(document.createTextNode(zPfad(r, k, false)));
+      if (r.schreibenRoh) { pw.appendChild(el('span', 'chip mut', '→ ' + zPfad(r, k, true))); }
       if (r.lesenAbs) { pw.appendChild(el('span', 'chip warn', tr('tpls.absolute'))); }
       row.appendChild(pw);
 

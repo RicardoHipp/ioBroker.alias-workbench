@@ -1,8 +1,12 @@
 {
   "common": {
     "name": "alias-workbench",
-    "version": "0.0.3",
+    "version": "0.0.4",
     "news": {
+      "0.0.4": {
+        "en": "Forbidden datapoints in detection; multi-output templates from a hand-built device",
+        "de": "Verbotene Datenpunkte in der Erkennung; Mehrfachvorlagen aus einem von Hand gebauten Gerät"
+      },
       "0.0.3": {
         "en": "Templates view: manage, duplicate, delete, import and export templates",
         "de": "Sicht Vorlagen: verwalten, duplizieren, löschen, ein- und ausgeben"

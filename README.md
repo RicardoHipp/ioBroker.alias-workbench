@@ -118,6 +118,7 @@ One JSON file per template under `admin/vorlagen/`. Example:
 |---|---|
 | `erkennung.erforderlich` | these datapoints must exist, otherwise the template does not match |
 | `erkennung.inhalt` | the named datapoint must contain this field in its JSON |
+| `erkennung.verboten` | these datapoints must **not** exist, otherwise the template does not match |
 | `erkennung.namenshinweis` | only breaks ties between templates that fit equally well |
 | `rang` | last tie-breaker, so the same device is always detected the same way |
 | `optional` | the state is skipped when its source or JSON field is missing |
@@ -127,6 +128,11 @@ One JSON file per template under `admin/vorlagen/`. Example:
 | `absolut` | `lesen` is a full object id, not relative to the device — the same object for every device |
 | `beschriftung` | the datapoint's display name, if it should differ from its slot name |
 | `nachkommastellen` | decimals for the value display |
+
+`verboten` is what genuinely separates a single socket from a multi-output one:
+the single one has no `stat.POWER2`. An absent datapoint deliberately does **not**
+count as evidence — otherwise a list of invented exclusions could inflate a
+template's score.
 
 Datapoint names are matched case-insensitively as a fallback, because MQTT keeps
 whatever casing was published — the same device family sends `cmnd.POWER` on one
@@ -150,6 +156,12 @@ asks:
   ticked.
 - **name hint** — never derived. It only breaks ties between templates that fit
   equally well; MQTT cannot tell a lamp from a PC.
+- **several outputs** — a tick plus the number that identifies this output.
+  `stat.POWER1` then becomes `stat.POWER%N%`, replaced only at the end of a path
+  segment so `ENERGY.Power` stays intact. If the draft still refers to the other
+  outputs, the dialog says so: such a template would only ever fit this one
+  device.
+- **must not exist** — datapoints whose presence rules the template out.
 
 Then the try-out shows what the detection actually catches, before anything is
 saved.
@@ -236,6 +248,11 @@ entry in `SPRACHEN` in `admin/tab.html` — nothing else.
   core feature of the js-controller, not of any adapter
 
 ## Changelog
+
+### 0.0.4
+
+- `erkennung.verboten`: datapoints that must not exist
+- Multi-output templates can be built from a device assembled by hand
 
 ### 0.0.3
 
