@@ -3428,6 +3428,9 @@
       function (x, w) { if (typeof x.name === 'string') { x.name = { de: x.name, en: x.name }; } x.name.en = w; }, '140px'));
     kb.appendChild(feld(tr('tpls.rank'), v.rang || 0,
       function (x, w) { x.rang = Number(w) || 0; }, '60px'));
+    var rh = el('span', 'hint', eigen ? tr('tv.rankOwn') : tr('tv.rankPackage'));
+    rh.style.flexBasis = '100%';
+    kb.appendChild(rh);
 
     var lt = el('label', 'feld');
     lt.appendChild(el('span', 'feldlabel', tr('tpls.deviceType')));
@@ -3578,9 +3581,7 @@
     } else {
       k.id = freierSchluessel(k.id + '-kopie');
       k.version = 1;
-      var maxRang = 0;
-      VORLAGEN.forEach(function (x) { if ((x.rang || 0) > maxRang) { maxRang = x.rang || 0; } });
-      k.rang = maxRang + 10;
+      k.rang = eigenerMaxRang() + 10;
       k.name = { de: textIn(k.name, 'de') + ' (Kopie)', en: textIn(k.name, 'en') + ' (copy)' };
     }
     if (typeof k.name === 'string') { k.name = { de: k.name, en: k.name }; }
@@ -3719,6 +3720,20 @@
       .replace(/[^a-z0-9]+/g, '-').replace(/^-+/, '').replace(/-+$/, '') || 'vorlage';
   }
 
+  /* Der Rang entscheidet nur zwischen Vorlagen derselben Herkunft — der
+     Zuschlag fuer „eigene" liegt in der Bewertung ueber jedem moeglichen
+     Rang. Deshalb wird beim Vergeben auch nur im eigenen Zahlenraum
+     gezaehlt: sonst schoebe eine mitgelieferte Vorlage mit hohem Rang die
+     Nummern des Benutzers mit jedem Update vor sich her, ohne dass sich am
+     Verhalten irgendetwas aenderte. */
+  function eigenerMaxRang() {
+    var m = 0;
+    VORLAGEN.forEach(function (v) {
+      if (v._quelle === 'benutzer' && (v.rang || 0) > m) { m = v.rang || 0; }
+    });
+    return m;
+  }
+
   function freierSchluessel(basis) {
     var da = {};
     VORLAGEN.forEach(function (v) { da[v.id] = 1; });
@@ -3730,8 +3745,7 @@
   function vorlagenVorbereiten(e) {
     var quelle = null;
     VORLAGEN.forEach(function (v) { if (v.id === e.vorlage) { quelle = v; } });
-    var maxRang = 0;
-    VORLAGEN.forEach(function (v) { if ((v.rang || 0) > maxRang) { maxRang = v.rang || 0; } });
+    var maxRang = eigenerMaxRang();
 
     var mehrfach = !!(quelle && quelle.mehrfach);
     var inst = mehrfach ? e.instanz : null;
@@ -4037,6 +4051,9 @@
     kb.appendChild(lt);
 
     kb.appendChild(tplFeld(tr('tpls.rank'), k.rang, function (x) { k.rang = x; }, '60px'));
+    var rh2 = el('div', 'hint', tr('tv.rankOwn'));
+    rh2.style.flexBasis = '100%';
+    kb.appendChild(rh2);
     kk.appendChild(kb);
 
     var nh = el('div');

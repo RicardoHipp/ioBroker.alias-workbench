@@ -307,5 +307,7 @@
   "tv.deleteHint": "If it shadows a shipped template, that one reappears afterwards.",
   "tv.show": "show",
   "tv.hide": "hide",
-  "tv.makeOwn": "Make an editable copy"
+  "tv.makeOwn": "Make an editable copy",
+  "tv.rankOwn": "The rank only decides between your own templates. Against a shipped one yours always wins anyway — it needs no high rank for that.",
+  "tv.rankPackage": "The rank only decides between shipped templates, and even there only once evidence and name hint come out even."
 }

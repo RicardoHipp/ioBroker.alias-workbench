@@ -307,5 +307,7 @@
   "tv.deleteHint": "Verdeckt sie eine mitgelieferte Vorlage, kommt die danach wieder zum Vorschein.",
   "tv.show": "zeigen",
   "tv.hide": "verbergen",
-  "tv.makeOwn": "Eigene Kopie zum Bearbeiten"
+  "tv.makeOwn": "Eigene Kopie zum Bearbeiten",
+  "tv.rankOwn": "Der Rang entscheidet nur zwischen deinen eigenen Vorlagen. Gegen eine mitgelieferte gewinnt deine ohnehin immer — dafür braucht sie keinen hohen Rang.",
+  "tv.rankPackage": "Der Rang entscheidet nur zwischen mitgelieferten Vorlagen, und auch dort erst, wenn Belege und Namenshinweis unentschieden sind."
 }

@@ -192,6 +192,18 @@ Order matters. Counting evidence first is what keeps a template you built on
 purpose from losing to a shipped one whose word happens to appear in the device
 name.
 
+Note what step 3 means for updates: a template of yours **cannot be outranked by
+a shipped one on `rang`** — that step sits above `rang` in the order, so no
+future version of this adapter can quietly take a device away from a template
+you built. `rang` only ever breaks ties between templates of the same origin,
+which is also why a new template of yours is numbered from your own templates
+and ignores the shipped numbers entirely.
+
+A shipped template can still win on step 1 by verifying strictly more
+datapoints. That is deliberate — more evidence should win — and it only affects
+devices you have not built yet: a finished alias records the template it came
+from and keeps it.
+
 ## Installation
 
 Not on npm yet. On the ioBroker host:
@@ -229,6 +241,8 @@ entry in `SPRACHEN` in `admin/tab.html` — nothing else.
 
 - Templates view: list, edit, duplicate, delete, import and export
 - Shipped templates are read-only; an editable copy shadows them
+- `rang` for a new template of yours is numbered from your own templates only,
+  so shipped ranks can never shift it
 
 ### 0.0.2
 
