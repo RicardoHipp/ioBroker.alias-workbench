@@ -328,5 +328,7 @@
   "tpls.colDefault": "Vorgabe",
   "tpls.statesHelp": "Der linke Haken sagt, ob der Punkt überhaupt in die Vorlage kommt. „Vorgabe“ ist der Zustand, mit dem er beim nächsten Gerät vorgeschlagen wird — der kommt von deiner Auswahl am Gerät. Der rechte Haken sagt, ob er vorhanden sein muss, damit die Vorlage überhaupt greift.",
   "tpls.someOff": "Am Gerät abgewählt: {0}. Diese Punkte kommen als „Vorgabe aus“ mit — beim nächsten Gerät stehen sie in der Liste, nur nicht angehakt.",
-  "tpls.dropOff": "Ganz weglassen"
+  "tpls.dropOff": "Ganz weglassen",
+  "tpls.loadFailed": "eigene Vorlagen nicht geladen",
+  "tpls.loadFailedHint": "Die Instanzkonfiguration hat nicht rechtzeitig geantwortet. Deine eigenen Vorlagen sind nicht verschwunden — sie fehlen nur in dieser Ansicht. Seite neu laden."
 }

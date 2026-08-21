@@ -1,8 +1,12 @@
 {
   "common": {
     "name": "alias-workbench",
-    "version": "0.0.4",
+    "version": "0.0.5",
     "news": {
+      "0.0.5": {
+        "en": "Saving touches one template at a time; clearer columns per datapoint",
+        "de": "Speichern fasst nur eine Vorlage an; klarere Spalten je Datenpunkt"
+      },
       "0.0.4": {
         "en": "Forbidden datapoints in detection; multi-output templates from a hand-built device",
         "de": "Verbotene Datenpunkte in der Erkennung; Mehrfachvorlagen aus einem von Hand gebauten Gerät"

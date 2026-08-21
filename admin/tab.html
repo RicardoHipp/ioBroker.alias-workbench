@@ -619,9 +619,7 @@
     c.textContent = tr('app.connected');
     beschrifteHtml();
     ladeVorlagen(function () {
-      $('#meta').textContent = tr('app.detector') + ' ' + (D ? D.version : '?') +
-        '  ·  ' + tr('app.patternsCount', D ? Object.keys(D.patterns).length : 0) +
-        '  ·  ' + tr('app.templatesCount', VORLAGEN.length);
+      setzeMeta();
       ladeObjekte();
     });
     });
@@ -966,6 +964,7 @@
      Eine Datei je Vorlage unter admin/vorlagen/. Die Verarbeitung kennt
      kein einziges Geraet — alles Geraetewissen steckt in den Dateien. */
   var VORLAGEN = [];
+  var vorlagenUnvollstaendig = false;
 
   /* Welche Instanz — der Reiter wird mit ?<instanz>&noFooter geladen. */
   var INSTANZ = (function () {
@@ -973,6 +972,20 @@
     return /^\d+$/.test(s) ? s : '0';
   })();
   var INSTANZ_ID = 'system.adapter.alias-workbench.' + INSTANZ;
+
+  function setzeMeta() {
+    var m = $('#meta');
+    if (!m) { return; }
+    m.textContent = tr('app.detector') + ' ' + (D ? D.version : '?') +
+      '  \u00b7  ' + tr('app.patternsCount', D ? Object.keys(D.patterns).length : 0) +
+      '  \u00b7  ' + tr('app.templatesCount', VORLAGEN.length);
+    if (vorlagenUnvollstaendig) {
+      var w = el('span', 'chip bad', tr('tpls.loadFailed'));
+      w.style.marginLeft = '8px';
+      w.title = tr('tpls.loadFailedHint');
+      m.appendChild(w);
+    }
+  }
 
   function ladeVorlagen(fertig) {
     fetch('./vorlagen/index.json').then(function (r) { return r.json(); }).then(function (ix) {
@@ -998,9 +1011,10 @@
     function dazu(paket) {
       paket.forEach(function (v) { v._quelle = 'paket'; });
       var durch = false;
-      var schluss = function (eigene) {
+      var schluss = function (eigene, ueberlauf) {
         if (durch) { return; }
         durch = true;
+        vorlagenUnvollstaendig = !!ueberlauf;
         var zus = paket.slice();
         (eigene || []).forEach(function (v) {
           if (!v || !v.id) { return; }
@@ -1012,37 +1026,47 @@
         VORLAGEN = zus;
         fertig();
       };
-      setTimeout(function () { schluss([]); }, 2500);
+      /* Wenn die Antwort ausbleibt, laeuft die Oberflaeche weiter — aber
+         sie behauptet dann nicht, es gaebe keine eigenen Vorlagen. */
+      setTimeout(function () { schluss([], true); }, 6000);
       socket.emit('getObject', INSTANZ_ID, function (err, o) {
         schluss((o && o.native && o.native.vorlagen) || []);
       });
     }
   }
 
-  /* Eigene Vorlagen ablegen.
+  /* Eine einzelne Vorlage ablegen oder entfernen.
 
-     Bewusst lesen–aendern–ganz zurueckschreiben statt extendObject:
-     extendObject fuehrt Listen *feldweise* zusammen. Eine kuerzer
-     gewordene Liste bliebe damit unveraendert, und schlimmer noch —
-     schreibt man an Platz 0 eine andere Vorlage, verschmelzen beide
-     zu einem Zwitter aus neuem Namen und alten Zustaenden. Gemessen,
-     nicht vermutet. */
-  function speichereVorlagen(liste, fertig) {
+     Zwei Entscheidungen stecken hier drin, beide teuer erkauft:
+
+     Erstens *nicht* extendObject. Das fuehrt Listen feldweise zusammen:
+     eine kuerzer gewordene Liste bliebe unveraendert, und schreibt man
+     an Platz 0 eine andere Vorlage, verschmelzen beide zu einem Zwitter
+     aus neuem Namen und alten Zustaenden. Gemessen, nicht vermutet.
+
+     Zweitens wird nur *ein Eintrag* geaendert, nie die ganze Liste aus
+     dem Arbeitsspeicher zurueckgeschrieben. Sonst haenge die Sicherheit
+     der gespeicherten Vorlagen daran, dass das Laden beim Seitenaufbau
+     geklappt hat — ein Zeitueberlauf haette aus einem Speichervorgang
+     ein stilles Loeschen aller anderen Vorlagen gemacht. */
+  function aendereVorlagen(id, vorlage, fertig) {
     socket.emit('getObject', INSTANZ_ID, function (err, o) {
       if (err || !o) { return fertig(err || tr('tpls.noInstance', INSTANZ_ID)); }
       o.native = o.native || {};
+      var liste = Array.isArray(o.native.vorlagen) ? o.native.vorlagen.slice() : [];
+      var i = -1;
+      liste.forEach(function (x, n) { if (x && x.id === id) { i = n; } });
+      if (vorlage === null) {
+        if (i === -1) { return fertig(null); }
+        liste.splice(i, 1);
+      } else if (i > -1) {
+        liste[i] = vorlage;
+      } else {
+        liste.push(vorlage);
+      }
       o.native.vorlagen = liste;
       socket.emit('setObject', INSTANZ_ID, o, function (e2) { fertig(e2 || null); });
     });
-  }
-
-  function eigeneVorlagen() {
-    return VORLAGEN.filter(function (v) { return v._quelle === 'benutzer'; })
-      .map(function (v) {
-        var k = {};
-        Object.keys(v).forEach(function (s) { if (s.charAt(0) !== '_') { k[s] = v[s]; } });
-        return k;
-      });
   }
 
   function kurz(id, kanal) { return id.slice(kanal.length + 1); }
@@ -3666,16 +3690,11 @@
     var v = vArbeitsstand();
     if (!v) { return; }
     var rein = ohneUnterstrich(v);
-    var liste = eigeneVorlagen();
-    var i = -1;
-    liste.forEach(function (x, n) { if (x.id === rein.id) { i = n; } });
-    if (i > -1) { liste[i] = rein; } else { liste.push(rein); }
-    speichereVorlagen(liste, function (err) {
+    aendereVorlagen(rein.id, rein, function (err) {
       if (err) { return vMeldung(tr('tpls.failed') + ' ' + err, true); }
       ladeVorlagen(function () {
         vEinlesen = null; vEntwurf = null; vGewaehlt = rein.id;
-        $('#meta').textContent = tr('app.patternsCount', D ? Object.keys(D.patterns).length : 0) +
-          '  ·  ' + tr('app.templatesCount', VORLAGEN.length);
+        setzeMeta();
         zeichneVorlagenListe();
         zeichneErgebnis();
       });
@@ -3683,14 +3702,12 @@
   }
 
   function vLoeschen(id) {
-    var liste = eigeneVorlagen().filter(function (x) { return x.id !== id; });
-    speichereVorlagen(liste, function (err) {
+    aendereVorlagen(id, null, function (err) {
       if (err) { return vMeldung(tr('tpls.failed') + ' ' + err, true); }
       ladeVorlagen(function () {
         vEinlesen = null; vEntwurf = null; vLoeschFrage = false;
         vGewaehlt = vorlageMitId(id) ? id : null;
-        $('#meta').textContent = tr('app.patternsCount', D ? Object.keys(D.patterns).length : 0) +
-          '  ·  ' + tr('app.templatesCount', VORLAGEN.length);
+        setzeMeta();
         zeichneVorlagenListe();
         zeichneErgebnis();
       });
@@ -4435,15 +4452,11 @@
   function speichereVorlageAusDialog() {
     if (!tplZ) { return; }
     var neu = baueVorlage(tplZ);
-    var liste = eigeneVorlagen();
-    var i = -1;
-    liste.forEach(function (v, n) { if (v.id === neu.id) { i = n; } });
-    if (i > -1) { liste[i] = neu; } else { liste.push(neu); }
 
     var b = $('#btn-tpl-save');
     if (b) { b.disabled = true; b.textContent = tr('tpls.saving'); }
 
-    speichereVorlagen(liste, function (err) {
+    aendereVorlagen(neu.id, neu, function (err) {
       var body = $('#tpl-body');
       if (err) {
         body.textContent = '';
@@ -4455,8 +4468,7 @@
         return;
       }
       ladeVorlagen(function () {
-        $('#meta').textContent = tr('app.patternsCount', D ? Object.keys(D.patterns).length : 0) +
-          '  ·  ' + tr('app.templatesCount', VORLAGEN.length);
+        setzeMeta();
         body.textContent = '';
         var m = el('div');
         m.style.fontSize = '13px';
