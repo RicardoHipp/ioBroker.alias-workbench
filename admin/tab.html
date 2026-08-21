@@ -3579,8 +3579,13 @@
       if (z.schreiben) { pw.appendChild(el('span', 'chip mut', '\u2192 ' + z.schreiben)); }
       if (z.absolut) { pw.appendChild(el('span', 'chip warn', tr('tpls.absolute'))); }
       r.appendChild(pw);
-      r.appendChild(el('span', 'rx', (z.optional ? tr('tv.optional') : tr('tv.required')) +
-        (z.vorgabeAus ? ' \u00b7 ' + tr('tpls.offByDefault') : '')));
+      /* Dieselben zwei Angaben wie im Speichern-Dialog, gleiche Richtung
+         und dieselben Woerter — vorher stand hier „Pflicht/freiwillig"
+         und dort „Vorgabe / muss da sein", fuer genau dieselbe Sache. */
+      var mm = el('span', 'rx');
+      if (!z.vorgabeAus) { mm.appendChild(el('span', 'chip mut', tr('tpls.colDefault'))); }
+      if (istPflichtpunkt(v, z)) { mm.appendChild(el('span', 'chip ok', tr('tpls.colRequired'))); }
+      r.appendChild(mm);
       r.appendChild(el('span', 'ca2', eigen ? (auf ? '\u25be' : '\u25b8') : ''));
       if (eigen) {
         r.addEventListener('click', function () {
@@ -3669,7 +3674,15 @@
   /* Ein Datenpunkt zum Aufklappen. Bewusst ohne Werte und ohne
      Detektor-Bericht: hier gibt es kein Geraet, an dem man das messen
      koennte. Was die Aenderung bewirkt, zeigt der Probelauf darunter. */
+  /* Zaehlt dieser Datenpunkt fuer die Erkennung? Nicht aus optional
+     abgelesen, sondern aus der Pflichtliste — die ist die Wahrheit. */
+  function istPflichtpunkt(v, z) {
+    var erf = (v.erkennung || {}).erforderlich || [];
+    return !!z.lesen && erf.indexOf(z.lesen) > -1;
+  }
+
   function vZeilenDetail(z, nr) {
+    var v = vArbeitsstand();
     var d = el('div');
     d.style.padding = '10px 12px 12px 30px';
     d.style.background = 'var(--surface-2)';
@@ -3762,10 +3775,36 @@
     zeile2.style.gap = '16px';
     zeile2.style.alignItems = 'center';
     zeile2.style.marginTop = '4px';
-    zeile2.appendChild(haken(tr('tv.optionalLabel'), !!z.optional,
-      function (zz, an) { if (an) { zz.optional = true; } else { delete zz.optional; } }));
-    zeile2.appendChild(haken(tr('tv.offByDefaultLabel'), !!z.vorgabeAus,
-      function (zz, an) { if (an) { zz.vorgabeAus = true; } else { delete zz.vorgabeAus; } }));
+
+    /* Beide Haken laufen in dieselbe Richtung wie im Speichern-Dialog:
+       angehakt heisst „ja". Vorher stand hier „freiwillig" und „Vorgabe
+       aus" — also zweimal die Umkehrung, was niemand zusammenbringt. */
+    zeile2.appendChild(haken(tr('tpls.colDefault'), !z.vorgabeAus,
+      function (zz, an) { if (an) { delete zz.vorgabeAus; } else { zz.vorgabeAus = true; } }));
+
+    /* Ein Pflichtpunkt ist zweierlei in einem: er darf beim Anwenden
+       nicht fehlen (optional) und er entscheidet ueber die Erkennung
+       (erforderlich). Der Haken haelt beides zusammen — sonst koennten
+       Liste und Zeile Verschiedenes behaupten. */
+    zeile2.appendChild(haken(tr('tpls.colRequired'), istPflichtpunkt(v, z), function (zz, an) {
+      var w = vArbeitsstand();
+      w.erkennung = w.erkennung || {};
+      var liste = (w.erkennung.erforderlich || []).slice();
+      var pfad = zz.lesen;
+      var i = liste.indexOf(pfad);
+      if (an) {
+        delete zz.optional;
+        if (pfad && i === -1) { liste.push(pfad); }
+        if (zz.schreiben && liste.indexOf(zz.schreiben) === -1) { liste.push(zz.schreiben); }
+      } else {
+        zz.optional = true;
+        if (i > -1) { liste.splice(i, 1); }
+        var j = zz.schreiben ? liste.indexOf(zz.schreiben) : -1;
+        if (j > -1) { liste.splice(j, 1); }
+      }
+      w.erkennung.erforderlich = liste;
+    }));
+
     zeile2.appendChild(haken(tr('tpls.absolute'), !!z.absolut,
       function (zz, an) { if (an) { zz.absolut = true; } else { delete zz.absolut; } }));
     zeile2.appendChild(el('span', 'luecke'));
@@ -3777,6 +3816,7 @@
     d.appendChild(zeile2);
 
     d.appendChild(el('div', 'hint', tr('tv.stateHelp')));
+    d.appendChild(el('div', 'hint', tr('tv.flagsHelp')));
     return d;
   }
 

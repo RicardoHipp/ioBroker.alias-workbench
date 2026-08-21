@@ -337,8 +337,7 @@
   "tv.removeState": "Remove this point",
   "tv.readPath": "reads from",
   "tv.writePath": "writes to",
-  "tv.optionalLabel": "optional",
-  "tv.offByDefaultLabel": "default off",
   "tv.stateHelp": "Paths are relative to the device; with \"fixed object\" it is the full object id. A field from JSON becomes JSON.parse(val).<field> when applied — field and read function are mutually exclusive.",
-  "tv.clickRow": "Click a row to edit the datapoint"
+  "tv.clickRow": "Click a row to edit the datapoint",
+  "tv.flagsHelp": "\"Default\" = pre-ticked on the next device. \"must exist\" = without this point the template does not match at all — it moves into the required list above. \"fixed object\" = the read path is not relative to the device but a full object id, the same for every device."
 }
