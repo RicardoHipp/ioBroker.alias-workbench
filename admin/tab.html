@@ -265,7 +265,7 @@
            padding:4px 15px; border-bottom:1px solid var(--line);
            font-size:8.5px; letter-spacing:.06em; text-transform:uppercase; font-weight:700; color:var(--ink-3); }
   .lhead .r { text-align:right; }
-  .erow { display:grid; grid-template-columns:19px 14px 1fr 150px 105px 12px; gap:8px; align-items:center;
+  .erow { display:grid; grid-template-columns:19px 14px 1fr 150px 105px 15px; gap:8px; align-items:center;
           padding:6px 15px; border-bottom:1px solid var(--line); font-size:12.5px; cursor:pointer; }
   .erow:last-of-type { border-bottom:0; }
   .erow:hover, .erow.open { background:var(--surface-2); }
@@ -286,7 +286,15 @@
   .erow .ro2.warnrole { color:var(--warn); font-weight:700; }
   .erow .vl2 { font-family:var(--mono); text-align:right; font-variant-numeric:tabular-nums;
                overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .erow .ca2 { font-size:8.5px; color:var(--ink-3); text-align:center; }
+  /* Der Pfeil ist die einzige Anzeige, dass eine Zeile mehr hergibt —
+     bei 8,5px in Grau war er nicht zu sehen. Gleiche Groesse, gleiche
+     Seite und gleiches Verhalten in beiden Listen. */
+  .erow .ca2, .slot .ca2 { font-size:11px; line-height:1; color:var(--ink-2);
+                           text-align:center; transition:color .12s; }
+  .erow:hover .ca2, .slot.vklick:hover .ca2 { color:var(--accent); }
+  .erow.open .ca2, .slot.vklick.offen .ca2 { color:var(--accent); }
+  .slot.vklick { cursor:pointer; }
+  .slot.vklick:hover, .slot.vklick.offen { background:var(--surface-2); }
 
   .addrow { display:flex; align-items:center; gap:7px; width:100%; font:inherit; font-size:12.5px;
             cursor:pointer; padding:8px 15px; border:0; border-top:1px dashed var(--line-strong);
@@ -3554,13 +3562,15 @@
     var zh = el('div', 'ch');
     zh.appendChild(el('span', 'typ', tr('tpls.states')));
     zh.appendChild(el('span', 'chip mut', tr('tpls.statesCount', (v.zustaende || []).length)));
+    if (eigen) {
+      zh.appendChild(el('span', 'luecke'));
+      zh.appendChild(el('span', 'hint', tr('tv.clickRow')));
+    }
     zk.appendChild(zh);
     (v.zustaende || []).forEach(function (z, nr) {
-      var r = el('div', 'slot');
-      r.style.gridTemplateColumns = '18px 1fr 1.1fr 1.2fr 90px';
-      if (eigen) { r.style.cursor = 'pointer'; }
       var auf = (vOffeneZeile === nr);
-      r.appendChild(el('span', 'rx', eigen ? (auf ? '\u25be' : '\u25b8') : ''));
+      var r = el('div', 'slot' + (eigen ? ' vklick' : '') + (auf ? ' offen' : ''));
+      r.style.gridTemplateColumns = '1fr 1.1fr 1.2fr 90px 15px';
       r.appendChild(el('span', 'sn', z.name));
       r.appendChild(el('span', 'rx', z.rolle || '\u2014'));
       var pw = el('span', 'rx');
@@ -3571,6 +3581,7 @@
       r.appendChild(pw);
       r.appendChild(el('span', 'rx', (z.optional ? tr('tv.optional') : tr('tv.required')) +
         (z.vorgabeAus ? ' \u00b7 ' + tr('tpls.offByDefault') : '')));
+      r.appendChild(el('span', 'ca2', eigen ? (auf ? '\u25be' : '\u25b8') : ''));
       if (eigen) {
         r.addEventListener('click', function () {
           vOffeneZeile = auf ? null : nr;

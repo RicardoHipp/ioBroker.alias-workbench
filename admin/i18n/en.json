@@ -339,5 +339,6 @@
   "tv.writePath": "writes to",
   "tv.optionalLabel": "optional",
   "tv.offByDefaultLabel": "default off",
-  "tv.stateHelp": "Paths are relative to the device; with \"fixed object\" it is the full object id. A field from JSON becomes JSON.parse(val).<field> when applied — field and read function are mutually exclusive."
+  "tv.stateHelp": "Paths are relative to the device; with \"fixed object\" it is the full object id. A field from JSON becomes JSON.parse(val).<field> when applied — field and read function are mutually exclusive.",
+  "tv.clickRow": "Click a row to edit the datapoint"
 }

@@ -339,5 +339,6 @@
   "tv.writePath": "schreibt nach",
   "tv.optionalLabel": "freiwillig",
   "tv.offByDefaultLabel": "Vorgabe aus",
-  "tv.stateHelp": "Pfade sind relativ zum Gerät, bei „festes Objekt\" die vollständige Objekt-ID. Ein Feld aus JSON wird beim Anwenden zu JSON.parse(val).<Feld> — Feld und Leseformel schließen sich aus."
+  "tv.stateHelp": "Pfade sind relativ zum Gerät, bei „festes Objekt\" die vollständige Objekt-ID. Ein Feld aus JSON wird beim Anwenden zu JSON.parse(val).<Feld> — Feld und Leseformel schließen sich aus.",
+  "tv.clickRow": "Zeile anklicken, um den Punkt zu bearbeiten"
 }
