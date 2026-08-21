@@ -323,5 +323,10 @@
   "tpls.otherOutputsText": "Eine Vorlage für mehrere Ausgänge beschreibt immer nur einen — die übrigen entstehen daraus. Nimm die fremden Punkte im Gerät heraus, sonst passt die Vorlage nur auf genau dieses eine Gerät.",
   "tpls.dropOthers": "Fremde Ausgänge weglassen",
   "tpls.droppedCount": "{0} Punkte weggelassen.",
-  "tpls.undrop": "zurücknehmen"
+  "tpls.undrop": "zurücknehmen",
+  "tpls.colInTemplate": "in Vorlage",
+  "tpls.colDefault": "Vorgabe",
+  "tpls.statesHelp": "Der linke Haken sagt, ob der Punkt überhaupt in die Vorlage kommt. „Vorgabe“ ist der Zustand, mit dem er beim nächsten Gerät vorgeschlagen wird — der kommt von deiner Auswahl am Gerät. Der rechte Haken sagt, ob er vorhanden sein muss, damit die Vorlage überhaupt greift.",
+  "tpls.someOff": "Am Gerät abgewählt: {0}. Diese Punkte kommen als „Vorgabe aus“ mit — beim nächsten Gerät stehen sie in der Liste, nur nicht angehakt.",
+  "tpls.dropOff": "Ganz weglassen"
 }

@@ -323,5 +323,10 @@
   "tpls.otherOutputsText": "A template for several outputs always describes just one — the rest are derived from it. Deselect the foreign points on the device, otherwise the template will only ever fit this one device.",
   "tpls.dropOthers": "Leave out the other outputs",
   "tpls.droppedCount": "{0} points left out.",
-  "tpls.undrop": "undo"
+  "tpls.undrop": "undo",
+  "tpls.colInTemplate": "in template",
+  "tpls.colDefault": "Default",
+  "tpls.statesHelp": "The left tick says whether the point goes into the template at all. “Default” is the state it will be proposed with on the next device — that comes from your selection on the device. The right tick says whether it must be present for the template to match at all.",
+  "tpls.someOff": "Deselected on the device: {0}. These points come along as “default off” — on the next device they will be listed, just not ticked.",
+  "tpls.dropOff": "Leave out entirely"
 }

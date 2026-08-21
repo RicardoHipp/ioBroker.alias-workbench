@@ -4240,27 +4240,57 @@
     zh.appendChild(el('span', 'chip mut', tr('tpls.statesCount', drin.length)));
     zk.appendChild(zh);
 
+    /* Drei verschiedene Fragen je Zeile, deshalb drei Spalten. Frueher
+       stand nur ein Haken links, und der bedeutete "muss vorhanden sein" —
+       an dieser Stelle liest aber jeder "ist ausgewaehlt", weil er genau
+       das in jeder anderen Liste dieses Adapters bedeutet. */
+    var erkl = el('div', 'hint');
+    erkl.style.padding = '8px 12px 0';
+    erkl.appendChild(document.createTextNode(tr('tpls.statesHelp')));
+    zk.appendChild(erkl);
+
+    var abgewaehlt = z.zeilen.filter(function (r) { return !r.weg && r.aus; });
+    if (abgewaehlt.length) {
+      var az = el('div', 'hint');
+      az.style.padding = '6px 12px 0';
+      az.appendChild(document.createTextNode(tr('tpls.someOff', abgewaehlt.length) + '  '));
+      var ab = el('button', 'btn schmal', tr('tpls.dropOff'));
+      ab.addEventListener('click', function () {
+        abgewaehlt.forEach(function (r) { r.weg = true; r.pflicht = false; });
+        zeichneVorlagenDialog();
+      });
+      az.appendChild(ab);
+      zk.appendChild(az);
+    }
+
+    var SPALTEN = '80px 1fr 1.2fr 66px 92px';
     var kopfz = el('div', 'slot');
-    kopfz.style.gridTemplateColumns = '80px 1fr 1.2fr 60px';
+    kopfz.style.gridTemplateColumns = SPALTEN;
     kopfz.style.fontWeight = '600';
     kopfz.style.opacity = '.7';
-    [tr('tpls.colRequired'), tr('tpls.colName'), tr('tpls.colPath'), tr('tpls.colOff')]
+    [tr('tpls.colInTemplate'), tr('tpls.colName'), tr('tpls.colPath'),
+     tr('tpls.colDefault'), tr('tpls.colRequired')]
       .forEach(function (t) { kopfz.appendChild(el('span', 'rx', t)); });
     zk.appendChild(kopfz);
 
     var absDa = false;
-    drin.forEach(function (r) {
-      if (r.lesenAbs) { absDa = true; }
+    z.zeilen.forEach(function (r) {
+      if (!r.weg && r.lesenAbs) { absDa = true; }
       var row = el('div', 'slot');
-      row.style.gridTemplateColumns = '80px 1fr 1.2fr 60px';
+      row.style.gridTemplateColumns = SPALTEN;
+      if (r.weg) { row.style.opacity = '.45'; }
 
+      /* 1. Kommt der Punkt ueberhaupt in die Vorlage? */
       var cw = el('span');
-      var cb = document.createElement('input');
-      cb.type = 'checkbox';
-      cb.checked = r.pflicht;
-      cb.disabled = r.lesenAbs;
-      cb.addEventListener('change', function () { r.pflicht = cb.checked; zeichneVorlagenDialog(); });
-      cw.appendChild(cb);
+      var cbIn = document.createElement('input');
+      cbIn.type = 'checkbox';
+      cbIn.checked = !r.weg;
+      cbIn.addEventListener('change', function () {
+        r.weg = !cbIn.checked;
+        if (r.weg) { r.pflicht = false; }
+        zeichneVorlagenDialog();
+      });
+      cw.appendChild(cbIn);
       row.appendChild(cw);
 
       row.appendChild(el('span', 'sn', r.name));
@@ -4272,7 +4302,29 @@
       if (r.lesenAbs) { pw.appendChild(el('span', 'chip warn', tr('tpls.absolute'))); }
       row.appendChild(pw);
 
-      row.appendChild(el('span', 'rx', r.aus ? tr('tpls.offByDefault') : ''));
+      /* 2. Ist er beim naechsten Geraet vorgehakt? Kommt vom Haken am
+            Geraet, laesst sich hier aber noch drehen. Auch ein Haken —
+            es ist ein Ja/Nein wie die anderen beiden, und ein Knopf
+            sieht nach Handlung aus statt nach Zustand. */
+      var vz = el('span');
+      var cbV = document.createElement('input');
+      cbV.type = 'checkbox';
+      cbV.checked = !r.aus;
+      cbV.disabled = r.weg;
+      cbV.addEventListener('change', function () { r.aus = !cbV.checked; zeichneVorlagenDialog(); });
+      vz.appendChild(cbV);
+      row.appendChild(vz);
+
+      /* 3. Muss er da sein, damit die Vorlage ueberhaupt greift? */
+      var pz = el('span');
+      var cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = r.pflicht;
+      cb.disabled = r.lesenAbs || r.weg;
+      cb.addEventListener('change', function () { r.pflicht = cb.checked; zeichneVorlagenDialog(); });
+      pz.appendChild(cb);
+      row.appendChild(pz);
+
       zk.appendChild(row);
     });
     body.appendChild(zk);
