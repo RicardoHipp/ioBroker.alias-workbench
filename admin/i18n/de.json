@@ -330,5 +330,14 @@
   "tpls.someOff": "Am Gerät abgewählt: {0}. Diese Punkte kommen als „Vorgabe aus“ mit — beim nächsten Gerät stehen sie in der Liste, nur nicht angehakt.",
   "tpls.dropOff": "Ganz weglassen",
   "tpls.loadFailed": "eigene Vorlagen nicht geladen",
-  "tpls.loadFailedHint": "Die Instanzkonfiguration hat nicht rechtzeitig geantwortet. Deine eigenen Vorlagen sind nicht verschwunden — sie fehlen nur in dieser Ansicht. Seite neu laden."
+  "tpls.loadFailedHint": "Die Instanzkonfiguration hat nicht rechtzeitig geantwortet. Deine eigenen Vorlagen sind nicht verschwunden — sie fehlen nur in dieser Ansicht. Seite neu laden.",
+  "tv.required2": "Muss es geben",
+  "tv.requiredHelp": "Diese Datenpunkte müssen am Gerät vorhanden sein, sonst passt die Vorlage nicht. Mehrere mit Komma trennen. Jeder Pflichtpunkt macht die Vorlage genauer und zugleich spröder.",
+  "tv.addState": "Datenpunkt hinzufügen",
+  "tv.removeState": "Diesen Punkt entfernen",
+  "tv.readPath": "liest aus",
+  "tv.writePath": "schreibt nach",
+  "tv.optionalLabel": "freiwillig",
+  "tv.offByDefaultLabel": "Vorgabe aus",
+  "tv.stateHelp": "Pfade sind relativ zum Gerät, bei „festes Objekt\" die vollständige Objekt-ID. Ein Feld aus JSON wird beim Anwenden zu JSON.parse(val).<Feld> — Feld und Leseformel schließen sich aus."
 }

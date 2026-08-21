@@ -170,8 +170,11 @@ saved.
 
 The third view next to **Sources** and **Aliases** is **Templates**: every
 template with its detection, its datapoints, a permanent try-out and the raw
-JSON. From there you can rename a template, change its rank and name hint,
-duplicate it, export it to a file and delete it.
+JSON. Everything about a template of yours can be changed there: name, rank,
+name hint, the required and forbidden datapoints, and every datapoint itself —
+click a row to open its role, type, unit, paths, formulas and flags. Datapoints
+can be added and removed. The try-out below reacts to every change, so you see
+what an edit does to the detection before you save.
 
 Shipped templates cannot be edited — that way they always stay the state they
 were delivered in. *Make an editable copy* gives you a copy under the same id
@@ -248,6 +251,17 @@ entry in `SPRACHEN` in `admin/tab.html` — nothing else.
   core feature of the js-controller, not of any adapter
 
 ## Changelog
+
+### 0.0.6
+
+- Templates of your own are fully editable in the Templates view, datapoints
+  included
+
+### 0.0.5
+
+- Saving and deleting touch one template at a time, so a failed load can no
+  longer wipe the others
+- Three separate columns per datapoint; all ticks aligned left
 
 ### 0.0.4
 

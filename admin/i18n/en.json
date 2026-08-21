@@ -330,5 +330,14 @@
   "tpls.someOff": "Deselected on the device: {0}. These points come along as “default off” — on the next device they will be listed, just not ticked.",
   "tpls.dropOff": "Leave out entirely",
   "tpls.loadFailed": "own templates not loaded",
-  "tpls.loadFailedHint": "The instance configuration did not answer in time. Your own templates are not gone — they are only missing from this view. Reload the page."
+  "tpls.loadFailedHint": "The instance configuration did not answer in time. Your own templates are not gone — they are only missing from this view. Reload the page.",
+  "tv.required2": "Must exist",
+  "tv.requiredHelp": "These datapoints must be present on the device, otherwise the template does not match. Separate several with commas. Every required point makes the template more precise and more brittle at the same time.",
+  "tv.addState": "Add datapoint",
+  "tv.removeState": "Remove this point",
+  "tv.readPath": "reads from",
+  "tv.writePath": "writes to",
+  "tv.optionalLabel": "optional",
+  "tv.offByDefaultLabel": "default off",
+  "tv.stateHelp": "Paths are relative to the device; with \"fixed object\" it is the full object id. A field from JSON becomes JSON.parse(val).<field> when applied — field and read function are mutually exclusive."
 }

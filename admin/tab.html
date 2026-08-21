@@ -3255,6 +3255,7 @@
   var vEntwurf = null;         /* Arbeitskopie beim Bearbeiten */
   var vLoeschFrage = false;
   var vJsonAuf = false;
+  var vOffeneZeile = null;
 
   function vorlageMitId(id) {
     var t = null;
@@ -3308,6 +3309,7 @@
       if (!eingelesen) { vEinlesen = null; vGewaehlt = v.id; }
       vEntwurf = null;
       vLoeschFrage = false;
+      vOffeneZeile = null;
       zeichneVorlagenListe();
       zeichneErgebnis();
     });
@@ -3510,16 +3512,23 @@
     ek.appendChild(eh);
     var eb = el('div');
     eb.style.padding = '9px 12px 11px';
+    var listenFeld = function (label, wert, setzen, hilfe) {
+      var w = el('div');
+      w.style.marginBottom = '9px';
+      w.appendChild(feld(label, wert, setzen, '380px'));
+      if (hilfe) { w.appendChild(el('div', 'hint', hilfe)); }
+      return w;
+    };
+    var alsListe = function (text) {
+      return String(text).split(',').map(function (t) { return t.trim(); })
+        .filter(function (t) { return !!t; });
+    };
+    eb.appendChild(listenFeld(tr('tv.required2'), erf.join(', '), function (x, wert) {
+      x.erkennung = x.erkennung || {};
+      x.erkennung.erforderlich = alsListe(wert);
+    }, tr('tv.requiredHelp')));
     if (!erf.length) {
       eb.appendChild(el('div', 'hint', tr('tpls.noRequired')));
-    } else {
-      erf.forEach(function (x) {
-        var z = el('div');
-        z.style.fontFamily = 'var(--mono)';
-        z.style.fontSize = '11.5px';
-        z.textContent = x;
-        eb.appendChild(z);
-      });
     }
     var inh = (v.erkennung || {}).inhalt || {};
     Object.keys(inh).forEach(function (punkt) {
@@ -3527,17 +3536,12 @@
       z.style.fontFamily = 'var(--mono)';
       eb.appendChild(z);
     });
-    var vb = el('div');
-    vb.style.marginTop = '9px';
-    vb.appendChild(feld(tr('tv.forbidden'), ((v.erkennung || {}).verboten || []).join(', '),
-      function (x, w) {
+    eb.appendChild(listenFeld(tr('tv.forbidden'), ((v.erkennung || {}).verboten || []).join(', '),
+      function (x, wert) {
         x.erkennung = x.erkennung || {};
-        var l = String(w).split(',').map(function (t) { return t.trim(); })
-          .filter(function (t) { return !!t; });
+        var l = alsListe(wert);
         if (l.length) { x.erkennung.verboten = l; } else { delete x.erkennung.verboten; }
-      }, '280px'));
-    vb.appendChild(el('div', 'hint', tr('tv.forbiddenHelp')));
-    eb.appendChild(vb);
+      }, tr('tv.forbiddenHelp')));
     if (v.mehrfach) {
       eb.appendChild(el('div', 'hint', tr('tv.multi', v.kanalname || 'POWER%N%')));
     }
@@ -3551,21 +3555,46 @@
     zh.appendChild(el('span', 'typ', tr('tpls.states')));
     zh.appendChild(el('span', 'chip mut', tr('tpls.statesCount', (v.zustaende || []).length)));
     zk.appendChild(zh);
-    (v.zustaende || []).forEach(function (z) {
+    (v.zustaende || []).forEach(function (z, nr) {
       var r = el('div', 'slot');
-      r.style.gridTemplateColumns = '1fr 1.1fr 1.2fr 90px';
+      r.style.gridTemplateColumns = '18px 1fr 1.1fr 1.2fr 90px';
+      if (eigen) { r.style.cursor = 'pointer'; }
+      var auf = (vOffeneZeile === nr);
+      r.appendChild(el('span', 'rx', eigen ? (auf ? '\u25be' : '\u25b8') : ''));
       r.appendChild(el('span', 'sn', z.name));
-      r.appendChild(el('span', 'rx', z.rolle || '—'));
+      r.appendChild(el('span', 'rx', z.rolle || '\u2014'));
       var pw = el('span', 'rx');
       pw.style.fontFamily = 'var(--mono)';
-      pw.appendChild(document.createTextNode(z.lesen + (z.feld ? ' · ' + z.feld : '')));
-      if (z.schreiben) { pw.appendChild(el('span', 'chip mut', '→ ' + z.schreiben)); }
+      pw.appendChild(document.createTextNode(z.lesen + (z.feld ? ' \u00b7 ' + z.feld : '')));
+      if (z.schreiben) { pw.appendChild(el('span', 'chip mut', '\u2192 ' + z.schreiben)); }
       if (z.absolut) { pw.appendChild(el('span', 'chip warn', tr('tpls.absolute'))); }
       r.appendChild(pw);
       r.appendChild(el('span', 'rx', (z.optional ? tr('tv.optional') : tr('tv.required')) +
-        (z.vorgabeAus ? ' · ' + tr('tpls.offByDefault') : '')));
+        (z.vorgabeAus ? ' \u00b7 ' + tr('tpls.offByDefault') : '')));
+      if (eigen) {
+        r.addEventListener('click', function () {
+          vOffeneZeile = auf ? null : nr;
+          zeichneErgebnis();
+        });
+      }
       zk.appendChild(r);
+      if (eigen && auf) { zk.appendChild(vZeilenDetail(z, nr)); }
     });
+
+    if (eigen) {
+      var np = el('div');
+      np.style.padding = '9px 12px 11px';
+      var nb = el('button', 'btn schmal', tr('tv.addState'));
+      nb.addEventListener('click', function () {
+        vAendern(function (x) {
+          x.zustaende = x.zustaende || [];
+          x.zustaende.push({ name: 'NEU', typ: 'mixed', lesen: '', optional: true });
+          vOffeneZeile = x.zustaende.length - 1;
+        });
+      });
+      np.appendChild(nb);
+      zk.appendChild(np);
+    }
     host.appendChild(zk);
 
     /* --- Probelauf --- */
@@ -3624,6 +3653,120 @@
 
     $('#foot').textContent = tr('app.templatesCount', VORLAGEN.length) + '  ·  ' +
       tr('tpls.hits', treffer.length, gew);
+  }
+
+  /* Ein Datenpunkt zum Aufklappen. Bewusst ohne Werte und ohne
+     Detektor-Bericht: hier gibt es kein Geraet, an dem man das messen
+     koennte. Was die Aenderung bewirkt, zeigt der Probelauf darunter. */
+  function vZeilenDetail(z, nr) {
+    var d = el('div');
+    d.style.padding = '10px 12px 12px 30px';
+    d.style.background = 'var(--surface-2)';
+    d.style.borderBottom = '1px solid var(--line)';
+    d.style.display = 'flex';
+    d.style.flexWrap = 'wrap';
+    d.style.gap = '9px 14px';
+
+    var setz = function (feldname, wandeln) {
+      return function (x, wert) {
+        var zz = x.zustaende[nr];
+        var w = wandeln ? wandeln(wert) : wert;
+        if (w === '' || w === undefined || w === null) { delete zz[feldname]; }
+        else { zz[feldname] = w; }
+      };
+    };
+
+    var txt = function (label, wert, feldname, breit, wandeln) {
+      var l = el('label', 'feld');
+      l.appendChild(el('span', 'feldlabel', label));
+      var i = document.createElement('input');
+      i.className = 'tx';
+      i.type = 'text';
+      i.value = wert === undefined || wert === null ? '' : String(wert);
+      if (breit) { i.style.minWidth = breit; }
+      i.addEventListener('change', function () { vAendern(setz(feldname, wandeln), i.value); });
+      l.appendChild(i);
+      return l;
+    };
+
+    d.appendChild(txt(tr('detail.name'), z.name, 'name', '130px'));
+
+    var lr = el('label', 'feld');
+    lr.appendChild(el('span', 'feldlabel', tr('detail.role')));
+    var sr = el('select', 'tx');
+    sr.appendChild(opt('', tr('list.noRole')));
+    ROLLEN.forEach(function (ro) {
+      var o = opt(ro, ro);
+      if (ro === z.rolle) { o.selected = true; }
+      sr.appendChild(o);
+    });
+    if (z.rolle && ROLLEN.indexOf(z.rolle) === -1) {
+      var oe = opt(z.rolle, z.rolle);
+      oe.selected = true;
+      sr.appendChild(oe);
+    }
+    sr.addEventListener('change', function () { vAendern(setz('rolle'), sr.value); });
+    lr.appendChild(sr);
+    d.appendChild(lr);
+
+    var lt = el('label', 'feld');
+    lt.appendChild(el('span', 'feldlabel', tr('detail.type')));
+    var st = el('select', 'tx');
+    ['', 'boolean', 'number', 'string', 'mixed'].forEach(function (t) {
+      var o = opt(t, t || '\u2014');
+      if (t === (z.typ || '')) { o.selected = true; }
+      st.appendChild(o);
+    });
+    st.addEventListener('change', function () { vAendern(setz('typ'), st.value); });
+    lt.appendChild(st);
+    d.appendChild(lt);
+
+    d.appendChild(txt(tr('detail.unit'), z.einheit, 'einheit', '60px'));
+    d.appendChild(txt(tr('tv.readPath'), z.lesen, 'lesen', '170px'));
+    d.appendChild(txt(tr('tv.writePath'), z.schreiben, 'schreiben', '170px'));
+    d.appendChild(txt(tr('detail.jsonField'), z.feld, 'feld', '130px'));
+    d.appendChild(txt(tr('detail.formula'), z.leseformel, 'leseformel', '170px'));
+    d.appendChild(txt(tr('detail.writeFormula'), z.schreibformel, 'schreibformel', '170px'));
+    d.appendChild(txt(tr('detail.caption'), z.beschriftung, 'beschriftung', '130px'));
+    d.appendChild(txt(tr('detail.decimals'), z.nachkommastellen, 'nachkommastellen', '50px',
+      function (w) { return w === '' ? '' : Number(w); }));
+
+    var haken = function (label, an, tut) {
+      var l = el('label', 'feld');
+      l.style.flexDirection = 'row';
+      l.style.alignItems = 'center';
+      l.style.gap = '5px';
+      var c = document.createElement('input');
+      c.type = 'checkbox';
+      c.checked = an;
+      c.addEventListener('change', function () { vAendern(function (x) { tut(x.zustaende[nr], c.checked); }); });
+      l.appendChild(c);
+      l.appendChild(el('span', 'feldlabel', label));
+      return l;
+    };
+
+    var zeile2 = el('div');
+    zeile2.style.flexBasis = '100%';
+    zeile2.style.display = 'flex';
+    zeile2.style.gap = '16px';
+    zeile2.style.alignItems = 'center';
+    zeile2.style.marginTop = '4px';
+    zeile2.appendChild(haken(tr('tv.optionalLabel'), !!z.optional,
+      function (zz, an) { if (an) { zz.optional = true; } else { delete zz.optional; } }));
+    zeile2.appendChild(haken(tr('tv.offByDefaultLabel'), !!z.vorgabeAus,
+      function (zz, an) { if (an) { zz.vorgabeAus = true; } else { delete zz.vorgabeAus; } }));
+    zeile2.appendChild(haken(tr('tpls.absolute'), !!z.absolut,
+      function (zz, an) { if (an) { zz.absolut = true; } else { delete zz.absolut; } }));
+    zeile2.appendChild(el('span', 'luecke'));
+    var wb = el('button', 'btn schmal', tr('tv.removeState'));
+    wb.addEventListener('click', function () {
+      vAendern(function (x) { x.zustaende.splice(nr, 1); vOffeneZeile = null; });
+    });
+    zeile2.appendChild(wb);
+    d.appendChild(zeile2);
+
+    d.appendChild(el('div', 'hint', tr('tv.stateHelp')));
+    return d;
   }
 
   function vDuplizieren(v, gleicheKennung) {

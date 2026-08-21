@@ -1,8 +1,12 @@
 {
   "common": {
     "name": "alias-workbench",
-    "version": "0.0.5",
+    "version": "0.0.6",
     "news": {
+      "0.0.6": {
+        "en": "Templates of your own are fully editable, datapoints included",
+        "de": "Eigene Vorlagen lassen sich vollständig bearbeiten, samt Datenpunkten"
+      },
       "0.0.5": {
         "en": "Saving touches one template at a time; clearer columns per datapoint",
         "de": "Speichern fasst nur eine Vorlage an; klarere Spalten je Datenpunkt"
