@@ -268,6 +268,37 @@ entry in `SPRACHEN` in `admin/tab.html` — nothing else.
 
 ## Changelog
 
+### 0.0.31
+
+Clicking into the target folder field showed the suggestion list for a
+heartbeat and then lost it, with no chance to click anything.
+
+The cause was not the list. Every incoming value rebuilt the whole right-hand
+side:
+
+```js
+socket.on('stateChange', function (id, state) {
+  werte[id] = state;
+  if (current) { zeichneErgebnis(); }     // on every single value
+});
+```
+
+Solar_Balkon reports about once a second. So once a second the page was
+rebuilt from scratch — taking the open list, the focus, and anything half
+typed with it. Anything that takes longer than a second to do was impossible
+on such a device.
+
+- Values are now collected for 700 ms and drawn once
+- Nothing is redrawn while the focus sits in a field of the right-hand side —
+  it waits until you are done. The same guard covers the delayed draws in
+  `waehle` and the subscription's catch-up
+- Values keep flowing: measured six redraws in six seconds when nothing has
+  focus
+
+Still worth doing later: a value arriving should update the one cell it
+belongs to, not rebuild the panel. Once a second for a whole panel is a lot
+of work for a new reading.
+
 ### 0.0.30
 
 The heading answered the wrong question. It showed the alias id — the answer

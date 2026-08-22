@@ -704,10 +704,23 @@
     c.className = 'conn off';
     c.textContent = tr('app.disconnected');
   });
+  /* Nicht bei jedem einzelnen Wert die ganze rechte Seite neu bauen. Ein
+     Solarzaehler sendet im Sekundentakt — und mit jedem Takt verschwand,
+     was gerade offen war: die Ordnerliste beim Hineinklicken, ein
+     aufgeklapptes Detail, der Fokus im Eingabefeld. Gesammelt zeichnen,
+     und nur, wenn niemand tippt. */
+  var werteTimer = null;
+  function werteGezeichnet() {
+    werteTimer = null;
+    if (document.querySelector('dialog[open]')) { return; }
+    if (tipptGerade()) { werteTimer = setTimeout(werteGezeichnet, 700); return; }
+    if (current) { zeichneErgebnis(); }
+  }
   socket.on('stateChange', function (id, state) {
     if (!state) { return; }
     werte[id] = state;
-    if (current) { zeichneErgebnis(); }
+    if (!current || werteTimer) { return; }
+    werteTimer = setTimeout(werteGezeichnet, 700);
   });
 
   /* Kopfzeile: die Vorlagenzahl kommt erst, wenn sie geladen sind —
@@ -787,16 +800,19 @@
       var betrifft = current && (id === current || id.indexOf(current + '.') === 0);
       if (!betrifft && !nachziehBaum) { return; }
       if (nachziehTimer) { clearTimeout(nachziehTimer); }
-      nachziehTimer = setTimeout(function () {
+      var nachziehen = function () {
         nachziehTimer = null;
         if (document.querySelector('dialog[open]')) { return; }
+        /* Wer gerade tippt, behaelt seine Eingabe — spaeter nochmal. */
+        if (tipptGerade()) { nachziehTimer = setTimeout(nachziehen, 400); return; }
         if (nachziehBaum || indexStimmtNicht()) {
           indexNeu();
           nachziehBaum = false;
           zeichneBaum();
         }
         if (current && baumModus !== 'vorlagen') { waehle(current); }
-      }, 600);
+      };
+      nachziehTimer = setTimeout(nachziehen, 600);
     });
   }
 
@@ -1802,6 +1818,24 @@
      steht: Werte geladen, Vorlage angewendet, Ziel gesetzt. Wer sofort
      nach waehle weiterarbeitet, sieht den Rohentwurf — alle Punkte ohne
      Rollen, und das Ziel noch leer. */
+  /* Steht der Fokus in einem Feld der rechten Seite, tippt oder waehlt
+     dort gerade jemand. Dann darf ihm die Seite nicht unter den Haenden
+     weggezogen werden: der Ordnervorschlag verschwand mitten im Klick,
+     weil spaet nachgeladene Werte ein zweites Mal zeichnen liessen. */
+  function tipptGerade() {
+    var a = document.activeElement;
+    if (!a || !/^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName)) { return false; }
+    return !!(a.closest && a.closest('.respane'));
+  }
+
+  /* Fuer alles, was nachtraeglich zeichnet — spaete Werte, Nachzieher.
+     Eine Aenderung, die der Nutzer selbst ausgeloest hat, zeichnet
+     weiterhin sofort. */
+  function zeichneWennFrei() {
+    if (tipptGerade()) { setTimeout(zeichneWennFrei, 400); return; }
+    zeichneErgebnis();
+  }
+
   function waehle(id, fertig) {
     current = id;
     openRow = null;
@@ -1877,8 +1911,11 @@
       entwurf.states.forEach(function (s) {
         if (s.srcR && !werte[s.srcR]) { nach.push(s.srcR); }
       });
-      if (nach.length) { holeWerte(id, nach, function () { zeichneErgebnis(); }); }
-      zeichneErgebnis();
+      if (nach.length) { holeWerte(id, nach, function () { zeichneWennFrei(); }); }
+      /* Auch dieser Durchgang kommt verzoegert — die Werte muessen erst da
+         sein. Wer in der Zwischenzeit schon ins Zielfeld geklickt hat, ist
+         schneller als die Oberflaeche; ihm gehoert der Vortritt. */
+      zeichneWennFrei();
       if (typeof fertig === 'function') { fertig(); }
     });
 
@@ -1888,7 +1925,7 @@
        wenn das Laden wirklich dauert. */
     if (!werteDa) {
       setTimeout(function () {
-        if (!werteDa && id === current) { zeichneErgebnis(); }
+        if (!werteDa && id === current) { zeichneWennFrei(); }
       }, 150);
     }
   }
