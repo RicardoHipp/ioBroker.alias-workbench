@@ -268,6 +268,14 @@ entry in `SPRACHEN` in `admin/tab.html` — nothing else.
 
 ## Changelog
 
+### 0.0.26
+
+- The two fold buttons now carry the **same folder icons the admin object
+  browser uses** — the outlined folder for "expand all", the filled one for
+  "collapse all". The paths are taken verbatim from the admin's own bundle, so
+  the shapes match rather than merely resemble. Inline SVG, no icon font, no
+  external request
+
 ### 0.0.25
 
 The tree opened the first two levels every time and forgot anything you

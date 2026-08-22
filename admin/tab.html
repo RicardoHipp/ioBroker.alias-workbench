@@ -377,9 +377,12 @@
 
   .klapp {
     border:1px solid var(--line); background:var(--surface); color:var(--ink-3);
-    border-radius:5px; width:23px; height:23px; line-height:1; cursor:pointer;
-    font-size:11px; padding:0; flex:none;
+    border-radius:5px; width:24px; height:24px; cursor:pointer;
+    padding:0; flex:none; display:inline-flex; align-items:center; justify-content:center;
   }
+  /* Dieselben Ordner wie im Objektbrowser des Admin: aufgeklappt ist der
+     leere Umriss, zugeklappt der gefuellte. */
+  .klapp svg { width:15px; height:15px; fill:currentColor; display:block; }
   .klapp:hover { border-color:var(--accent); color:var(--accent); }
 
   .freikopf {
@@ -496,8 +499,8 @@
         <button id="m-quellen" class="an">Quellen</button><button id="m-aliase">Aliase</button><button id="m-vorlagen">Vorlagen</button>
       </span>
       <input class="search" id="q" type="search" placeholder="filtern …" aria-label="Objekte filtern">
-      <button class="klapp" id="btn-auf" type="button">&#9662;</button>
-      <button class="klapp" id="btn-zu" type="button">&#9656;</button>
+      <button class="klapp" id="btn-auf" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2m0 12H4V8h16z"/></svg></button>
+      <button class="klapp" id="btn-zu" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8z"/></svg></button>
       <button class="btn schmal" id="btn-einlesen" hidden>Einlesen &hellip;</button>
       <input type="file" id="datei-einlesen" accept=".json,application/json" hidden>
     </div>

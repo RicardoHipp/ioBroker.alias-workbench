@@ -1,8 +1,12 @@
 {
   "common": {
     "name": "alias-workbench",
-    "version": "0.0.25",
+    "version": "0.0.26",
     "news": {
+      "0.0.26": {
+        "en": "The fold buttons use the same folder icons as the admin object browser",
+        "de": "Die Klappknöpfe tragen dieselben Ordnersymbole wie der Objektbrowser"
+      },
       "0.0.25": {
         "en": "The tree remembers what you folded open, plus buttons for all open and all closed",
         "de": "Der Baum merkt sich, was aufgeklappt war — dazu zwei Knöpfe für alles auf und alles zu"
@@ -78,10 +82,6 @@
       "0.0.7": {
         "en": "Editing a datapoint looks the same on a device and on a template",
         "de": "Ein Datenpunkt sieht am Gerät und an der Vorlage gleich aus"
-      },
-      "0.0.6": {
-        "en": "Templates of your own are fully editable, datapoints included",
-        "de": "Eigene Vorlagen lassen sich vollständig bearbeiten, samt Datenpunkten"
       }
     },
     "titleLang": {
