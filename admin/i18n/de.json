@@ -48,14 +48,13 @@
   "tpl.label": "Vorlage",
   "tpl.switch": "— Vorlage wechseln —",
   "tpl.choose": "— Vorlage wählen —",
-  "tpl.fits": "✓ passt",
+  "tpl.fits": "passt",
   "tpl.fitsNot": "✕ {0}",
   "tpl.manuallyChosen": "von Hand gewählt",
   "tpl.forced": "erzwungen",
   "tpl.forcedHint": "Die Erkennung springt bei dieser Vorlage nicht an — von Hand gewählt.",
   "tpl.showRaw": "Rohpunkte zeigen",
   "tpl.showProposal": "Vorschlag zeigen",
-  "tpl.skipped": "übersprungen:",
   "tpl.none": "— keine Vorlage —",
   "tpl.output": "Ausgang",
   "tpl.presentIn": "{0} vorhanden",
@@ -411,5 +410,6 @@
   "list.sendPointMissing": "Sendepunkt fehlt noch",
   "write.createSendPoints": "Die {0} fehlenden Sendepunkte anlegen",
   "check.sendPointMissing": "Sendepunkt fehlt noch: {0}",
-  "write.notUnderAlias": "{0} liegt nicht unter alias. — hier wird nichts geschrieben"
+  "write.notUnderAlias": "{0} liegt nicht unter alias. — hier wird nichts geschrieben",
+  "tpl.whyThis": "Warum diese Vorlage"
 }

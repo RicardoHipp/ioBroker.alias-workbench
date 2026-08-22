@@ -268,6 +268,33 @@ entry in `SPRACHEN` in `admin/tab.html` — nothing else.
 
 ## Changelog
 
+### 0.0.33
+
+Two answers to the same question sat in two places, and neither was in a
+good one. Why a template was chosen hid in the tooltip of a small **i**,
+where nobody looks. What it left out stood open below it and filled the
+screen — six lines on Solar_Balkon.
+
+- Both now share **one foldable block**. Folded it is a single line that
+  still carries the number: "Weggelassen, weil die Quelle fehlt: 6". Unfolded
+  it lists the skipped points and, below them, why the template matched
+- The **i** is gone, along with its styling
+- The fold state survives redrawing and switching devices, like the MQTT card
+
+Measured on Solar_Balkon: 226 px down to 21 px.
+
+Worth noting what was hidden in that tooltip all along:
+
+```
+cmnd.POWER vorhanden
+tele.STATE enthält POWER
+Name gibt keinen Hinweis — „Tasmota-Steckdose" ist die Vorgabe,
+aus MQTT sind sie nicht unterscheidbar
+```
+
+That is the actual reasoning behind a detection, and until now you had to
+hover a 15-pixel circle to read it.
+
 ### 0.0.32
 
 Changing the target folder and then creating a missing send datapoint threw

@@ -48,14 +48,13 @@
   "tpl.label": "Template",
   "tpl.switch": "— switch template —",
   "tpl.choose": "— choose template —",
-  "tpl.fits": "✓ fits",
+  "tpl.fits": "fits",
   "tpl.fitsNot": "✕ {0}",
   "tpl.manuallyChosen": "chosen by hand",
   "tpl.forced": "forced",
   "tpl.forcedHint": "Detection does not trigger for this template — chosen by hand.",
   "tpl.showRaw": "show raw points",
   "tpl.showProposal": "show proposal",
-  "tpl.skipped": "skipped:",
   "tpl.none": "— no template —",
   "tpl.output": "Output",
   "tpl.presentIn": "{0} present",
@@ -411,5 +410,6 @@
   "list.sendPointMissing": "send datapoint not created yet",
   "write.createSendPoints": "Create the {0} missing send datapoints",
   "check.sendPointMissing": "send datapoint not created yet: {0}",
-  "write.notUnderAlias": "{0} is not below alias. — nothing will be written here"
+  "write.notUnderAlias": "{0} is not below alias. — nothing will be written here",
+  "tpl.whyThis": "Why this template"
 }

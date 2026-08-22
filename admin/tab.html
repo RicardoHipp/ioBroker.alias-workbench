@@ -417,14 +417,21 @@
   .freirow.pflicht .mk3, .freirow.pflicht .rl2, .freirow.pflicht .rx2 { color:var(--bad); }
   .freirow.pflicht .rx2 { font-weight:700; }
 
-  .infopunkt {
-    display:inline-block; width:15px; height:15px; margin-left:8px;
-    border-radius:50%; border:1px solid var(--accent); color:var(--accent);
-    font-family:Georgia, "Times New Roman", serif; font-size:11px; font-weight:700;
-    font-style:normal; text-align:center; line-height:13px;
-    cursor:help; vertical-align:middle; box-sizing:border-box;
+  .warum { margin-top:7px; font-size:11.5px; color:var(--ink-3); }
+  .warum .wkopf {
+    display:flex; align-items:center; gap:6px; cursor:pointer;
+    padding:2px 0; user-select:none;
   }
-  .infopunkt:hover, .infopunkt:focus { background:var(--accent); color:var(--accent-ink); }
+  .warum .wkopf:hover { color:var(--ink); }
+  .warum .wkopf .ca2 { font-size:9px; }
+  .warum .wleib { margin:4px 0 0 15px; }
+  .warum .wleib ul { margin:0; padding-left:16px; }
+  .warum .wleib li { margin:1px 0; }
+  .warum .wtrenn {
+    margin:7px 0 3px; font-size:9.5px; letter-spacing:.05em;
+    text-transform:uppercase; font-weight:700; color:var(--ink-3);
+  }
+
   .suggestbox .hd { display:flex; align-items:center; flex-wrap:wrap; }
 
   .suggestbox { flex-direction:column; align-items:stretch; gap:9px; }
@@ -2620,44 +2627,55 @@
         hd.appendChild(qc);
       }
       sg.appendChild(hd);
-      /* Begruendung nicht mehr als Liste, sondern hinter einem kleinen i. */
-      var zeilen = [];
+
+      /* Warum diese Vorlage, und was sie weggelassen hat — beides an einer
+         Stelle und zugeklappt. Vorher stand die Begruendung im Tooltip
+         eines kleinen i, wo sie niemand findet, und die Liste der
+         weggelassenen Punkte offen darunter, wo sie den halben Bildschirm
+         fuellte. Zugeklappt bleibt die Zahl sichtbar; wer es genau wissen
+         will, klappt auf. */
+      var gruende = [];
       if (e.vorschlag) {
-        zeilen = e.grund.slice();
+        gruende = e.grund.slice();
       } else {
         VORLAGEN.forEach(function (v) {
           var t = pruefeVorlage(v, current);
-          zeilen.push(sprachtext(v.name) + ': ' + (t.passt ? 'passt' : t.fehler.join(', ')));
+          gruende.push(sprachtext(v.name) + ': ' + (t.passt ? tr('tpl.fits') : t.fehler.join(', ')));
         });
       }
-      if (e.uebersprungen && e.uebersprungen.length) {
-        zeilen.push('');
-        zeilen.push(tr('tpl.skipped'));
-        e.uebersprungen.forEach(function (u) { zeilen.push('  ' + u); });
-      }
-      if (zeilen.length) {
-        var inf = el('span', 'infopunkt', 'i');
-        inf.title = zeilen.join(String.fromCharCode(10));
-        inf.setAttribute('tabindex', '0');
-        inf.setAttribute('role', 'note');
-        inf.setAttribute('aria-label', zeilen.join('. '));
-        hd.appendChild(inf);
-      }
+      var weggelassen = (e.uebersprungen || []).slice();
 
-      /* Was die Vorlage weggelassen hat, gehoert in die Auslage — nicht in
-         den Tooltip eines kleinen i. „Die Vorlage hat doch IP, warum sehe
-         ich es nicht?" laesst sich sonst nur durch Lesen der Datei
-         beantworten. */
-      if (e.vorschlag && e.uebersprungen && e.uebersprungen.length) {
-        var wg = el('div', 'hint');
-        wg.style.marginTop = '6px';
-        wg.appendChild(el('b', null, tr('tpl.skippedHead', e.uebersprungen.length)));
-        var ul2 = el('ul');
-        ul2.style.margin = '4px 0 0';
-        ul2.style.paddingLeft = '16px';
-        e.uebersprungen.forEach(function (u) { ul2.appendChild(el('li', null, u)); });
-        wg.appendChild(ul2);
-        sg.appendChild(wg);
+      if (gruende.length || weggelassen.length) {
+        var wk = el('div', 'warum' + (warumAuf ? ' auf' : ''));
+        var wh = el('div', 'wkopf');
+        wh.appendChild(el('span', 'ca2', warumAuf ? '▾' : '▸'));
+        wh.appendChild(el('span', null, weggelassen.length
+          ? tr('tpl.skippedHead', weggelassen.length)
+          : tr('tpl.whyThis')));
+        wh.tabIndex = 0;
+        var um2 = function () { warumAuf = !warumAuf; zeichneErgebnis(); };
+        wh.addEventListener('click', um2);
+        wh.addEventListener('keydown', function (ev) {
+          if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); um2(); }
+        });
+        wk.appendChild(wh);
+
+        if (warumAuf) {
+          var wb2 = el('div', 'wleib');
+          if (weggelassen.length) {
+            var ul2 = el('ul');
+            weggelassen.forEach(function (u) { ul2.appendChild(el('li', null, u)); });
+            wb2.appendChild(ul2);
+          }
+          if (gruende.length) {
+            if (weggelassen.length) { wb2.appendChild(el('div', 'wtrenn', tr('tpl.whyThis'))); }
+            var ul3 = el('ul');
+            gruende.forEach(function (g2) { if (g2) { ul3.appendChild(el('li', null, g2)); } });
+            wb2.appendChild(ul3);
+          }
+          wk.appendChild(wb2);
+        }
+        sg.appendChild(wk);
       }
       if (e.erzwungen) {
         var ezc = el('span', 'chip warn', tr('tpl.forced'));
@@ -4747,6 +4765,9 @@
      Notiz klickte man „Befehle abfragen" und sah hinterher nichts —
      weder Erfolg noch Fehlschlag. */
   var mqttAbfrage = {};
+
+  /* Ueberlebt das Neuzeichnen — wie bei der MQTT-Karte. */
+  var warumAuf = false;
 
   var mqttAuf = false;
 

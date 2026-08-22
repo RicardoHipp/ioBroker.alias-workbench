@@ -1,8 +1,12 @@
 {
   "common": {
     "name": "alias-workbench",
-    "version": "0.0.32",
+    "version": "0.0.33",
     "news": {
+      "0.0.33": {
+        "en": "Why this template, and what it left out — one foldable block instead of a tooltip and a wall of text",
+        "de": "Warum diese Vorlage und was sie weglässt — ein aufklappbarer Block statt Tooltip und Textwand"
+      },
       "0.0.32": {
         "en": "Creating a datapoint no longer discards what you had set up",
         "de": "Einen Datenpunkt anzulegen verwirft nicht mehr, was man eingestellt hat"
@@ -78,10 +82,6 @@
       "0.0.14": {
         "en": "Per-command action in the MQTT card; detection runs again afterwards",
         "de": "Handlung je Befehl in der MQTT-Karte; die Erkennung läuft danach neu"
-      },
-      "0.0.13": {
-        "en": "Feedback check, with SetOption59 read from the device and switchable",
-        "de": "Prüfung der Rückmeldung, SetOption59 wird abgefragt und lässt sich einschalten"
       }
     },
     "titleLang": {
