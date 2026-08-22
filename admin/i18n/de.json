@@ -366,5 +366,6 @@
   "mq.andMore": "… und {0} weitere",
   "mq.write": "Anlegen ({0})",
   "mq.done": "{0} Objekte geschrieben.",
-  "mq.doneHint": "Die Erkennung läuft gleich neu — eine Vorlage, die vorher nicht griff, kann jetzt greifen."
+  "mq.doneHint": "Die Erkennung läuft gleich neu — eine Vorlage, die vorher nicht griff, kann jetzt greifen.",
+  "mq.askRedundant": "nicht nötig — die Befehle stehen schon in dem, was das Gerät gesendet hat. Nur sinnvoll, wenn es sich seit dem Start noch nicht gemeldet hat."
 }

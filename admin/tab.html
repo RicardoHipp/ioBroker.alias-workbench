@@ -3483,10 +3483,16 @@
       ba.addEventListener('click', function () { zeigeMqttDialog(kanal); });
       leiste.appendChild(ba);
     }
-    var bf = el('button', 'btn', tr('mq.ask'));
+    /* Status 11 liefert dasselbe wie tele/STATE — gemessen, Feld fuer
+       Feld. Der Knopf ist also nur noetig, wenn das Geraet sich seit dem
+       Start noch nicht gemeldet hat. Weil StateRetain bei Tasmota auf 0
+       steht, wird nichts nachgeliefert, und bis zur naechsten Telemetrie
+       koennen es je nach TelePeriod fuenf Minuten sein. Deshalb: sichtbar,
+       aber nur dann als Hauptweg beschriftet. */
+    var bf = el('button', 'btn' + (l.befehle ? ' schmal' : ' primary'), tr('mq.ask'));
     bf.addEventListener('click', function () { mqttFragen(kanal, bf); });
     leiste.appendChild(bf);
-    leiste.appendChild(el('span', 'hint', tr('mq.askHint')));
+    leiste.appendChild(el('span', 'hint', l.befehle ? tr('mq.askRedundant') : tr('mq.askHint')));
     b.appendChild(leiste);
 
     k.appendChild(b);

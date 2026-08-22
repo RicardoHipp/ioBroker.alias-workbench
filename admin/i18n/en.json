@@ -366,5 +366,6 @@
   "mq.andMore": "… and {0} more",
   "mq.write": "Create ({0})",
   "mq.done": "{0} objects written.",
-  "mq.doneHint": "Detection runs again in a moment — a template that did not match before can match now."
+  "mq.doneHint": "Detection runs again in a moment — a template that did not match before can match now.",
+  "mq.askRedundant": "not needed — the commands are already in what the device sent. Only useful if it has not reported since start."
 }
