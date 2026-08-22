@@ -268,6 +268,34 @@ entry in `SPRACHEN` in `admin/tab.html` — nothing else.
 
 ## Changelog
 
+### 0.0.30
+
+The heading answered the wrong question. It showed the alias id — the answer
+to "what will be created" — while the obvious question when looking at the
+right-hand side is "where am I?". You clicked a device on the left, and the
+name of something else appeared on the right.
+
+```
+before   alias.0.Bastelzimmer.Bastelzimmer_Decklenlicht_RGB
+         WIRD AKTUALISIERT · aus mqtt-client.0.… · kein Objekt · 11 Zustände
+
+after    Bastelzimmer_Decklenlicht_RGB
+         mqtt-client.0.SmartHome.Bastelzimmer.Bastelzimmer_Decklenlicht_RGB
+         kein Objekt · 11 Zustände
+```
+
+- The heading now carries the **selected node**: its name, the full path
+  below it in small type, then type and state count
+- Where the alias goes, and whether it already exists, is said **once** — in
+  the target row, next to the id it concerns, where it can also be changed.
+  It now covers both cases, "already exists" and "will be created"; before,
+  "will be updated" sat in the heading and "already exists" ten centimetres
+  further down, two wordings for the same fact
+- The device card below no longer repeats the path either
+- With the source in the heading, `· kein Objekt ·` finally has a clear
+  referent. It always described the source; above the target id it read as if
+  the target were missing
+
 ### 0.0.29
 
 The workbench reads from `tele.STATE` which commands a Tasmota knows — that is

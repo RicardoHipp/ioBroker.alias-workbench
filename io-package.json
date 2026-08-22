@@ -1,8 +1,12 @@
 {
   "common": {
     "name": "alias-workbench",
-    "version": "0.0.29",
+    "version": "0.0.30",
     "news": {
+      "0.0.30": {
+        "en": "The heading shows what you picked on the left, not what will be created",
+        "de": "Die Kopfzeile zeigt, was links gewählt wurde — nicht, was daraus entsteht"
+      },
       "0.0.29": {
         "en": "Templates are recognised from what a device can do, not from which datapoints happen to exist",
         "de": "Vorlagen werden daran erkannt, was ein Gerät kann — nicht daran, welche Punkte zufällig schon da sind"
@@ -78,10 +82,6 @@
       "0.0.11": {
         "en": "Determine MQTT send commands and create the missing cmnd points",
         "de": "Sendebefehle eines MQTT-Geräts ermitteln und fehlende cmnd-Punkte anlegen"
-      },
-      "0.0.10": {
-        "en": "Diagnostic values from tele/STATE in the Tasmota templates, unticked",
-        "de": "Diagnosewerte aus tele/STATE in den Tasmota-Vorlagen, abgewählt"
       }
     },
     "titleLang": {
