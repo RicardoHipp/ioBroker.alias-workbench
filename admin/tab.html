@@ -1329,6 +1329,9 @@
         fw: z.schreibformel || '',
         caption: z.beschriftung || '',
         dec: z.nachkommastellen === undefined ? undefined : String(z.nachkommastellen),
+        /* Plaetze mit statesDefined — EFFECT etwa — bleiben ohne
+           Werteliste leer, egal wie gut Rolle und Typ passen. */
+        states: z.werteliste || undefined,
         manuell: false,
         ausVorlage: z.name,
         hinweis: z.hinweis || ''
@@ -4806,6 +4809,7 @@
       if (r.aus) { zu.vorgabeAus = true; }
       if (s.caption) { zu.beschriftung = s.caption; }
       if (s.dec !== undefined && s.dec !== '') { zu.nachkommastellen = Number(s.dec); }
+      if (s.states) { zu.werteliste = s.states; }
       if (s.hinweis) { zu.hinweis = s.hinweis; }
       return zu;
     });

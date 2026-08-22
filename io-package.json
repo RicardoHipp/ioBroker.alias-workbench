@@ -1,8 +1,12 @@
 {
   "common": {
     "name": "alias-workbench",
-    "version": "0.0.11",
+    "version": "0.0.12",
     "news": {
+      "0.0.12": {
+        "en": "New template for Tasmota colour lights on the rgbSingle pattern",
+        "de": "Neue Vorlage für Tasmota-Farblampen auf dem rgbSingle-Muster"
+      },
       "0.0.11": {
         "en": "Determine MQTT send commands and create the missing cmnd points",
         "de": "Sendebefehle eines MQTT-Geräts ermitteln und fehlende cmnd-Punkte anlegen"

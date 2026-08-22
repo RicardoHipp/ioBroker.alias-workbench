@@ -1,0 +1,193 @@
+{
+  "id": "tasmota-rgb",
+  "version": 1,
+  "rang": 25,
+  "name": {
+    "de": "Tasmota-Farblampe",
+    "en": "Tasmota colour light"
+  },
+  "geraetetyp": "rgbSingle",
+
+  "erkennung": {
+    "erforderlich": ["stat.POWER", "tele.STATE"],
+    "inhalt": { "tele.STATE": "Color" },
+    "hinweis": "Das Farbfeld in tele.STATE ist der Unterschied zu einer gewöhnlichen Tasmota. cmnd.POWER steht bewusst nicht in der Pflichtliste — bei einem frisch angelegten Gerät gibt es den Punkt noch nicht, und die Vorlage soll trotzdem greifen."
+  },
+
+  "zustaende": [
+    {
+      "name": "RGB",
+      "rolle": "level.color.rgb",
+      "typ": "string",
+      "lesen": "tele.STATE",
+      "leseformel": "'#' + String(JSON.parse(val).Color).slice(0, 6)",
+      "schreiben": "cmnd.Color",
+      "schreibformel": "String(val).replace('#', '')",
+      "hinweis": "Tasmota liefert die Farbe ohne Raute (F4FFCC), ioBroker und VIS erwarten sie mit. Bei RGBW-Geräten hängen weitere Kanäle hinten an, deshalb die ersten sechs Zeichen."
+    },
+    {
+      "name": "DIMMER",
+      "rolle": "level.dimmer",
+      "typ": "number",
+      "einheit": "%",
+      "lesen": "tele.STATE",
+      "feld": "Dimmer",
+      "schreiben": "cmnd.Dimmer"
+    },
+    {
+      "name": "ON",
+      "rolle": "switch.light",
+      "typ": "boolean",
+      "lesen": "stat.POWER",
+      "schreiben": "cmnd.POWER",
+      "schreibformel": "val ? \"ON\" : \"OFF\"",
+      "hinweis": "getrennte Quellen: sonst zeigt der Schalter den Befehl statt des Zustands"
+    },
+    {
+      "name": "ON_ACTUAL",
+      "rolle": "sensor.light",
+      "typ": "boolean",
+      "lesen": "stat.POWER"
+    },
+    {
+      "name": "EFFECT",
+      "rolle": "level.effect",
+      "typ": "number",
+      "lesen": "tele.STATE",
+      "feld": "Scheme",
+      "schreiben": "cmnd.Scheme",
+      "optional": true,
+      "werteliste": {
+        "0": "einfarbig",
+        "1": "Aufwachen",
+        "2": "Farben vorwärts",
+        "3": "Farben rückwärts",
+        "4": "zufällig"
+      },
+      "hinweis": "Der Platz EFFECT verlangt eine Werteliste — ohne common.states erkennt der type-detector ihn nicht."
+    },
+    {
+      "name": "FADE",
+      "rolle": "switch",
+      "typ": "boolean",
+      "lesen": "tele.STATE",
+      "feld": "Fade",
+      "schreiben": "cmnd.Fade",
+      "leseformel": "JSON.parse(val).Fade === \"ON\"",
+      "schreibformel": "val ? \"ON\" : \"OFF\"",
+      "optional": true,
+      "vorgabeAus": true,
+      "hinweis": "weiche Übergänge. Kein Platz im rgbSingle-Muster, landet im info-Gerät."
+    },
+    {
+      "name": "SPEED",
+      "rolle": "level",
+      "typ": "number",
+      "lesen": "tele.STATE",
+      "feld": "Speed",
+      "schreiben": "cmnd.Speed",
+      "optional": true,
+      "vorgabeAus": true,
+      "hinweis": "Geschwindigkeit des Effekts, 1 bis 40."
+    },
+    {
+      "name": "UNREACH",
+      "rolle": "indicator.maintenance.unreach",
+      "typ": "boolean",
+      "lesen": "tele.LWT",
+      "leseformel": "val !== \"Online\"",
+      "optional": true
+    },
+    {
+      "name": "RSSI",
+      "rolle": "value.rssi",
+      "typ": "number",
+      "einheit": "dBm",
+      "lesen": "tele.STATE",
+      "feld": "Wifi.Signal",
+      "optional": true
+    },
+    {
+      "name": "UPTIME",
+      "rolle": "value",
+      "typ": "number",
+      "einheit": "s",
+      "lesen": "tele.STATE",
+      "feld": "UptimeSec",
+      "optional": true,
+      "vorgabeAus": true,
+      "hinweis": "Sekunden seit dem letzten Start. Fällt der Wert ständig zurück, startet das Gerät neu."
+    },
+    {
+      "name": "LAST_REPORT",
+      "rolle": "text",
+      "typ": "string",
+      "lesen": "tele.STATE",
+      "feld": "Time",
+      "optional": true,
+      "vorgabeAus": true
+    },
+    {
+      "name": "HEAP",
+      "rolle": "value",
+      "typ": "number",
+      "einheit": "kB",
+      "lesen": "tele.STATE",
+      "feld": "Heap",
+      "optional": true,
+      "vorgabeAus": true
+    },
+    {
+      "name": "WIFI_QUALITY",
+      "rolle": "value",
+      "typ": "number",
+      "einheit": "%",
+      "lesen": "tele.STATE",
+      "feld": "Wifi.RSSI",
+      "optional": true,
+      "vorgabeAus": true
+    },
+    {
+      "name": "WIFI_SSID",
+      "rolle": "text",
+      "typ": "string",
+      "lesen": "tele.STATE",
+      "feld": "Wifi.SSId",
+      "optional": true,
+      "vorgabeAus": true
+    },
+    {
+      "name": "WIFI_LINKCOUNT",
+      "rolle": "value",
+      "typ": "number",
+      "lesen": "tele.STATE",
+      "feld": "Wifi.LinkCount",
+      "optional": true,
+      "vorgabeAus": true
+    },
+    {
+      "name": "WIFI_DOWNTIME",
+      "rolle": "text",
+      "typ": "string",
+      "lesen": "tele.STATE",
+      "feld": "Wifi.Downtime",
+      "optional": true,
+      "vorgabeAus": true
+    },
+    {
+      "name": "IP",
+      "rolle": "text",
+      "typ": "string",
+      "lesen": "tele.STATE",
+      "feld": "IPAddress",
+      "optional": true,
+      "vorgabeAus": true
+    }
+  ],
+
+  "nebenwirkungen": [
+    { "art": "mqtt-publish", "punkt": "cmnd.POWER" },
+    { "art": "mqtt-publish", "punkt": "cmnd.Color" },
+    { "art": "mqtt-publish", "punkt": "cmnd.Dimmer" }
+  ]
+}

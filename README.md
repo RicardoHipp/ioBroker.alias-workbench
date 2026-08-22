@@ -33,7 +33,8 @@ which pattern slots are filled and which are still free.
 **Templates.** A template describes how a device source becomes a finished alias
 device. Templates are plain JSON files, one per template — see
 [Template format](#template-format). Shipped with the adapter:
-Tasmota socket, Tasmota light, Tasmota with multiple outputs, measurement point.
+Tasmota socket, Tasmota light, Tasmota colour light, Tasmota with multiple
+outputs, measurement point.
 
 **Your own templates.** Build a device — by hand or by adapting a shipped
 template — and save it as a template of your own. What can be derived is
@@ -125,6 +126,7 @@ One JSON file per template under `admin/vorlagen/`. Example:
 | `vorgabeAus` | proposed but unchecked — used for values no pattern has a slot for |
 | `feld` | builds the read function `JSON.parse(val).<field>` |
 | `mehrfach` + `%N%` | one device per output; the numbers are read from what exists |
+| `werteliste` | value list for the datapoint — slots like EFFECT are not detected without one |
 | `absolut` | `lesen` is a full object id, not relative to the device — the same object for every device |
 | `beschriftung` | the datapoint's display name, if it should differ from its slot name |
 | `nachkommastellen` | decimals for the value display |
@@ -251,6 +253,11 @@ entry in `SPRACHEN` in `admin/tab.html` — nothing else.
   core feature of the js-controller, not of any adapter
 
 ## Changelog
+
+### 0.0.12
+
+- New template: Tasmota colour light, on the `rgbSingle` pattern
+- Templates can carry a `werteliste` for their datapoints
 
 ### 0.0.11
 

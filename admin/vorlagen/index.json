@@ -1,4 +1,10 @@
 {
   "hinweis": "Eine Datei je Vorlage. Diese Liste sagt dem Adapter, welche er laden soll.",
-  "vorlagen": ["tasmota-mehrfach.json", "tasmota-steckdose.json", "tasmota-lampe.json", "messpunkt.json"]
+  "vorlagen": [
+    "tasmota-mehrfach.json",
+    "tasmota-steckdose.json",
+    "tasmota-rgb.json",
+    "tasmota-lampe.json",
+    "messpunkt.json"
+  ]
 }
