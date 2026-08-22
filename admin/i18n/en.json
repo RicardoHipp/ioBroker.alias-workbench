@@ -388,5 +388,8 @@
   "check.feedbackUnknown": "unchecked: {0}",
   "mq.stMissing": "point missing",
   "mq.stMute": "cannot send",
-  "mq.stFine": "present, sends"
+  "mq.stFine": "present, sends",
+  "mq.rowCreate": "create",
+  "mq.rowAllow": "allow sending",
+  "mq.rowWorking": "…"
 }

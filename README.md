@@ -254,6 +254,13 @@ entry in `SPRACHEN` in `admin/tab.html` — nothing else.
 
 ## Changelog
 
+### 0.0.14
+
+- Every command in the MQTT card carries its own state and its own action —
+  create the point, or allow it to send
+- After such a change detection runs again, because it depends on which points
+  exist
+
 ### 0.0.13
 
 - New check: feedback that only arrives with the next telemetry. A point that

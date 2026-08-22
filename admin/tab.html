@@ -662,7 +662,11 @@
   /* ================== Objekte holen ================== */
   var ARTEN = ['device', 'channel', 'folder', 'state'];
 
-  function ladeObjekte() {
+  /* Nach dem Neuladen soll der Bericht stimmen. Die Erkennung haengt an
+     den vorhandenen Objekten — legt man einen cmnd-Punkt an, kann eine
+     Vorlage greifen, die vorher nicht griff. Vorher zeichnete das Laden
+     nur den Baum neu und liess rechts den alten Entwurf stehen. */
+  function ladeObjekte(danach) {
     var offen = ARTEN.length;
     objects = {};
     ARTEN.forEach(function (art) {
@@ -677,6 +681,8 @@
           kleinIndex = {};
           $('#foot').textContent = tr('app.objectsRead', keysSorted.length);
           zeichneBaum();
+          if (current && baumModus !== 'vorlagen') { waehle(current); }
+          if (typeof danach === 'function') { danach(); }
         }
       });
     });
@@ -3548,7 +3554,7 @@
       tab.style.marginTop = '7px';
       reihen.forEach(function (n) {
         var r = el('div', 'slot');
-        r.style.gridTemplateColumns = '1fr 150px';
+        r.style.gridTemplateColumns = '1fr 150px 96px';
         r.style.padding = '3px 0';
         var nm = el('span', 'sn', 'cmnd.' + n);
         nm.style.fontFamily = 'var(--mono)';
@@ -3560,6 +3566,20 @@
         else if (z === 'stumm') { c.appendChild(el('span', 'chip bad', tr('mq.stMute'))); }
         else { c.appendChild(el('span', 'chip ok', tr('mq.stFine'))); }
         r.appendChild(c);
+
+        /* Handeln, wo es etwas zu tun gibt — je Zeile einzeln, ohne
+           Umweg ueber den Sammeldialog. */
+        var h = el('span');
+        if (z === 'fehlt') {
+          var bn = el('button', 'btn schmal', tr('mq.rowCreate'));
+          bn.addEventListener('click', function () { mqttEinzeln(kanal, n, 'neu', bn); });
+          h.appendChild(bn);
+        } else if (z === 'stumm') {
+          var bs2 = el('button', 'btn schmal', tr('mq.rowAllow'));
+          bs2.addEventListener('click', function () { mqttEinzeln(kanal, n, 'frei', bs2); });
+          h.appendChild(bs2);
+        }
+        r.appendChild(h);
         tab.appendChild(r);
       });
       b.appendChild(tab);
@@ -3727,6 +3747,44 @@
       setAck: true
     };
     return c;
+  }
+
+  /* Einen einzelnen Punkt anlegen oder ihm das Senden erlauben. Klein
+     genug, dass ein Trockenlauf nur im Weg staende — die Zeile sagt ja,
+     was passiert. Der Sammeldialog bleibt fuer mehrere auf einmal. */
+  function mqttEinzeln(kanal, name, was, knopf) {
+    var g = mqttGeraet(kanal);
+    if (!g) { return; }
+    knopf.disabled = true;
+    knopf.textContent = tr('mq.rowWorking');
+
+    var id, obj;
+    if (was === 'frei') {
+      id = hatPunkt(kanal, 'cmnd.' + name);
+      var alt = objects[id];
+      if (!alt) { return; }
+      obj = JSON.parse(JSON.stringify(alt));
+      var cu = obj.common.custom || {};
+      Object.keys(cu).forEach(function (i) { if (/^mqtt/.test(i)) { cu[i].publish = true; } });
+      obj.common.custom = cu;
+    } else {
+      var w = befehlsWissen(name) || {};
+      var thema = mqttThema(g, 'cmnd', name);
+      id = kanal + '.cmnd.' + name;
+      var common = {
+        name: name,
+        role: w.rolle || 'state',
+        type: w.typ || 'mixed',
+        read: true, write: true,
+        desc: tr('mq.createdBy'),
+        custom: mqttCustom(g, thema)
+      };
+      if (w.einheit) { common.unit = w.einheit; }
+      if (w.werteliste) { common.states = w.werteliste; }
+      obj = { type: 'state', common: common, native: { topic: thema } };
+    }
+
+    socket.emit('setObject', id, obj, function () { ladeObjekte(); });
   }
 
   function zeigeMqttDialog(kanal) {

@@ -1,8 +1,12 @@
 {
   "common": {
     "name": "alias-workbench",
-    "version": "0.0.13",
+    "version": "0.0.14",
     "news": {
+      "0.0.14": {
+        "en": "Per-command action in the MQTT card; detection runs again afterwards",
+        "de": "Handlung je Befehl in der MQTT-Karte; die Erkennung läuft danach neu"
+      },
       "0.0.13": {
         "en": "Feedback check, with SetOption59 read from the device and switchable",
         "de": "Prüfung der Rückmeldung, SetOption59 wird abgefragt und lässt sich einschalten"

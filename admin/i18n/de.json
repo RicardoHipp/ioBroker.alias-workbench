@@ -388,5 +388,8 @@
   "check.feedbackUnknown": "ungeprüft: {0}",
   "mq.stMissing": "Punkt fehlt",
   "mq.stMute": "kann nicht senden",
-  "mq.stFine": "angelegt, sendet"
+  "mq.stFine": "angelegt, sendet",
+  "mq.rowCreate": "anlegen",
+  "mq.rowAllow": "senden erlauben",
+  "mq.rowWorking": "…"
 }
