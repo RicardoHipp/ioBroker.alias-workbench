@@ -268,6 +268,78 @@ entry in `SPRACHEN` in `admin/tab.html` — nothing else.
 
 ## Changelog
 
+### 0.0.20
+
+A systematic test of the whole adapter on the test system turned up 26
+findings. All are fixed.
+
+The heavy ones, all of the same family — the draft did not know the alias
+that already existed:
+
+- A datapoint you add by hand was written correctly but had vanished from the
+  list the next time you opened the device. `uebernehmeBestand` could only
+  tick what the draft already knew; anything that lived only in the alias was
+  invisible. Now those points join the draft, with their own role, formula and
+  source
+- The change card was blind to exactly those points. Switching the template on
+  a finished alias reported "1 open" while the dry run listed seven affected
+  datapoints
+- Updating from the alias view overwrote `native.quelle` with the alias itself
+  and dropped `vorlage`, `vorlageVersion` and `geraetetyp` — the whole origin,
+  without warning. A hand-given channel name was overwritten too
+- `common.states` was lost when reading a finished alias, so every slot with
+  `statesDefined` counted as empty. The workbench claimed a gap in an alias
+  its own detector reads as complete
+- Slots without a `defaultRole` — BRIGHTNESS in the rgbSingle pattern — got no
+  role at all, never filled their slot, and could be added over and over. The
+  role is now derived from the pattern's expression
+
+Things the workbench could not do:
+
+- **Remove an alias.** There was no button, and the obvious detour failed:
+  untick everything and the dry run refuses to write. Now there is a dialog
+  that lists what disappears, and empty parent folders go with it
+- **Notice objects created elsewhere.** The usual path — create `cmnd.POWER`,
+  switch once, and mqtt-client creates `stat.POWER` — left the display stuck
+  on "stat.POWER missing" until you reloaded the tab. Object changes are now
+  subscribed
+- **Show the folder overview.** `zeichneOrdner` existed but was never called.
+  Wiring it up exposed a second bug: `cmnd`, `stat` and `tele` were counted as
+  devices of their own, turning one NSPanel into three
+
+Wording and display:
+
+- "übrig geblieben" in the dry run meant "will be deleted" — and the same red
+  number also covered points that stay. Now counted separately, and the
+  numbers follow the checkboxes
+- The badge "will be created / will be updated" was missing wherever no
+  template matched, and "no object" sat under the target id while describing
+  the source
+- German leftovers in the English interface, in the error messages of all
+  places: "SET fehlt", "kein Objekt", "passt nicht"
+- The detected pattern dropped out of the pattern list after one switch, so
+  there was no way back except through "all 51 patterns"
+- The SetOption59 answer lives in `stat.RESULT`, where the next command
+  overwrites it — the finding fell back to "unknown" after a single switch.
+  It is now remembered with its age
+- Saving an own template did not raise its version, which would have left
+  every device looking up to date forever
+- A template could contradict itself, listing the same point as required and
+  as forbidden; that is now refused with an explanation
+- "Ask the device for its commands" gave no feedback at all
+- The command list re-sorted itself by state, so the row you just worked on
+  jumped away under the cursor
+- The dialog badge counted the missing points while the button created only
+  the preselected ones — "10 missing" above "Create (4)"
+- The boolean formula hint appeared under every field, including voltages
+- In template view the device buttons stayed visible, and the search filter
+  survived the switch, leaving the tree at "nothing found"
+- 18 unused i18n keys removed
+
+New: a seventh check, **no duplicate point** — it catches two datapoints that
+read and write exactly the same thing, which is what a template switch leaves
+behind when the old one called the switch ON and the new one calls it SET.
+
 ### 0.0.19
 
 - Opening a source whose alias already exists now targets that alias, wherever

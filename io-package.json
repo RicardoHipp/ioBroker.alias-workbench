@@ -1,8 +1,12 @@
 {
   "common": {
     "name": "alias-workbench",
-    "version": "0.0.19",
+    "version": "0.0.20",
     "news": {
+      "0.0.20": {
+        "en": "Systemtest across the whole adapter — 26 findings, all fixed",
+        "de": "Systemtest über den ganzen Adapter — 26 Befunde, alle behoben"
+      },
       "0.0.19": {
         "en": "An existing alias is found and used as the target, with its datapoints ticked",
         "de": "Ein vorhandener Alias wird gefunden, als Ziel genommen und seine Punkte angehakt"

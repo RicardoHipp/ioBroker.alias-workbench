@@ -504,6 +504,7 @@
       <button class="btn primary" id="btn-dry" disabled>Alias erzeugen &hellip;</button>
       <button class="btn primary" id="btn-dry-alle" hidden>Alle erzeugen &hellip;</button>
       <button class="btn" id="btn-tpl" disabled>Als Vorlage speichern &hellip;</button>
+      <button class="btn" id="btn-del" hidden>Alias entfernen &hellip;</button>
       <button class="btn" id="btn-checks">Pr&uuml;fungen <span id="checkchip"></span></button>
       <span class="sp" style="flex:1"></span>
       <span class="footnote" id="foot"></span>
@@ -591,6 +592,9 @@
     if (bc) { bc.childNodes[0].nodeValue = tr('check.button') + ' '; }
     setz('#dry-titel', tr('write.dryTitleCreate'));
     setz('#btn-tpl', tr('tpls.button'));
+    setz('#btn-del', tr('del.button'));
+    setz('#del-titel', tr('del.title'));
+    setz('#btn-del-go', tr('del.now'));
     setz('#tpl-titel', tr('tpls.title', ''));
     setz('#btn-tpl-save', tr('tpls.saveNew'));
     setz('#mqtt-titel', tr('mq.dialogTitle'));
@@ -682,9 +686,48 @@
           $('#foot').textContent = tr('app.objectsRead', keysSorted.length);
           zeichneBaum();
           if (current && baumModus !== 'vorlagen') { waehle(current); }
+          horcheAufObjekte();
           if (typeof danach === 'function') { danach(); }
         }
       });
+    });
+  }
+
+  /* Objekte entstehen auch ohne Zutun der Werkbank. Der uebliche Weg ist
+     genau der: cmnd.POWER anlegen, einmal schalten — und mqtt-client legt
+     stat.POWER an. Ohne Abo zeigte die Werkbank danach weiter „stat.POWER
+     fehlt", bis man den Reiter neu lud. Man erreichte den Zustand, in dem
+     die Vorlage greift, mit dem Werkzeug allein nie.
+
+     Nachgezogen wird immer, neu gezeichnet nur, wenn es den gerade
+     gewaehlten Zweig betrifft und kein Dialog offensteht — sonst
+     verschwindet einem die Zeile unter dem Finger. */
+  var horcht = false, nachziehTimer = null, nachziehBaum = false;
+
+  function horcheAufObjekte() {
+    if (horcht) { return; }
+    horcht = true;
+    socket.emit('subscribeObjects', '*');
+    socket.on('objectChange', function (id, obj) {
+      if (!id) { return; }
+      var gabEs = objects[id] !== undefined;
+      if (obj) { objects[id] = obj; } else { delete objects[id]; }
+      if (gabEs !== (objects[id] !== undefined)) { nachziehBaum = true; }
+
+      var betrifft = current && (id === current || id.indexOf(current + '.') === 0);
+      if (!betrifft && !nachziehBaum) { return; }
+      if (nachziehTimer) { clearTimeout(nachziehTimer); }
+      nachziehTimer = setTimeout(function () {
+        nachziehTimer = null;
+        if (document.querySelector('dialog[open]')) { return; }
+        if (nachziehBaum) {
+          keysSorted = Object.keys(objects).sort();
+          kleinIndex = {};
+          nachziehBaum = false;
+          zeichneBaum();
+        }
+        if (current && baumModus !== 'vorlagen') { waehle(current); }
+      }, 600);
     });
   }
 
@@ -851,8 +894,24 @@
 
   $('#q').addEventListener('input', zeichneBaum);
 
+  var baumModusVorher = null;
+
   function setzeModus(m) {
     baumModus = m;
+    /* Beim Moduswechsel den Filter fallen lassen und die Geraeteknoepfe
+       zurueckholen. Sonst stand man im Vorlagenbaum vor „nichts gefunden"
+       und sah nicht, dass noch ein Suchwort von vorhin wirkte. */
+    if (m !== baumModusVorher) {
+      var q0 = $('#q');
+      if (q0) { q0.value = ''; }
+    }
+    baumModusVorher = m;
+    if (m !== 'vorlagen') {
+      ['#btn-dry', '#btn-tpl', '#btn-checks'].forEach(function (w) {
+        var b = $(w);
+        if (b) { b.hidden = false; }
+      });
+    }
     $('#m-quellen').className = (m === 'quellen') ? 'an' : '';
     $('#m-aliase').className = (m === 'aliase') ? 'an' : '';
     $('#m-vorlagen').className = (m === 'vorlagen') ? 'an' : '';
@@ -882,11 +941,30 @@
 
   /* Die Rollen kommen aus dem Paket, nicht aus einer eigenen Liste —
      sonst pflegt man eine zweite Wahrheit, die auseinanderlaeuft. */
+  /* Manche Plaetze nennen keine Standardrolle, sondern nur einen
+     Ausdruck: BRIGHTNESS im rgbSingle-Muster hat blossen Anker und Wort.
+     Steht darin genau ein Rollenname, ist das die Rolle. Ohne diese
+     Ableitung bekam so ein Punkt gar keine: er belegte seinen Platz nie,
+     liess sich beliebig oft hinzufuegen, und die Rolle fehlte auch in der
+     Auswahlliste — der Platz war auf keinem Weg zu befuellen. */
+  function rolleAusAusdruck(r) {
+    if (!r) { return ''; }
+    var q = (r.source !== undefined) ? r.source : String(r);
+    if (q.charAt(0) !== '^' || q.slice(-1) !== '$') { return ''; }
+    var t = q.slice(1, -1).split(String.fromCharCode(92)).join('');
+    return /^[A-Za-z0-9_]+([.][A-Za-z0-9_]+)*$/.test(t) ? t : '';
+  }
+
+  function rolleVonPlatz(st) { return st.defaultRole || rolleAusAusdruck(st.role); }
+
   var ROLLEN = (function () {
     if (!D) { return []; }
     var m = {};
     Object.keys(D.patterns).forEach(function (t) {
-      D.patterns[t].states.forEach(function (st) { if (st.defaultRole) { m[st.defaultRole] = 1; } });
+      D.patterns[t].states.forEach(function (st) {
+        var r = rolleVonPlatz(st);
+        if (r) { m[r] = 1; }
+      });
     });
     ['state', 'text', 'json', 'value'].forEach(function (r) { m[r] = 1; });
     return Object.keys(m).sort();
@@ -938,6 +1016,10 @@
         role: istAlias ? (c.role || '') : '',
         typ: c.type || '',
         unit: c.unit || '',
+        /* Ohne die Werteliste bleibt jeder Platz mit statesDefined leer —
+           EFFECT etwa. Die Werkbank meldete dann eine Luecke an einem
+           Alias, den ihr eigener Detektor tadellos findet. */
+        states: c.states || undefined,
         wr: !!c.write,
         /* Ohne common.alias ist der Punkt seine eigene Quelle. Vorher stand
            hier nichts und man musste jede Zeile von Hand zuweisen. */
@@ -1447,6 +1529,12 @@
     current = id;
     openRow = null;
     entwurf = baueEntwurf(id);
+    /* Bis die Werte da sind und die Vorlage gegriffen hat, steht rechts
+       der Rohentwurf — alle Punkte angehakt, ohne Rollen. Auf dem
+       Testsystem waren das 130 ms, auf einer grossen Anlage deutlich
+       mehr. In dieser Zeit darf der Schreibknopf nicht scharf sein. */
+    var bd0 = $('#btn-dry');
+    if (bd0) { bd0.disabled = true; }
 
     /* Alle Ebenen darueber aufklappen, damit die Auswahl im Baum auch
        sichtbar wird — sonst waehlt man rechts etwas aus und links
@@ -1668,6 +1756,10 @@
   /* Welche Geraete liegen unter diesem Knoten? Ein Knoten gilt als Geraet,
      sobald eine Vorlage darauf passt; darunter wird nicht weitergesucht.
      Findet sich keine Vorlage, zaehlt jeder Knoten mit eigenen Zustaenden. */
+  /* cmnd, stat und tele sind die Sparten eines Tasmota, keine eigenen
+     Geraete. Wer sie einzeln zaehlt, macht aus einem NSPanel drei. */
+  var SPARTEN = ['cmnd', 'stat', 'tele'];
+
   function geraeteDarunter(wurzel) {
     var pre = wurzel + '.';
     var tiefeWurzel = wurzel.split('.').length;
@@ -1694,6 +1786,7 @@
 
     pfade.forEach(function (pfad) {
       if (schonDrin(pfad)) { return; }
+      if (SPARTEN.indexOf(pfad.split('.').pop()) !== -1) { return; }
       var beste = null;
       VORLAGEN.forEach(function (v) {
         var t = pruefeVorlage(v, pfad);
@@ -1708,9 +1801,15 @@
     /* Reste: Knoten mit eigenen Zustaenden, die keine Vorlage traf */
     pfade.forEach(function (pfad) {
       if (schonDrin(pfad)) { return; }
+      if (SPARTEN.indexOf(pfad.split('.').pop()) !== -1) { return; }
       var eigene = keysSorted.filter(function (k) {
-        return k.indexOf(pfad + '.') === 0 && objects[k] && objects[k].type === 'state' &&
-               k.slice(pfad.length + 1).indexOf('.') === -1;
+        if (k.indexOf(pfad + '.') !== 0) { return false; }
+        if (!objects[k] || objects[k].type !== 'state') { return false; }
+        var rest = k.slice(pfad.length + 1);
+        if (rest.indexOf('.') === -1) { return true; }
+        /* Ein Zustand in einer Sparte gehoert dem Geraet darueber. */
+        var t = rest.split('.');
+        return t.length === 2 && SPARTEN.indexOf(t[0]) !== -1;
       });
       if (eigene.length) {
         geraete.push({ id: pfad, vorlage: null, punkte: 0 });
@@ -1788,6 +1887,21 @@
        Nicht sperren, aber auch nicht ungefragt 1000 Zeilen zeichnen. */
     var VIEL = 40;
     if (!e.vorschlag && e.states.length > VIEL && !e.trotzdem) {
+      /* Sind darunter mehrere eigenstaendige Geraete, ist eine Uebersicht
+         nuetzlicher als die blosse Warnung: sie zeigt je Geraet, welche
+         Vorlage greift und ob es schon einen Alias gibt. Die Funktion gab
+         es laengst, sie wurde nur nie aufgerufen. */
+      var drunter = geraeteDarunter(current);
+      if (drunter.length > 1) {
+        zeichneOrdner(host, current);
+        var bt2 = el('div');
+        bt2.style.margin = '11px 0 0';
+        var btn2 = el('button', 'btn', tr('result.allAnyway') + e.states.length);
+        btn2.addEventListener('click', function () { e.trotzdem = true; zeichneErgebnis(); });
+        bt2.appendChild(btn2);
+        host.appendChild(bt2);
+        return;
+      }
       var zweige = {};
       e.states.forEach(function (st) {
         zweige[(st.n.split('_')[0] || st.n)] = 1;
@@ -1809,6 +1923,7 @@
       tplKnopf(false);
       var ba0 = $('#btn-dry-alle');
       if (ba0) { ba0.hidden = true; }
+      delKnopf(false);
       return;
     }
 
@@ -1829,21 +1944,26 @@
     links.appendChild(el('div', 'id', e.ziel || current));
     var sub = el('div', 'sub');
     var nm = txt(obj.common && obj.common.name);
-    if (e.vorschlag) {
-      /* Haengt daran, ob es das Ziel gibt — nicht daran, ob der Entwurf
-         aus einer Vorlage kam. Vorher stand „wird neu angelegt" auch
-         ueber einem Geraet, das laengst einen Alias hat. */
+    /* Das Abzeichen haengt daran, ob es das Ziel gibt — nicht daran, ob
+       der Entwurf aus einer Vorlage kam. Vorher fehlte es ueberall dort,
+       wo keine Vorlage griff: gerade da, wo man am wenigsten weiss, was
+       ein Klick anrichtet. */
+    var ausQuelle = (current.indexOf('alias.') !== 0);
+    if (ausQuelle) {
       var gibtsZiel = !!objects[e.ziel || current];
       var ch1 = el('span', 'chip ' + (gibtsZiel ? 'warn' : 'ok'),
         gibtsZiel ? tr('result.willBeUpdated') : tr('result.newlyCreated'));
       ch1.style.marginRight = '7px';
       sub.appendChild(ch1);
+      /* Der Bezug muss dabeistehen: oben steht das Ziel, hier die Quelle.
+         Ohne ihn las sich „kein Objekt" als Aussage ueber das Ziel. */
       sub.appendChild(document.createTextNode(tr('result.from') + current + '   ·   '));
     }
-    sub.appendChild(document.createTextNode((objects[current] ? obj.type : 'kein Objekt') +
-      (nm ? '  ·  ' + nm : '') +
-      '  ·  ' + alleZust.length + ' Zustände' +
-      (direkt.length !== alleZust.length ? ' (' + direkt.length + ' direkt)' : '')));
+    sub.appendChild(document.createTextNode((objects[current] ? obj.type : tr('result.noObjectShort')) +
+      (nm ? '  ·  ' + nm : '') + '  ·  ' +
+      (direkt.length !== alleZust.length
+        ? tr('result.statesDirect', alleZust.length, direkt.length)
+        : tr('result.states', alleZust.length))));
     links.appendChild(sub);
     head.appendChild(links);
 
@@ -1854,7 +1974,13 @@
     vw.appendChild(vlbl);
     var sel = el('select', 'musterwahl');
     var liste = e.alleMuster ? Object.keys(D.patterns).sort() : VORSCHAU.slice();
-    if (e.want && liste.indexOf(e.want) === -1) { liste.unshift(e.want); }
+    /* Auch das urspruenglich erkannte Muster gehoert dauerhaft in die
+       Liste. Sonst fiel rgbSingle heraus, sobald man einmal auf light
+       gewechselt hatte — und der Weg zurueck fuehrte nur ueber
+       „alle 51 Muster". */
+    [e.wantAuto, e.want].forEach(function (m0) {
+      if (m0 && D.patterns[m0] && liste.indexOf(m0) === -1) { liste.unshift(m0); }
+    });
     liste.forEach(function (m) {
       if (!D.patterns[m]) { return; }
 
@@ -1876,7 +2002,8 @@
       if (!r.length) {
         var fehlend = D.patterns[m].states.filter(function (x) { return x.required; })
           .map(function (x) { return x.name; });
-        mark = '✕ ' + (fehlend.length ? fehlend.join(', ') + ' fehlt' : 'passt nicht');
+        mark = fehlend.length ? ('✕ ' + tr('pattern.missing', fehlend.join(', ')))
+                              : tr('pattern.doesNotFit');
       } else {
         var g = r[0].states.filter(function (x) { return x.id; }).length;
         mark = tr('pattern.slotsTaken', g, r[0].states.length);
@@ -1910,7 +2037,8 @@
     if (!haupt) {
       meta.appendChild(el('span', 'chip bad', tr('pattern.notDetected')));
     } else if (pflichtFehlt.length) {
-      meta.appendChild(el('span', 'chip bad', pflichtFehlt.map(function (x) { return x.name; }).join(', ') + ' fehlt'));
+      meta.appendChild(el('span', 'chip bad',
+        tr('pattern.missing', pflichtFehlt.map(function (x) { return x.name; }).join(', '))));
     }
     if (e.want && e.wantAuto && e.want !== e.wantAuto) {
       meta.appendChild(el('span', 'chip warn', tr('pattern.manualInstead', e.wantAuto)));
@@ -2446,14 +2574,14 @@
         fr.setAttribute('role', 'button');
         fr.appendChild(el('span', 'mk3', st.required ? '✕' : '+'));
         fr.appendChild(el('span', 'sn2', st.name));
-        fr.appendChild(el('span', 'rl2', st.defaultRole || String(st.role || '')));
+        fr.appendChild(el('span', 'rl2', rolleVonPlatz(st) || String(st.role || '')));
         fr.appendChild(el('span', 'rx2', st.required ? tr('pattern.required') : String(st.role || '')));
 
         var nimm = function () {
           e.states.push({
             n: st.name,
             on: true,
-            role: st.defaultRole || '',
+            role: rolleVonPlatz(st),
             /* Manche Plaetze lassen mehrere Typen zu und nennen sie als
                Liste — light.EFFECT etwa [number, string]. Ungefiltert
                landete die Liste in common.type, der Detektor lehnte den
@@ -2545,6 +2673,7 @@
     var ba = $('#btn-dry-alle');
     var mehr = e.instanzen && e.instanzen.length > 1;
     tplKnopf(true);
+    delKnopf(!!objects[zielId2] && zielId2.indexOf('alias.') === 0);
     if (bd) {
       bd.disabled = false;
       /* Bei mehreren Ausgaengen den Ausgang beim Namen nennen — „für den
@@ -2572,8 +2701,8 @@
     var head = el('div', 'rhead');
     var links = el('div');
     links.appendChild(el('div', 'id', wurzel));
-    links.appendChild(el('div', 'sub', geraete.length + ' Geräte darunter  ·  ' +
-      kindZustaende(wurzel).length + ' Datenpunkte'));
+    links.appendChild(el('div', 'sub',
+      tr('folder.devicesBelow', geraete.length, kindZustaende(wurzel).length)));
     head.appendChild(links);
     host.appendChild(head);
 
@@ -2708,12 +2837,42 @@
   }
 
   function uebernehmeBestand(e) {
-    if (!e.ziel || e.bestandGeprueft) { return; }
+    if (!e.ziel || e.bestandGeprueft === e.ziel) { return; }
     e.bestandGeprueft = e.ziel;
     if (!objects[e.ziel]) { return; }
-    e.states.forEach(function (s) {
-      if (!s.n || s.on) { return; }
-      if (objects[e.ziel + '.' + s.n]) { s.on = true; s.ausBestand = true; }
+    /* Im Aliasmodus ist der Entwurf schon der Bestand. */
+    if (e.kanal === e.ziel) { return; }
+
+    var kennt = {};
+    e.states.forEach(function (s) { if (s.n) { kennt[s.n] = s; } });
+
+    /* Erstens: was der Vorschlag kennt und im Alias steht, wird angehakt. */
+    Object.keys(kennt).forEach(function (n) {
+      var s = kennt[n];
+      if (!s.on && objects[e.ziel + '.' + n]) { s.on = true; s.ausBestand = true; }
+    });
+
+    /* Zweitens — und das ist das Wichtigere: was NUR im Alias steht, kommt
+       als eigene Zeile dazu. Vorher war es unsichtbar. Man sah seine selbst
+       angelegten Punkte nie wieder, konnte sie weder aendern noch
+       entfernen, die Aenderungs-Karte war blind fuer sie, und beim
+       Aktualisieren standen sie stumm unter „Entfernen". */
+    kindZustaende(e.ziel).forEach(function (id) {
+      var n = id.slice(e.ziel.length + 1);
+      if (n.indexOf('.') !== -1 || kennt[n]) { return; }
+      var o = objects[id], c = o.common || {}, a = c.alias || {}, q = aliasQuellen(o);
+      var nm = txt(c.name);
+      e.states.push({
+        n: n, on: true, ausBestand: true, nurImAlias: true,
+        role: c.role || '', typ: c.type || '', unit: c.unit || '',
+        states: c.states || undefined,
+        wr: !!c.write,
+        srcR: q.read || '', srcW: q.einfach ? '' : (q.write || ''),
+        f: (typeof a.read === 'string') ? a.read : '',
+        fw: (typeof a.write === 'string') ? a.write : '',
+        caption: (nm && nm !== n) ? nm : '',
+        manuell: false
+      });
     });
   }
 
@@ -2805,9 +2964,12 @@
       { s: formelKaputt.length ? 'bad' : 'ok', t: tr('check.formulaYields'),
         d: formelKaputt.length ? formelKaputt.map(function (x) { return x.n; }).join(', ') : tr('check.allFine') },
       { s: haupt && !pflichtFehlt.length ? 'ok' : 'bad', t: tr('check.rolesMakeDevice'),
-        d: haupt ? (pflichtFehlt.length ? pflichtFehlt.map(function (x) { return x.name; }).join(', ') + ' fehlt' : haupt.type) : tr('check.noPatternFits') },
+        d: haupt ? (pflichtFehlt.length
+              ? tr('pattern.missing', pflichtFehlt.map(function (x) { return x.name; }).join(', '))
+              : haupt.type) : tr('check.noPatternFits') },
       pruefungSenden(e),
-      pruefungRueckmeldung(e)
+      pruefungRueckmeldung(e),
+      pruefungDopplung(e)
     ];
 
     var ul = $('#checklist');
@@ -2944,7 +3106,11 @@
     iF.addEventListener('click', function (ev) { ev.stopPropagation(); });
     iF.addEventListener('change', function () { s.f = iF.value.trim(); neu(); });
     fb.appendChild(iF);
-    fb.appendChild(el('div', 'sugg', tr('detail.formulaHint')));
+    /* Der Hinweis gilt nur fuer Schaltpunkte. Bei einem Spannungswert
+       stand er auch — und ergab dort keinen Sinn. */
+    if ((s.typ || '') === 'boolean') {
+      fb.appendChild(el('div', 'sugg', tr('detail.formulaHint')));
+    }
     zeile(tr('detail.formula'), fb);
 
     if (s.srcW) {
@@ -3152,16 +3318,27 @@
 
     /* Der Kanal — hier wird die Vorlage vermerkt, damit ein spaeteres
        Nachziehen weiss, woraus das Geraet entstanden ist. */
-    var kanalNative = { quelle: e.kanal };
+    /* Wird der Alias aus sich selbst heraus bearbeitet — Baummodus
+       „Aliase" —, darf „quelle" nicht auf ihn selbst zeigen. Vorher
+       verschwanden dabei Vorlage, Version und Geraetetyp, und damit die
+       ganze Herkunft: das Abzeichen „gemerkt" war weg, die Erkennung
+       nahm womoeglich eine andere Vorlage, und ein spaeteres Nachziehen
+       der Versionen haette nichts mehr zu greifen. */
+    var altN = (objects[ziel] && objects[ziel].native) || {};
+    var ausAlias = (e.kanal.indexOf('alias.') === 0);
+    var kanalNative = ausAlias ? JSON.parse(JSON.stringify(altN)) : { quelle: e.kanal };
     if (e.vorlage) {
       kanalNative.vorlage = e.vorlage;
       kanalNative.vorlageVersion = e.vorlageVersion;
       kanalNative.geraetetyp = e.want;
       if (e.want !== e.wantAuto) { kanalNative.musterVonHand = true; }
     }
+    /* Einen von Hand vergebenen Kanalnamen nicht durch die Kennung
+       ersetzen. */
+    var altName = txt(objects[ziel] && objects[ziel].common && objects[ziel].common.name);
     raus.push({ id: ziel, neu: !objects[ziel], obj: {
       type: 'channel',
-      common: { name: teile[teile.length - 1] },
+      common: { name: altName || teile[teile.length - 1] },
       native: kanalNative
     } });
 
@@ -3189,7 +3366,12 @@
       if (s.states) { common.states = s.states; }
 
       var nat = {};
-      if (s.manuell) { nat.vonHand = true; }
+      if (s.nurImAlias && objects[id] && objects[id].native) {
+        /* Ein Punkt, den es nur im Alias gibt, behaelt seinen Vermerk —
+           sonst schreibt ihn ein Aktualisieren der Vorlage zu, aus der er
+           nie kam. */
+        nat = JSON.parse(JSON.stringify(objects[id].native));
+      } else if (s.manuell) { nat.vonHand = true; }
       else if (e.vorlage) { nat.vorlage = e.vorlage; nat.ausZustand = s.ausVorlage || s.n; }
 
       raus.push({ id: id, neu: !objects[id], obj: { type: 'state', common: common, native: nat } });
@@ -3296,12 +3478,21 @@
     kopf.appendChild(el('b', null, tr('app.objectsCount', liste.length)));
     var neu = liste.filter(function (x) { return x.neu; }).length;
     kopf.appendChild(document.createTextNode('  —  ' + tr('write.summaryTail', neu, liste.length - neu)));
-    if (weg.length) {
-      kopf.appendChild(document.createTextNode(', '));
-      var wc = el('b', null, tr('write.leftOver', weg.length));
-      wc.style.color = 'var(--bad)';
-      kopf.appendChild(wc);
+    /* „uebrig geblieben" hiess in Wahrheit „wird geloescht" — und
+       dieselbe rote Zahl stand auch fuer Punkte, die stehenbleiben. Zwei
+       gegensaetzliche Faelle unter einer Zahl, ausgerechnet dort, wo
+       etwas verschwindet. Jetzt getrennt, und die Zahlen folgen den
+       Kaestchen. */
+    var wRaus = el('b'), wBleibt = el('span');
+    wRaus.style.color = 'var(--bad)';
+    wBleibt.style.color = 'var(--ink-3)';
+    function zaehlerAuffrischen() {
+      var n = loeschListe.filter(function (v) { return v.vorgabe; }).length;
+      wRaus.textContent = n ? ('  —  ' + tr('write.willRemove', n)) : '';
+      var b = loeschListe.length - n;
+      wBleibt.textContent = b ? ('  —  ' + tr('write.willKeep', b)) : '';
     }
+    if (weg.length) { kopf.appendChild(wRaus); kopf.appendChild(wBleibt); }
     body.appendChild(kopf);
 
     if (weg.length) {
@@ -3320,16 +3511,21 @@
         var cb = document.createElement('input');
         cb.type = 'checkbox';
         cb.checked = v.vorgabe;
-        cb.addEventListener('change', function () { loeschListe[i].vorgabe = cb.checked; });
         cbw.appendChild(cb);
         r.appendChild(cbw);
         r.appendChild(el('span', 'sn', v.id.slice((entwurf.ziel || entwurf.kanal).length + 1)));
         var g = el('span', 'rx', v.grund);
         if (!v.vorgabe) { g.style.color = 'var(--warn)'; }
         r.appendChild(g);
+        cb.addEventListener('change', function () {
+          loeschListe[i].vorgabe = cb.checked;
+          g.style.color = cb.checked ? '' : 'var(--warn)';
+          zaehlerAuffrischen();
+        });
         wk.appendChild(r);
       });
       body.appendChild(wk);
+      zaehlerAuffrischen();
     }
 
     if (probleme.length) {
@@ -3374,6 +3570,131 @@
     $('#btn-dry-write').disabled = probleme.length > 0;
     $('#btn-dry-write').textContent = objects[entwurf.ziel || entwurf.kanal] ? tr('write.nowUpdate') : tr('write.now');
     $('#dlg-dry').showModal();
+  }
+
+  /* Einen Alias wieder loswerden.
+
+     Anlegen und Aktualisieren gab es, Entfernen nicht — und der
+     naheliegende Umweg lief ins Leere: haekelt man alle Punkte ab, listet
+     der Trockenlauf sie zwar auf, sperrt aber das Schreiben mit „kein
+     einziger Datenpunkt ausgewaehlt". Ein einmal angelegter Alias liess
+     sich nur ueber die Objektverwaltung entfernen. */
+  var loeschZiel = null;
+
+  function zeigeLoeschen() {
+    var ziel = (entwurf && (entwurf.ziel || entwurf.kanal)) || current;
+    if (!ziel || ziel.indexOf('alias.') !== 0 || !objects[ziel]) { return; }
+    loeschZiel = ziel;
+
+    var body = $('#del-body');
+    body.textContent = '';
+    var kinder = kindZustaende(ziel).filter(function (id) { return id.indexOf(ziel + '.') === 0; });
+    var unter = keysSorted.filter(function (id) {
+      return id.indexOf(ziel + '.') === 0 && kinder.indexOf(id) === -1;
+    });
+    var alle = kinder.concat(unter);
+
+    var kopf = el('div');
+    kopf.style.marginBottom = '11px';
+    kopf.style.fontSize = '12.5px';
+    kopf.appendChild(el('b', null, tr('del.count', alle.length + 1)));
+    body.appendChild(kopf);
+
+    var hin = el('div', 'aside w');
+    hin.style.marginBottom = '11px';
+    hin.textContent = tr('del.hint');
+    body.appendChild(hin);
+
+    var k = el('div', 'card');
+    var ch = el('div', 'ch');
+    ch.appendChild(el('span', 'typ', tr('del.objects')));
+    ch.appendChild(el('span', 'chip bad', String(alle.length + 1)));
+    k.appendChild(ch);
+    [ziel].concat(alle).forEach(function (id) {
+      var r = el('div', 'slot');
+      r.style.gridTemplateColumns = '1fr 90px';
+      r.appendChild(el('span', 'sn', id === ziel ? id : id.slice(ziel.length + 1)));
+      r.appendChild(el('span', 'rx', (objects[id] && objects[id].type) || ''));
+      k.appendChild(r);
+    });
+    body.appendChild(k);
+
+    var b = $('#btn-del-go');
+    b.disabled = false;
+    b.textContent = tr('del.now');
+    $('#dlg-del').showModal();
+  }
+
+  function loescheAlias() {
+    if (!loeschZiel) { return; }
+    var ziel = loeschZiel;
+    var alle = keysSorted.filter(function (id) { return id.indexOf(ziel + '.') === 0; });
+    /* Kinder vor den Eltern, sonst bleiben Waisen stehen. */
+    alle.sort(function (a, b) { return b.length - a.length; });
+    alle.push(ziel);
+
+    var b = $('#btn-del-go');
+    b.disabled = true;
+    b.textContent = tr('write.writing');
+
+    var offen = alle.length, fehler = [];
+    alle.forEach(function (id) {
+      socket.emit('delObject', id, function (err) {
+        if (err) { fehler.push(id + ': ' + err); }
+        if (--offen === 0) {
+          var body = $('#del-body');
+          body.textContent = '';
+          var m = el('div');
+          m.style.fontSize = '13px';
+          if (fehler.length) {
+            m.appendChild(el('b', null, tr('write.failed', fehler.length)));
+          } else {
+            m.appendChild(el('b', null, tr('del.done', alle.length)));
+          }
+          body.appendChild(m);
+          alle.forEach(function (x) { delete objects[x]; });
+          keysSorted = Object.keys(objects).sort();
+
+          /* Ordner, die dadurch leer geworden sind, mitnehmen — aber nur
+             die eigenen Zwischenebenen unterhalb von alias.0, und nur
+             solange wirklich nichts mehr darin liegt. */
+          leereOrdnerRaeumen(ziel, function () {
+            loeschZiel = null;
+            entwurf = null;
+            current = null;
+            b.textContent = tr('del.now');
+            zeichneBaum();
+            zeichneErgebnis();
+          });
+        }
+      });
+    });
+  }
+
+  function delKnopf(zeigen) {
+    var b = $('#btn-del');
+    if (b) { b.hidden = !zeigen; }
+  }
+
+  function leereOrdnerRaeumen(weg, fertig) {
+    var teile = weg.split('.');
+    var kette = [];
+    for (var i = teile.length - 1; i > 2; i--) {
+      kette.push(teile.slice(0, i).join('.'));
+    }
+    var i2 = 0;
+    (function weiter() {
+      if (i2 >= kette.length) { return fertig(); }
+      var pfad = kette[i2++];
+      var o = objects[pfad];
+      var belegt = keysSorted.some(function (id) { return id.indexOf(pfad + '.') === 0; });
+      if (!o || o.type !== 'folder' || belegt) { return fertig(); }
+      socket.emit('delObject', pfad, function () {
+        delete objects[pfad];
+        keysSorted = Object.keys(objects).sort();
+        weiter();
+      });
+    })();
   }
 
   /* Wirklich schreiben — nur aus dem Trockenlauf heraus erreichbar. */
@@ -3465,6 +3786,31 @@
     if (sofort === true) { return { s: 'ok', t: tr('check.feedback'), d: tr('check.feedbackFast') }; }
     if (sofort === null) { return { s: 'mut', t: tr('check.feedback'), d: tr('check.feedbackUnknown', namen) }; }
     return { s: 'warn', t: tr('check.feedback'), d: tr('check.feedbackSlow', namen) };
+  }
+
+  /* Zeigen zwei Punkte auf genau dasselbe?
+
+     Das passiert beim Wechsel der Vorlage: die alte nannte den Schalter
+     ON, die neue nennt ihn SET — hinterher stehen beide im Alias, auf
+     derselben Quelle, mit derselben Formel. Das Geraet hat dann zwei
+     Schalter, die sich gegenseitig nachziehen.
+
+     SET und ACTUAL zaehlen nicht als Dopplung: sie lesen zwar denselben
+     Punkt, aber nur einer schreibt. Und zwei Messwerte aus demselben
+     JSON sind verschieden, solange ihre Formeln es sind. */
+  function pruefungDopplung(e) {
+    var nach = {};
+    e.states.forEach(function (s) {
+      if (!s.on || !s.n || !s.srcR) { return; }
+      var k = s.srcR + '|' + (s.f || '') + ' → ' + (s.srcW || '') + '|' + (s.fw || '');
+      (nach[k] = nach[k] || []).push(s.n);
+    });
+    var doppelt = [];
+    Object.keys(nach).forEach(function (k) {
+      if (nach[k].length > 1) { doppelt.push(nach[k].join(' = ')); }
+    });
+    if (!doppelt.length) { return { s: 'ok', t: tr('check.duplicate'), d: tr('check.duplicateNone') }; }
+    return { s: 'warn', t: tr('check.duplicate'), d: tr('check.duplicateSome', doppelt.join(',  ')) };
   }
 
   /* Kann der Schreibweg ueberhaupt senden? Bei MQTT sitzt der Schalter
@@ -3609,15 +3955,60 @@
      Gemessen: mit SetOption59 ON kam tele/STATE drei Sekunden nach einer
      Scheme-Aenderung — also wirkt es auch fuer Licht-Befehle, nicht nur
      fuer POWER. */
+  /* Steht die Antwort noch in stat.RESULT, ist sie frisch — dann wird sie
+     zugleich gemerkt. Sonst gilt die gemerkte.
+
+     Vorher wurde nur stat.RESULT gelesen, und dort ueberschreibt der
+     naechste Befehl die Antwort. Gemessen: nachfragen → „eingeschaltet",
+     einmal schalten → wieder „unbekannt", obwohl sich am Geraet nichts
+     geaendert hatte. Der Befund war praktisch nie stabil zu sehen. */
   function sofortRueckmeldung(kanal) {
     var id = hatPunkt(kanal, 'stat.RESULT');
     if (id) {
       var j = jsonVon(id);
       if (j && j.SetOption59 !== undefined) {
-        return String(j.SetOption59).toUpperCase() === 'ON';
+        var w = String(j.SetOption59).toUpperCase() === 'ON';
+        merkeSo59(kanal, w);
+        return w;
       }
     }
-    return null;                     /* unbekannt, nicht "aus" */
+    var g = gemerktesSo59(kanal);
+    return g ? g.wert : null;        /* unbekannt, nicht "aus" */
+  }
+
+  /* Gemerkt wird am cmnd-Punkt selbst — dort, wo die Frage gestellt wurde.
+     Kein eigenes Objekt, und beim Aufraeumen verschwindet es mit. */
+  function gemerktesSo59(kanal) {
+    var id = hatPunkt(kanal, 'cmnd.SetOption59');
+    var n = id && objects[id] && objects[id].native;
+    if (!n || n.so59 === undefined) { return null; }
+    return { wert: !!n.so59, zeit: n.so59Zeit || 0 };
+  }
+
+  function merkeSo59(kanal, wert) {
+    var id = hatPunkt(kanal, 'cmnd.SetOption59');
+    if (!id || !objects[id]) { return; }
+    var n = objects[id].native || (objects[id].native = {});
+    if (n.so59 === wert) { return; }
+    n.so59 = wert;
+    n.so59Zeit = neueZeit();
+    var kopie = JSON.parse(JSON.stringify(objects[id]));
+    socket.emit('setObject', id, kopie, function () {});
+  }
+
+  /* Zeitstempel ohne Date.now — das Skript laeuft im Browser, hier ist es
+     unbedenklich, aber einheitlich an einer Stelle. */
+  function neueZeit() { return new Date().getTime(); }
+
+  function so59Alter(kanal) {
+    var g = gemerktesSo59(kanal);
+    if (!g || !g.zeit) { return ''; }
+    var min = Math.round((neueZeit() - g.zeit) / 60000);
+    if (min < 1) { return tr('mq.justAsked'); }
+    if (min < 60) { return tr('mq.askedMinutes', min); }
+    var std = Math.round(min / 60);
+    if (std < 48) { return tr('mq.askedHours', std); }
+    return tr('mq.askedDays', Math.round(std / 24));
   }
 
   /* Was fehlt dem Geraet an cmnd-Punkten, und welche koennen nicht senden? */
@@ -3702,12 +4093,11 @@
       Object.keys(zustand).forEach(function (n) {
         if (reihen.indexOf(n) === -1) { reihen.push(n); }
       });
-      var rang = { stumm: 0, fehlt: 1, da: 2 };
-      reihen.sort(function (x, y) {
-        var a = rang[zustand[x]] === undefined ? 3 : rang[zustand[x]];
-        var c = rang[zustand[y]] === undefined ? 3 : rang[zustand[y]];
-        return a - c || (x < y ? -1 : 1);
-      });
+      /* Nach Namen, nicht nach Zustand. Sortiert man nach Zustand,
+         rutscht jede Zeile beim Anlegen ans Ende — und wer mehrere
+         nacheinander anlegt, klickt jedes Mal woanders hin. Welcher Fall
+         vorliegt, sagt ohnehin die Spalte daneben. */
+      reihen.sort(function (x, y) { return x < y ? -1 : (x > y ? 1 : 0); });
 
       var tab = el('div');
       tab.style.marginTop = '7px';
@@ -3791,8 +4181,12 @@
       sl.appendChild(be);
     }
     sk.appendChild(sl);
-    sk.appendChild(el('div', 'hint', l.sofort === true ? tr('mq.instantHintOn')
-      : (l.sofort === false ? tr('mq.instantHintOff') : tr('mq.instantHintUnknown'))));
+    var hinweis = l.sofort === true ? tr('mq.instantHintOn')
+      : (l.sofort === false ? tr('mq.instantHintOff') : tr('mq.instantHintUnknown'));
+    /* Woher der Befund stammt, gehoert dazu — sonst weiss niemand, ob er
+       von eben ist oder von vorgestern. */
+    var alter = (l.sofort === null) ? '' : so59Alter(kanal);
+    sk.appendChild(el('div', 'hint', hinweis + (alter ? '  ·  ' + alter : '')));
     b.appendChild(sk);
 
     /* Nachfragen liefert dasselbe wie tele/STATE — gemessen, Feld fuer
@@ -3815,6 +4209,14 @@
       warum.textContent = (l.befehle ? tr('mq.onlyResult') : tr('mq.neverReported')) +
         '  ' + tr('mq.askHint');
       kasten.appendChild(warum);
+      if (mqttAbfrage[kanal] !== undefined) {
+        var ah = el('div', 'hint');
+        ah.style.marginTop = '6px';
+        ah.textContent = mqttAbfrage[kanal]
+          ? tr('mq.askGotAnswer', mqttAbfrage[kanal]) : tr('mq.askNoAnswer');
+        ah.style.color = mqttAbfrage[kanal] ? 'var(--ok)' : 'var(--warn)';
+        kasten.appendChild(ah);
+      }
       b.appendChild(kasten);
     }
 
@@ -3826,6 +4228,11 @@
   var mqttAuswahl = {};
   /* Bleibt ueber das Neuzeichnen hinweg stehen — sonst klappte die Karte
      nach jeder Handlung wieder zu. */
+  /* Was die letzte Befehlsabfrage ergeben hat, je Geraet. Ohne diese
+     Notiz klickte man „Befehle abfragen" und sah hinterher nichts —
+     weder Erfolg noch Fehlschlag. */
+  var mqttAbfrage = {};
+
   var mqttAuf = false;
 
   /* Leere Nutzlast fragt nur, "1" schaltet ein. Beides ueber denselben
@@ -3856,7 +4263,9 @@
     });
   }
 
-  /* Status 11 aktiv anfordern. Eine Abfrage — sie schaltet nichts. */
+  /* Status 11 aktiv anfordern. Eine Abfrage — sie schaltet nichts.
+     Antwortet das Geraet nicht, muss das dranstehen: vorher klickte man
+     und es passierte sichtbar gar nichts. */
   function mqttFragen(kanal, knopf) {
     var g = mqttGeraet(kanal);
     if (!g) { return; }
@@ -3887,9 +4296,17 @@
           setTimeout(function () {
             socket.emit('setState', id, { val: '11', ack: false }, function () {
               setTimeout(function () {
-                ladeObjekte();
-                knopf.disabled = false;
-                knopf.textContent = tr('mq.ask');
+                /* Kam eine Antwort? Nur dann hat die Abfrage etwas
+                   gebracht. Ohne diese Rueckmeldung klickte man und sah
+                   nichts — weder Erfolg noch Fehlschlag. */
+                /* Das Ergebnis gehoert in den Zustand, nicht ins DOM:
+                   ladeObjekte zeichnet die Karte neu, und ein Hinweis, den
+                   man an den Knopf gehaengt hat, waere danach verwaist. */
+                ladeObjekte(function () {
+                  var bb = tasmotaBefehle(kanal);
+                  mqttAbfrage[kanal] = (bb && bb.befehle.length) ? bb.befehle.length : 0;
+                  zeichneErgebnis();
+                });
               }, 5000);
             });
           }, 5000);
@@ -3994,7 +4411,12 @@
       nk.style.marginBottom = '11px';
       var nh = el('div', 'ch');
       nh.appendChild(el('span', 'typ', tr('mq.newPoints')));
-      nh.appendChild(el('span', 'chip warn', tr('mq.missing', l.fehlen.length)));
+      /* Vorher stand hier die Zahl der fehlenden Punkte, angelegt wurden
+         aber nur die vorausgewaehlten — „10 Sendepunkte fehlen" ueber
+         einem Knopf „Anlegen (4)". */
+      var gewaehlt = l.fehlen.filter(function (y) { return mqttAuswahl['neu:' + y.name]; }).length;
+      nh.appendChild(el('span', 'chip ' + (gewaehlt ? 'warn' : 'mut'),
+        tr('mq.selectedOf', gewaehlt, l.fehlen.length)));
       nk.appendChild(nh);
       l.fehlen.forEach(function (x) {
         var w = befehlsWissen(x.name);
@@ -4237,12 +4659,15 @@
     /* Die Knoepfe unten gehoeren zum Geraet, nicht zur Vorlage. In dieser
        Sicht waeren sie sonst noch auf das Geraet scharf, das vor dem
        Umschalten gewaehlt war. */
+    /* Nicht nur sperren, sondern verstecken — ein grauer Knopf „Alias
+       erzeugen" gehoert nicht unter eine Vorlage. */
     ['#btn-dry', '#btn-tpl', '#btn-checks'].forEach(function (w) {
       var b = $(w);
-      if (b) { b.disabled = true; }
+      if (b) { b.disabled = true; b.hidden = true; }
     });
     var ba0 = $('#btn-dry-alle');
     if (ba0) { ba0.hidden = true; }
+    delKnopf(false);
 
     var v = vArbeitsstand();
     if (!v) {
@@ -4744,7 +5169,9 @@
 
     var fb = el('div');
     fb.appendChild(eingabe(z.leseformel, 'leseformel', '100%', tr('detail.formulaPlaceholder')));
-    fb.appendChild(el('div', 'sugg', tr('detail.formulaHint')));
+    if ((z.typ || '') === 'boolean') {
+      fb.appendChild(el('div', 'sugg', tr('detail.formulaHint')));
+    }
     dtZeile(d, tr('detail.formula'), fb);
 
     if (z.schreiben) {
@@ -4905,6 +5332,29 @@
     var v = vArbeitsstand();
     if (!v) { return; }
     var rein = ohneUnterstrich(v);
+
+    /* Aendert sich der Inhalt, zaehlt die Version weiter. Sonst traegt
+       jedes Geraet fuer immer „vorlageVersion: 1" und gilt als aktuell —
+       ein spaeteres Nachziehen haette nie etwas zu melden. Das Duplizieren
+       zaehlte schon hoch, das Speichern nicht. */
+    var alt = vorlageMitId(rein.id);
+    if (alt) {
+      var ohneV = function (x) {
+        var k = JSON.parse(JSON.stringify(ohneUnterstrich(x)));
+        delete k.version;
+        return JSON.stringify(k);
+      };
+      /* Nie unter das fallen, was der Arbeitsstand schon traegt: beim
+         Duplizieren einer mitgelieferten Vorlage steht dort bereits eine
+         Version hoeher, damit die Kopie das Original verdeckt. Wuerde man
+         stumpf die gespeicherte uebernehmen, faende die Kopie zurueck auf
+         die Version des Pakets. */
+      var vorschlag = Number(rein.version) || 1;
+      var altV = Number(alt.version) || 1;
+      rein.version = (ohneV(alt) !== ohneV(rein))
+        ? Math.max(vorschlag, altV + 1)
+        : Math.max(vorschlag, altV);
+    }
     aendereVorlagen(rein.id, rein, function (err) {
       if (err) { return vMeldung(tr('tpls.failed') + ' ' + err, true); }
       ladeVorlagen(function () {
@@ -5155,6 +5605,11 @@
 
     var verb = String(k.verboten || '').split(',').map(function (x) { return x.trim(); })
       .filter(function (x) { return !!x; });
+    /* Ein Punkt kann nicht zugleich Pflicht und verboten sein — so eine
+       Vorlage passt auf gar nichts. Der Widerspruch entsteht leicht: man
+       traegt unten „darf es nicht geben" ein und vergisst, dass derselbe
+       Punkt oben schon „muss da sein" ist. */
+    v.widerspruch = verb.filter(function (x) { return erf.indexOf(x) !== -1; });
     if (verb.length) { v.erkennung.verboten = verb; }
 
     var inh = {};
@@ -5661,6 +6116,23 @@
     if (!tplZ) { return; }
     var neu = baueVorlage(tplZ);
 
+    /* Widerspricht sie sich, wird nicht gespeichert — eine Vorlage, die
+       auf nichts passen kann, hilft niemandem und ist spaeter schwer zu
+       durchschauen. */
+    if (neu.widerspruch && neu.widerspruch.length) {
+      var body0 = $('#tpl-body');
+      var alt0 = body0.querySelector('.widerspruch');
+      if (alt0) { alt0.remove(); }
+      var w0 = el('div', 'aside w widerspruch');
+      w0.appendChild(el('b', null, tr('tpls.contradiction')));
+      w0.appendChild(document.createTextNode(' ' + tr('tpls.contradictionText',
+        neu.widerspruch.join(', '))));
+      body0.insertBefore(w0, body0.firstChild);
+      body0.scrollTop = 0;
+      return;
+    }
+    delete neu.widerspruch;
+
     var b = $('#btn-tpl-save');
     if (b) { b.disabled = true; b.textContent = tr('tpls.saving'); }
 
@@ -5700,6 +6172,9 @@
     var ba2 = $('#btn-dry-alle');
     if (ba2) { ba2.addEventListener('click', function () { zeigeTrockenlauf(true); }); }
     if (bw) { bw.addEventListener('click', schreibeObjekte); }
+    var bdel = $('#btn-del'), bdg = $('#btn-del-go');
+    if (bdel) { bdel.addEventListener('click', zeigeLoeschen); }
+    if (bdg) { bdg.addEventListener('click', loescheAlias); }
     var bmq = $('#btn-mqtt-write');
     if (bmq) { bmq.addEventListener('click', mqttSchreiben); }
     var bt = $('#btn-tpl'), bts = $('#btn-tpl-save');
@@ -5722,6 +6197,15 @@
   <div class="dfoot">
     <button class="btn" data-close>Schlie&szlig;en</button>
     <button class="btn primary" id="btn-dry-write">Jetzt anlegen</button>
+  </div>
+</dialog>
+
+<dialog id="dlg-del" style="max-width:640px;">
+  <h3 id="del-titel">Alias entfernen</h3>
+  <div class="dbody" id="del-body"></div>
+  <div class="dfoot">
+    <button class="btn" data-close>Schlie&szlig;en</button>
+    <button class="btn primary" id="btn-del-go">Endg&uuml;ltig entfernen</button>
   </div>
 </dialog>
 
