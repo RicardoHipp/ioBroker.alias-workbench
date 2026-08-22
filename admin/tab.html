@@ -4733,6 +4733,20 @@
   function ohneUnterstrich(v) {
     var k = {};
     Object.keys(v).forEach(function (f) { if (f.charAt(0) !== '_') { k[f] = v[f]; } });
+    /* Halbfertige Ersatzquellen nicht mitspeichern: eine Zeile ohne
+       Datenpunkt ist beim Bearbeiten nuetzlich, in der Vorlage waere sie
+       nur Ballast. */
+    if (Array.isArray(k.zustaende)) {
+      k.zustaende = k.zustaende.map(function (z) {
+        if (!z || !z.lesenSonst) { return z; }
+        var liste = ersatzListe(z).filter(function (x) { return x && x.punkt; });
+        var kopie = {};
+        Object.keys(z).forEach(function (f) { kopie[f] = z[f]; });
+        if (!liste.length) { delete kopie.lesenSonst; }
+        else { kopie.lesenSonst = (liste.length === 1) ? liste[0] : liste; }
+        return kopie;
+      });
+    }
     return k;
   }
 
@@ -5270,6 +5284,25 @@
     return !!z.lesen && erf.indexOf(z.lesen) > -1;
   }
 
+  /* lesenSonst darf ein Punktname, ein Objekt oder eine Liste sein — alle
+     drei Formen kommen in Vorlagen vor. Nach innen immer eine Liste. */
+  function ersatzListe(z) {
+    var s0 = z.lesenSonst;
+    if (!s0) { return []; }
+    var arr = Array.isArray(s0) ? s0 : [s0];
+    return arr.map(function (x) {
+      return (typeof x === 'string') ? { punkt: x } : x;
+    });
+  }
+
+  /* Im Arbeitsstand bleibt eine noch leere Zeile stehen — sonst koennte
+     man nie eine anlegen, weil sie im selben Atemzug wieder verschwaende.
+     Weggeworfen wird sie erst beim Ablegen, in ohneUnterstrich. */
+  function schreibeErsatz(z, liste) {
+    if (!liste.length) { delete z.lesenSonst; return; }
+    z.lesenSonst = (liste.length === 1) ? liste[0] : liste;
+  }
+
   function vZeilenDetail(z, nr) {
     var v = vArbeitsstand();
     var d = el('div', 'detail');
@@ -5310,6 +5343,82 @@
       eingabe(z.lesen, 'lesen', '260px', z.absolut ? '0_userdata.0.\u2026' : 'stat.POWER')));
     qf.appendChild(dtFeld(tr('detail.jsonField'), eingabe(z.feld, 'feld', '150px', '\u2014')));
     dtZeile(d, tr('detail.readsFrom'), qf);
+
+    /* --- Ersatzquellen --- 
+       Dasselbe steht bei Tasmota oft an mehreren Stellen, und welche ein
+       Geraet gerade fuehrt, weiss man vorher nicht: die IP liegt in
+       tele.INFO2, in tele.STATE oder in stat.STATUS5. Die Werkbank nimmt
+       den ersten Weg, bei dem Objekt und Feld wirklich da sind. Ohne
+       dieses Feld liess sich das nur in der ausgegebenen Datei aendern. */
+    var sonstListe = ersatzListe(z);
+
+    var sb = el('div');
+    sonstListe.forEach(function (w, wi) {
+      var zeile = el('div', 'fields');
+      zeile.style.marginBottom = '5px';
+
+      var setzeErsatz = function (teil, wert) {
+        vAendern(function (x) {
+          var zz = x.zustaende[nr];
+          var liste = ersatzListe(zz);
+          if (!liste[wi]) { return; }
+          if (wert === '') { delete liste[wi][teil]; } else { liste[wi][teil] = wert; }
+          if (!liste[wi].punkt) { liste.splice(wi, 1); }
+          schreibeErsatz(zz, liste);
+        }, wert);
+      };
+
+      var ip1 = el('input', 'tx');
+      ip1.type = 'text'; ip1.value = w.punkt || ''; ip1.style.width = '210px';
+      ip1.placeholder = 'tele.STATE';
+      ip1.addEventListener('click', function (ev) { ev.stopPropagation(); });
+      ip1.addEventListener('change', function () { setzeErsatz('punkt', ip1.value); });
+      zeile.appendChild(dtFeld(tr('detail.datapoint'), ip1));
+
+      var ip2 = el('input', 'tx');
+      ip2.type = 'text'; ip2.value = w.feld || ''; ip2.style.width = '150px';
+      ip2.placeholder = '—';
+      ip2.addEventListener('click', function (ev) { ev.stopPropagation(); });
+      ip2.addEventListener('change', function () { setzeErsatz('feld', ip2.value); });
+      zeile.appendChild(dtFeld(tr('detail.jsonField'), ip2));
+
+      var ip3 = el('input', 'tx');
+      ip3.type = 'text'; ip3.value = w.leseformel || ''; ip3.style.width = '230px';
+      ip3.placeholder = tr('detail.formulaPlaceholder');
+      ip3.addEventListener('click', function (ev) { ev.stopPropagation(); });
+      ip3.addEventListener('change', function () { setzeErsatz('leseformel', ip3.value); });
+      zeile.appendChild(dtFeld(tr('detail.formula'), ip3));
+
+      var x1 = el('button', 'btn schmal', tr('tv.removeFallback'));
+      x1.type = 'button';
+      x1.addEventListener('click', function (ev) {
+        ev.stopPropagation();
+        vAendern(function (x) {
+          var zz = x.zustaende[nr];
+          var liste = ersatzListe(zz);
+          liste.splice(wi, 1);
+          schreibeErsatz(zz, liste);
+        }, null);
+      });
+      zeile.appendChild(dtFeld(' ', x1));
+
+      sb.appendChild(zeile);
+    });
+
+    var plus = el('button', 'btn schmal', tr('tv.addFallback'));
+    plus.type = 'button';
+    plus.addEventListener('click', function (ev) {
+      ev.stopPropagation();
+      vAendern(function (x) {
+        var zz = x.zustaende[nr];
+        var liste = ersatzListe(zz);
+        liste.push({ punkt: '' });
+        schreibeErsatz(zz, liste);
+      }, null);
+    });
+    sb.appendChild(plus);
+    sb.appendChild(el('div', 'sugg', tr('tv.fallbackHint')));
+    dtZeile(d, tr('tv.fallback'), sb);
 
     dtZeile(d, tr('detail.writesTo'),
       eingabe(z.schreiben, 'schreiben', '260px', tr('detail.sameAsRead')));

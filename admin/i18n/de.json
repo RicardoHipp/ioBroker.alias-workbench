@@ -69,7 +69,6 @@
   "tpl.nameHint": "Name passt zu „{0}\" — nicht aus MQTT erkennbar",
   "tpl.noNameHint": "Name gibt keinen Hinweis — „{0}\" ist die Vorgabe, aus MQTT sind sie nicht unterscheidbar",
   "tpl.wouldNeed": "fehlt eigentlich: {0}",
-  "tpl.skippedField": "{0}: {1} nicht im JSON",
   "tpl.skippedSource": "{0}: {1} fehlt",
   "list.willBeCreated": "angelegt werden",
   "list.ofDatapoints": "Datenpunkten",
@@ -403,5 +402,9 @@
   "del.allOutputsHint": "Sonst bleibt der Rest verwaist stehen: {0}",
   "tpl.skippedHead": "Weggelassen, weil die Quelle fehlt: {0}",
   "tpl.skippedNowhere": "{0}: weder in {1}",
-  "tpl.nor": " noch in "
+  "tpl.nor": " noch in ",
+  "tv.fallback": "Ersatzquellen",
+  "tv.addFallback": "Ersatzquelle hinzufügen",
+  "tv.removeFallback": "entfernen",
+  "tv.fallbackHint": "Findet die Werkbank den Punkt oben nicht — oder das Feld nicht darin —, probiert sie diese der Reihe nach. Der erste Weg, bei dem Punkt und Feld wirklich da sind, wird genommen."
 }

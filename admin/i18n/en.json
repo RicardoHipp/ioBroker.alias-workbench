@@ -69,7 +69,6 @@
   "tpl.nameHint": "name matches \"{0}\" — not detectable from MQTT",
   "tpl.noNameHint": "the name gives no hint — \"{0}\" is the default, from MQTT they are indistinguishable",
   "tpl.wouldNeed": "actually missing: {0}",
-  "tpl.skippedField": "{0}: {1} not in the JSON",
   "tpl.skippedSource": "{0}: {1} missing",
   "list.willBeCreated": "will be created:",
   "list.ofDatapoints": "datapoints",
@@ -403,5 +402,9 @@
   "del.allOutputsHint": "Otherwise the rest stays behind, orphaned: {0}",
   "tpl.skippedHead": "Left out because the source is missing: {0}",
   "tpl.skippedNowhere": "{0}: neither in {1}",
-  "tpl.nor": " nor in "
+  "tpl.nor": " nor in ",
+  "tv.fallback": "Fallback sources",
+  "tv.addFallback": "Add fallback source",
+  "tv.removeFallback": "remove",
+  "tv.fallbackHint": "If the workbench cannot find the datapoint above — or the field inside it — it tries these in order. The first one where both really exist is used."
 }

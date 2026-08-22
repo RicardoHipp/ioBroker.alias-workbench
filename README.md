@@ -268,6 +268,24 @@ entry in `SPRACHEN` in `admin/tab.html` — nothing else.
 
 ## Changelog
 
+### 0.0.23
+
+`lesenSonst` survived copying and editing a template, but there was no field
+for it — you could only change it by exporting the template, editing the file
+and importing it again.
+
+- The state detail in the template view now has an **Fallback sources** block:
+  datapoint, JSON field and formula per entry, one line each, with add and
+  remove
+- A line that is still empty stays while you edit — otherwise it would vanish
+  in the same breath and could never be filled in. It is dropped when the
+  template is saved or exported, so nothing half-finished ends up in the file
+- All three shapes are read: a plain datapoint name, one object, or a list
+
+Not fixed yet, and worth knowing: deriving a template **from a device** still
+loses the fallback sources. The template is rebuilt from the draft, and the
+draft only remembers the source that happened to win on that one device.
+
 ### 0.0.22
 
 All five templates carried an IP datapoint — it just never appeared. Measured

@@ -1,8 +1,12 @@
 {
   "common": {
     "name": "alias-workbench",
-    "version": "0.0.22",
+    "version": "0.0.23",
     "news": {
+      "0.0.23": {
+        "en": "Fallback sources can now be seen and edited in the template view",
+        "de": "Ersatzquellen lassen sich jetzt im Vorlagen-Tab sehen und ändern"
+      },
       "0.0.22": {
         "en": "IP now really arrives — three sources instead of one, and what is left out says why",
         "de": "Die IP kommt jetzt wirklich an — drei Quellen statt einer, und Weggelassenes sagt warum"
@@ -78,10 +82,6 @@
       "0.0.4": {
         "en": "Forbidden datapoints in detection; multi-output templates from a hand-built device",
         "de": "Verbotene Datenpunkte in der Erkennung; Mehrfachvorlagen aus einem von Hand gebauten Gerät"
-      },
-      "0.0.3": {
-        "en": "Templates view: manage, duplicate, delete, import and export templates",
-        "de": "Sicht Vorlagen: verwalten, duplizieren, löschen, ein- und ausgeben"
       }
     },
     "titleLang": {
