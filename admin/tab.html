@@ -2633,10 +2633,36 @@
         try { return new RegExp(st.role.source || st.role).test(rolle); } catch (x) { return false; }
       });
     }
+    /* Was die Vorlage von sich aus vorgeschlagen hat. Ein Punkt, der
+       dort schon auf „Vorgabe aus" steht, ist nicht abgewaehlt worden —
+       er war nie an. Vorher landeten bei einer Tasmota alle zwoelf
+       Diagnosepunkte in dieser Liste, obwohl niemand etwas geaendert
+       hatte. */
+    var vorlage = null;
+    VORLAGEN.forEach(function (v) { if (v.id === e.vorlage) { vorlage = v; } });
+    function warVorgabeAn(s) {
+      if (!vorlage) { return true; }          /* ohne Vorlage zaehlt jedes Abwaehlen */
+      var z = null;
+      (vorlage.zustaende || []).forEach(function (x) {
+        if (x.name === (s.ausVorlage || s.n)) { z = x; }
+      });
+      if (!z) { return true; }
+      return !z.vorgabeAus;
+    }
+    var zielBasis = e.ziel || e.kanal;
+
     e.states.forEach(function (s) {
       if (s.manuell) { raus.push({ n: s.n || '(ohne Namen)', was: tr('diff.newByHand') }); return; }
       if (!s.on) {
-        raus.push({ n: s.n, was: hatPlatz(s.role) ? tr('diff.deselectedWithPlace', e.want) : tr('diff.deselectedNoPlace', e.want) });
+        /* Nur melden, wenn es wirklich eine Abweichung ist: entweder
+           steht der Punkt im gespeicherten Alias und verschwaende, oder
+           die Vorlage hatte ihn vorgeschlagen und jemand hat ihn
+           weggeklickt. */
+        var imAlias = !!objects[zielBasis + '.' + s.n];
+        if (!imAlias && !warVorgabeAn(s)) { return; }
+        raus.push({ n: s.n, was: imAlias ? tr('diff.wouldBeRemoved')
+          : (hatPlatz(s.role) ? tr('diff.deselectedWithPlace', e.want)
+                              : tr('diff.deselectedNoPlace', e.want)) });
         return;
       }
       var o = objects[s.urId];

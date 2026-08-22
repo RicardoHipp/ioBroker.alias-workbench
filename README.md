@@ -268,6 +268,16 @@ entry in `SPRACHEN` in `admin/tab.html` — nothing else.
 
 ## Changelog
 
+### 0.0.17
+
+- The changes card only reports real deviations. Points the template proposes
+  unticked are no longer listed as if someone had deselected them
+
+### 0.0.16
+
+- Removed the note about missing MQTT objects — it contradicted the
+  identification right above it and helped nobody
+
 ### 0.0.15
 
 - The MQTT section sits under the identification and is collapsed by default;

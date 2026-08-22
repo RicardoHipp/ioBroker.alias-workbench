@@ -391,5 +391,6 @@
   "mq.rowAllow": "senden erlauben",
   "mq.rowWorking": "…",
   "mq.intro": "Nicht jede Tasmota ist gleich eingerichtet. Ein fehlender oder stummer Punkt ist für sich genommen kein Fehler — er fällt erst ins Gewicht, wenn ein Alias darüber schalten soll oder eine Vorlage ihn zur Erkennung braucht.",
-  "mq.instantOffShort": "Rückmeldung verzögert"
+  "mq.instantOffShort": "Rückmeldung verzögert",
+  "diff.wouldBeRemoved": "abgewählt — steht im Alias und würde entfernt"
 }

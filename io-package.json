@@ -1,8 +1,12 @@
 {
   "common": {
     "name": "alias-workbench",
-    "version": "0.0.16",
+    "version": "0.0.17",
     "news": {
+      "0.0.17": {
+        "en": "Changes card only reports real deviations",
+        "de": "Die Änderungs-Karte meldet nur noch echte Abweichungen"
+      },
       "0.0.16": {
         "en": "Removed the confusing note about missing MQTT objects",
         "de": "Die verwirrende Meldung über fehlende MQTT-Objekte entfernt"
