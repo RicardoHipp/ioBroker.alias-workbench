@@ -1,8 +1,12 @@
 {
   "common": {
     "name": "alias-workbench",
-    "version": "0.0.28",
+    "version": "0.0.29",
     "news": {
+      "0.0.29": {
+        "en": "Templates are recognised from what a device can do, not from which datapoints happen to exist",
+        "de": "Vorlagen werden daran erkannt, was ein Gerät kann — nicht daran, welche Punkte zufällig schon da sind"
+      },
       "0.0.28": {
         "en": "The tree updates again after creating a datapoint",
         "de": "Der Baum zieht nach, wenn ein Datenpunkt angelegt wird"
@@ -78,10 +82,6 @@
       "0.0.10": {
         "en": "Diagnostic values from tele/STATE in the Tasmota templates, unticked",
         "de": "Diagnosewerte aus tele/STATE in den Tasmota-Vorlagen, abgewählt"
-      },
-      "0.0.9": {
-        "en": "Tasmota templates cover apparent power, reactive power and power factor",
-        "de": "Tasmota-Vorlagen decken Schein- und Blindleistung und den Leistungsfaktor ab"
       }
     },
     "titleLang": {

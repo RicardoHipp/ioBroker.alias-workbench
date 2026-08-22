@@ -201,7 +201,7 @@
   "write.duplicateName": "{0}: name appears twice.",
   "write.noSourceChosen": "{0}: no source chosen.",
   "write.sourceMissing": "{0}: source {1} does not exist.",
-  "write.writeSourceMissing": "{0}: write source {1} does not exist.",
+  "write.writeSourceMissing": "{0}: the send datapoint {1} does not exist yet",
   "app.patternsCount": "{0} patterns",
   "app.templatesCount": "{0} templates",
   "write.summaryTail": "{0} new, {1} would be overwritten",
@@ -408,5 +408,10 @@
   "tv.removeFallback": "remove",
   "tv.fallbackHint": "If the workbench cannot find the datapoint above — or the field inside it — it tries these in order. The first one where both really exist is used.",
   "tree.expandAll": "expand all",
-  "tree.collapseAll": "collapse all"
+  "tree.collapseAll": "collapse all",
+  "tpl.possibleIn": "{0} is a command the device knows (datapoint not created yet)",
+  "list.sendPointMissing": "send datapoint not created yet",
+  "write.createSendPoints": "Create the {0} missing send datapoints",
+  "check.sendPointMissing": "send datapoint not created yet: {0}",
+  "write.notUnderAlias": "{0} is not below alias. — nothing will be written here"
 }

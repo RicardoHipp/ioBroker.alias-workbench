@@ -268,6 +268,40 @@ entry in `SPRACHEN` in `admin/tab.html` — nothing else.
 
 ## Changelog
 
+### 0.0.29
+
+The workbench reads from `tele.STATE` which commands a Tasmota knows — that is
+where "11 send datapoints missing" comes from. Template detection did not use
+that knowledge: it asked whether the **object** `cmnd.POWER` exists, not
+whether the **device** can do POWER. So on a fresh device you had to create
+datapoints first for detection to work, although the workbench already knew
+what stood in front of it.
+
+- A required `cmnd.X` now counts as met if the datapoint exists **or** the
+  device demonstrably knows the command. Only for `cmnd` — `stat` and `tele`
+  appear by themselves once the device sends, so "missing" means something
+  there
+- Where a send datapoint is still absent, the row says so and offers to create
+  it, right where the problem shows
+- Writing stays blocked until it exists. The dry run lists what is missing and
+  offers one button that creates all of them and recalculates
+- The check "publish on the cmnd datapoint" gained a third case: not there at
+  all, there but mute, or sending
+
+Detection changed for 16 of 32 devices on the test system, all of them
+correctly: the RGB ceiling light becomes a colour lamp, Esstischlicht and
+Stehlampe too (they report `Color`), and twelve metering points turn into
+sockets — they really are switchable sockets that measure.
+
+Two faults found while building this:
+
+- The dry run could offer to write **outside `alias.`**. Opened from a
+  callback, the draft had no target yet and `zuSchreiben` fell back to the
+  source — so it listed objects under `mqtt-client`. A hard check now refuses
+  any id that does not start with `alias.`
+- `waehle(id, fertig)` never called back. Its local marker from 0.0.27 was
+  also called `fertig` and shadowed the parameter
+
 ### 0.0.28
 
 Creating a datapoint updated the right-hand side but left the tree on the old

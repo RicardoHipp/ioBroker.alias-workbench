@@ -201,7 +201,7 @@
   "write.duplicateName": "{0}: Name kommt doppelt vor.",
   "write.noSourceChosen": "{0}: keine Quelle gewählt.",
   "write.sourceMissing": "{0}: Quelle {1} existiert nicht.",
-  "write.writeSourceMissing": "{0}: Schreibquelle {1} existiert nicht.",
+  "write.writeSourceMissing": "{0}: den Sendepunkt {1} gibt es noch nicht",
   "app.patternsCount": "{0} Muster",
   "app.templatesCount": "{0} Vorlagen",
   "write.summaryTail": "{0} neu, {1} würden überschrieben",
@@ -408,5 +408,10 @@
   "tv.removeFallback": "entfernen",
   "tv.fallbackHint": "Findet die Werkbank den Punkt oben nicht — oder das Feld nicht darin —, probiert sie diese der Reihe nach. Der erste Weg, bei dem Punkt und Feld wirklich da sind, wird genommen.",
   "tree.expandAll": "alles aufklappen",
-  "tree.collapseAll": "alles zuklappen"
+  "tree.collapseAll": "alles zuklappen",
+  "tpl.possibleIn": "{0} kann das Gerät (Punkt noch nicht angelegt)",
+  "list.sendPointMissing": "Sendepunkt fehlt noch",
+  "write.createSendPoints": "Die {0} fehlenden Sendepunkte anlegen",
+  "check.sendPointMissing": "Sendepunkt fehlt noch: {0}",
+  "write.notUnderAlias": "{0} liegt nicht unter alias. — hier wird nichts geschrieben"
 }

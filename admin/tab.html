@@ -375,6 +375,13 @@
   .tree .node.sel .geraetepunkt { color:var(--accent-ink); }
   .tree .geraetepunkt + .cnt { margin-left:5px; }
 
+  .erow .fehltnoch {
+    margin-left:7px; font-style:normal; font-size:10px; font-weight:700;
+    letter-spacing:.04em; text-transform:uppercase;
+    color:var(--warn); background:var(--warn-soft);
+    border-radius:4px; padding:1px 5px;
+  }
+
   .klapp {
     border:1px solid var(--line); background:var(--surface); color:var(--ink-3);
     border-radius:5px; width:24px; height:24px; cursor:pointer;
@@ -824,12 +831,12 @@
         indexNeu();
         zeichneBaum();
       }
-      if (current && baumModus !== 'vorlagen') { waehle(current); }
       /* Das Abo hat auf dieselbe Aenderung schon einen Nachzieher
          angesetzt — der ist jetzt erledigt. Sonst zeichnet die Werkbank
          ein zweites Mal, eine halbe Sekunde spaeter, und alles springt. */
       nachziehenErledigt();
-      if (typeof danach === 'function') { danach(); }
+      if (current && baumModus !== 'vorlagen') { waehle(current, danach); }
+      else if (typeof danach === 'function') { danach(); }
     });
   }
 
@@ -850,9 +857,9 @@
               indexNeu();
               zeichneBaum();
             }
-            if (current && baumModus !== 'vorlagen') { waehle(current); }
             nachziehenErledigt();
-            if (typeof danach === 'function') { danach(); }
+            if (current && baumModus !== 'vorlagen') { waehle(current, danach); }
+            else if (typeof danach === 'function') { danach(); }
           }
         });
     });
@@ -1445,6 +1452,32 @@
     return String(text).split(v.mehrfach.platzhalter || '%N%').join(n);
   }
 
+  /* Einen cmnd-Punkt gibt es erst, wenn ihn jemand angelegt hat: eine
+     Tasmota sendet dorthin nie, das ist ihr Posteingang. Was sie kann,
+     steht aber in dem, was sie sendet — die JSON-Schluessel in tele/STATE
+     sind die Befehlsnamen.
+
+     Deshalb zaehlt fuer die Erkennung nicht, ob der Punkt schon da ist,
+     sondern ob das Geraet den Befehl kennt. Sonst muss man erst Punkte
+     anlegen, damit die Vorlage greift, obwohl die Werkbank langst weiss,
+     was vor ihr steht.
+
+     Nur fuer cmnd. stat und tele entstehen von selbst, sobald das Geraet
+     sendet — dort ist „fehlt" eine echte Aussage. Und nur, wenn das Geraet
+     den Befehl wirklich meldet: ein blosser Messpunkt, der ein Relais
+     nennt, soll nicht als Steckdose durchgehen. */
+  function befehlMoeglich(kanal, pfad) {
+    if (String(pfad).indexOf('cmnd.') !== 0) { return false; }
+    var name = String(pfad).slice(5).toLowerCase();
+    var b = tasmotaBefehle(kanal);
+    if (!b) { return false; }
+    return b.befehle.some(function (x) { return String(x.name).toLowerCase() === name; });
+  }
+
+  function punktErfuellt(kanal, pfad) {
+    return !!hatPunkt(kanal, pfad) || befehlMoeglich(kanal, pfad);
+  }
+
   /* Nur die Struktur pruefen — ohne in Rohwerte zu schauen. Braucht man
      fuer die Frage „Ordner oder Geraet?", die schon vor dem Laden der
      Werte beantwortet sein muss. */
@@ -1483,10 +1516,14 @@
     var verbotenDa = ((erk.verboten || []).map(auf)).filter(function (e) { return hatPunkt(kanal, e); });
     verbotenDa.forEach(function (e) { fehler.push(tr('tpl.forbiddenThere', e)); });
 
-    var fehlt = (erk.erforderlich || []).map(auf).filter(function (e) { return !hatPunkt(kanal, e); });
+    var fehlt = (erk.erforderlich || []).map(auf).filter(function (e) { return !punktErfuellt(kanal, e); });
     fehlt.forEach(function (e) { fehler.push(tr('tpl.missingPoint', e)); });
     (erk.erforderlich || []).map(auf).forEach(function (e) {
-      if (fehlt.indexOf(e) === -1) { gruende.push(tr('tpl.presentIn', e)); }
+      if (fehlt.indexOf(e) !== -1) { return; }
+      /* Im „Warum" auseinanderhalten, worauf die Erkennung beruht: ein
+         vorhandener Punkt ist eine Tatsache, ein moeglicher eine
+         Schlussfolgerung. */
+      gruende.push(hatPunkt(kanal, e) ? tr('tpl.presentIn', e) : tr('tpl.possibleIn', e));
     });
     var ausgaenge = v.mehrfach ? instanzenVon(v, kanal) : [];
     if (v.mehrfach) {
@@ -1538,6 +1575,17 @@
     return { vorlage: v, passt: true, punkte: punkte, gruende: gruende, fehler: [],
              belege: belege, namenstreffer: namenstreffer, eigen: eigen,
              instanz: inst, instanzen: ausgaenge };
+  }
+
+  /* Wohin ein Zustand schreibt. Gibt es den Punkt, ist es seine ID; kennt
+     das Geraet den Befehl bloss, ist es die ID, die er bekommen wird. */
+  function schreibZiel(z, kanal, auf) {
+    if (!z.schreiben) { return ''; }
+    var pfad = auf(z.schreiben);
+    if (z.schreibenAbs || z.absolut) { return objects[pfad] ? pfad : ''; }
+    var da = hatPunkt(kanal, pfad);
+    if (da) { return da; }
+    return befehlMoeglich(kanal, pfad) ? (kanal + '.' + pfad) : '';
   }
 
   /* Vorlage auf einen Kanal anwenden → Entwurf. */
@@ -1626,7 +1674,14 @@
         unit: z.einheit || '',
         wr: !!z.schreiben,
         srcR: quelle,
-        srcW: z.schreiben ? (finde(z.schreiben) || '') : '',
+        /* Kennt das Geraet den Befehl, ist das Ziel bekannt — auch wenn
+           der Punkt noch nicht angelegt ist. Sonst waere der Alias stumm,
+           obwohl jeder weiss, wohin er schreiben muesste. Dass der Punkt
+           fehlt, steht in srcWfehlt und wird in der Zeile gezeigt; der
+           Trockenlauf laesst so lange nicht schreiben. */
+        srcW: schreibZiel(z, kanal, auf),
+        srcWfehlt: !!(z.schreiben && !finde(z.schreiben) &&
+                      befehlMoeglich(kanal, auf(z.schreiben))),
         f: formel,
         fw: z.schreibformel ? auf(z.schreibformel) : '',
         caption: z.beschriftung || '',
@@ -1739,7 +1794,11 @@
   }
 
   /* ================== Auswahl ================== */
-  function waehle(id) {
+  /* Mit „fertig" kann der Aufrufer warten, bis der Entwurf wirklich
+     steht: Werte geladen, Vorlage angewendet, Ziel gesetzt. Wer sofort
+     nach waehle weiterarbeitet, sieht den Rohentwurf — alle Punkte ohne
+     Rollen, und das Ziel noch leer. */
+  function waehle(id, fertig) {
     current = id;
     openRow = null;
     entwurf = baueEntwurf(id);
@@ -1786,9 +1845,12 @@
       });
     });
 
-    var fertig = false;
+    /* Nicht „fertig" nennen — so hiess der Rueckruf dieser Funktion, und
+       die lokale Marke ueberschattete ihn. Der Aufrufer wartete dann
+       vergeblich. */
+    var werteDa = false;
     holeWerte(id, quellen, function () {
-      fertig = true;
+      werteDa = true;
       if (id !== current) { return; }
       if (id.indexOf('alias.') !== 0) {
         /* Gibt es fuer diese Quelle schon einen Alias, bleibt es bei der
@@ -1813,15 +1875,16 @@
       });
       if (nach.length) { holeWerte(id, nach, function () { zeichneErgebnis(); }); }
       zeichneErgebnis();
+      if (typeof fertig === 'function') { fertig(); }
     });
 
     /* Der Rohentwurf — alle Punkte, keine Rollen — ist nur ein Platzhalter,
        bis die Werte da sind und die Vorlage greift. Sofort gezeichnet
        sprang die Liste bei jeder Auswahl sichtbar um. Also erst zeigen,
        wenn das Laden wirklich dauert. */
-    if (!fertig) {
+    if (!werteDa) {
       setTimeout(function () {
-        if (!fertig && id === current) { zeichneErgebnis(); }
+        if (!werteDa && id === current) { zeichneErgebnis(); }
       }, 150);
     }
   }
@@ -2771,6 +2834,23 @@
       var n3 = el('span', 'nm3', s.n || tr('list.newPoint'));
       if (s.manuell) { n3.appendChild(el('span', 'hand', tr('list.byHand'))); }
       if (s.geaendert) { n3.appendChild(el('span', 'geae', tr('list.changed'))); }
+      /* Das Geraet kann den Befehl, der Punkt fehlt noch. Die Handlung
+         gehoert dorthin, wo das Problem sichtbar wird — nicht nur in die
+         MQTT-Karte weiter oben. */
+      if (s.on && s.srcWfehlt) {
+        var fw = el('span', 'fehltnoch', tr('list.sendPointMissing'));
+        fw.title = s.srcW;
+        n3.appendChild(fw);
+        var fb2 = el('button', 'btn schmal');
+        fb2.textContent = tr('mq.rowCreate');
+        fb2.style.marginLeft = '7px';
+        fb2.addEventListener('click', function (ev) {
+          ev.stopPropagation();
+          var teile = s.srcW.split('.cmnd.');
+          if (teile.length === 2) { mqttEinzeln(teile[0], teile[1], 'neu', fb2); }
+        });
+        n3.appendChild(fb2);
+      }
       if (s.on) {
         if (unfertig) { n3.appendChild(el('em', null, !s.n ? tr('list.nameMissing') : tr('list.sourceMissing'))); }
         else if (pl && pl !== s.n && platzAnzahl[pl] === 1) {
@@ -3665,6 +3745,12 @@
            hilft. Deshalb hier hart sperren. */
         probleme.push(tr('write.sourceMissing', s.n, s.srcR));
       }
+
+      /* Dasselbe fuer das Schreibziel: die Erkennung darf sich auf einen
+         Befehl stuetzen, den das Geraet kennt — geschrieben wird aber erst,
+         wenn der Punkt wirklich da ist. Sonst zeigte der Alias auf ein
+         Objekt, das es nicht gibt, und der Controller merkt sich auch das
+         dauerhaft. */
       if (s.srcW && !objects[s.srcW]) {
         probleme.push(tr('write.writeSourceMissing', s.n, s.srcW));
       }
@@ -3695,6 +3781,13 @@
   function zeigeTrockenlauf(alleAusgaenge) {
     if (!entwurf) { return; }
     trockenAlle = !!alleAusgaenge;
+    /* Das Ziel steht sonst erst, wenn zeichneErgebnis gelaufen ist. Wird
+       der Trockenlauf aus einem Rueckruf heraus geoeffnet — etwa nachdem
+       fehlende Sendepunkte angelegt wurden —, ist der Entwurf frisch und
+       hat noch keins. Dann faellt zuSchreiben auf e.kanal zurueck, und das
+       ist die Quelle: der Trockenlauf zeigte Objekte unter mqtt-client an. */
+    if (entwurf) { setzeZiel(entwurf); }
+
     var entwuerfe = zuSchreiben(trockenAlle);
     var liste = [];
     var probleme = [];
@@ -3703,6 +3796,16 @@
         if (!liste.some(function (x) { return x.id === o.id; })) { liste.push(o); }
       });
       pruefeSchreiben(en).forEach(function (pr) { probleme.push(pr); });
+    });
+
+    /* Letzte Sicherung, unabhaengig von allem davor: ein Alias gehoert
+       unter alias. — sonst schreibt die Werkbank in fremde Zweige. Die
+       Pruefung kostet nichts und faengt jeden Weg ab, auf dem das Ziel
+       verlorengeht. */
+    liste.forEach(function (x) {
+      if (x.id.indexOf('alias.') !== 0) {
+        probleme.push(tr('write.notUnderAlias', x.id));
+      }
     });
     var weg = [];
     entwuerfe.forEach(function (en) {
@@ -3779,6 +3882,45 @@
       ul.style.paddingLeft = '18px';
       probleme.forEach(function (t) { ul.appendChild(el('li', null, t)); });
       pw.appendChild(ul);
+
+      /* Was fehlt, laesst sich von hier aus anlegen — sonst muesste man
+         den Trockenlauf schliessen, in der Karte nachziehen und von vorn
+         anfangen. */
+      var fehlend = [];
+      entwuerfe.forEach(function (en) {
+        en.states.forEach(function (s2) {
+          if (s2.on && s2.srcW && !objects[s2.srcW] && s2.srcW.indexOf('.cmnd.') > -1 &&
+              fehlend.indexOf(s2.srcW) === -1) { fehlend.push(s2.srcW); }
+        });
+      });
+      if (fehlend.length) {
+        var kb = el('div');
+        kb.style.marginTop = '9px';
+        var kn2 = el('button', 'btn', tr('write.createSendPoints', fehlend.length));
+        kn2.addEventListener('click', function () {
+          kn2.disabled = true;
+          kn2.textContent = tr('write.writing');
+          var offen2 = fehlend.length;
+          fehlend.forEach(function (fid) {
+            var t2 = fid.split('.cmnd.');
+            mqttEinzelnStill(t2[0], t2[1], function () {
+              if (--offen2 === 0) {
+                /* Erst den Entwurf neu aufbauen lassen, dann den
+                   Trockenlauf noch einmal rechnen. Sofort geoeffnet zeigte
+                   er den Rohentwurf, weil die Vorlage noch nicht wieder
+                   angewandt war. */
+                indexNeu();
+                nachziehenErledigt();
+                zeichneBaum();
+                if (current) { waehle(current, function () { zeigeTrockenlauf(trockenAlle); }); }
+                else { zeigeTrockenlauf(trockenAlle); }
+              }
+            });
+          });
+        });
+        kb.appendChild(kn2);
+        pw.appendChild(kb);
+      }
       body.appendChild(pw);
     }
 
@@ -4118,13 +4260,18 @@
   function pruefungSenden(e) {
     var ziele = e.states.filter(function (x) { return x.on && x.srcW; });
     if (!ziele.length) { return { s: 'mut', t: tr('check.publish'), d: tr('check.noWritePath') }; }
-    var mqtt = [], stumm = [];
+    var mqtt = [], stumm = [], fehlt = [];
     ziele.forEach(function (x) {
+      /* Drei Faelle, nicht zwei: den Punkt gibt es gar nicht, es gibt ihn
+         und er ist stumm, oder er sendet. Der erste kam dazu, seit die
+         Erkennung sich auf Befehle stuetzen darf, die das Geraet kennt. */
+      if (!objects[x.srcW]) { fehlt.push(x.n); return; }
       var m = mqttEinstellung(x.srcW);
       if (!m) { return; }
       mqtt.push(x);
       if (!m.publish) { stumm.push(x.n); }
     });
+    if (fehlt.length) { return { s: 'bad', t: tr('check.publish'), d: tr('check.sendPointMissing', fehlt.join(', ')) }; }
     if (!mqtt.length) { return { s: 'mut', t: tr('check.publish'), d: tr('check.notMqtt') }; }
     if (stumm.length) { return { s: 'bad', t: tr('check.publish'), d: tr('check.cannotSend', stumm.join(', ')) }; }
     return { s: 'ok', t: tr('check.publish'), d: tr('check.canSend', mqtt.length) };
@@ -4640,6 +4787,53 @@
   /* Einen einzelnen Punkt anlegen oder ihm das Senden erlauben. Klein
      genug, dass ein Trockenlauf nur im Weg staende — die Zeile sagt ja,
      was passiert. Der Sammeldialog bleibt fuer mehrere auf einmal. */
+  /* Denselben Punkt anlegen, aber ohne Knopf — fuer den Trockenlauf, der
+     mehrere auf einmal nachzieht. */
+  /* Ohne eigenes Nachladen und ohne Ruecklesen: was gerade geschrieben
+     wurde, ist bekannt — es kommt direkt in objects. Ueber getObjectView
+     zurueckzulesen ist ein Wettlauf: die Sicht hinkt dem frisch
+     geschriebenen Objekt einen Wimpernschlag hinterher, und der
+     Trockenlauf sperrte weiter wegen eines Punktes, den es laengst gab. */
+  function mqttEinzelnStill(kanal, name, fertig) {
+    var bau = mqttPunktBauen(kanal, name, 'neu');
+    if (!bau) { return fertig && fertig(); }
+    socket.emit('setObject', bau.id, bau.obj, function () {
+      uebernimmObjekt(bau.id, bau.obj);
+      if (fertig) { fertig(); }
+    });
+  }
+
+  function mqttPunktBauen(kanal, name, was) {
+    var g = mqttGeraet(kanal);
+    if (!g) { return null; }
+    var id, obj;
+    if (was === 'frei') {
+      id = hatPunkt(kanal, 'cmnd.' + name);
+      var alt0 = objects[id];
+      if (!alt0) { return null; }
+      obj = JSON.parse(JSON.stringify(alt0));
+      var cu0 = obj.common.custom || {};
+      Object.keys(cu0).forEach(function (i) { if (/^mqtt/.test(i)) { cu0[i].publish = true; } });
+      obj.common.custom = cu0;
+    } else {
+      var w0 = befehlsWissen(name) || {};
+      var thema0 = mqttThema(g, 'cmnd', name);
+      id = kanal + '.cmnd.' + name;
+      var common0 = {
+        name: name,
+        role: w0.rolle || 'state',
+        type: w0.typ || 'mixed',
+        read: true, write: true,
+        desc: tr('mq.createdBy'),
+        custom: mqttCustom(g, thema0)
+      };
+      if (w0.einheit) { common0.unit = w0.einheit; }
+      if (w0.werteliste) { common0.states = w0.werteliste; }
+      obj = { type: 'state', common: common0, native: { topic: thema0 } };
+    }
+    return { id: id, obj: obj };
+  }
+
   function mqttEinzeln(kanal, name, was, knopf) {
     var g = mqttGeraet(kanal);
     if (!g) { return; }
