@@ -779,9 +779,8 @@
       nachziehTimer = setTimeout(function () {
         nachziehTimer = null;
         if (document.querySelector('dialog[open]')) { return; }
-        if (nachziehBaum) {
-          keysSorted = Object.keys(objects).sort();
-          kleinIndex = {};
+        if (nachziehBaum || indexStimmtNicht()) {
+          indexNeu();
           nachziehBaum = false;
           zeichneBaum();
         }
@@ -797,17 +796,34 @@
   function uebernimmObjekt(id, o) {
     var gabEs = objects[id] !== undefined;
     if (o) { objects[id] = o; } else { delete objects[id]; }
-    if (gabEs !== (objects[id] !== undefined)) {
-      keysSorted = Object.keys(objects).sort();
-      kleinIndex = {};
-      return true;
-    }
-    return false;
+    return gabEs !== (objects[id] !== undefined);
+  }
+
+  /* Der Baum liest aus keysSorted, nicht aus objects. Wer einen Punkt
+     hinzufuegt oder entfernt, muss den Index neu bauen — sonst kennt der
+     Baum ihn nicht, egal wie oft man zeichnet. */
+  function indexNeu() {
+    keysSorted = Object.keys(objects).sort();
+    kleinIndex = {};
+  }
+
+  /* Stimmt die Zahl der Schluessel nicht mit dem Index ueberein, hat
+     jemand anders an objects gearbeitet — das Abo etwa, das eintraegt und
+     das Aufraeumen seinem Zeitgeber ueberlaesst. Ohne diese Probe fiel
+     genau der uebliche Fall durch: Abo traegt ein, das gezielte Nachladen
+     sieht keine Aenderung mehr, bricht den Zeitgeber ab, und der Baum
+     bleibt auf altem Stand. */
+  function indexStimmtNicht() {
+    return keysSorted.length !== Object.keys(objects).length;
   }
 
   function holeObjekt(id, danach) {
     socket.emit('getObject', id, function (err, o) {
-      if (uebernimmObjekt(id, err ? null : o)) { zeichneBaum(); }
+      var anders = uebernimmObjekt(id, err ? null : o);
+      if (anders || nachziehBaum || indexStimmtNicht()) {
+        indexNeu();
+        zeichneBaum();
+      }
       if (current && baumModus !== 'vorlagen') { waehle(current); }
       /* Das Abo hat auf dieselbe Aenderung schon einen Nachzieher
          angesetzt — der ist jetzt erledigt. Sonst zeichnet die Werkbank
@@ -830,7 +846,10 @@
             });
           }
           if (--offen === 0) {
-            if (baum) { zeichneBaum(); }
+            if (baum || nachziehBaum || indexStimmtNicht()) {
+              indexNeu();
+              zeichneBaum();
+            }
             if (current && baumModus !== 'vorlagen') { waehle(current); }
             nachziehenErledigt();
             if (typeof danach === 'function') { danach(); }

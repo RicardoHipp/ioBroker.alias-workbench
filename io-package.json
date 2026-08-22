@@ -1,8 +1,12 @@
 {
   "common": {
     "name": "alias-workbench",
-    "version": "0.0.27",
+    "version": "0.0.28",
     "news": {
+      "0.0.28": {
+        "en": "The tree updates again after creating a datapoint",
+        "de": "Der Baum zieht nach, wenn ein Datenpunkt angelegt wird"
+      },
       "0.0.27": {
         "en": "Datapoints no longer land under \"undefined\", and the page stops redrawing itself twice",
         "de": "Datenpunkte landen nicht mehr unter „undefined\", und die Seite baut sich nicht mehr zweimal auf"
@@ -78,10 +82,6 @@
       "0.0.9": {
         "en": "Tasmota templates cover apparent power, reactive power and power factor",
         "de": "Tasmota-Vorlagen decken Schein- und Blindleistung und den Leistungsfaktor ab"
-      },
-      "0.0.8": {
-        "en": "Slots that need a value list (EFFECT) can be filled again",
-        "de": "Plätze mit Werteliste (EFFECT) lassen sich wieder belegen"
       }
     },
     "titleLang": {

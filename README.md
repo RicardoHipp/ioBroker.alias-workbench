@@ -268,6 +268,20 @@ entry in `SPRACHEN` in `admin/tab.html` — nothing else.
 
 ## Changelog
 
+### 0.0.28
+
+Creating a datapoint updated the right-hand side but left the tree on the old
+count. Caused by the previous release: the subscription enters the object into
+`objects` and leaves tidying up to its timer. The targeted reload then saw no
+change any more, did not rebuild `keysSorted`, and cancelled that very timer.
+The tree reads from `keysSorted`, so it could not know the point existed —
+no matter how often it was drawn.
+
+- Rebuilding the index is now its own step, and it runs whenever the number of
+  keys no longer matches — regardless of who changed `objects`
+
+Measured: `cmnd 1 → cmnd 2`, device `● 8 → ● 9`, in one redraw.
+
 ### 0.0.27
 
 Four datapoints had been written to **`undefined.cmnd.POWER1…4`** — real
