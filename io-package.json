@@ -1,8 +1,12 @@
 {
   "common": {
     "name": "alias-workbench",
-    "version": "0.0.14",
+    "version": "0.0.15",
     "news": {
+      "0.0.15": {
+        "en": "MQTT section moved up under the identification and collapsible",
+        "de": "MQTT-Bereich unter die Erkennung gerückt und zuklappbar"
+      },
       "0.0.14": {
         "en": "Per-command action in the MQTT card; detection runs again afterwards",
         "de": "Handlung je Befehl in der MQTT-Karte; die Erkennung läuft danach neu"

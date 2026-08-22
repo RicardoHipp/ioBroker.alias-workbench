@@ -391,5 +391,7 @@
   "mq.stFine": "present, sends",
   "mq.rowCreate": "create",
   "mq.rowAllow": "allow sending",
-  "mq.rowWorking": "…"
+  "mq.rowWorking": "…",
+  "mq.intro": "Not every Tasmota is set up the same way. A missing or mute point is not a fault in itself — it only matters once an alias is meant to switch through it, or a template needs it for detection.",
+  "mq.instantOffShort": "feedback delayed"
 }

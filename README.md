@@ -254,6 +254,11 @@ entry in `SPRACHEN` in `admin/tab.html` — nothing else.
 
 ## Changelog
 
+### 0.0.15
+
+- The MQTT section sits under the identification and is collapsed by default;
+  the warning stays visible in its header
+
 ### 0.0.14
 
 - Every command in the MQTT card carries its own state and its own action —

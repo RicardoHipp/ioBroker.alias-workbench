@@ -2245,6 +2245,10 @@
       head.appendChild(musterBlock);
     }
 
+    /* Gleich unter die Erkennung: was hier fehlt, entscheidet mit
+       darueber, ob eine Vorlage ueberhaupt greift. */
+    mqttKarte(host, current);
+
     if (!objects[current]) {
       var ko = el('div', 'aside w');
       ko.appendChild(el('b', null, tr('result.noObject')));
@@ -2501,9 +2505,6 @@
       });
       host.appendChild(dc);
     }
-
-    /* --- MQTT-Geraet: fehlende Sendepunkte --- */
-    mqttKarte(host, current);
 
     /* --- Prüfungen --- */
     baueChecks(e, haupt, pflichtFehlt);
@@ -3514,16 +3515,32 @@
     var k = el('div', 'card');
     k.style.marginBottom = '11px';
     var ch = el('div', 'ch');
+    ch.style.cursor = 'pointer';
     ch.appendChild(el('span', 'typ', tr('mq.title')));
     var th = el('span', 'chip mut', l.geraet.basis);
     th.style.fontFamily = 'var(--mono)';
     ch.appendChild(th);
     if (l.fehlen.length) { ch.appendChild(el('span', 'chip warn', tr('mq.missing', l.fehlen.length))); }
     if (l.stumm.length) { ch.appendChild(el('span', 'chip bad', tr('mq.mute', l.stumm.length))); }
+    if (l.sofort === false) { ch.appendChild(el('span', 'chip warn', tr('mq.instantOffShort'))); }
+    ch.appendChild(el('span', 'luecke'));
+    ch.appendChild(el('span', 'ca2', mqttAuf ? '▾' : '▸'));
+    ch.addEventListener('click', function () { mqttAuf = !mqttAuf; zeichneErgebnis(); });
     k.appendChild(ch);
+
+    if (!mqttAuf) {
+      /* Zugeklappt bleibt die Warnung in der Kopfzeile stehen — man
+         sieht, dass etwas ist, ohne die ganze Liste vor sich zu haben. */
+      host.appendChild(k);
+      return;
+    }
 
     var b = el('div');
     b.style.padding = '9px 12px 11px';
+    var einl = el('div', 'hint');
+    einl.style.marginBottom = '9px';
+    einl.textContent = tr('mq.intro');
+    b.appendChild(einl);
 
     if (l.befehle) {
       b.appendChild(el('div', 'hint', tr('mq.commandsFrom', l.befehle.woher)));
@@ -3665,6 +3682,9 @@
 
   var mqttStand = null;
   var mqttAuswahl = {};
+  /* Bleibt ueber das Neuzeichnen hinweg stehen — sonst klappte die Karte
+     nach jeder Handlung wieder zu. */
+  var mqttAuf = false;
 
   /* Leere Nutzlast fragt nur, "1" schaltet ein. Beides ueber denselben
      Weg, damit es nur eine Stelle gibt, die das Objekt anlegt. */
