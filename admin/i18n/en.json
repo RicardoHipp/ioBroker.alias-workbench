@@ -350,11 +350,11 @@
   "mq.missing": "{0} send points missing",
   "mq.mute": "{0} cannot send",
   "mq.commandsFrom": "commands from {0}:",
-  "mq.nothingYet": "The device has not sent anything yet that commands could be read from. \"Request status 11\" asks for it.",
+  "mq.nothingYet": "The device has not sent anything yet that commands could be read from.",
   "mq.fix": "Create send points …",
-  "mq.ask": "Request status 11",
-  "mq.asking": "asking …",
-  "mq.askHint": "sends a plain query to the device — it switches nothing and changes no setting",
+  "mq.ask": "Ask the device for its commands",
+  "mq.asking": "asking the device …",
+  "mq.askHint": "This is a plain query — it switches nothing and changes no setting.",
   "mq.createdBy": "created by the Alias Workbench",
   "mq.dialogTitle": "Create send points",
   "mq.newPoints": "To be created",
@@ -367,5 +367,6 @@
   "mq.write": "Create ({0})",
   "mq.done": "{0} objects written.",
   "mq.doneHint": "Detection runs again in a moment — a template that did not match before can match now.",
-  "mq.askRedundant": "not needed — the commands are already in what the device sent. Only useful if it has not reported since start."
+  "mq.neverReported": "The device has not fully reported since it started, so its command list is unknown.",
+  "mq.onlyResult": "So far only the reply to a single command arrived, not the whole state — the list may be incomplete."
 }

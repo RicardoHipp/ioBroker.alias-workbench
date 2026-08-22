@@ -350,11 +350,11 @@
   "mq.missing": "{0} Sendepunkte fehlen",
   "mq.mute": "{0} können nicht senden",
   "mq.commandsFrom": "Befehle aus {0}:",
-  "mq.nothingYet": "Das Gerät hat noch nichts gesendet, aus dem sich Befehle ablesen ließen. „Status 11 anfordern\" fragt danach.",
+  "mq.nothingYet": "Das Gerät hat noch nichts gesendet, aus dem sich Befehle ablesen ließen.",
   "mq.fix": "Sendepunkte anlegen …",
-  "mq.ask": "Status 11 anfordern",
-  "mq.asking": "frage …",
-  "mq.askHint": "schickt eine reine Abfrage an das Gerät — sie schaltet nichts und ändert keine Einstellung",
+  "mq.ask": "Befehle beim Gerät abfragen",
+  "mq.asking": "frage beim Gerät nach …",
+  "mq.askHint": "Das ist eine reine Abfrage — sie schaltet nichts und ändert keine Einstellung.",
   "mq.createdBy": "von der Alias-Werkbank angelegt",
   "mq.dialogTitle": "Sendepunkte anlegen",
   "mq.newPoints": "Neu anzulegen",
@@ -367,5 +367,6 @@
   "mq.write": "Anlegen ({0})",
   "mq.done": "{0} Objekte geschrieben.",
   "mq.doneHint": "Die Erkennung läuft gleich neu — eine Vorlage, die vorher nicht griff, kann jetzt greifen.",
-  "mq.askRedundant": "nicht nötig — die Befehle stehen schon in dem, was das Gerät gesendet hat. Nur sinnvoll, wenn es sich seit dem Start noch nicht gemeldet hat."
+  "mq.neverReported": "Das Gerät hat sich seit dem Start noch nicht vollständig gemeldet, deshalb ist seine Befehlsliste unbekannt.",
+  "mq.onlyResult": "Bisher kam nur die Antwort auf einen einzelnen Befehl an, nicht der ganze Zustand — die Liste ist also womöglich unvollständig."
 }

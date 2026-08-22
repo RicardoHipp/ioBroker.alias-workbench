@@ -3483,17 +3483,30 @@
       ba.addEventListener('click', function () { zeigeMqttDialog(kanal); });
       leiste.appendChild(ba);
     }
-    /* Status 11 liefert dasselbe wie tele/STATE — gemessen, Feld fuer
-       Feld. Der Knopf ist also nur noetig, wenn das Geraet sich seit dem
-       Start noch nicht gemeldet hat. Weil StateRetain bei Tasmota auf 0
-       steht, wird nichts nachgeliefert, und bis zur naechsten Telemetrie
-       koennen es je nach TelePeriod fuenf Minuten sein. Deshalb: sichtbar,
-       aber nur dann als Hauptweg beschriftet. */
-    var bf = el('button', 'btn' + (l.befehle ? ' schmal' : ' primary'), tr('mq.ask'));
-    bf.addEventListener('click', function () { mqttFragen(kanal, bf); });
-    leiste.appendChild(bf);
-    leiste.appendChild(el('span', 'hint', l.befehle ? tr('mq.askRedundant') : tr('mq.askHint')));
     b.appendChild(leiste);
+
+    /* Nachfragen liefert dasselbe wie tele/STATE — gemessen, Feld fuer
+       Feld. Der Knopf erscheint deshalb nur, wenn es etwas zu holen gibt:
+       gar nichts gelesen, oder nur stat.RESULT, das meist bloss die
+       Antwort auf den letzten Befehl enthaelt und nicht den ganzen
+       Zustand. Steht die Liste vollstaendig da, gibt es den Knopf nicht —
+       er koennte nichts hinzufuegen. */
+    var luecke = !l.befehle || l.befehle.woher === 'stat.RESULT';
+    if (luecke) {
+      var kasten = el('div');
+      kasten.style.marginTop = '11px';
+      kasten.style.paddingTop = '10px';
+      kasten.style.borderTop = '1px solid var(--line)';
+      var bf = el('button', 'btn' + (l.befehle ? '' : ' primary'), tr('mq.ask'));
+      bf.addEventListener('click', function () { mqttFragen(kanal, bf); });
+      kasten.appendChild(bf);
+      var warum = el('div', 'hint');
+      warum.style.marginTop = '6px';
+      warum.textContent = (l.befehle ? tr('mq.onlyResult') : tr('mq.neverReported')) +
+        '  ' + tr('mq.askHint');
+      kasten.appendChild(warum);
+      b.appendChild(kasten);
+    }
 
     k.appendChild(b);
     host.appendChild(k);
