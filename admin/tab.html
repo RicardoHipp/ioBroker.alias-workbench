@@ -744,12 +744,31 @@
      verschwindet einem die Zeile unter dem Finger. */
   var horcht = false, nachziehTimer = null, nachziehBaum = false;
 
+  /* Wer selbst frisch nachgeladen hat, macht den Nachzieher des Abos
+     ueberfluessig. */
+  function nachziehenErledigt() {
+    if (nachziehTimer) { clearTimeout(nachziehTimer); nachziehTimer = null; }
+    nachziehBaum = false;
+  }
+
   function horcheAufObjekte() {
     if (horcht) { return; }
     horcht = true;
     socket.emit('subscribeObjects', '*');
     socket.on('objectChange', function (id, obj) {
       if (!id) { return; }
+      /* Nur was zaehlt, nicht jeder Schreibvorgang: ts und from aendern
+         sich bei jedem setObject, auch wenn inhaltlich alles gleich
+         bleibt. Ohne diesen Vergleich zeichnete die Werkbank ein zweites
+         Mal neu, nachdem sie selbst geschrieben und schon nachgezogen
+         hatte — der Baum sprang sichtbar zweimal. */
+      var kern = function (o) {
+        return o ? JSON.stringify([o.type, o.common, o.native]) : null;
+      };
+      var vorher = kern(objects[id]);
+      var nachher = kern(obj);
+      if (vorher === nachher) { return; }
+
       var gabEs = objects[id] !== undefined;
       if (obj) { objects[id] = obj; } else { delete objects[id]; }
       if (gabEs !== (objects[id] !== undefined)) { nachziehBaum = true; }
@@ -768,6 +787,55 @@
         }
         if (current && baumModus !== 'vorlagen') { waehle(current); }
       }, 600);
+    });
+  }
+
+  /* Nach einer eigenen Aktion nur nachziehen, was sich geaendert hat.
+     Vorher rief jede angelegte cmnd-Zeile ladeObjekte() und las die ganze
+     Datenbank neu — auf einer gewachsenen Anlage sind das 24 500 Objekte
+     fuer einen einzigen Datenpunkt, und der Baum sprang zweimal. */
+  function uebernimmObjekt(id, o) {
+    var gabEs = objects[id] !== undefined;
+    if (o) { objects[id] = o; } else { delete objects[id]; }
+    if (gabEs !== (objects[id] !== undefined)) {
+      keysSorted = Object.keys(objects).sort();
+      kleinIndex = {};
+      return true;
+    }
+    return false;
+  }
+
+  function holeObjekt(id, danach) {
+    socket.emit('getObject', id, function (err, o) {
+      if (uebernimmObjekt(id, err ? null : o)) { zeichneBaum(); }
+      if (current && baumModus !== 'vorlagen') { waehle(current); }
+      /* Das Abo hat auf dieselbe Aenderung schon einen Nachzieher
+         angesetzt — der ist jetzt erledigt. Sonst zeichnet die Werkbank
+         ein zweites Mal, eine halbe Sekunde spaeter, und alles springt. */
+      nachziehenErledigt();
+      if (typeof danach === 'function') { danach(); }
+    });
+  }
+
+  /* Nach einer Abfrage am Geraet weiss man nicht, welche Punkte dabei
+     entstanden sind — dann eben der ganze Zweig, aber nicht mehr. */
+  function holeZweig(praefix, danach) {
+    var offen = ARTEN.length, baum = false;
+    ARTEN.forEach(function (art) {
+      socket.emit('getObjectView', 'system', art,
+        { startkey: praefix, endkey: praefix + '香' }, function (err, doc) {
+          if (!err && doc && doc.rows) {
+            doc.rows.forEach(function (r) {
+              if (r.value && r.id && uebernimmObjekt(r.id, r.value)) { baum = true; }
+            });
+          }
+          if (--offen === 0) {
+            if (baum) { zeichneBaum(); }
+            if (current && baumModus !== 'vorlagen') { waehle(current); }
+            nachziehenErledigt();
+            if (typeof danach === 'function') { danach(); }
+          }
+        });
     });
   }
 
@@ -1699,7 +1767,9 @@
       });
     });
 
+    var fertig = false;
     holeWerte(id, quellen, function () {
+      fertig = true;
       if (id !== current) { return; }
       if (id.indexOf('alias.') !== 0) {
         /* Gibt es fuer diese Quelle schon einen Alias, bleibt es bei der
@@ -1725,7 +1795,16 @@
       if (nach.length) { holeWerte(id, nach, function () { zeichneErgebnis(); }); }
       zeichneErgebnis();
     });
-    zeichneErgebnis();
+
+    /* Der Rohentwurf — alle Punkte, keine Rollen — ist nur ein Platzhalter,
+       bis die Werte da sind und die Vorlage greift. Sofort gezeichnet
+       sprang die Liste bei jeder Auswahl sichtbar um. Also erst zeigen,
+       wenn das Laden wirklich dauert. */
+    if (!fertig) {
+      setTimeout(function () {
+        if (!fertig && id === current) { zeichneErgebnis(); }
+      }, 150);
+    }
   }
 
   function kindZustaende(kanal) {
@@ -3955,8 +4034,8 @@
       body.appendChild(m);
       $('#btn-dry-write').textContent = tr('write.now');
       loeschListe = [];
-      /* Objektliste neu einlesen, damit Baum und Bericht stimmen */
-      ladeObjekte();
+      /* Nur der Aliaszweig, nicht die ganze Datenbank. */
+      holeZweig((entwurf.ziel || entwurf.kanal).split('.').slice(0, 2).join('.') + '.');
     }
   }
 
@@ -4244,6 +4323,12 @@
     var l = mqttLage(kanal);
     if (!l) { return; }
     mqttStand = l;
+    /* Ohne den Kanal baut der offene Dialog seine IDs aus „undefined" und
+       legt die Punkte an einer Stelle an, die es nicht gibt. Der Dialog
+       setzte ihn, das Neuzeichnen der Karte nicht — und seit die Werkbank
+       auf Objektaenderungen horcht, wird waehrend eines offenen Dialogs
+       oft neu gezeichnet. */
+    mqttStand.kanal = kanal;
 
     var k = el('div', 'card');
     k.style.marginBottom = '11px';
@@ -4455,7 +4540,7 @@
         socket.emit('setState', id, { val: wert, ack: false }, function () {
           setTimeout(function () {
             socket.emit('setState', id, { val: wert, ack: false }, function () {
-              setTimeout(function () { ladeObjekte(); }, 4000);
+              setTimeout(function () { holeZweig(kanal + '.'); }, 4000);
             });
           }, 4000);
         });
@@ -4504,9 +4589,10 @@
                    gebracht. Ohne diese Rueckmeldung klickte man und sah
                    nichts — weder Erfolg noch Fehlschlag. */
                 /* Das Ergebnis gehoert in den Zustand, nicht ins DOM:
-                   ladeObjekte zeichnet die Karte neu, und ein Hinweis, den
-                   man an den Knopf gehaengt hat, waere danach verwaist. */
-                ladeObjekte(function () {
+                   das Nachladen zeichnet die Karte neu, und ein Hinweis,
+                   den man an den Knopf gehaengt hat, waere danach
+                   verwaist. */
+                holeZweig(kanal + '.', function () {
                   var bb = tasmotaBefehle(kanal);
                   mqttAbfrage[kanal] = (bb && bb.befehle.length) ? bb.befehle.length : 0;
                   zeichneErgebnis();
@@ -4567,7 +4653,7 @@
       obj = { type: 'state', common: common, native: { topic: thema } };
     }
 
-    socket.emit('setObject', id, obj, function () { ladeObjekte(); });
+    socket.emit('setObject', id, obj, function () { holeObjekt(id); });
   }
 
   function zeigeMqttDialog(kanal) {
@@ -4762,7 +4848,7 @@
           }
           body.appendChild(m);
           if (b) { b.hidden = true; }
-          ladeObjekte();
+          holeZweig((mqttStand && mqttStand.kanal ? mqttStand.kanal + '.' : ''));
         }
       });
     });

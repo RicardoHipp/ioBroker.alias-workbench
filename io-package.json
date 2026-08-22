@@ -1,8 +1,12 @@
 {
   "common": {
     "name": "alias-workbench",
-    "version": "0.0.26",
+    "version": "0.0.27",
     "news": {
+      "0.0.27": {
+        "en": "Datapoints no longer land under \"undefined\", and the page stops redrawing itself twice",
+        "de": "Datenpunkte landen nicht mehr unter „undefined\", und die Seite baut sich nicht mehr zweimal auf"
+      },
       "0.0.26": {
         "en": "The fold buttons use the same folder icons as the admin object browser",
         "de": "Die Klappknöpfe tragen dieselben Ordnersymbole wie der Objektbrowser"
@@ -78,10 +82,6 @@
       "0.0.8": {
         "en": "Slots that need a value list (EFFECT) can be filled again",
         "de": "Plätze mit Werteliste (EFFECT) lassen sich wieder belegen"
-      },
-      "0.0.7": {
-        "en": "Editing a datapoint looks the same on a device and on a template",
-        "de": "Ein Datenpunkt sieht am Gerät und an der Vorlage gleich aus"
       }
     },
     "titleLang": {

@@ -268,6 +268,46 @@ entry in `SPRACHEN` in `admin/tab.html` — nothing else.
 
 ## Changelog
 
+### 0.0.27
+
+Four datapoints had been written to **`undefined.cmnd.POWER1…4`** — real
+objects in the database, with the correct topic and role, just filed in a
+place that does not exist.
+
+Two stretches of code set the state of the MQTT card. The dialog set the
+channel, redrawing the card did not:
+
+```js
+function zeigeMqttDialog(kanal) { mqttStand = l; mqttStand.kanal = kanal; }
+function mqttKarte(host, kanal) { mqttStand = l; }          // channel lost
+```
+
+With the dialog open, any redraw dropped the channel, and the next click
+built the id from `undefined`. The gap had always been there, but before
+0.0.20 there was hardly ever a redraw while a dialog stood open — the object
+subscription introduced then woke it up. A fix for one fault had armed
+another.
+
+- `mqttKarte` sets the channel too
+- After its own writes the workbench now reloads **only what changed** — one
+  object, or one device branch. `ladeObjekte()` re-read the entire database
+  for a single datapoint: 332 objects here, some 24 500 on a grown
+  installation
+- The subscription compares `type`, `common` and `native` before redrawing.
+  `ts` and `from` change on every write even when nothing else does
+- Whoever reloads on their own cancels the subscription's pending redraw
+- `waehle()` no longer paints the raw draft immediately. It waits 150 ms and
+  only shows it if loading really takes that long
+
+Measured on one click of "create", before and after:
+
+```
+before   tree 2×, right-hand side 4×    (52 ms, 114 ms, 614 ms, 644 ms)
+after    tree 1×, right-hand side 1×    (12 ms, 78 ms)
+```
+
+Selecting a device went from two redraws to one.
+
 ### 0.0.26
 
 - The two fold buttons now carry the **same folder icons the admin object
