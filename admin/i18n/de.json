@@ -398,5 +398,7 @@
   "tpls.contradictionText": "Diese Punkte stehen zugleich unter „muss da sein\" und unter „darf es nicht geben\": {0}. Nimm sie an einer der beiden Stellen heraus.",
   "check.duplicate": "Kein Punkt doppelt",
   "check.duplicateNone": "jeder zeigt woanders hin",
-  "check.duplicateSome": "zeigen auf dasselbe: {0}"
+  "check.duplicateSome": "zeigen auf dasselbe: {0}",
+  "del.allOutputs": "Alle {0} Ausgänge dieses Geräts entfernen",
+  "del.allOutputsHint": "Sonst bleibt der Rest verwaist stehen: {0}"
 }

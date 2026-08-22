@@ -1,6 +1,6 @@
 {
   "id": "tasmota-rgb",
-  "version": 2,
+  "version": 3,
   "rang": 25,
   "name": {
     "de": "Tasmota-Farblampe",
@@ -9,13 +9,13 @@
   "geraetetyp": "rgbSingle",
   "erkennung": {
     "erforderlich": [
-      "stat.POWER",
-      "tele.STATE"
+      "tele.STATE",
+      "cmnd.Color"
     ],
     "inhalt": {
       "tele.STATE": "Color"
     },
-    "hinweis": "Das Farbfeld in tele.STATE ist der Unterschied zu einer gewöhnlichen Tasmota. cmnd.POWER steht bewusst nicht in der Pflichtliste — bei einem frisch angelegten Gerät gibt es den Punkt noch nicht, und die Vorlage soll trotzdem greifen."
+    "hinweis": "Das Farbfeld in tele.STATE ist der Unterschied zu einer gewoehnlichen Tasmota. stat.POWER steht nicht in der Pflichtliste - der Punkt entsteht erst beim ersten Schalten, der Zustand steht solange in tele.STATE."
   },
   "zustaende": [
     {
@@ -45,13 +45,21 @@
       "lesen": "stat.POWER",
       "schreiben": "cmnd.POWER",
       "schreibformel": "val ? \"ON\" : \"OFF\"",
-      "hinweis": "getrennte Quellen: sonst zeigt der Schalter den Befehl statt des Zustands"
+      "hinweis": "getrennte Quellen: sonst zeigt der Schalter den Befehl statt des Zustands",
+      "lesenSonst": {
+        "punkt": "tele.STATE",
+        "leseformel": "JSON.parse(val).POWER === 'ON'"
+      }
     },
     {
       "name": "ON_ACTUAL",
       "rolle": "sensor.light",
       "typ": "boolean",
-      "lesen": "stat.POWER"
+      "lesen": "stat.POWER",
+      "lesenSonst": {
+        "punkt": "tele.STATE",
+        "leseformel": "JSON.parse(val).POWER === 'ON'"
+      }
     },
     {
       "name": "EFFECT",

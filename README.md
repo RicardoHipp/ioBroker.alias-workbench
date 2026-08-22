@@ -268,6 +268,41 @@ entry in `SPRACHEN` in `admin/tab.html` — nothing else.
 
 ## Changelog
 
+### 0.0.21
+
+The multi-output template did not fit the printer power strip — and the reason
+turned out to sit in all four Tasmota templates.
+
+They required `stat.POWER`. That datapoint appears only after the device has
+been switched once: Tasmota never publishes to `cmnd`, and `stat/POWER` is
+sent on a change. On a freshly bound device neither exists, so the template
+could never match — even though the switch state sits in `tele/STATE` the
+whole time, as `POWER` or as `POWER1`, `POWER2` …
+
+- `stat.POWER` is no longer required in any of the four. Templates now name a
+  **fallback source**: `stat.POWER` if it exists, `tele.STATE` otherwise. The
+  channel keeps the faster path where it is available
+- The outputs of a multi-output device are found in the **JSON keys of
+  `tele.STATE`**, not only in existing objects. The power strip reports
+  POWER1…POWER4 there long before any `stat.POWER1` exists
+- `cmnd.POWER` stays required, deliberately. It is the evidence that there is
+  something to switch here at all — without it every measuring point that
+  reports a relay would pass as a socket. Measured: Solar_Balkon has no
+  `cmnd.POWER` and stays a measurement point, Solar_Garten has one and is
+  correctly a socket
+- Placeholders are now substituted in formulas too. A multi-output template
+  with a formula would have looked for a field literally called `POWER%N%`
+- `inhalt` in the detection block also gets the placeholder, so
+  `{"tele.STATE": "POWER%N%"}` works
+- **Energy per output is off by default.** Most power strips meter as a whole;
+  ticked, each of four outputs would carry the same total, and the sum would
+  appear four times over. The hint says so, and a strip that really meters per
+  output can still have them
+
+Also fixed while testing this: **"Remove alias" removed only one output** of a
+multi-output device and left the rest orphaned. The dialog now offers to take
+all outputs of the device — off by default, listing what else would go.
+
 ### 0.0.20
 
 A systematic test of the whole adapter on the test system turned up 26

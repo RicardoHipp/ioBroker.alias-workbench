@@ -1,6 +1,6 @@
 {
   "id": "tasmota-lampe",
-  "version": 3,
+  "version": 4,
   "rang": 10,
   "name": {
     "de": "Tasmota-Lampe",
@@ -9,10 +9,13 @@
   "geraetetyp": "light",
   "erkennung": {
     "erforderlich": [
-      "stat.POWER",
       "cmnd.POWER"
     ],
-    "namenshinweis": "licht|lampe|light|led|leuchte|strahler"
+    "inhalt": {
+      "tele.STATE": "POWER"
+    },
+    "namenshinweis": "licht|lampe|light|led|leuchte|strahler",
+    "hinweis": "stat.POWER steht bewusst nicht in der Pflichtliste: den Punkt legt der mqtt-Adapter erst an, wenn das Geraet zum ersten Mal geschaltet hat. Vorher haette die Vorlage nie gegriffen, obwohl der Schaltzustand die ganze Zeit in tele.STATE steht - von dort liest sie ersatzweise. cmnd.POWER bleibt dagegen Pflicht: es ist der Beleg dafuer, dass hier ueberhaupt etwas zu schalten ist. Ohne ihn wuerde jeder blosse Messpunkt mit Relaismeldung als Steckdose durchgehen."
   },
   "zustaende": [
     {
@@ -21,14 +24,22 @@
       "typ": "boolean",
       "lesen": "stat.POWER",
       "schreiben": "cmnd.POWER",
-      "schreibformel": "val ? \"ON\" : \"OFF\""
+      "schreibformel": "val ? \"ON\" : \"OFF\"",
+      "lesenSonst": {
+        "punkt": "tele.STATE",
+        "leseformel": "JSON.parse(val).POWER === 'ON'"
+      }
     },
     {
       "name": "ON_ACTUAL",
       "rolle": "sensor.light",
       "typ": "boolean",
       "lesen": "stat.POWER",
-      "hinweis": "beim light heisst die Rueckmeldung ON_ACTUAL, nicht ACTUAL"
+      "hinweis": "beim light heisst die Rueckmeldung ON_ACTUAL, nicht ACTUAL",
+      "lesenSonst": {
+        "punkt": "tele.STATE",
+        "leseformel": "JSON.parse(val).POWER === 'ON'"
+      }
     },
     {
       "name": "ELECTRIC_POWER",

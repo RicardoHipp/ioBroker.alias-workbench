@@ -1,6 +1,6 @@
 {
   "id": "tasmota-steckdose",
-  "version": 3,
+  "version": 4,
   "rang": 20,
   "name": {
     "de": "Tasmota-Steckdose",
@@ -9,10 +9,13 @@
   "geraetetyp": "socket",
   "erkennung": {
     "erforderlich": [
-      "stat.POWER",
       "cmnd.POWER"
     ],
-    "namenshinweis": "steckdose|dose|stecker|plug|socket"
+    "inhalt": {
+      "tele.STATE": "POWER"
+    },
+    "namenshinweis": "steckdose|dose|stecker|plug|socket",
+    "hinweis": "stat.POWER steht bewusst nicht in der Pflichtliste: den Punkt legt der mqtt-Adapter erst an, wenn das Geraet zum ersten Mal geschaltet hat. Vorher haette die Vorlage nie gegriffen, obwohl der Schaltzustand die ganze Zeit in tele.STATE steht - von dort liest sie ersatzweise. cmnd.POWER bleibt dagegen Pflicht: es ist der Beleg dafuer, dass hier ueberhaupt etwas zu schalten ist. Ohne ihn wuerde jeder blosse Messpunkt mit Relaismeldung als Steckdose durchgehen."
   },
   "zustaende": [
     {
@@ -22,14 +25,22 @@
       "lesen": "stat.POWER",
       "schreiben": "cmnd.POWER",
       "schreibformel": "val ? \"ON\" : \"OFF\"",
-      "hinweis": "getrennte Quellen: sonst zeigt der Schalter den Befehl statt des Zustands"
+      "hinweis": "getrennte Quellen: sonst zeigt der Schalter den Befehl statt des Zustands",
+      "lesenSonst": {
+        "punkt": "tele.STATE",
+        "leseformel": "JSON.parse(val).POWER === 'ON'"
+      }
     },
     {
       "name": "ACTUAL",
       "rolle": "sensor.switch",
       "typ": "boolean",
       "lesen": "stat.POWER",
-      "hinweis": "type-detector 6 verlangt sensor.switch oder state.active, blankes state passt nicht mehr"
+      "hinweis": "type-detector 6 verlangt sensor.switch oder state.active, blankes state passt nicht mehr",
+      "lesenSonst": {
+        "punkt": "tele.STATE",
+        "leseformel": "JSON.parse(val).POWER === 'ON'"
+      }
     },
     {
       "name": "ELECTRIC_POWER",

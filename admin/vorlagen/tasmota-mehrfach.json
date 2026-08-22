@@ -1,6 +1,6 @@
 {
   "id": "tasmota-mehrfach",
-  "version": 2,
+  "version": 3,
   "rang": 30,
   "name": {
     "de": "Tasmota mit mehreren Ausgängen",
@@ -17,9 +17,12 @@
   "kanalname": "POWER%N%",
   "erkennung": {
     "erforderlich": [
-      "stat.POWER%N%",
       "cmnd.POWER%N%"
-    ]
+    ],
+    "inhalt": {
+      "tele.STATE": "POWER%N%"
+    },
+    "hinweis": "stat.POWER steht bewusst nicht in der Pflichtliste: den Punkt legt der mqtt-Adapter erst an, wenn das Geraet zum ersten Mal geschaltet hat. Vorher haette die Vorlage nie gegriffen, obwohl der Schaltzustand die ganze Zeit in tele.STATE steht - von dort liest sie ersatzweise. cmnd.POWER bleibt dagegen Pflicht: es ist der Beleg dafuer, dass hier ueberhaupt etwas zu schalten ist. Ohne ihn wuerde jeder blosse Messpunkt mit Relaismeldung als Steckdose durchgehen. Die Nummern der Ausgaenge liest die Vorlage aus den Feldern POWER1, POWER2 ... in tele.STATE, nicht aus vorhandenen Objekten."
   },
   "zustaende": [
     {
@@ -28,13 +31,21 @@
       "typ": "boolean",
       "lesen": "stat.POWER%N%",
       "schreiben": "cmnd.POWER%N%",
-      "schreibformel": "val ? \"ON\" : \"OFF\""
+      "schreibformel": "val ? \"ON\" : \"OFF\"",
+      "lesenSonst": {
+        "punkt": "tele.STATE",
+        "leseformel": "JSON.parse(val).POWER%N% === 'ON'"
+      }
     },
     {
       "name": "ACTUAL",
       "rolle": "sensor.switch",
       "typ": "boolean",
-      "lesen": "stat.POWER%N%"
+      "lesen": "stat.POWER%N%",
+      "lesenSonst": {
+        "punkt": "tele.STATE",
+        "leseformel": "JSON.parse(val).POWER%N% === 'ON'"
+      }
     },
     {
       "name": "ELECTRIC_POWER",
@@ -44,7 +55,8 @@
       "lesen": "tele.SENSOR",
       "feld": "ENERGY.Power",
       "optional": true,
-      "hinweis": "gemeinsamer Messblock — alle Ausgänge teilen sich einen"
+      "hinweis": "Die meisten Mehrfachsteckdosen messen nur gesamt. Angehakt bekaeme jeder Ausgang denselben Wert, und die Summe erschiene vierfach. Nur anhaken, wenn dieses Modell je Ausgang misst.",
+      "vorgabeAus": true
     },
     {
       "name": "CONSUMPTION",
@@ -53,7 +65,9 @@
       "einheit": "kWh",
       "lesen": "tele.SENSOR",
       "feld": "ENERGY.Total",
-      "optional": true
+      "optional": true,
+      "vorgabeAus": true,
+      "hinweis": "Die meisten Mehrfachsteckdosen messen nur gesamt. Angehakt bekaeme jeder Ausgang denselben Wert, und die Summe erschiene vierfach. Nur anhaken, wenn dieses Modell je Ausgang misst."
     },
     {
       "name": "UNREACH",

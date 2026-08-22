@@ -398,5 +398,7 @@
   "tpls.contradictionText": "These points are listed as required and as forbidden at the same time: {0}. Remove them from one of the two.",
   "check.duplicate": "No duplicate point",
   "check.duplicateNone": "each points somewhere else",
-  "check.duplicateSome": "point at the same thing: {0}"
+  "check.duplicateSome": "point at the same thing: {0}",
+  "del.allOutputs": "Remove all {0} outputs of this device",
+  "del.allOutputsHint": "Otherwise the rest stays behind, orphaned: {0}"
 }

@@ -1233,9 +1233,35 @@
     var ph = mf.platzhalter || '%N%';
     var erf = (v.erkennung || {}).erforderlich || [];
     var mitPh = erf.filter(function (e) { return e.indexOf(ph) > -1; });
-    if (!mitPh.length) { return [null]; }
 
     var kurzNamen = kindZustaende(kanal).map(function (id) { return id.slice(kanal.length + 1); });
+
+    /* Die Nummern der Ausgaenge muessen nicht als eigene Objekte
+       dastehen. Eine Tasmota meldet POWER1..POWER4 in tele/STATE, lange
+       bevor es stat/POWER1 gibt — das entsteht erst beim ersten
+       Schalten. Wer nur nach Objekten sucht, findet an einem frisch
+       eingebundenen Mehrfachgeraet keinen einzigen Ausgang und laesst
+       die Vorlage ins Leere laufen. */
+    var ausJson = [];
+    var inh = (v.erkennung || {}).inhalt || {};
+    Object.keys(inh).forEach(function (punkt) {
+      if (String(inh[punkt]).indexOf(ph) === -1) { return; }
+      var id = hatPunkt(kanal, punkt);
+      var j = id ? jsonVon(id) : null;
+      if (!j) { return; }
+      var teile = String(inh[punkt]).split(ph);
+      var vor = teile[0].toLowerCase(), nach = (teile[1] || '').toLowerCase();
+      var raus = {};
+      Object.keys(j).forEach(function (feld) {
+        var k = feld.toLowerCase();
+        if (k.length <= vor.length + nach.length) { return; }
+        if (k.slice(0, vor.length) !== vor) { return; }
+        if (nach && k.slice(-nach.length) !== nach) { return; }
+        var mitte = nach ? feld.slice(vor.length, feld.length - nach.length) : feld.slice(vor.length);
+        if (mitte && /^[A-Za-z0-9_]+$/.test(mitte)) { raus[mitte] = 1; }
+      });
+      if (Object.keys(raus).length) { ausJson.push(raus); }
+    });
 
     /* Ohne regulaeren Ausdruck: der Platzhalter teilt die Angabe in
        Vorspann und Nachspann, dazwischen steht die Nummer. */
@@ -1255,6 +1281,9 @@
       });
       return raus;
     });
+
+    mengen = mengen.concat(ausJson);
+    if (!mengen.length) { return [null]; }
 
     /* nur Nummern, die in allen Pflichtangaben vorkommen */
     var klein = mengen.map(function (m) {
@@ -1322,14 +1351,18 @@
     }
 
     if (erk.inhalt) {
-      Object.keys(erk.inhalt).forEach(function (punkt) {
+      Object.keys(erk.inhalt).forEach(function (punkt0) {
+        /* Auch hier den Platzhalter ersetzen — ein Mehrfachgeraet nennt
+           sein Feld POWER%N%, und ohne Ersetzung suchte die Pruefung nach
+           einem Feld, das woertlich so heisst. */
+        var punkt = auf(punkt0), feld = auf(erk.inhalt[punkt0]);
         var id = hatPunkt(kanal, punkt);
         var j = id ? jsonVon(id) : null;
         if (!id) { fehler.push(tr('tpl.missingPoint', punkt)); }
         else if (!j) { fehler.push(tr('tpl.noJson', punkt)); }
-        else if (feldWert(j, erk.inhalt[punkt]) === undefined) {
-          fehler.push(tr('tpl.withoutField', punkt, erk.inhalt[punkt]));
-        } else { gruende.push(tr('tpl.contains', punkt, erk.inhalt[punkt])); }
+        else if (feldWert(j, feld) === undefined) {
+          fehler.push(tr('tpl.withoutField', punkt, feld));
+        } else { gruende.push(tr('tpl.contains', punkt, feld)); }
       });
     }
 
@@ -1387,6 +1420,20 @@
         return hatPunkt(kanal, auf(pfad));
       };
       var quelle = finde(z.lesen);
+      var feld = z.feld, leseformel = z.leseformel;
+
+      /* Ersatzquelle: dasselbe steht oft an zwei Stellen. Der Schaltzustand
+         einer Tasmota liegt in stat/POWER, aber auch in tele/STATE — und
+         stat/POWER entsteht erst beim ersten Schalten. Ohne Ersatz griff
+         die Vorlage an einem frisch eingebundenen Geraet nie, obwohl alles
+         Noetige da war. */
+      if (!quelle && z.lesenSonst) {
+        quelle = finde(z.lesenSonst.punkt || z.lesenSonst);
+        if (quelle) {
+          feld = z.lesenSonst.feld;
+          leseformel = z.lesenSonst.leseformel;
+        }
+      }
       if (!quelle) {
         if (!z.optional) { e.uebersprungen.push(tr('tpl.skippedSource', z.name, auf(z.lesen))); }
         return;
@@ -1394,14 +1441,17 @@
 
       /* Bei einem Feld aus JSON: nur anlegen, wenn das Feld wirklich da ist.
          Sonst entstehen Karteileichen mit Dauerfehlern im Log. */
-      var formel = z.leseformel || '';
-      if (z.feld) {
+      /* Auch in der Formel steht der Platzhalter — ohne Ersetzung suchte
+         der Alias nach einem Feld namens POWER%N%. */
+      var formel = leseformel ? auf(leseformel) : '';
+      if (feld) {
+        feld = auf(feld);
         var j = jsonVon(quelle);
-        if (!j || feldWert(j, z.feld) === undefined) {
-          e.uebersprungen.push(tr('tpl.skippedField', z.name, z.feld));
+        if (!j || feldWert(j, feld) === undefined) {
+          e.uebersprungen.push(tr('tpl.skippedField', z.name, feld));
           return;
         }
-        formel = 'JSON.parse(val).' + z.feld;
+        formel = 'JSON.parse(val).' + feld;
       }
 
       e.states.push({
@@ -1414,7 +1464,7 @@
         srcR: quelle,
         srcW: z.schreiben ? (finde(z.schreiben) || '') : '',
         f: formel,
-        fw: z.schreibformel || '',
+        fw: z.schreibformel ? auf(z.schreibformel) : '',
         caption: z.beschriftung || '',
         dec: z.nachkommastellen === undefined ? undefined : String(z.nachkommastellen),
         /* Plaetze mit statesDefined — EFFECT etwa — bleiben ohne
@@ -3580,24 +3630,55 @@
      einziger Datenpunkt ausgewaehlt". Ein einmal angelegter Alias liess
      sich nur ueber die Objektverwaltung entfernen. */
   var loeschZiel = null;
+  var loeschAlleAusgaenge = false;
+
+  /* Die Geschwister eines Ausgangs: bei einem Mehrfachgeraet tragen alle
+     Kanaele dieselbe Quelle. Ohne sie loescht „Alias entfernen" nur einen
+     von vier Ausgaengen, und der Rest bleibt verwaist stehen — man glaubt,
+     das Geraet sei weg. */
+  function geschwisterVon(ziel) {
+    var o = objects[ziel];
+    var q = o && o.native && o.native.quelle;
+    if (!q) { return []; }
+    return keysSorted.filter(function (id) {
+      if (id === ziel || id.indexOf('alias.') !== 0) { return false; }
+      var x = objects[id];
+      return x && x.type === 'channel' && x.native && x.native.quelle === q;
+    });
+  }
 
   function zeigeLoeschen() {
     var ziel = (entwurf && (entwurf.ziel || entwurf.kanal)) || current;
     if (!ziel || ziel.indexOf('alias.') !== 0 || !objects[ziel]) { return; }
     loeschZiel = ziel;
+    loeschAlleAusgaenge = false;
+    zeichneLoeschen();
+  }
 
+  function loeschUmfang() {
+    var ziel = loeschZiel;
+    var wurzeln = [ziel];
+    if (loeschAlleAusgaenge) { wurzeln = wurzeln.concat(geschwisterVon(ziel)); }
+    var alle = [];
+    wurzeln.forEach(function (w) {
+      alle.push(w);
+      keysSorted.forEach(function (id) {
+        if (id.indexOf(w + '.') === 0 && alle.indexOf(id) === -1) { alle.push(id); }
+      });
+    });
+    return alle;
+  }
+
+  function zeichneLoeschen() {
+    var ziel = loeschZiel;
     var body = $('#del-body');
     body.textContent = '';
-    var kinder = kindZustaende(ziel).filter(function (id) { return id.indexOf(ziel + '.') === 0; });
-    var unter = keysSorted.filter(function (id) {
-      return id.indexOf(ziel + '.') === 0 && kinder.indexOf(id) === -1;
-    });
-    var alle = kinder.concat(unter);
+    var alle = loeschUmfang();
 
     var kopf = el('div');
     kopf.style.marginBottom = '11px';
     kopf.style.fontSize = '12.5px';
-    kopf.appendChild(el('b', null, tr('del.count', alle.length + 1)));
+    kopf.appendChild(el('b', null, tr('del.count', alle.length)));
     body.appendChild(kopf);
 
     var hin = el('div', 'aside w');
@@ -3605,15 +3686,41 @@
     hin.textContent = tr('del.hint');
     body.appendChild(hin);
 
+    var gesch = geschwisterVon(ziel);
+    if (gesch.length) {
+      var gw = el('div', 'aside');
+      gw.style.marginBottom = '11px';
+      var lab = document.createElement('label');
+      lab.style.display = 'flex';
+      lab.style.gap = '8px';
+      lab.style.alignItems = 'flex-start';
+      lab.style.cursor = 'pointer';
+      var cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = loeschAlleAusgaenge;
+      cb.addEventListener('change', function () {
+        loeschAlleAusgaenge = cb.checked;
+        zeichneLoeschen();
+      });
+      lab.appendChild(cb);
+      var txt2 = el('span');
+      txt2.appendChild(el('b', null, tr('del.allOutputs', gesch.length + 1)));
+      txt2.appendChild(el('div', 'hint', tr('del.allOutputsHint',
+        gesch.map(function (x) { return x.split('.').pop(); }).join(', '))));
+      lab.appendChild(txt2);
+      gw.appendChild(lab);
+      body.appendChild(gw);
+    }
+
     var k = el('div', 'card');
     var ch = el('div', 'ch');
     ch.appendChild(el('span', 'typ', tr('del.objects')));
-    ch.appendChild(el('span', 'chip bad', String(alle.length + 1)));
+    ch.appendChild(el('span', 'chip bad', String(alle.length)));
     k.appendChild(ch);
-    [ziel].concat(alle).forEach(function (id) {
+    alle.forEach(function (id) {
       var r = el('div', 'slot');
       r.style.gridTemplateColumns = '1fr 90px';
-      r.appendChild(el('span', 'sn', id === ziel ? id : id.slice(ziel.length + 1)));
+      r.appendChild(el('span', 'sn', id));
       r.appendChild(el('span', 'rx', (objects[id] && objects[id].type) || ''));
       k.appendChild(r);
     });
@@ -3622,16 +3729,15 @@
     var b = $('#btn-del-go');
     b.disabled = false;
     b.textContent = tr('del.now');
-    $('#dlg-del').showModal();
+    if (!$('#dlg-del').open) { $('#dlg-del').showModal(); }
   }
 
   function loescheAlias() {
     if (!loeschZiel) { return; }
     var ziel = loeschZiel;
-    var alle = keysSorted.filter(function (id) { return id.indexOf(ziel + '.') === 0; });
+    var alle = loeschUmfang();
     /* Kinder vor den Eltern, sonst bleiben Waisen stehen. */
     alle.sort(function (a, b) { return b.length - a.length; });
-    alle.push(ziel);
 
     var b = $('#btn-del-go');
     b.disabled = true;
