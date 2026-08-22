@@ -368,5 +368,9 @@
   "mq.done": "{0} Objekte geschrieben.",
   "mq.doneHint": "Die Erkennung läuft gleich neu — eine Vorlage, die vorher nicht griff, kann jetzt greifen.",
   "mq.neverReported": "Das Gerät hat sich seit dem Start noch nicht vollständig gemeldet, deshalb ist seine Befehlsliste unbekannt.",
-  "mq.onlyResult": "Bisher kam nur die Antwort auf einen einzelnen Befehl an, nicht der ganze Zustand — die Liste ist also womöglich unvollständig."
+  "mq.onlyResult": "Bisher kam nur die Antwort auf einen einzelnen Befehl an, nicht der ganze Zustand — die Liste ist also womöglich unvollständig.",
+  "check.feedback": "Rückmeldung kommt sofort",
+  "check.feedbackFine": "alle in Ordnung",
+  "check.feedbackSlow": "verzögert: {0}",
+  "check.hintCount": "Hinweise: {0}"
 }

@@ -368,5 +368,9 @@
   "mq.done": "{0} objects written.",
   "mq.doneHint": "Detection runs again in a moment — a template that did not match before can match now.",
   "mq.neverReported": "The device has not fully reported since it started, so its command list is unknown.",
-  "mq.onlyResult": "So far only the reply to a single command arrived, not the whole state — the list may be incomplete."
+  "mq.onlyResult": "So far only the reply to a single command arrived, not the whole state — the list may be incomplete.",
+  "check.feedback": "feedback arrives at once",
+  "check.feedbackFine": "all fine",
+  "check.feedbackSlow": "delayed: {0}",
+  "check.hintCount": "notes: {0}"
 }

@@ -2657,7 +2657,8 @@
         d: formelKaputt.length ? formelKaputt.map(function (x) { return x.n; }).join(', ') : tr('check.allFine') },
       { s: haupt && !pflichtFehlt.length ? 'ok' : 'bad', t: tr('check.rolesMakeDevice'),
         d: haupt ? (pflichtFehlt.length ? pflichtFehlt.map(function (x) { return x.name; }).join(', ') + ' fehlt' : haupt.type) : tr('check.noPatternFits') },
-      pruefungSenden(e)
+      pruefungSenden(e),
+      pruefungRueckmeldung(e)
     ];
 
     var ul = $('#checklist');
@@ -2666,14 +2667,19 @@
     items.forEach(function (c) {
       if (c.s === 'bad') { schlecht++; }
       var li = el('li');
-      li.appendChild(el('span', 'm ' + c.s, c.s === 'ok' ? '✓' : (c.s === 'mut' ? '·' : '✕')));
+      li.appendChild(el('span', 'm ' + c.s,
+        c.s === 'ok' ? '✓' : (c.s === 'mut' ? '·' : (c.s === 'warn' ? '!' : '✕'))));
       li.appendChild(el('span', null, c.t));
       li.appendChild(el('span', 'det', c.d));
       ul.appendChild(li);
     });
+    /* Der Zaehler stand fest auf vier, obwohl es inzwischen sechs
+       Pruefungen sind — und die Warnstufe kannte er gar nicht. */
+    var warnungen = items.filter(function (c) { return c.s === 'warn'; }).length;
     var chip = $('#checkchip');
-    chip.className = 'chip ' + (schlecht ? 'bad' : 'ok');
-    chip.textContent = schlecht ? tr('check.openCount', schlecht) : tr('check.allOk', 4);
+    chip.className = 'chip ' + (schlecht ? 'bad' : (warnungen ? 'warn' : 'ok'));
+    chip.textContent = schlecht ? tr('check.openCount', schlecht)
+      : (warnungen ? tr('check.hintCount', warnungen) : tr('check.allOk', items.length));
   }
 
   /* ================== Aufgeklappte Zeile: hier wird bearbeitet ================== */
@@ -3282,6 +3288,28 @@
       /* Objektliste neu einlesen, damit Baum und Bericht stimmen */
       ladeObjekte();
     }
+  }
+
+  /* Kommt die Rueckmeldung sofort oder erst mit der naechsten Telemetrie?
+
+     Ein Punkt, der nach cmnd schreibt und aus tele liest, zeigt nach dem
+     Schalten minutenlang den alten Wert. Tasmota antwortet zwar sofort
+     auf stat/RESULT, aber dort steht nur der eine geaenderte Schluessel —
+     als Lesequelle waere das unbrauchbar, weil der Punkt nach jedem
+     anderen Befehl leer liefe. Wer stat/POWER liest, ist fein raus: das
+     kommt bei jeder Schaltung.
+
+     Am Geraet gemessen: cmnd/Scheme geschrieben, stat/RESULT war sofort
+     da, tele/STATE kam erst nach der naechsten Telemetrie — bei
+     TelePeriod 300 also bis zu fuenf Minuten spaeter. */
+  function pruefungRueckmeldung(e) {
+    var lahm = e.states.filter(function (x) {
+      if (!x.on || !x.srcW || !x.srcR) { return false; }
+      return /\.tele\./.test(x.srcR) && /\.cmnd\./.test(x.srcW);
+    });
+    if (!lahm.length) { return { s: 'ok', t: tr('check.feedback'), d: tr('check.feedbackFine') }; }
+    return { s: 'warn', t: tr('check.feedback'),
+             d: tr('check.feedbackSlow', lahm.map(function (x) { return x.n; }).join(', ')) };
   }
 
   /* Kann der Schreibweg ueberhaupt senden? Bei MQTT sitzt der Schalter

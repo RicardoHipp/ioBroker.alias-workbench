@@ -1,8 +1,12 @@
 {
   "common": {
     "name": "alias-workbench",
-    "version": "0.0.12",
+    "version": "0.0.13",
     "news": {
+      "0.0.13": {
+        "en": "New check: feedback delayed until the next telemetry",
+        "de": "Neue Prüfung: Rückmeldung erst mit der nächsten Telemetrie"
+      },
       "0.0.12": {
         "en": "New template for Tasmota colour lights on the rgbSingle pattern",
         "de": "Neue Vorlage für Tasmota-Farblampen auf dem rgbSingle-Muster"

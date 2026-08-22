@@ -254,6 +254,11 @@ entry in `SPRACHEN` in `admin/tab.html` — nothing else.
 
 ## Changelog
 
+### 0.0.13
+
+- New check: feedback that only arrives with the next telemetry. A point that
+  writes to `cmnd` but reads from `tele` shows the old value for minutes
+
 ### 0.0.12
 
 - New template: Tasmota colour light, on the `rgbSingle` pattern

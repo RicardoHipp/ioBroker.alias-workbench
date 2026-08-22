@@ -1,19 +1,22 @@
 {
   "id": "tasmota-rgb",
-  "version": 1,
+  "version": 2,
   "rang": 25,
   "name": {
     "de": "Tasmota-Farblampe",
     "en": "Tasmota colour light"
   },
   "geraetetyp": "rgbSingle",
-
   "erkennung": {
-    "erforderlich": ["stat.POWER", "tele.STATE"],
-    "inhalt": { "tele.STATE": "Color" },
+    "erforderlich": [
+      "stat.POWER",
+      "tele.STATE"
+    ],
+    "inhalt": {
+      "tele.STATE": "Color"
+    },
     "hinweis": "Das Farbfeld in tele.STATE ist der Unterschied zu einer gewöhnlichen Tasmota. cmnd.POWER steht bewusst nicht in der Pflichtliste — bei einem frisch angelegten Gerät gibt es den Punkt noch nicht, und die Vorlage soll trotzdem greifen."
   },
-
   "zustaende": [
     {
       "name": "RGB",
@@ -23,7 +26,7 @@
       "leseformel": "'#' + String(JSON.parse(val).Color).slice(0, 6)",
       "schreiben": "cmnd.Color",
       "schreibformel": "String(val).replace('#', '')",
-      "hinweis": "Tasmota liefert die Farbe ohne Raute (F4FFCC), ioBroker und VIS erwarten sie mit. Bei RGBW-Geräten hängen weitere Kanäle hinten an, deshalb die ersten sechs Zeichen."
+      "hinweis": "Tasmota liefert die Farbe ohne Raute (F4FFCC), ioBroker und VIS erwarten sie mit. Bei RGBW-Geräten hängen weitere Kanäle hinten an, deshalb die ersten sechs Zeichen. Liest aus tele.STATE und schreibt nach cmnd — die Rückmeldung kommt deshalb erst mit der nächsten Telemetrie, bei TelePeriod 300 also bis zu fünf Minuten später. Tasmota antwortet zwar sofort auf stat/RESULT, aber dort steht nur der eine geänderte Schlüssel; als Lesequelle wäre das unbrauchbar. Abhilfe am Gerät: SetOption59 1 — dann schickt Tasmota tele/STATE bei jeder Änderung mit."
     },
     {
       "name": "DIMMER",
@@ -32,7 +35,8 @@
       "einheit": "%",
       "lesen": "tele.STATE",
       "feld": "Dimmer",
-      "schreiben": "cmnd.Dimmer"
+      "schreiben": "cmnd.Dimmer",
+      "hinweis": "Liest aus tele.STATE und schreibt nach cmnd — die Rückmeldung kommt deshalb erst mit der nächsten Telemetrie, bei TelePeriod 300 also bis zu fünf Minuten später. Tasmota antwortet zwar sofort auf stat/RESULT, aber dort steht nur der eine geänderte Schlüssel; als Lesequelle wäre das unbrauchbar. Abhilfe am Gerät: SetOption59 1 — dann schickt Tasmota tele/STATE bei jeder Änderung mit."
     },
     {
       "name": "ON",
@@ -64,7 +68,7 @@
         "3": "Farben rückwärts",
         "4": "zufällig"
       },
-      "hinweis": "Der Platz EFFECT verlangt eine Werteliste — ohne common.states erkennt der type-detector ihn nicht."
+      "hinweis": "Der Platz EFFECT verlangt eine Werteliste — ohne common.states erkennt der type-detector ihn nicht. Liest aus tele.STATE und schreibt nach cmnd — die Rückmeldung kommt deshalb erst mit der nächsten Telemetrie, bei TelePeriod 300 also bis zu fünf Minuten später. Tasmota antwortet zwar sofort auf stat/RESULT, aber dort steht nur der eine geänderte Schlüssel; als Lesequelle wäre das unbrauchbar. Abhilfe am Gerät: SetOption59 1 — dann schickt Tasmota tele/STATE bei jeder Änderung mit."
     },
     {
       "name": "FADE",
@@ -77,7 +81,7 @@
       "schreibformel": "val ? \"ON\" : \"OFF\"",
       "optional": true,
       "vorgabeAus": true,
-      "hinweis": "weiche Übergänge. Kein Platz im rgbSingle-Muster, landet im info-Gerät."
+      "hinweis": "weiche Übergänge. Kein Platz im rgbSingle-Muster, landet im info-Gerät. Liest aus tele.STATE und schreibt nach cmnd — die Rückmeldung kommt deshalb erst mit der nächsten Telemetrie, bei TelePeriod 300 also bis zu fünf Minuten später. Tasmota antwortet zwar sofort auf stat/RESULT, aber dort steht nur der eine geänderte Schlüssel; als Lesequelle wäre das unbrauchbar. Abhilfe am Gerät: SetOption59 1 — dann schickt Tasmota tele/STATE bei jeder Änderung mit."
     },
     {
       "name": "SPEED",
@@ -88,7 +92,7 @@
       "schreiben": "cmnd.Speed",
       "optional": true,
       "vorgabeAus": true,
-      "hinweis": "Geschwindigkeit des Effekts, 1 bis 40."
+      "hinweis": "Geschwindigkeit des Effekts, 1 bis 40. Liest aus tele.STATE und schreibt nach cmnd — die Rückmeldung kommt deshalb erst mit der nächsten Telemetrie, bei TelePeriod 300 also bis zu fünf Minuten später. Tasmota antwortet zwar sofort auf stat/RESULT, aber dort steht nur der eine geänderte Schlüssel; als Lesequelle wäre das unbrauchbar. Abhilfe am Gerät: SetOption59 1 — dann schickt Tasmota tele/STATE bei jeder Änderung mit."
     },
     {
       "name": "UNREACH",
@@ -184,10 +188,18 @@
       "vorgabeAus": true
     }
   ],
-
   "nebenwirkungen": [
-    { "art": "mqtt-publish", "punkt": "cmnd.POWER" },
-    { "art": "mqtt-publish", "punkt": "cmnd.Color" },
-    { "art": "mqtt-publish", "punkt": "cmnd.Dimmer" }
+    {
+      "art": "mqtt-publish",
+      "punkt": "cmnd.POWER"
+    },
+    {
+      "art": "mqtt-publish",
+      "punkt": "cmnd.Color"
+    },
+    {
+      "art": "mqtt-publish",
+      "punkt": "cmnd.Dimmer"
+    }
   ]
 }
