@@ -1,8 +1,12 @@
 {
   "common": {
     "name": "alias-workbench",
-    "version": "0.0.21",
+    "version": "0.0.22",
     "news": {
+      "0.0.22": {
+        "en": "IP now really arrives — three sources instead of one, and what is left out says why",
+        "de": "Die IP kommt jetzt wirklich an — drei Quellen statt einer, und Weggelassenes sagt warum"
+      },
       "0.0.21": {
         "en": "Tasmota templates no longer need stat.POWER, which only appears after the first switch",
         "de": "Tasmota-Vorlagen brauchen kein stat.POWER mehr — den Punkt gibt es erst nach dem ersten Schalten"
@@ -78,10 +82,6 @@
       "0.0.3": {
         "en": "Templates view: manage, duplicate, delete, import and export templates",
         "de": "Sicht Vorlagen: verwalten, duplizieren, löschen, ein- und ausgeben"
-      },
-      "0.0.2": {
-        "en": "Save your own templates; detection weighs verified evidence first",
-        "de": "Eigene Vorlagen speichern; Erkennung wertet zuerst die Belege"
       }
     },
     "titleLang": {

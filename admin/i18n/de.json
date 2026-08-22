@@ -400,5 +400,8 @@
   "check.duplicateNone": "jeder zeigt woanders hin",
   "check.duplicateSome": "zeigen auf dasselbe: {0}",
   "del.allOutputs": "Alle {0} Ausgänge dieses Geräts entfernen",
-  "del.allOutputsHint": "Sonst bleibt der Rest verwaist stehen: {0}"
+  "del.allOutputsHint": "Sonst bleibt der Rest verwaist stehen: {0}",
+  "tpl.skippedHead": "Weggelassen, weil die Quelle fehlt: {0}",
+  "tpl.skippedNowhere": "{0}: weder in {1}",
+  "tpl.nor": " noch in "
 }

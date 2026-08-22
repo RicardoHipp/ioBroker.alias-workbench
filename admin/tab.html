@@ -1419,38 +1419,59 @@
         if (z.absolut) { return objects[pfad] ? pfad : null; }
         return hatPunkt(kanal, auf(pfad));
       };
-      var quelle = finde(z.lesen);
-      var feld = z.feld, leseformel = z.leseformel;
+      /* Ersatzquelle: dasselbe steht oft an zwei Stellen, und welche davon
+         ein Geraet gerade fuehrt, weiss man vorher nicht.
 
-      /* Ersatzquelle: dasselbe steht oft an zwei Stellen. Der Schaltzustand
-         einer Tasmota liegt in stat/POWER, aber auch in tele/STATE — und
-         stat/POWER entsteht erst beim ersten Schalten. Ohne Ersatz griff
-         die Vorlage an einem frisch eingebundenen Geraet nie, obwohl alles
-         Noetige da war. */
-      if (!quelle && z.lesenSonst) {
-        quelle = finde(z.lesenSonst.punkt || z.lesenSonst);
-        if (quelle) {
-          feld = z.lesenSonst.feld;
-          leseformel = z.lesenSonst.leseformel;
-        }
+         Der Schaltzustand liegt in stat/POWER und in tele/STATE — stat
+         entsteht erst beim ersten Schalten. Die IP steht in tele/INFO2,
+         das eine Tasmota beim Start retained hinterlegt, und ausserdem in
+         der ersten tele/STATE nach dem Boot, danach nicht mehr.
+
+         Geprueft wird deshalb beides, und zwar vollstaendig: Objekt da UND
+         Feld drin. Vorher wurde der Ersatz nur genommen, wenn das Objekt
+         ganz fehlte — gab es tele.INFO2 ohne die IP darin, fiel der Punkt
+         weg, obwohl tele.STATE sie gehabt haette. */
+      var wege = [{ punkt: z.lesen, feld: z.feld, leseformel: z.leseformel }];
+      /* Ein Ersatzweg, mehrere Ersatzwege oder blosser Punktname — alles
+         drei kommt in Vorlagen vor und soll gehen. */
+      var sonst = z.lesenSonst;
+      if (sonst) {
+        (Array.isArray(sonst) ? sonst : [sonst]).forEach(function (x) {
+          wege.push(typeof x === 'string'
+            ? { punkt: x, feld: z.feld, leseformel: z.leseformel }
+            : { punkt: x.punkt, feld: x.feld, leseformel: x.leseformel });
+        });
       }
+
+      var quelle = null, feld = null, leseformel = null, gescheitert = [];
+      for (var wi = 0; wi < wege.length; wi++) {
+        var w = wege[wi];
+        var id0 = finde(w.punkt);
+        var wo = auf(w.punkt) + (w.feld ? ' · ' + auf(w.feld) : '');
+        if (!id0) { gescheitert.push(wo); continue; }
+        if (w.feld) {
+          var f0 = auf(w.feld);
+          var j0 = jsonVon(id0);
+          if (!j0 || feldWert(j0, f0) === undefined) { gescheitert.push(wo); continue; }
+        }
+        quelle = id0; feld = w.feld; leseformel = w.leseformel;
+        break;
+      }
+
       if (!quelle) {
-        if (!z.optional) { e.uebersprungen.push(tr('tpl.skippedSource', z.name, auf(z.lesen))); }
+        /* Beide Wege nennen, nicht nur den letzten — sonst sucht man an der
+           einen Stelle und die Vorlage hatte an zwei geschaut. */
+        e.uebersprungen.push(gescheitert.length > 1
+          ? tr('tpl.skippedNowhere', z.name, gescheitert.join(tr('tpl.nor')))
+          : tr('tpl.skippedSource', z.name, gescheitert[0] || auf(z.lesen)));
         return;
       }
 
-      /* Bei einem Feld aus JSON: nur anlegen, wenn das Feld wirklich da ist.
-         Sonst entstehen Karteileichen mit Dauerfehlern im Log. */
       /* Auch in der Formel steht der Platzhalter — ohne Ersetzung suchte
          der Alias nach einem Feld namens POWER%N%. */
       var formel = leseformel ? auf(leseformel) : '';
       if (feld) {
         feld = auf(feld);
-        var j = jsonVon(quelle);
-        if (!j || feldWert(j, feld) === undefined) {
-          e.uebersprungen.push(tr('tpl.skippedField', z.name, feld));
-          return;
-        }
         formel = 'JSON.parse(val).' + feld;
       }
 
@@ -2346,6 +2367,22 @@
         inf.setAttribute('role', 'note');
         inf.setAttribute('aria-label', zeilen.join('. '));
         hd.appendChild(inf);
+      }
+
+      /* Was die Vorlage weggelassen hat, gehoert in die Auslage — nicht in
+         den Tooltip eines kleinen i. „Die Vorlage hat doch IP, warum sehe
+         ich es nicht?" laesst sich sonst nur durch Lesen der Datei
+         beantworten. */
+      if (e.vorschlag && e.uebersprungen && e.uebersprungen.length) {
+        var wg = el('div', 'hint');
+        wg.style.marginTop = '6px';
+        wg.appendChild(el('b', null, tr('tpl.skippedHead', e.uebersprungen.length)));
+        var ul2 = el('ul');
+        ul2.style.margin = '4px 0 0';
+        ul2.style.paddingLeft = '16px';
+        e.uebersprungen.forEach(function (u) { ul2.appendChild(el('li', null, u)); });
+        wg.appendChild(ul2);
+        sg.appendChild(wg);
       }
       if (e.erzwungen) {
         var ezc = el('span', 'chip warn', tr('tpl.forced'));
@@ -4400,6 +4437,10 @@
       setTimeout(function () {
         socket.emit('setState', id, { val: '11', ack: false }, function () {
           setTimeout(function () {
+            /* Status 5 gleich mit: dort steht die IP, und die fehlt an
+               jedem Geraet, das seit dem Einbinden nicht neu gestartet
+               ist — tele/INFO2 kommt nur beim Start. */
+            socket.emit('setState', id, { val: '5', ack: false }, function () {});
             socket.emit('setState', id, { val: '11', ack: false }, function () {
               setTimeout(function () {
                 /* Kam eine Antwort? Nur dann hat die Abfrage etwas

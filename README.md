@@ -268,6 +268,33 @@ entry in `SPRACHEN` in `admin/tab.html` — nothing else.
 
 ## Changelog
 
+### 0.0.22
+
+All five templates carried an IP datapoint — it just never appeared. Measured
+on the test system: **4 of 31 devices** had `IPAddress` in `tele.STATE`. For
+the rest the point was dropped, and nothing said so.
+
+Tasmota puts `IPAddress` into `tele/STATE` only in the first message after a
+boot, never again. It lives permanently in `tele/INFO2`, which the device
+publishes retained on start, and it can be asked for with `Status 5`.
+
+- IP now reads from **`tele.INFO2` · `Info2.IPAddress`**, falls back to
+  `tele.STATE` · `IPAddress`, and finally to `stat.STATUS5` ·
+  `StatusNET.IPAddress`. `lesenSonst` accepts a list, not just one entry
+- A fallback source is now taken when the **field** is missing too, not only
+  when the whole object is. `tele.INFO2` without the IP inside used to drop
+  the point although `tele.STATE` had it
+- "Ask the device for its commands" sends `Status 5` alongside `Status 11`, so
+  the IP arrives with it
+- **What a template leaves out is now visible**, under the identification
+  line, with the reason: "IP: neither in tele.INFO2 · Info2.IPAddress nor in
+  tele.STATE · IPAddress". Before it sat in the tooltip of a small i, where
+  nobody finds it — the template had the point, and there was no way to learn
+  why it never showed
+
+Measured after the change: Lavalampe 192.168.179.60 (from INFO2), Karbonator
+192.168.179.225 (from STATE), power strip 192.168.179.71 (from STATUS5).
+
 ### 0.0.21
 
 The multi-output template did not fit the printer power strip — and the reason
