@@ -1,8 +1,12 @@
 {
   "common": {
     "name": "alias-workbench",
-    "version": "0.0.9",
+    "version": "0.0.10",
     "news": {
+      "0.0.10": {
+        "en": "Diagnostic values from tele/STATE in the Tasmota templates, unticked",
+        "de": "Diagnosewerte aus tele/STATE in den Tasmota-Vorlagen, abgewählt"
+      },
       "0.0.9": {
         "en": "Tasmota templates cover apparent power, reactive power and power factor",
         "de": "Tasmota-Vorlagen decken Schein- und Blindleistung und den Leistungsfaktor ab"

@@ -1,6 +1,6 @@
 {
   "id": "tasmota-steckdose",
-  "version": 2,
+  "version": 3,
   "rang": 20,
   "name": {
     "de": "Tasmota-Steckdose",
@@ -136,6 +136,88 @@
       "lesen": "tele.STATE",
       "feld": "Wifi.Signal",
       "optional": true
+    },
+    {
+      "name": "UPTIME",
+      "rolle": "value",
+      "typ": "number",
+      "einheit": "s",
+      "lesen": "tele.STATE",
+      "feld": "UptimeSec",
+      "optional": true,
+      "vorgabeAus": true,
+      "hinweis": "Sekunden seit dem letzten Start. Faellt der Wert staendig zurueck, startet das Geraet neu."
+    },
+    {
+      "name": "LAST_REPORT",
+      "rolle": "text",
+      "typ": "string",
+      "lesen": "tele.STATE",
+      "feld": "Time",
+      "optional": true,
+      "vorgabeAus": true,
+      "hinweis": "Zeitstempel der letzten Telemetrie des Geraets, nicht der von ioBroker."
+    },
+    {
+      "name": "HEAP",
+      "rolle": "value",
+      "typ": "number",
+      "einheit": "kB",
+      "lesen": "tele.STATE",
+      "feld": "Heap",
+      "optional": true,
+      "vorgabeAus": true,
+      "hinweis": "Freier Speicher. Wird er klein, wird das Geraet unzuverlaessig."
+    },
+    {
+      "name": "WIFI_QUALITY",
+      "rolle": "value",
+      "typ": "number",
+      "einheit": "%",
+      "lesen": "tele.STATE",
+      "feld": "Wifi.RSSI",
+      "optional": true,
+      "vorgabeAus": true,
+      "hinweis": "Guete 0 bis 100. RSSI in dBm steht getrennt daneben."
+    },
+    {
+      "name": "WIFI_SSID",
+      "rolle": "text",
+      "typ": "string",
+      "lesen": "tele.STATE",
+      "feld": "Wifi.SSId",
+      "optional": true,
+      "vorgabeAus": true
+    },
+    {
+      "name": "WIFI_LINKCOUNT",
+      "rolle": "value",
+      "typ": "number",
+      "lesen": "tele.STATE",
+      "feld": "Wifi.LinkCount",
+      "optional": true,
+      "vorgabeAus": true,
+      "hinweis": "Wie oft die WLAN-Verbindung seit dem Start neu aufgebaut wurde."
+    },
+    {
+      "name": "WIFI_DOWNTIME",
+      "rolle": "text",
+      "typ": "string",
+      "lesen": "tele.STATE",
+      "feld": "Wifi.Downtime",
+      "optional": true,
+      "vorgabeAus": true,
+      "hinweis": "Summe der Ausfallzeit seit dem Start."
+    },
+    {
+      "name": "IP",
+      "rolle": "text",
+      "typ": "string",
+      "lesen": "tele.STATE",
+      "feld": "IPAddress",
+      "optional": true,
+      "vorgabeAus": true,
+      "hinweis": "Erst ab neueren Firmwarestaenden in tele.STATE — sonst wird der Punkt weggelassen."
     }
   ],
   "nebenwirkungen": [

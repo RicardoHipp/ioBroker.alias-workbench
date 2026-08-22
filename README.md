@@ -252,6 +252,12 @@ entry in `SPRACHEN` in `admin/tab.html` — nothing else.
 
 ## Changelog
 
+### 0.0.10
+
+- Tasmota templates also carry the diagnostic values from tele/STATE — uptime,
+  free heap, WiFi quality, SSID, link count, downtime, IP — all proposed
+  unticked
+
 ### 0.0.9
 
 - Tasmota templates cover apparent power, reactive power and power factor,
