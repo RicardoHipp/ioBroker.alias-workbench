@@ -120,7 +120,15 @@
   }
   .tree .cnt { margin-left:auto; font-size:9.5px; color:var(--ink-3); }
   .tree .node.sel .cnt { color:var(--accent-ink); }
-  .tree .tw { cursor:pointer; width:11px; text-align:center; color:var(--ink-3); flex:0 0 auto; }
+  /* 11 px waren zu klein, um als Schaltflaeche erkannt zu werden — und
+     in der blassesten Farbe der Oberflaeche. Als Mindestmass fuer eine
+     Trefferflaeche gelten 24 px; so weit gehen wir hier nicht, aber
+     deutlich naeher heran. */
+  .tree .tw {
+    cursor:pointer; width:18px; text-align:center; color:var(--ink-2);
+    flex:0 0 auto; font-size:12px; line-height:1; border-radius:4px;
+  }
+  .tree .tw:hover { color:var(--accent); background:var(--accent-soft); }
   .tree .grp { color:var(--ink-3); }
 
   .resscroll { overflow:auto; flex:1 1 auto; min-height:0; padding:14px; }
@@ -293,7 +301,16 @@
   /* Der Pfeil ist die einzige Anzeige, dass eine Zeile mehr hergibt —
      bei 8,5px in Grau war er nicht zu sehen. Gleiche Groesse, gleiche
      Seite und gleiches Verhalten in beiden Listen. */
-  .erow .ca2, .slot .ca2 { font-size:11px; line-height:1; color:var(--ink-2);
+  /* Kartenkopf, der sich auf- und zuklappen laesst. */
+  .ch.klappbar { cursor:pointer; transition:background .12s; }
+  .ch.klappbar:hover { background:var(--surface-2); }
+  .ch.klappbar .klappz { color:var(--ink-2); margin-right:2px; }
+  .ch.klappbar:hover .klappz { color:var(--accent); }
+
+  /* 11 px am Zeilenende waren kaum zu sehen. Groesser, kraeftiger, und die
+     ganze Zeile faerbt sich beim Ueberfahren — die klappt naemlich auf,
+     nicht nur das Zeichen. */
+  .erow .ca2, .slot .ca2 { font-size:14px; line-height:1; color:var(--ink-2);
                            text-align:center; transition:color .12s; }
   .erow:hover .ca2, .slot.vklick:hover .ca2 { color:var(--accent); }
   .erow.open .ca2, .slot.vklick.offen .ca2 { color:var(--accent); }
@@ -417,13 +434,23 @@
   .freirow.pflicht .mk3, .freirow.pflicht .rl2, .freirow.pflicht .rx2 { color:var(--bad); }
   .freirow.pflicht .rx2 { font-weight:700; }
 
+  /* Ein Abschnittskopf muss aussehen wie etwas, auf das man druecken
+     kann. Ein Zeichen allein reicht nicht — man sieht es schlicht nicht.
+     Deshalb eine eigene Flaeche, die beim Ueberfahren deutlicher wird. */
+  .klappz { display:inline-flex; align-items:center; justify-content:center;
+            width:18px; height:18px; flex:0 0 auto; }
+  .klappz svg { width:15px; height:15px; fill:currentColor; display:block; }
+
   .warum { margin-top:7px; font-size:11.5px; color:var(--ink-3); }
   .warum .wkopf {
-    display:flex; align-items:center; gap:6px; cursor:pointer;
-    padding:2px 0; user-select:none;
+    display:flex; align-items:center; gap:7px; cursor:pointer;
+    padding:4px 8px; margin-left:-8px; border-radius:6px;
+    user-select:none; transition:background .12s, color .12s;
   }
-  .warum .wkopf:hover { color:var(--ink); }
-  .warum .wkopf .ca2 { font-size:9px; }
+  .warum .wkopf .klappz { color:var(--ink-2); }
+  .warum .wkopf:hover { color:var(--ink); background:var(--surface-2); }
+  .warum .wkopf:hover .klappz { color:var(--accent); }
+  .warum.auf .wkopf { color:var(--ink-2); }
   .warum .wleib { margin:4px 0 0 15px; }
   .warum .wleib ul { margin:0; padding-left:16px; }
   .warum .wleib li { margin:1px 0; }
@@ -682,6 +709,20 @@
   }
   var abo = null;          // aktuelles Abo-Muster
 
+  /* Plus und Minus in der Form, die auch der Admin verwendet. Fuer
+     Abschnitte, die man auf- und zuklappt — im Gegensatz zum Baum, wo ein
+     Dreieck die gewohnte Form ist. „Mehr davon" und „hier geht es weiter"
+     sind zwei verschiedene Aussagen. */
+  var WEG_PLUS  = 'M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6z';
+  var WEG_MINUS = 'M19 13H5v-2h14z';
+
+  function klappZeichen(offen) {
+    var sp = document.createElement('span');
+    sp.className = 'klappz';
+    sp.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="' +
+                   (offen ? WEG_MINUS : WEG_PLUS) + '"/></svg>';
+    return sp;
+  }
   function el(tag, cls, txt) {
     var e = document.createElement(tag);
     if (cls) { e.className = cls; }
@@ -2648,7 +2689,7 @@
       if (gruende.length || weggelassen.length) {
         var wk = el('div', 'warum' + (warumAuf ? ' auf' : ''));
         var wh = el('div', 'wkopf');
-        wh.appendChild(el('span', 'ca2', warumAuf ? '▾' : '▸'));
+        wh.appendChild(klappZeichen(warumAuf));
         wh.appendChild(el('span', null, weggelassen.length
           ? tr('tpl.skippedHead', weggelassen.length)
           : tr('tpl.whyThis')));
@@ -4589,8 +4630,8 @@
     if (l.fehlen.length) { ch.appendChild(el('span', 'chip warn', tr('mq.missing', l.fehlen.length))); }
     if (l.stumm.length) { ch.appendChild(el('span', 'chip bad', tr('mq.mute', l.stumm.length))); }
     if (l.sofort === false) { ch.appendChild(el('span', 'chip warn', tr('mq.instantOffShort'))); }
-    ch.appendChild(el('span', 'luecke'));
-    ch.appendChild(el('span', 'ca2', mqttAuf ? '▾' : '▸'));
+    ch.insertBefore(klappZeichen(mqttAuf), ch.firstChild);
+    ch.classList.add('klappbar');
     ch.addEventListener('click', function () { mqttAuf = !mqttAuf; zeichneErgebnis(); });
     k.appendChild(ch);
 

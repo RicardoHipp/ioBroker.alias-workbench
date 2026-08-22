@@ -1,8 +1,12 @@
 {
   "common": {
     "name": "alias-workbench",
-    "version": "0.0.33",
+    "version": "0.0.34",
     "news": {
+      "0.0.34": {
+        "en": "Foldable things now look foldable — plus/minus on sections, bigger triangles in the tree",
+        "de": "Aufklappbares sieht jetzt danach aus — Plus/Minus an Abschnitten, größere Dreiecke im Baum"
+      },
       "0.0.33": {
         "en": "Why this template, and what it left out — one foldable block instead of a tooltip and a wall of text",
         "de": "Warum diese Vorlage und was sie weglässt — ein aufklappbarer Block statt Tooltip und Textwand"
@@ -78,10 +82,6 @@
       "0.0.15": {
         "en": "MQTT section moved up under the identification and collapsible",
         "de": "MQTT-Bereich unter die Erkennung gerückt und zuklappbar"
-      },
-      "0.0.14": {
-        "en": "Per-command action in the MQTT card; detection runs again afterwards",
-        "de": "Handlung je Befehl in der MQTT-Karte; die Erkennung läuft danach neu"
       }
     },
     "titleLang": {

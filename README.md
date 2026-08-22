@@ -268,6 +268,34 @@ entry in `SPRACHEN` in `admin/tab.html` — nothing else.
 
 ## Changelog
 
+### 0.0.34
+
+Four places fold open, and none of them looked like it. Measured before:
+
+```
+tree            11 px wide, --ink-3, the palest colour in the interface
+state rows      11 px, at the very end of the row
+MQTT card       11 px, at the very end of the header
+why block        9 px
+```
+
+24 px is the usual minimum for a mouse target. We were at 9 to 11.
+
+The symbol was the smaller half of the problem. A header that does not look
+like a button is not recognised as one, whatever sits at its edge.
+
+- **Sections** — MQTT card and the why block — now carry a **plus/minus**, on
+  the left where reading starts, and their header is a surface that darkens
+  when hovered. A section is not a tree node: "there is more here" is a
+  different statement from "it continues over there". The admin bundle uses
+  both shapes, so either is at home in ioBroker
+- **The tree** keeps its triangle — that is what everyone expects there, from
+  Explorer to the object browser. 18 px instead of 11, one shade stronger
+- **State rows** keep the arrow at the end, at 14 px instead of 11
+
+The paths for plus and minus are taken from the admin's own bundle, like the
+folder icons in 0.0.26.
+
 ### 0.0.33
 
 Two answers to the same question sat in two places, and neither was in a
