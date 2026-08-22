@@ -3308,8 +3308,14 @@
       return /\.tele\./.test(x.srcR) && /\.cmnd\./.test(x.srcW);
     });
     if (!lahm.length) { return { s: 'ok', t: tr('check.feedback'), d: tr('check.feedbackFine') }; }
-    return { s: 'warn', t: tr('check.feedback'),
-             d: tr('check.feedbackSlow', lahm.map(function (x) { return x.n; }).join(', ')) };
+    /* Nur warnen, wenn es wirklich langsam ist. Mit SetOption59 meldet
+       das Geraet jede Aenderung sofort — dann ist die Bauform zwar
+       dieselbe, aber kein Problem. Gemessen: drei Sekunden. */
+    var sofort = sofortRueckmeldung(e.kanal);
+    var namen = lahm.map(function (x) { return x.n; }).join(', ');
+    if (sofort === true) { return { s: 'ok', t: tr('check.feedback'), d: tr('check.feedbackFast') }; }
+    if (sofort === null) { return { s: 'mut', t: tr('check.feedback'), d: tr('check.feedbackUnknown', namen) }; }
+    return { s: 'warn', t: tr('check.feedback'), d: tr('check.feedbackSlow', namen) };
   }
 
   /* Kann der Schreibweg ueberhaupt senden? Bei MQTT sitzt der Schalter
@@ -3443,6 +3449,28 @@
     return null;
   }
 
+  /* Meldet das Geraet Aenderungen sofort? Das haengt an SetOption59.
+
+     Die Bitmaske aus StatusLOG zu entziffern waere moeglich, ist aber
+     versionsabhaengig und fehleranfaellig — eine Pruefung, die luegt, ist
+     schlimmer als keine. Deshalb wird das Geraet gefragt: eine leere
+     Nutzlast an cmnd/SetOption59 ist eine Abfrage, und die Antwort steht
+     danach in stat/RESULT.
+
+     Gemessen: mit SetOption59 ON kam tele/STATE drei Sekunden nach einer
+     Scheme-Aenderung — also wirkt es auch fuer Licht-Befehle, nicht nur
+     fuer POWER. */
+  function sofortRueckmeldung(kanal) {
+    var id = hatPunkt(kanal, 'stat.RESULT');
+    if (id) {
+      var j = jsonVon(id);
+      if (j && j.SetOption59 !== undefined) {
+        return String(j.SetOption59).toUpperCase() === 'ON';
+      }
+    }
+    return null;                     /* unbekannt, nicht "aus" */
+  }
+
   /* Was fehlt dem Geraet an cmnd-Punkten, und welche koennen nicht senden? */
   function mqttLage(kanal) {
     var g = mqttGeraet(kanal);
@@ -3468,7 +3496,8 @@
       var m = mqttEinstellung(id);
       if (m && !m.publish) { stumm.push({ name: name, id: id }); }
     });
-    return { geraet: g, befehle: b, fehlen: fehlen, stumm: stumm, da: da };
+    return { geraet: g, befehle: b, fehlen: fehlen, stumm: stumm, da: da,
+             sofort: sofortRueckmeldung(kanal) };
   }
 
   function mqttKarte(host, kanal) {
@@ -3516,6 +3545,41 @@
     }
     b.appendChild(leiste);
 
+    /* Sofortige Rueckmeldung — Zustand und, wenn noetig, der Schalter. */
+    var sk = el('div');
+    sk.style.marginTop = '11px';
+    sk.style.paddingTop = '10px';
+    sk.style.borderTop = '1px solid var(--line)';
+    var sz = el('div');
+    sz.style.fontSize = '11.5px';
+    sz.appendChild(el('b', null, tr('mq.instant') + '  '));
+    if (l.sofort === true) {
+      sz.appendChild(el('span', 'chip ok', tr('mq.instantOn')));
+    } else if (l.sofort === false) {
+      sz.appendChild(el('span', 'chip warn', tr('mq.instantOff')));
+    } else {
+      sz.appendChild(el('span', 'chip mut', tr('mq.instantUnknown')));
+    }
+    sk.appendChild(sz);
+
+    var sl = el('div');
+    sl.style.marginTop = '7px';
+    sl.style.display = 'flex';
+    sl.style.gap = '8px';
+    sl.style.flexWrap = 'wrap';
+    if (l.sofort !== true) {
+      var bp = el('button', 'btn schmal', tr('mq.instantCheck'));
+      bp.addEventListener('click', function () { so59(kanal, bp, ''); });
+      sl.appendChild(bp);
+      var be = el('button', 'btn', tr('mq.instantEnable'));
+      be.addEventListener('click', function () { so59(kanal, be, '1'); });
+      sl.appendChild(be);
+    }
+    sk.appendChild(sl);
+    sk.appendChild(el('div', 'hint', l.sofort === true ? tr('mq.instantHintOn')
+      : (l.sofort === false ? tr('mq.instantHintOff') : tr('mq.instantHintUnknown'))));
+    b.appendChild(sk);
+
     /* Nachfragen liefert dasselbe wie tele/STATE — gemessen, Feld fuer
        Feld. Der Knopf erscheint deshalb nur, wenn es etwas zu holen gibt:
        gar nichts gelesen, oder nur stat.RESULT, das meist bloss die
@@ -3545,6 +3609,34 @@
 
   var mqttStand = null;
   var mqttAuswahl = {};
+
+  /* Leere Nutzlast fragt nur, "1" schaltet ein. Beides ueber denselben
+     Weg, damit es nur eine Stelle gibt, die das Objekt anlegt. */
+  function so59(kanal, knopf, wert) {
+    var g = mqttGeraet(kanal);
+    if (!g) { return; }
+    var thema = mqttThema(g, 'cmnd', 'SetOption59');
+    var id = hatPunkt(kanal, 'cmnd.SetOption59') || (kanal + '.cmnd.SetOption59');
+    knopf.disabled = true;
+    knopf.textContent = wert ? tr('mq.instantEnabling') : tr('mq.instantChecking');
+    var obj = {
+      type: 'state',
+      common: { name: 'SetOption59', type: 'mixed', read: true, write: true, role: 'text',
+                desc: tr('mq.createdBy'), custom: mqttCustom(g, thema) },
+      native: { topic: thema }
+    };
+    socket.emit('setObject', id, obj, function () {
+      setTimeout(function () {
+        socket.emit('setState', id, { val: wert, ack: false }, function () {
+          setTimeout(function () {
+            socket.emit('setState', id, { val: wert, ack: false }, function () {
+              setTimeout(function () { ladeObjekte(); }, 4000);
+            });
+          }, 4000);
+        });
+      }, 2000);
+    });
+  }
 
   /* Status 11 aktiv anfordern. Eine Abfrage — sie schaltet nichts. */
   function mqttFragen(kanal, knopf) {

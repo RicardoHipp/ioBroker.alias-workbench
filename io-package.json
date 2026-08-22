@@ -4,8 +4,8 @@
     "version": "0.0.13",
     "news": {
       "0.0.13": {
-        "en": "New check: feedback delayed until the next telemetry",
-        "de": "Neue Prüfung: Rückmeldung erst mit der nächsten Telemetrie"
+        "en": "Feedback check, with SetOption59 read from the device and switchable",
+        "de": "Prüfung der Rückmeldung, SetOption59 wird abgefragt und lässt sich einschalten"
       },
       "0.0.12": {
         "en": "New template for Tasmota colour lights on the rgbSingle pattern",

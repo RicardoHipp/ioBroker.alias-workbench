@@ -372,5 +372,18 @@
   "check.feedback": "feedback arrives at once",
   "check.feedbackFine": "all fine",
   "check.feedbackSlow": "delayed: {0}",
-  "check.hintCount": "notes: {0}"
+  "check.hintCount": "notes: {0}",
+  "mq.instant": "Immediate feedback",
+  "mq.instantOn": "enabled",
+  "mq.instantOff": "off",
+  "mq.instantUnknown": "unknown",
+  "mq.instantCheck": "ask",
+  "mq.instantEnable": "Enable",
+  "mq.instantChecking": "asking …",
+  "mq.instantEnabling": "enabling …",
+  "mq.instantHintOn": "SetOption59 is set: the device reports every change at once, not only with the next telemetry. Measured at three seconds.",
+  "mq.instantHintOff": "Without SetOption59 an alias reading from tele/STATE shows the old value for minutes after switching. Enabling is a persistent setting on the device — it switches nothing and only changes how often the device reports.",
+  "mq.instantHintUnknown": "The device has not been asked yet. \"Ask\" sends an empty query to SetOption59 — it changes nothing.",
+  "check.feedbackFast": "at once, SetOption59 is on",
+  "check.feedbackUnknown": "unchecked: {0}"
 }

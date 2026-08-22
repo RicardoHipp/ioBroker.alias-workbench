@@ -372,5 +372,18 @@
   "check.feedback": "Rückmeldung kommt sofort",
   "check.feedbackFine": "alle in Ordnung",
   "check.feedbackSlow": "verzögert: {0}",
-  "check.hintCount": "Hinweise: {0}"
+  "check.hintCount": "Hinweise: {0}",
+  "mq.instant": "Sofortige Rückmeldung",
+  "mq.instantOn": "eingeschaltet",
+  "mq.instantOff": "aus",
+  "mq.instantUnknown": "unbekannt",
+  "mq.instantCheck": "nachfragen",
+  "mq.instantEnable": "Einschalten",
+  "mq.instantChecking": "frage nach …",
+  "mq.instantEnabling": "schalte ein …",
+  "mq.instantHintOn": "SetOption59 ist gesetzt: das Gerät meldet jede Änderung sofort, nicht erst mit der nächsten Telemetrie. Gemessen wurden drei Sekunden.",
+  "mq.instantHintOff": "Ohne SetOption59 zeigt ein Alias, der aus tele/STATE liest, nach dem Schalten minutenlang den alten Wert. Einschalten ist eine dauerhafte Einstellung am Gerät — sie schaltet nichts und ändert nur, wie oft das Gerät meldet.",
+  "mq.instantHintUnknown": "Das Gerät wurde danach noch nicht gefragt. „Nachfragen\" schickt eine leere Abfrage an SetOption59 — sie ändert nichts.",
+  "check.feedbackFast": "sofort, SetOption59 ist an",
+  "check.feedbackUnknown": "ungeprüft: {0}"
 }

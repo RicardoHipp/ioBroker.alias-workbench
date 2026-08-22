@@ -257,7 +257,9 @@ entry in `SPRACHEN` in `admin/tab.html` — nothing else.
 ### 0.0.13
 
 - New check: feedback that only arrives with the next telemetry. A point that
-  writes to `cmnd` but reads from `tele` shows the old value for minutes
+  writes to `cmnd` but reads from `tele` shows the old value for minutes —
+  unless `SetOption59` is on, which the adapter asks the device about and can
+  switch on
 
 ### 0.0.12
 
