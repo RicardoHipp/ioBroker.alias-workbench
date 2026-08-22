@@ -3520,13 +3520,49 @@
     b.style.padding = '9px 12px 11px';
 
     if (l.befehle) {
-      var z = el('div');
-      z.style.fontSize = '11.5px';
-      z.appendChild(el('b', null, tr('mq.commandsFrom', l.befehle.woher) + '  '));
-      var namen = el('span', null, l.befehle.befehle.map(function (x) { return x.name; }).join(', '));
-      namen.style.fontFamily = 'var(--mono)';
-      z.appendChild(namen);
-      b.appendChild(z);
+      b.appendChild(el('div', 'hint', tr('mq.commandsFrom', l.befehle.woher)));
+
+      /* Je Befehl eine Zeile mit seinem Zustand. Vorher stand hier eine
+         Aufzaehlung und darueber „2 fehlen, 1 kann nicht senden" — man
+         sah die Zahlen, aber nicht, welcher Befehl welcher Fall ist. */
+      var zustand = {};
+      l.fehlen.forEach(function (x) { zustand[x.name] = 'fehlt'; });
+      l.stumm.forEach(function (x) { zustand[x.name] = 'stumm'; });
+      l.da.forEach(function (n) { zustand[n] = 'da'; });
+
+      var reihen = l.befehle.befehle.map(function (x) { return x.name; });
+      /* cmnd-Punkte, die es gibt, ohne im Zustand aufzutauchen — Status
+         etwa. Die gehoeren mit in die Liste, sonst fehlt in der Zeile,
+         was die Zahl oben mitzaehlt. */
+      Object.keys(zustand).forEach(function (n) {
+        if (reihen.indexOf(n) === -1) { reihen.push(n); }
+      });
+      var rang = { stumm: 0, fehlt: 1, da: 2 };
+      reihen.sort(function (x, y) {
+        var a = rang[zustand[x]] === undefined ? 3 : rang[zustand[x]];
+        var c = rang[zustand[y]] === undefined ? 3 : rang[zustand[y]];
+        return a - c || (x < y ? -1 : 1);
+      });
+
+      var tab = el('div');
+      tab.style.marginTop = '7px';
+      reihen.forEach(function (n) {
+        var r = el('div', 'slot');
+        r.style.gridTemplateColumns = '1fr 150px';
+        r.style.padding = '3px 0';
+        var nm = el('span', 'sn', 'cmnd.' + n);
+        nm.style.fontFamily = 'var(--mono)';
+        nm.style.fontWeight = '400';
+        r.appendChild(nm);
+        var z = zustand[n];
+        var c = el('span');
+        if (z === 'fehlt') { c.appendChild(el('span', 'chip warn', tr('mq.stMissing'))); }
+        else if (z === 'stumm') { c.appendChild(el('span', 'chip bad', tr('mq.stMute'))); }
+        else { c.appendChild(el('span', 'chip ok', tr('mq.stFine'))); }
+        r.appendChild(c);
+        tab.appendChild(r);
+      });
+      b.appendChild(tab);
     } else {
       b.appendChild(el('div', 'hint', tr('mq.nothingYet')));
     }

@@ -349,7 +349,7 @@
   "mq.title": "MQTT device",
   "mq.missing": "{0} send points missing",
   "mq.mute": "{0} cannot send",
-  "mq.commandsFrom": "commands from {0}:",
+  "mq.commandsFrom": "Commands, read from {0}",
   "mq.nothingYet": "The device has not sent anything yet that commands could be read from.",
   "mq.fix": "Create send points …",
   "mq.ask": "Ask the device for its commands",
@@ -385,5 +385,8 @@
   "mq.instantHintOff": "Without SetOption59 an alias reading from tele/STATE shows the old value for minutes after switching. Enabling is a persistent setting on the device — it switches nothing and only changes how often the device reports.",
   "mq.instantHintUnknown": "The device has not been asked yet. \"Ask\" sends an empty query to SetOption59 — it changes nothing.",
   "check.feedbackFast": "at once, SetOption59 is on",
-  "check.feedbackUnknown": "unchecked: {0}"
+  "check.feedbackUnknown": "unchecked: {0}",
+  "mq.stMissing": "point missing",
+  "mq.stMute": "cannot send",
+  "mq.stFine": "present, sends"
 }

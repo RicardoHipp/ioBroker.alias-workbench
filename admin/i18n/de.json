@@ -349,7 +349,7 @@
   "mq.title": "MQTT-Gerät",
   "mq.missing": "{0} Sendepunkte fehlen",
   "mq.mute": "{0} können nicht senden",
-  "mq.commandsFrom": "Befehle aus {0}:",
+  "mq.commandsFrom": "Befehle, abgelesen aus {0}",
   "mq.nothingYet": "Das Gerät hat noch nichts gesendet, aus dem sich Befehle ablesen ließen.",
   "mq.fix": "Sendepunkte anlegen …",
   "mq.ask": "Befehle beim Gerät abfragen",
@@ -385,5 +385,8 @@
   "mq.instantHintOff": "Ohne SetOption59 zeigt ein Alias, der aus tele/STATE liest, nach dem Schalten minutenlang den alten Wert. Einschalten ist eine dauerhafte Einstellung am Gerät — sie schaltet nichts und ändert nur, wie oft das Gerät meldet.",
   "mq.instantHintUnknown": "Das Gerät wurde danach noch nicht gefragt. „Nachfragen\" schickt eine leere Abfrage an SetOption59 — sie ändert nichts.",
   "check.feedbackFast": "sofort, SetOption59 ist an",
-  "check.feedbackUnknown": "ungeprüft: {0}"
+  "check.feedbackUnknown": "ungeprüft: {0}",
+  "mq.stMissing": "Punkt fehlt",
+  "mq.stMute": "kann nicht senden",
+  "mq.stFine": "angelegt, sendet"
 }
