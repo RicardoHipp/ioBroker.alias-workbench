@@ -810,7 +810,7 @@
           nachziehBaum = false;
           zeichneBaum();
         }
-        if (current && baumModus !== 'vorlagen') { waehle(current); }
+        neuZeichnenOderAufbauen();
       };
       nachziehTimer = setTimeout(nachziehen, 600);
     });
@@ -820,6 +820,26 @@
      Vorher rief jede angelegte cmnd-Zeile ladeObjekte() und las die ganze
      Datenbank neu — auf einer gewachsenen Anlage sind das 24 500 Objekte
      fuer einen einzigen Datenpunkt, und der Baum sprang zweimal. */
+  /* Sobald jemand am Entwurf etwas eingestellt hat, darf ihn kein
+     Nachladen mehr wegwerfen. Vorher genuegte ein angelegter Datenpunkt,
+     und Zielordner, Haken und von Hand angelegte Punkte waren weg. */
+  function entwurfAngefasst() {
+    if (entwurf) { entwurf.angefasst = true; }
+  }
+
+  function neuZeichnenOderAufbauen(danach) {
+    if (!current || baumModus === 'vorlagen') {
+      if (typeof danach === 'function') { danach(); }
+      return;
+    }
+    if (entwurf && entwurf.angefasst) {
+      zeichneErgebnis();
+      if (typeof danach === 'function') { danach(); }
+      return;
+    }
+    waehle(current, danach);
+  }
+
   function uebernimmObjekt(id, o) {
     var gabEs = objects[id] !== undefined;
     if (o) { objects[id] = o; } else { delete objects[id]; }
@@ -855,8 +875,7 @@
          angesetzt — der ist jetzt erledigt. Sonst zeichnet die Werkbank
          ein zweites Mal, eine halbe Sekunde spaeter, und alles springt. */
       nachziehenErledigt();
-      if (current && baumModus !== 'vorlagen') { waehle(current, danach); }
-      else if (typeof danach === 'function') { danach(); }
+      neuZeichnenOderAufbauen(danach);
     });
   }
 
@@ -878,8 +897,7 @@
               zeichneBaum();
             }
             nachziehenErledigt();
-            if (current && baumModus !== 'vorlagen') { waehle(current, danach); }
-            else if (typeof danach === 'function') { danach(); }
+            neuZeichnenOderAufbauen(danach);
           }
         });
     });
@@ -1696,12 +1714,12 @@
         srcR: quelle,
         /* Kennt das Geraet den Befehl, ist das Ziel bekannt — auch wenn
            der Punkt noch nicht angelegt ist. Sonst waere der Alias stumm,
-           obwohl jeder weiss, wohin er schreiben muesste. Dass der Punkt
-           fehlt, steht in srcWfehlt und wird in der Zeile gezeigt; der
-           Trockenlauf laesst so lange nicht schreiben. */
+           obwohl jeder weiss, wohin er schreiben muesste. Ob es den Punkt
+           schon gibt, wird beim Zeichnen nachgeschaut, nicht hier vermerkt:
+           ein Vermerk veraltet, sobald der Punkt entsteht, und zwingt zum
+           Neuaufbau des ganzen Entwurfs — mitsamt allem, was der Nutzer
+           bis dahin eingestellt hat. */
         srcW: schreibZiel(z, kanal, auf),
-        srcWfehlt: !!(z.schreiben && !finde(z.schreiben) &&
-                      befehlMoeglich(kanal, auf(z.schreiben))),
         f: formel,
         fw: z.schreibformel ? auf(z.schreibformel) : '',
         caption: z.beschriftung || '',
@@ -2403,6 +2421,7 @@
         iO.value = '';
         fokusOrdnerfeld = true;
         e.zielOrdner = 'alias.0';
+        entwurfAngefasst();
         zeichneErgebnis();
       });
       wrap.appendChild(xBtn);
@@ -2426,6 +2445,7 @@
       var uebernehmen = function () {
         var t = saeubern(iO.value);
         e.zielOrdner = t ? ('alias.0.' + t) : 'alias.0';
+        entwurfAngefasst();
         zeichneErgebnis();
       };
 
@@ -2545,6 +2565,7 @@
       iN2.value = e.zielName;
       iN2.addEventListener('change', function () {
         e.zielName = iN2.value.trim().replace(/[^\w.\-äöüÄÖÜß]/g, '_') || current.split('.').pop();
+        entwurfAngefasst();
         zeichneErgebnis();
       });
       zb.appendChild(iN2);
@@ -2827,7 +2848,9 @@
         e.states.forEach(function (s) { s.on = !!platzVon[s.n]; });
      }]].forEach(function (pr) {
       var b = el('button', null, pr[0]);
-      b.addEventListener('click', function () { pr[1](); openRow = null; zeichneErgebnis(); });
+      b.addEventListener('click', function () {
+        pr[1](); entwurfAngefasst(); openRow = null; zeichneErgebnis();
+      });
       bar.appendChild(b);
     });
     card.appendChild(bar);
@@ -2852,7 +2875,9 @@
       cb.checked = s.on;
       cb.setAttribute('aria-label', s.n + ' anlegen');
       cb.addEventListener('click', function (ev) { ev.stopPropagation(); });
-      cb.addEventListener('change', function () { s.on = cb.checked; zeichneErgebnis(); });
+      cb.addEventListener('change', function () {
+        s.on = cb.checked; entwurfAngefasst(); zeichneErgebnis();
+      });
       cbw.appendChild(cb);
       row.appendChild(cbw);
 
@@ -2873,7 +2898,8 @@
       /* Das Geraet kann den Befehl, der Punkt fehlt noch. Die Handlung
          gehoert dorthin, wo das Problem sichtbar wird — nicht nur in die
          MQTT-Karte weiter oben. */
-      if (s.on && s.srcWfehlt) {
+      /* Frisch nachgeschaut statt gemerkt — siehe wendeAn. */
+      if (s.on && s.srcW && !objects[s.srcW]) {
         var fw = el('span', 'fehltnoch', tr('list.sendPointMissing'));
         fw.title = s.srcW;
         n3.appendChild(fw);
@@ -2957,6 +2983,7 @@
             caption: '', manuell: true, ausPlatz: st.name
           });
           openRow = e.states.length - 1;
+          entwurfAngefasst();
           zeichneErgebnis();
         };
         fr.addEventListener('click', nimm);
@@ -2974,6 +3001,7 @@
       e.states.push({ n: '', on: true, role: 'value', typ: 'number', unit: '', wr: false,
                       srcR: '', srcW: '', f: '', fw: '', caption: '', manuell: true, geaendert: true });
       openRow = e.states.length - 1;
+      entwurfAngefasst();
       zeichneErgebnis();
     });
     card.appendChild(add);
@@ -3358,7 +3386,7 @@
 
     function zeile(k, inhalt, cls) { return dtZeile(d, k, inhalt, cls); }
 
-    function neu() { s.geaendert = true; zeichneErgebnis(); }
+    function neu() { s.geaendert = true; entwurfAngefasst(); zeichneErgebnis(); }
 
     /* --- Name, nur bei selbst angelegten --- */
     if (s.manuell) {

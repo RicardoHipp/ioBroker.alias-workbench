@@ -268,6 +268,41 @@ entry in `SPRACHEN` in `admin/tab.html` — nothing else.
 
 ## Changelog
 
+### 0.0.32
+
+Changing the target folder and then creating a missing send datapoint threw
+the change away. Measured — three edits, then one datapoint created:
+
+```
+                  before                    after
+target folder     alias.0.MeinOrdner.…      alias.0.Bastelzimmer.…   reset
+RSSI unticked     [ ] RSSI                  [x] RSSI                 back on
+point added by hand   [x] !                 gone
+```
+
+So every edit was lost, not just the folder.
+
+The obvious repair — save the edits and put them back after the rebuild —
+would have been the wrong one. It adds a second place that maintains the same
+state, and every new property would have to be remembered there or vanish
+silently. Three of today's faults are of exactly that kind.
+
+The better question was why anything is rebuilt at all. That came from before
+0.0.29, when detection depended on which datapoints existed. Since detection
+reads what the device **can do**, creating a datapoint changes nothing about
+it — the template already matched.
+
+What does change is one detail: the orange "send datapoint not created yet".
+And that was my mistake from 0.0.29 — I stored it in the draft instead of
+looking it up when drawing. A stored mark goes stale the moment the datapoint
+appears, and forces the rebuild that costs everything else.
+
+- The mark is now looked up while drawing, not remembered
+- A draft you have edited is no longer rebuilt by any background reload. One
+  flag, set where you make an edit, checked in one place — instead of a list
+  of fields that can be forgotten
+- Switching devices still starts fresh, as it should
+
 ### 0.0.31
 
 Clicking into the target folder field showed the suggestion list for a

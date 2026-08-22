@@ -1,8 +1,12 @@
 {
   "common": {
     "name": "alias-workbench",
-    "version": "0.0.31",
+    "version": "0.0.32",
     "news": {
+      "0.0.32": {
+        "en": "Creating a datapoint no longer discards what you had set up",
+        "de": "Einen Datenpunkt anzulegen verwirft nicht mehr, was man eingestellt hat"
+      },
       "0.0.31": {
         "en": "Incoming values no longer tear the page away while you are typing",
         "de": "Eintreffende Werte ziehen die Seite nicht mehr weg, während man tippt"
@@ -78,10 +82,6 @@
       "0.0.13": {
         "en": "Feedback check, with SetOption59 read from the device and switchable",
         "de": "Prüfung der Rückmeldung, SetOption59 wird abgefragt und lässt sich einschalten"
-      },
-      "0.0.12": {
-        "en": "New template for Tasmota colour lights on the rgbSingle pattern",
-        "de": "Neue Vorlage für Tasmota-Farblampen auf dem rgbSingle-Muster"
       }
     },
     "titleLang": {
