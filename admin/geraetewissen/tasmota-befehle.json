@@ -1,0 +1,116 @@
+{
+  "hinweis": "Gerätewissen, kein Programm. Die Schlüssel sind Tasmota-Befehlsnamen, wie sie in tele/STATE und StatusSTS stehen. %N% steht für die Ausgangsnummer, damit POWER1 bis POWER8 mit einem Eintrag abgedeckt sind.",
+  "keineBefehle": [
+    "Time",
+    "Uptime",
+    "UptimeSec",
+    "Heap",
+    "LoadAvg",
+    "MqttCount",
+    "Hostname",
+    "IPAddress",
+    "StatusSTS",
+    "Wifi",
+    "Berry"
+  ],
+  "befehle": {
+    "POWER": {
+      "rolle": "switch",
+      "typ": "boolean",
+      "schreibformel": "val ? \"ON\" : \"OFF\"",
+      "was": "Ausgang schalten"
+    },
+    "POWER%N%": {
+      "rolle": "switch",
+      "typ": "boolean",
+      "schreibformel": "val ? \"ON\" : \"OFF\"",
+      "was": "einzelner Ausgang eines Mehrfachgeräts"
+    },
+    "Dimmer": {
+      "rolle": "level.dimmer",
+      "typ": "number",
+      "einheit": "%",
+      "was": "Helligkeit 0 bis 100"
+    },
+    "Color": {
+      "rolle": "level.color.rgb",
+      "typ": "string",
+      "was": "Farbe als Hex, etwa F4FFCC"
+    },
+    "HSBColor": {
+      "rolle": "level.color.hue",
+      "typ": "string",
+      "was": "dieselbe Farbe als Ton, Sättigung, Helligkeit",
+      "dopplung": "Color"
+    },
+    "Channel": {
+      "rolle": "level.dimmer",
+      "typ": "string",
+      "was": "dieselbe Farbe als Kanalliste",
+      "dopplung": "Color"
+    },
+    "CT": {
+      "rolle": "level.color.temperature",
+      "typ": "number",
+      "einheit": "mired",
+      "was": "Farbtemperatur 153 bis 500"
+    },
+    "White": {
+      "rolle": "level.dimmer",
+      "typ": "number",
+      "einheit": "%",
+      "was": "Weißkanal"
+    },
+    "Scheme": {
+      "rolle": "level.effect",
+      "typ": "number",
+      "werteliste": {
+        "0": "einfarbig",
+        "1": "Aufwachen",
+        "2": "Farben vorwärts",
+        "3": "Farben rückwärts",
+        "4": "zufällig"
+      },
+      "was": "Effekt"
+    },
+    "Speed": {
+      "rolle": "level",
+      "typ": "number",
+      "was": "Geschwindigkeit des Effekts, 1 bis 40",
+      "vorgabeAus": true
+    },
+    "Fade": {
+      "rolle": "switch",
+      "typ": "boolean",
+      "schreibformel": "val ? \"ON\" : \"OFF\"",
+      "was": "weiche Übergänge"
+    },
+    "LedTable": {
+      "rolle": "switch",
+      "typ": "boolean",
+      "schreibformel": "val ? \"ON\" : \"OFF\"",
+      "was": "Helligkeitskorrektur für LEDs",
+      "vorgabeAus": true
+    },
+    "Sleep": {
+      "rolle": "level",
+      "typ": "number",
+      "einheit": "ms",
+      "was": "Ruhezeit je Durchlauf — nur ändern, wenn man weiß warum",
+      "vorgabeAus": true
+    },
+    "TelePeriod": {
+      "rolle": "level",
+      "typ": "number",
+      "einheit": "s",
+      "was": "wie oft das Gerät von sich aus meldet",
+      "vorgabeAus": true
+    },
+    "SleepMode": {
+      "rolle": "text",
+      "typ": "string",
+      "was": "Dynamic oder Normal - Einstellung, keine Geraetefunktion",
+      "vorgabeAus": true
+    }
+  }
+}

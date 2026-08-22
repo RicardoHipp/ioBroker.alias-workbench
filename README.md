@@ -252,6 +252,15 @@ entry in `SPRACHEN` in `admin/tab.html` — nothing else.
 
 ## Changelog
 
+### 0.0.11
+
+- MQTT devices: reads the command set from what the device already publishes,
+  creates the missing `cmnd` points with publishing enabled, and can request
+  `Status 11` when nothing is there to read
+- The write-path check is no longer a placeholder: it reports a `cmnd` point
+  that is not allowed to publish, which makes an alias look fine and switch
+  nothing
+
 ### 0.0.10
 
 - Tasmota templates also carry the diagnostic values from tele/STATE — uptime,

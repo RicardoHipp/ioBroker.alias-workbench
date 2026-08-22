@@ -593,6 +593,7 @@
     setz('#btn-tpl', tr('tpls.button'));
     setz('#tpl-titel', tr('tpls.title', ''));
     setz('#btn-tpl-save', tr('tpls.saveNew'));
+    setz('#mqtt-titel', tr('mq.dialogTitle'));
     setz('#tree .empty', tr('tree.loading'));
     setz('#res .empty', tr('result.pickSomething'));
     setz('#btn-dry-write', tr('write.now'));
@@ -635,9 +636,11 @@
     ladeSprache(function () {
     c.textContent = tr('app.connected');
     beschrifteHtml();
-    ladeVorlagen(function () {
-      setzeMeta();
-      ladeObjekte();
+    ladeBefehlswissen(function () {
+      ladeVorlagen(function () {
+        setzeMeta();
+        ladeObjekte();
+      });
     });
     });
   });
@@ -2490,6 +2493,9 @@
       host.appendChild(dc);
     }
 
+    /* --- MQTT-Geraet: fehlende Sendepunkte --- */
+    mqttKarte(host, current);
+
     /* --- Prüfungen --- */
     baueChecks(e, haupt, pflichtFehlt);
 
@@ -2648,7 +2654,7 @@
         d: formelKaputt.length ? formelKaputt.map(function (x) { return x.n; }).join(', ') : tr('check.allFine') },
       { s: haupt && !pflichtFehlt.length ? 'ok' : 'bad', t: tr('check.rolesMakeDevice'),
         d: haupt ? (pflichtFehlt.length ? pflichtFehlt.map(function (x) { return x.name; }).join(', ') + ' fehlt' : haupt.type) : tr('check.noPatternFits') },
-      { s: 'mut', t: tr('check.publish'), d: tr('check.notCheckedYet') }
+      pruefungSenden(e)
     ];
 
     var ul = $('#checklist');
@@ -3273,6 +3279,469 @@
       /* Objektliste neu einlesen, damit Baum und Bericht stimmen */
       ladeObjekte();
     }
+  }
+
+  /* Kann der Schreibweg ueberhaupt senden? Bei MQTT sitzt der Schalter
+     am einzelnen Objekt. Steht er auf falsch, sieht der Alias tadellos
+     aus und schaltet trotzdem nichts — auf der Produktivanlage betraf das
+     einen von 25 Aliasen. Reine Objektlektuere, es wird nichts gesendet. */
+  function pruefungSenden(e) {
+    var ziele = e.states.filter(function (x) { return x.on && x.srcW; });
+    if (!ziele.length) { return { s: 'mut', t: tr('check.publish'), d: tr('check.noWritePath') }; }
+    var mqtt = [], stumm = [];
+    ziele.forEach(function (x) {
+      var m = mqttEinstellung(x.srcW);
+      if (!m) { return; }
+      mqtt.push(x);
+      if (!m.publish) { stumm.push(x.n); }
+    });
+    if (!mqtt.length) { return { s: 'mut', t: tr('check.publish'), d: tr('check.notMqtt') }; }
+    if (stumm.length) { return { s: 'bad', t: tr('check.publish'), d: tr('check.cannotSend', stumm.join(', ')) }; }
+    return { s: 'ok', t: tr('check.publish'), d: tr('check.canSend', mqtt.length) };
+  }
+
+  /* ================== MQTT-Geraete ==================
+     Ein Tasmota sendet nur nach stat und tele — cmnd ist sein Posteingang,
+     dort veroeffentlicht es nie. Ein frisch angelegtes Geraet hat deshalb
+     keine cmnd-Punkte, und ohne die greift keine Vorlage und kann kein
+     Alias schalten. Was das Geraet an Befehlen kennt, steht aber in dem,
+     was es sendet: die JSON-Schluessel in tele/STATE beziehungsweise
+     StatusSTS sind die Befehlsnamen. */
+
+  var TASMOTA_BEFEHLE = null;        /* Geraetewissen, aus einer Datei */
+
+  function ladeBefehlswissen(fertig) {
+    fetch('./geraetewissen/tasmota-befehle.json')
+      .then(function (r) { return r.json(); })
+      .then(function (j) { TASMOTA_BEFEHLE = j; fertig(); })
+      .catch(function () { TASMOTA_BEFEHLE = { befehle: {}, keineBefehle: [] }; fertig(); });
+  }
+
+  /* Die MQTT-Einstellung eines Objekts — sie sitzt je Objekt, nicht an der
+     Instanz. Dort steht das Thema und, entscheidend, ob gesendet werden
+     darf. */
+  function mqttEinstellung(id) {
+    var o = objects[id];
+    if (!o || !o.common) { return null; }
+    var cu = o.common.custom || {};
+    var k = null;
+    Object.keys(cu).forEach(function (x) { if (!k && /^mqtt/.test(x)) { k = x; } });
+    if (!k) {
+      /* Manche Objekte tragen das Thema nur in native. */
+      if (o.native && o.native.topic) { return { instanz: null, topic: o.native.topic, publish: false }; }
+      return null;
+    }
+    return { instanz: k, topic: cu[k].topic || (o.native || {}).topic || '', publish: !!cu[k].publish,
+             roh: cu[k] };
+  }
+
+  /* Ist der Kanal ein MQTT-Geraet, und wie heisst sein Thema? Alles aus
+     dem Bestand abgelesen — auch die Reihenfolge von Praefix und Thema,
+     denn FullTopic ist frei einstellbar. */
+  function mqttGeraet(kanal) {
+    var kinder = kindZustaende(kanal);
+    if (!kinder.length) { return null; }
+    var fund = null;
+    kinder.forEach(function (id) {
+      if (fund) { return; }
+      var e = mqttEinstellung(id);
+      if (!e || !e.topic) { return; }
+      var rel = id.slice(kanal.length + 1).split('.');
+      if (rel.length < 2) { return; }
+      var praefix = rel[0];                     /* stat | tele | cmnd */
+      if (!/^(stat|tele|cmnd)$/i.test(praefix)) { return; }
+      var teile = e.topic.split('/');
+      var pi = -1;
+      teile.forEach(function (t, i) { if (t.toLowerCase() === praefix.toLowerCase()) { pi = i; } });
+      if (pi === -1) { return; }
+      /* Alles ausser Praefix und dem letzten Stueck ist die Basis. */
+      var ohne = teile.slice(0, teile.length - 1);
+      ohne.splice(pi, 1);
+      fund = {
+        instanz: e.instanz,
+        basis: ohne.join('/'),
+        praefixIndex: pi,
+        vorlage: teile.slice(0, teile.length - 1),   /* Muster mit Praefix an Stelle pi */
+        beispiel: e.topic
+      };
+    });
+    return fund;
+  }
+
+  /* Das Thema fuer einen bestimmten Punkt bauen, mit der abgelesenen
+     Reihenfolge. */
+  function mqttThema(g, praefix, name) {
+    var t = g.vorlage.slice();
+    t[g.praefixIndex] = praefix;
+    return t.join('/') + '/' + name;
+  }
+
+  /* Welche Befehle kennt das Geraet? Aus dem, was schon da ist. */
+  function tasmotaBefehle(kanal) {
+    var quellen = ['stat.STATUS11', 'tele.STATE', 'stat.RESULT'];
+    var aus = null, woher = null;
+    quellen.forEach(function (q) {
+      if (aus) { return; }
+      var id = hatPunkt(kanal, q);
+      if (!id) { return; }
+      var j = jsonVon(id);
+      if (!j) { return; }
+      if (j.StatusSTS) { j = j.StatusSTS; }
+      var k = Object.keys(j);
+      if (!k.length) { return; }
+      aus = j; woher = q;
+    });
+    if (!aus) { return null; }
+
+    var weg = (TASMOTA_BEFEHLE && TASMOTA_BEFEHLE.keineBefehle) || [];
+    var liste = [];
+    Object.keys(aus).forEach(function (f) {
+      if (weg.indexOf(f) > -1) { return; }
+      if (aus[f] !== null && typeof aus[f] === 'object' && !Array.isArray(aus[f])) { return; }
+      liste.push({ name: f, wert: aus[f] });
+    });
+    return { woher: woher, befehle: liste };
+  }
+
+  /* Was das Geraetewissen zu einem Befehl sagt — mit %N% fuer POWER1..n. */
+  function befehlsWissen(name) {
+    var b = (TASMOTA_BEFEHLE && TASMOTA_BEFEHLE.befehle) || {};
+    if (b[name]) { return b[name]; }
+    var m = /^([A-Za-z_]+?)(\d{1,2})$/.exec(name);
+    if (m && b[m[1] + '%N%']) { return b[m[1] + '%N%']; }
+    return null;
+  }
+
+  /* Was fehlt dem Geraet an cmnd-Punkten, und welche koennen nicht senden? */
+  function mqttLage(kanal) {
+    var g = mqttGeraet(kanal);
+    if (!g) { return null; }
+    var b = tasmotaBefehle(kanal);
+    var fehlen = [], stumm = [], da = [];
+    if (b) {
+      b.befehle.forEach(function (x) {
+        var id = hatPunkt(kanal, 'cmnd.' + x.name);
+        if (!id) { fehlen.push(x); return; }
+        var m = mqttEinstellung(id);
+        if (m && !m.publish) { stumm.push({ name: x.name, id: id }); } else { da.push(x.name); }
+      });
+    }
+    /* Auch cmnd-Punkte, die es schon gibt, ohne dass sie im Zustand
+       auftauchen — Status etwa. Stumm sind sie genauso. */
+    kindZustaende(kanal).forEach(function (id) {
+      var rel = id.slice(kanal.length + 1);
+      if (rel.indexOf('cmnd.') !== 0) { return; }
+      var name = rel.slice(5);
+      if (stumm.some(function (x) { return x.name === name; })) { return; }
+      if (da.indexOf(name) > -1) { return; }
+      var m = mqttEinstellung(id);
+      if (m && !m.publish) { stumm.push({ name: name, id: id }); }
+    });
+    return { geraet: g, befehle: b, fehlen: fehlen, stumm: stumm, da: da };
+  }
+
+  function mqttKarte(host, kanal) {
+    var l = mqttLage(kanal);
+    if (!l) { return; }
+    mqttStand = l;
+
+    var k = el('div', 'card');
+    k.style.marginBottom = '11px';
+    var ch = el('div', 'ch');
+    ch.appendChild(el('span', 'typ', tr('mq.title')));
+    var th = el('span', 'chip mut', l.geraet.basis);
+    th.style.fontFamily = 'var(--mono)';
+    ch.appendChild(th);
+    if (l.fehlen.length) { ch.appendChild(el('span', 'chip warn', tr('mq.missing', l.fehlen.length))); }
+    if (l.stumm.length) { ch.appendChild(el('span', 'chip bad', tr('mq.mute', l.stumm.length))); }
+    k.appendChild(ch);
+
+    var b = el('div');
+    b.style.padding = '9px 12px 11px';
+
+    if (l.befehle) {
+      var z = el('div');
+      z.style.fontSize = '11.5px';
+      z.appendChild(el('b', null, tr('mq.commandsFrom', l.befehle.woher) + '  '));
+      var namen = el('span', null, l.befehle.befehle.map(function (x) { return x.name; }).join(', '));
+      namen.style.fontFamily = 'var(--mono)';
+      z.appendChild(namen);
+      b.appendChild(z);
+    } else {
+      b.appendChild(el('div', 'hint', tr('mq.nothingYet')));
+    }
+
+    var leiste = el('div');
+    leiste.style.marginTop = '10px';
+    leiste.style.display = 'flex';
+    leiste.style.gap = '8px';
+    leiste.style.flexWrap = 'wrap';
+    leiste.style.alignItems = 'center';
+
+    if (l.fehlen.length || l.stumm.length) {
+      var ba = el('button', 'btn primary', tr('mq.fix'));
+      ba.addEventListener('click', function () { zeigeMqttDialog(kanal); });
+      leiste.appendChild(ba);
+    }
+    var bf = el('button', 'btn', tr('mq.ask'));
+    bf.addEventListener('click', function () { mqttFragen(kanal, bf); });
+    leiste.appendChild(bf);
+    leiste.appendChild(el('span', 'hint', tr('mq.askHint')));
+    b.appendChild(leiste);
+
+    k.appendChild(b);
+    host.appendChild(k);
+  }
+
+  var mqttStand = null;
+  var mqttAuswahl = {};
+
+  /* Status 11 aktiv anfordern. Eine Abfrage — sie schaltet nichts. */
+  function mqttFragen(kanal, knopf) {
+    var g = mqttGeraet(kanal);
+    if (!g) { return; }
+    var thema = mqttThema(g, 'cmnd', 'Status');
+    var id = kanal + '.cmnd.Status';
+    var vorhanden = hatPunkt(kanal, 'cmnd.Status');
+    if (vorhanden) { id = vorhanden; }
+
+    knopf.disabled = true;
+    knopf.textContent = tr('mq.asking');
+
+    var obj = {
+      type: 'state',
+      common: {
+        name: 'Status', type: 'mixed', read: true, write: true, role: 'text',
+        desc: tr('mq.createdBy'),
+        custom: mqttCustom(g, thema)
+      },
+      native: { topic: thema }
+    };
+
+    socket.emit('setObject', id, obj, function () {
+      /* Beim ersten Schreiben nach dem Anlegen legt der mqtt-client nur
+         die Antwortobjekte an und verwirft die Werte — gemessen. Deshalb
+         zweimal fragen. */
+      setTimeout(function () {
+        socket.emit('setState', id, { val: '11', ack: false }, function () {
+          setTimeout(function () {
+            socket.emit('setState', id, { val: '11', ack: false }, function () {
+              setTimeout(function () {
+                ladeObjekte();
+                knopf.disabled = false;
+                knopf.textContent = tr('mq.ask');
+              }, 5000);
+            });
+          }, 5000);
+        });
+      }, 2000);
+    });
+  }
+
+  function mqttCustom(g, thema) {
+    var c = {};
+    var inst = g.instanz || 'mqtt-client.0';
+    c[inst] = {
+      enabled: true, topic: thema,
+      publish: true, pubChangesOnly: false, pubAsObject: false,
+      qos: 0, retain: false,
+      subscribe: true, subChangesOnly: false, subAsObject: false, subQos: 0,
+      setAck: true
+    };
+    return c;
+  }
+
+  function zeigeMqttDialog(kanal) {
+    var l = mqttLage(kanal);
+    if (!l) { return; }
+    mqttStand = l;
+    mqttStand.kanal = kanal;
+    mqttAuswahl = {};
+    l.fehlen.forEach(function (x) {
+      var w = befehlsWissen(x.name);
+      /* Vorgehakt nur, was eine Geraetefunktion ist: bekannt, keine
+         Dopplung und keine blosse Einstellung des Geraets. */
+      mqttAuswahl['neu:' + x.name] = !!w && !w.vorgabeAus && !istDopplung(x.name, l);
+    });
+    l.stumm.forEach(function (x) { mqttAuswahl['fix:' + x.name] = true; });
+    zeichneMqttDialog();
+    $('#dlg-mqtt').showModal();
+  }
+
+  /* HSBColor und Channel beschreiben dieselbe Farbe wie Color. Alle drei
+     anzulegen ergibt drei Punkte, die sich gegenseitig ueberschreiben. */
+  function istDopplung(name, l) {
+    var w = befehlsWissen(name);
+    if (!w || !w.dopplung) { return false; }
+    return l.fehlen.some(function (x) { return x.name === w.dopplung; }) ||
+           l.da.indexOf(w.dopplung) > -1;
+  }
+
+  function zeichneMqttDialog() {
+    var l = mqttStand;
+    var body = $('#mqtt-body');
+    body.textContent = '';
+
+    var kopf = el('div');
+    kopf.style.marginBottom = '11px';
+    kopf.style.fontSize = '12.5px';
+    kopf.appendChild(el('b', null, l.geraet.basis));
+    if (l.befehle) {
+      kopf.appendChild(el('div', 'hint', tr('mq.commandsFrom', l.befehle.woher)));
+    }
+    body.appendChild(kopf);
+
+    if (l.fehlen.length) {
+      var nk = el('div', 'card');
+      nk.style.marginBottom = '11px';
+      var nh = el('div', 'ch');
+      nh.appendChild(el('span', 'typ', tr('mq.newPoints')));
+      nh.appendChild(el('span', 'chip warn', tr('mq.missing', l.fehlen.length)));
+      nk.appendChild(nh);
+      l.fehlen.forEach(function (x) {
+        var w = befehlsWissen(x.name);
+        var r = el('div', 'slot');
+        r.style.gridTemplateColumns = '24px 1fr 1.2fr 1fr';
+        var cw = el('span');
+        var cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.checked = !!mqttAuswahl['neu:' + x.name];
+        cb.addEventListener('change', function () {
+          mqttAuswahl['neu:' + x.name] = cb.checked; zeichneMqttDialog();
+        });
+        cw.appendChild(cb);
+        r.appendChild(cw);
+        var nm = el('span', 'sn', 'cmnd.' + x.name);
+        nm.style.fontFamily = 'var(--mono)';
+        r.appendChild(nm);
+        r.appendChild(el('span', 'rx', w ? (w.rolle || '—') + (w.einheit ? '  ' + w.einheit : '') : tr('mq.unknownCommand')));
+        var wz = el('span', 'rx', w && w.was ? w.was : (tr('mq.nowValue') + ' ' + JSON.stringify(x.wert)));
+        if (w && w.dopplung) { wz.appendChild(el('span', 'chip warn', tr('mq.duplicate', w.dopplung))); }
+        r.appendChild(wz);
+        nk.appendChild(r);
+      });
+      body.appendChild(nk);
+    }
+
+    if (l.stumm.length) {
+      var sk = el('div', 'card');
+      sk.style.marginBottom = '11px';
+      var sh = el('div', 'ch');
+      sh.appendChild(el('span', 'typ', tr('mq.repair')));
+      sh.appendChild(el('span', 'chip bad', tr('mq.mute', l.stumm.length)));
+      sk.appendChild(sh);
+      sk.appendChild(el('div', 'hint', tr('mq.repairHint')));
+      l.stumm.forEach(function (x) {
+        var r = el('div', 'slot');
+        r.style.gridTemplateColumns = '24px 1fr';
+        var cw = el('span');
+        var cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.checked = !!mqttAuswahl['fix:' + x.name];
+        cb.addEventListener('change', function () {
+          mqttAuswahl['fix:' + x.name] = cb.checked; zeichneMqttDialog();
+        });
+        cw.appendChild(cb);
+        r.appendChild(cw);
+        var nm = el('span', 'sn', 'cmnd.' + x.name);
+        nm.style.fontFamily = 'var(--mono)';
+        r.appendChild(nm);
+        sk.appendChild(r);
+      });
+      body.appendChild(sk);
+    }
+
+    /* Trockenlauf: das fertige Objekt, bevor es entsteht. */
+    var liste = mqttZuSchreiben();
+    var jk = el('div', 'card');
+    var jh = el('div', 'ch');
+    jh.appendChild(el('span', 'typ', tr('write.dryTitleCreate')));
+    jh.appendChild(el('span', 'chip mut', tr('app.objectsCount', liste.length)));
+    jk.appendChild(jh);
+    liste.slice(0, 3).forEach(function (x) {
+      var pre = el('div', 'raw');
+      pre.style.margin = '9px 12px 0';
+      pre.style.whiteSpace = 'pre';
+      pre.style.maxHeight = 'none';
+      pre.textContent = x.id + '\n' + JSON.stringify(x.obj, null, 2);
+      jk.appendChild(pre);
+    });
+    if (liste.length > 3) {
+      jk.appendChild(el('div', 'hint', tr('mq.andMore', liste.length - 3)));
+    }
+    jk.appendChild(el('div', null, ' '));
+    body.appendChild(jk);
+
+    var bs = $('#btn-mqtt-write');
+    if (bs) {
+      bs.disabled = !liste.length;
+      bs.textContent = tr('mq.write', liste.length);
+    }
+  }
+
+  function mqttZuSchreiben() {
+    var l = mqttStand;
+    if (!l) { return []; }
+    var kanal = l.kanal;
+    var raus = [];
+    l.fehlen.forEach(function (x) {
+      if (!mqttAuswahl['neu:' + x.name]) { return; }
+      var w = befehlsWissen(x.name) || {};
+      var thema = mqttThema(l.geraet, 'cmnd', x.name);
+      var common = {
+        name: x.name,
+        role: w.rolle || 'state',
+        type: w.typ || 'mixed',
+        read: true, write: true,
+        desc: tr('mq.createdBy'),
+        custom: mqttCustom(l.geraet, thema)
+      };
+      if (w.einheit) { common.unit = w.einheit; }
+      if (w.werteliste) { common.states = w.werteliste; }
+      raus.push({ id: kanal + '.cmnd.' + x.name, obj: { type: 'state', common: common, native: { topic: thema } }, neu: true });
+    });
+    l.stumm.forEach(function (x) {
+      if (!mqttAuswahl['fix:' + x.name]) { return; }
+      var alt = objects[x.id];
+      if (!alt) { return; }
+      var kopie = JSON.parse(JSON.stringify(alt));
+      var cu = kopie.common.custom || {};
+      Object.keys(cu).forEach(function (i) { if (/^mqtt/.test(i)) { cu[i].publish = true; } });
+      kopie.common.custom = cu;
+      raus.push({ id: x.id, obj: kopie, neu: false });
+    });
+    return raus;
+  }
+
+  function mqttSchreiben() {
+    var liste = mqttZuSchreiben();
+    if (!liste.length) { return; }
+    var b = $('#btn-mqtt-write');
+    if (b) { b.disabled = true; b.textContent = tr('write.writing'); }
+    var offen = liste.length, fehler = [];
+    liste.forEach(function (x) {
+      socket.emit('setObject', x.id, x.obj, function (err) {
+        if (err) { fehler.push(x.id + ': ' + err); }
+        if (--offen === 0) {
+          var body = $('#mqtt-body');
+          body.textContent = '';
+          var m = el('div');
+          m.style.fontSize = '13px';
+          if (fehler.length) {
+            m.appendChild(el('b', null, tr('write.failed', fehler.length)));
+            var ul = el('ul');
+            fehler.forEach(function (t) { ul.appendChild(el('li', null, t)); });
+            m.appendChild(ul);
+          } else {
+            m.appendChild(el('b', null, tr('mq.done', liste.length)));
+            m.appendChild(el('div', 'hint', tr('mq.doneHint')));
+          }
+          body.appendChild(m);
+          if (b) { b.hidden = true; }
+          ladeObjekte();
+        }
+      });
+    });
   }
 
   /* ================== Vorlagen verwalten ==================
@@ -4832,6 +5301,8 @@
     var ba2 = $('#btn-dry-alle');
     if (ba2) { ba2.addEventListener('click', function () { zeigeTrockenlauf(true); }); }
     if (bw) { bw.addEventListener('click', schreibeObjekte); }
+    var bmq = $('#btn-mqtt-write');
+    if (bmq) { bmq.addEventListener('click', mqttSchreiben); }
     var bt = $('#btn-tpl'), bts = $('#btn-tpl-save');
     if (bt) { bt.addEventListener('click', zeigeVorlagenDialog); }
     if (bts) { bts.addEventListener('click', speichereVorlageAusDialog); }
@@ -4861,6 +5332,15 @@
   <div class="dfoot">
     <button class="btn" data-close>Schlie&szlig;en</button>
     <button class="btn primary" id="btn-tpl-save">Speichern</button>
+  </div>
+</dialog>
+
+<dialog id="dlg-mqtt" style="max-width:820px;">
+  <h3 id="mqtt-titel">Sendepunkte anlegen</h3>
+  <div class="dbody" id="mqtt-body"></div>
+  <div class="dfoot">
+    <button class="btn" data-close>Schlie&szlig;en</button>
+    <button class="btn primary" id="btn-mqtt-write">Anlegen</button>
   </div>
 </dialog>
 

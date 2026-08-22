@@ -1,8 +1,12 @@
 {
   "common": {
     "name": "alias-workbench",
-    "version": "0.0.10",
+    "version": "0.0.11",
     "news": {
+      "0.0.11": {
+        "en": "Determine MQTT send commands and create the missing cmnd points",
+        "de": "Sendebefehle eines MQTT-Geräts ermitteln und fehlende cmnd-Punkte anlegen"
+      },
       "0.0.10": {
         "en": "Diagnostic values from tele/STATE in the Tasmota templates, unticked",
         "de": "Diagnosewerte aus tele/STATE in den Tasmota-Vorlagen, abgewählt"
