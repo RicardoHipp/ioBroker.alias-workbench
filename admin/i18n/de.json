@@ -395,5 +395,6 @@
   "diff.wouldBeRemoved": "abgewählt — steht im Alias und würde entfernt",
   "diff.wouldBeAdded": "zusätzlich angehakt — kommt beim Aktualisieren dazu",
   "diff.addedWithPlace": "zusätzlich angehakt — hat einen Platz im {0}-Muster",
-  "diff.addedNoPlace": "zusätzlich angehakt — hat keinen Platz im {0}-Muster, landet im info-Gerät"
+  "diff.addedNoPlace": "zusätzlich angehakt — hat keinen Platz im {0}-Muster, landet im info-Gerät",
+  "result.willBeUpdated": "wird aktualisiert"
 }

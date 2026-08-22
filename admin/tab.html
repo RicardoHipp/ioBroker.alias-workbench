@@ -1722,7 +1722,18 @@
     return geraete;
   }
 
-  /* Gibt es fuer diese Quelle schon einen Alias? Ueber native.quelle. */
+  /* Gibt es fuer diese Quelle schon einen Alias?
+
+     Zwei Wege, und der zweite ist der wichtigere. Ueber native.quelle
+     findet man nur, was die Werkbank selbst angelegt hat. Von Hand
+     gebaute Aliase — bei einer gewachsenen Anlage die Mehrheit — tragen
+     den Vermerk nicht. Dann wird gesucht, wo es wirklich steht: in den
+     Aliasquellen der Datenpunkte.
+
+     Ohne das schlaegt die Werkbank ein freies Ziel vor, meldet „wird neu
+     angelegt" und erzeugt beim Klick ein zweites Geraet, waehrend das
+     erste verwaist stehenbleibt. Beim Karbonator lag der Alias unter
+     alias.0.Strom, vorgeschlagen wurde alias.0.SmartHome. */
   function aliasFuer(quelle) {
     var treffer = null;
     keysSorted.forEach(function (id) {
@@ -1730,7 +1741,27 @@
       var o = objects[id];
       if (o && o.native && o.native.quelle === quelle) { treffer = id; }
     });
-    return treffer;
+    if (treffer) { return treffer; }
+
+    /* Welcher Aliaskanal liest oder schreibt am haeufigsten in diesen
+       Zweig? Einzelne Punkte koennen anderswohin zeigen — ein
+       gemeinsamer Sollwert etwa —, deshalb die Mehrheit und nicht der
+       erste Treffer. */
+    var zaehler = {}, bester = null, wieviel = 0;
+    var pre = quelle + '.';
+    keysSorted.forEach(function (id) {
+      if (id.indexOf('alias.') !== 0) { return; }
+      var o = objects[id];
+      if (!o || o.type !== 'state') { return; }
+      var q = aliasQuellen(o);
+      var passt = (q.read && q.read.indexOf(pre) === 0) ||
+                  (q.write && q.write.indexOf(pre) === 0);
+      if (!passt) { return; }
+      var eltern = id.slice(0, id.lastIndexOf('.'));
+      zaehler[eltern] = (zaehler[eltern] || 0) + 1;
+      if (zaehler[eltern] > wieviel) { wieviel = zaehler[eltern]; bester = eltern; }
+    });
+    return bester;
   }
 
   /* ================== Ergebnis ================== */
@@ -1791,13 +1822,20 @@
     var haupt = funde.length ? funde[0] : null;
 
     /* --- Kopf --- */
+    setzeZiel(e);
+
     var head = el('div', 'rhead');
     var links = el('div');
     links.appendChild(el('div', 'id', e.ziel || current));
     var sub = el('div', 'sub');
     var nm = txt(obj.common && obj.common.name);
     if (e.vorschlag) {
-      var ch1 = el('span', 'chip ok', tr('result.newlyCreated'));
+      /* Haengt daran, ob es das Ziel gibt — nicht daran, ob der Entwurf
+         aus einer Vorlage kam. Vorher stand „wird neu angelegt" auch
+         ueber einem Geraet, das laengst einen Alias hat. */
+      var gibtsZiel = !!objects[e.ziel || current];
+      var ch1 = el('span', 'chip ' + (gibtsZiel ? 'warn' : 'ok'),
+        gibtsZiel ? tr('result.willBeUpdated') : tr('result.newlyCreated'));
       ch1.style.marginRight = '7px';
       sub.appendChild(ch1);
       sub.appendChild(document.createTextNode(tr('result.from') + current + '   ·   '));
@@ -1887,21 +1925,7 @@
 
     var istQuelle = current.indexOf('alias.') !== 0;
     if (istQuelle) {
-      if (e.zielOrdner === undefined) {
-        var zt0 = (e.ziel || zielId(current)).split('.');
-        var geraet = zt0.pop();
-        if (e.instanzen && e.instanzen.length > 1) {
-          /* Mehrere Ausgaenge: das Geraet wird zum Ordner, jeder Ausgang
-             ein Kanal darin. Ein folder darueber, kein device — sonst
-             rutscht die Erkennung hoch und macht aus dreien wieder eins. */
-          e.zielOrdner = zt0.join('.') + '.' + geraet;
-          e.zielName = e.kanalname || ('POWER' + e.instanz);
-        } else {
-          e.zielOrdner = zt0.join('.');
-          e.zielName = geraet;
-        }
-      }
-      e.ziel = e.zielOrdner + '.' + e.zielName;
+      setzeZiel(e);
 
       var zb = el('div', 'zielbar');
       zb.appendChild(el('span', 'zl', tr('target.folder')));
@@ -2621,6 +2645,76 @@
     tplKnopf(false);
     var chip = $('#checkchip');
     if (chip) { chip.className = 'chip mut'; chip.textContent = ''; }
+  }
+
+  /* Gibt es den Alias schon, sollen seine Punkte angehakt sein.
+
+     Vorher kamen die Haken allein aus der Vorlage. Wer ein fertiges
+     Geraet aufmachte, sah den Vorschlag fuer ein neues — und ein Punkt,
+     den er sich damals von Hand dazugeholt hatte, stand ungehakt da.
+     Ein Klick auf „Alias aktualisieren" haette ihn entfernt. Der
+     Trockenlauf haette es gezeigt, aber darauf darf man sich nicht
+     verlassen.
+
+     Vereinigung statt Ersetzung: angehakt wird, was im Alias steht
+     ODER was die Vorlage vorschlaegt. In die gefaehrliche Richtung —
+     etwas verlieren — kann damit nichts mehr passieren, und ein
+     Vorschlag aus einer neueren Vorlage geht trotzdem nicht verloren.
+     Was dadurch dazukommt, meldet die Aenderungs-Karte. */
+  /* Wohin der Alias gehoert. Muss feststehen, bevor die Kopfzeile
+     gezeichnet wird — sonst meldet die „wird neu angelegt", waehrend die
+     Zielzeile darunter schon „gibt es schon" sagt. */
+  function setzeZiel(e) {
+    if (current.indexOf('alias.') === 0) { return; }
+    if (e.zielOrdner === undefined) {
+      var zt0 = (e.ziel || zielId(current)).split('.');
+      var geraet = zt0.pop();
+
+      /* Gibt es fuer diese Quelle schon einen Alias, ist der das Ziel —
+         auch wenn er woanders liegt als der Vorschlag. Sonst zeigt die
+         Werkbank auf einen freien Platz, meldet „wird neu angelegt" und
+         legt beim Klick ein zweites Geraet an, waehrend das erste
+         verwaist stehenbleibt. Beim Karbonator lag der Alias unter
+         alias.0.Strom, vorgeschlagen wurde alias.0.SmartHome. */
+      var vorhanden = aliasFuer(current);
+
+      if (e.instanzen && e.instanzen.length > 1) {
+        /* Mehrere Ausgaenge: das Geraet wird zum Ordner, jeder Ausgang
+           ein Kanal darin. Ein folder darueber, kein device — sonst
+           rutscht die Erkennung hoch und macht aus dreien wieder eins. */
+        if (vorhanden) {
+          /* Der gefundene Kanal ist einer der Ausgaenge; der Ordner liegt
+             darueber. Wie der einzelne Ausgang heisst, kann die Werkbank
+             nicht wissen — wer sie umbenannt hat, sieht den Vorschlag in
+             der Zielzeile und kann ihn anpassen. */
+          var tm = vorhanden.split('.');
+          tm.pop();
+          e.zielOrdner = tm.join('.');
+        } else {
+          e.zielOrdner = zt0.join('.') + '.' + geraet;
+        }
+        e.zielName = e.kanalname || ('POWER' + e.instanz);
+      } else if (vorhanden) {
+        var te = vorhanden.split('.');
+        e.zielName = te.pop();
+        e.zielOrdner = te.join('.');
+      } else {
+        e.zielOrdner = zt0.join('.');
+        e.zielName = geraet;
+      }
+    }
+    e.ziel = e.zielOrdner + '.' + e.zielName;
+    uebernehmeBestand(e);
+  }
+
+  function uebernehmeBestand(e) {
+    if (!e.ziel || e.bestandGeprueft) { return; }
+    e.bestandGeprueft = e.ziel;
+    if (!objects[e.ziel]) { return; }
+    e.states.forEach(function (s) {
+      if (!s.n || s.on) { return; }
+      if (objects[e.ziel + '.' + s.n]) { s.on = true; s.ausBestand = true; }
+    });
   }
 
   function unterschiede(e) {

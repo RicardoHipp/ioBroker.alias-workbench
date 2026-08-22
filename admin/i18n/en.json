@@ -395,5 +395,6 @@
   "diff.wouldBeRemoved": "deselected — exists in the alias and would be removed",
   "diff.wouldBeAdded": "ticked on — will be added when updating",
   "diff.addedWithPlace": "ticked on — has a slot in the {0} pattern",
-  "diff.addedNoPlace": "ticked on — has no slot in the {0} pattern, goes to the info device"
+  "diff.addedNoPlace": "ticked on — has no slot in the {0} pattern, goes to the info device",
+  "result.willBeUpdated": "will be updated"
 }

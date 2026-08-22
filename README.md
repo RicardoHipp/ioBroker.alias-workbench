@@ -268,6 +268,20 @@ entry in `SPRACHEN` in `admin/tab.html` — nothing else.
 
 ## Changelog
 
+### 0.0.19
+
+- Opening a source whose alias already exists now targets that alias, wherever
+  it lives, and ticks the datapoints it already contains. Before, the workbench
+  proposed a fresh location and unticked boxes — one click could have created a
+  duplicate or dropped points
+- An existing alias is found through the sources of its datapoints, not only
+  through the marker the workbench writes, so hand-built aliases count too
+
+### 0.0.18
+
+- The changes card reports both directions, and finds role, unit, formula and
+  source changes on a draft built from the source as well
+
 ### 0.0.17
 
 - The changes card only reports real deviations, in both directions: a point

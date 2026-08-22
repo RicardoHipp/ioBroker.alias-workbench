@@ -1,8 +1,12 @@
 {
   "common": {
     "name": "alias-workbench",
-    "version": "0.0.18",
+    "version": "0.0.19",
     "news": {
+      "0.0.19": {
+        "en": "An existing alias is found and used as the target, with its datapoints ticked",
+        "de": "Ein vorhandener Alias wird gefunden, als Ziel genommen und seine Punkte angehakt"
+      },
       "0.0.18": {
         "en": "Changes card reports both directions, and finds changes on source drafts too",
         "de": "Die Änderungs-Karte meldet beide Richtungen und findet Änderungen auch am Quellentwurf"
