@@ -268,6 +268,26 @@ entry in `SPRACHEN` in `admin/tab.html` — nothing else.
 
 ## Changelog
 
+### 0.0.24
+
+Measured on the Lavalampe, before and after a firmware update — same device,
+same wiring:
+
+```
+12.5.0   tele.STATE without IPAddress
+15.5.0   tele.STATE with IPAddress, in every telemetry
+```
+
+Uptime 490 s, telemetry 6 s old: that is not the boot message. So the newer
+firmware carries the address permanently, and the earlier explanation in
+0.0.22 — "only in the first message after a boot" — was wrong. It is the
+firmware, not the moment.
+
+- IP now reads **`tele.STATE` first**, then `tele.INFO2`, then `stat.STATUS5`.
+  STATE arrives every few minutes and follows a DHCP change; INFO2 is a still
+  from the last boot and would keep showing the old address until the device
+  restarts
+
 ### 0.0.23
 
 `lesenSonst` survived copying and editing a template, but there was no field

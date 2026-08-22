@@ -1,8 +1,12 @@
 {
   "common": {
     "name": "alias-workbench",
-    "version": "0.0.23",
+    "version": "0.0.24",
     "news": {
+      "0.0.24": {
+        "en": "IP is read from tele.STATE first — the source that stays current",
+        "de": "Die IP wird zuerst aus tele.STATE gelesen — der Quelle, die aktuell bleibt"
+      },
       "0.0.23": {
         "en": "Fallback sources can now be seen and edited in the template view",
         "de": "Ersatzquellen lassen sich jetzt im Vorlagen-Tab sehen und ändern"
@@ -78,10 +82,6 @@
       "0.0.5": {
         "en": "Saving touches one template at a time; clearer columns per datapoint",
         "de": "Speichern fasst nur eine Vorlage an; klarere Spalten je Datenpunkt"
-      },
-      "0.0.4": {
-        "en": "Forbidden datapoints in detection; multi-output templates from a hand-built device",
-        "de": "Verbotene Datenpunkte in der Erkennung; Mehrfachvorlagen aus einem von Hand gebauten Gerät"
       }
     },
     "titleLang": {

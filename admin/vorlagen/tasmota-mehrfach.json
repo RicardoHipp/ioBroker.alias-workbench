@@ -162,15 +162,15 @@
       "name": "IP",
       "rolle": "text",
       "typ": "string",
-      "lesen": "tele.INFO2",
-      "feld": "Info2.IPAddress",
+      "lesen": "tele.STATE",
+      "feld": "IPAddress",
       "optional": true,
       "vorgabeAus": true,
-      "hinweis": "Drei Wege, weil keiner allein reicht. tele.INFO2 schickt eine Tasmota beim Start und laesst es retained stehen — das ist der verlaesslichste. In tele.STATE steht die IP nur in der ersten Meldung nach dem Boot. stat.STATUS5 entsteht, wenn jemand den Status abfragt. Hat das Geraet seit dem Einbinden nicht neu gestartet und wurde nie abgefragt, kennt der mqtt-Adapter keine davon und der Punkt wird weggelassen.",
+      "hinweis": "Drei Wege, weil keiner allein reicht. tele.STATE steht zuerst, weil es alle paar Minuten frisch kommt und einem Adresswechsel folgt - allerdings fuehrt es die IP erst ab neuerer Firmware mit (gemessen: 12.5.0 nein, 15.5.0 ja). tele.INFO2 schickt eine Tasmota beim Start und laesst es retained stehen; das steht auch bei alter Firmware da, ist aber ein Standbild vom letzten Boot. stat.STATUS5 entsteht, wenn jemand den Status abfragt.",
       "lesenSonst": [
         {
-          "punkt": "tele.STATE",
-          "feld": "IPAddress"
+          "punkt": "tele.INFO2",
+          "feld": "Info2.IPAddress"
         },
         {
           "punkt": "stat.STATUS5",
