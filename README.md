@@ -268,6 +268,23 @@ entry in `SPRACHEN` in `admin/tab.html` — nothing else.
 
 ## Changelog
 
+### 0.0.25
+
+The tree opened the first two levels every time and forgot anything you
+folded yourself as soon as the tab was reloaded.
+
+- What you fold open or closed is **remembered**, and it survives a reload
+- Two buttons next to the filter: **all open** and **all closed**
+- Stored in the browser's `localStorage`, not in the instance object — the
+  fold state is a matter of view, and this way no click on a triangle writes
+  to the database
+
+Folding everything open or closed clears the individually remembered nodes.
+Otherwise a branch you had deliberately closed would stay closed, and "all
+open" would be a lie. Once you use either button, the old default of two
+levels does not come back on its own — from then on the tree does what you
+last told it.
+
 ### 0.0.24
 
 Measured on the Lavalampe, before and after a firmware update — same device,

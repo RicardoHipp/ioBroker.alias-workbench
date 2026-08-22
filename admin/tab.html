@@ -375,6 +375,13 @@
   .tree .node.sel .geraetepunkt { color:var(--accent-ink); }
   .tree .geraetepunkt + .cnt { margin-left:5px; }
 
+  .klapp {
+    border:1px solid var(--line); background:var(--surface); color:var(--ink-3);
+    border-radius:5px; width:23px; height:23px; line-height:1; cursor:pointer;
+    font-size:11px; padding:0; flex:none;
+  }
+  .klapp:hover { border-color:var(--accent); color:var(--accent); }
+
   .freikopf {
     display:flex; align-items:center; gap:8px; padding:6px 15px;
     border-top:1px solid var(--line); border-bottom:1px solid var(--line);
@@ -489,6 +496,8 @@
         <button id="m-quellen" class="an">Quellen</button><button id="m-aliase">Aliase</button><button id="m-vorlagen">Vorlagen</button>
       </span>
       <input class="search" id="q" type="search" placeholder="filtern …" aria-label="Objekte filtern">
+      <button class="klapp" id="btn-auf" type="button">&#9662;</button>
+      <button class="klapp" id="btn-zu" type="button">&#9656;</button>
       <button class="btn schmal" id="btn-einlesen" hidden>Einlesen &hellip;</button>
       <input type="file" id="datei-einlesen" accept=".json,application/json" hidden>
     </div>
@@ -592,6 +601,9 @@
     if (bc) { bc.childNodes[0].nodeValue = tr('check.button') + ' '; }
     setz('#dry-titel', tr('write.dryTitleCreate'));
     setz('#btn-tpl', tr('tpls.button'));
+    var bA = $('#btn-auf'), bZ = $('#btn-zu');
+    if (bA) { bA.title = tr('tree.expandAll'); bA.setAttribute('aria-label', tr('tree.expandAll')); }
+    if (bZ) { bZ.title = tr('tree.collapseAll'); bZ.setAttribute('aria-label', tr('tree.collapseAll')); }
     setz('#btn-del', tr('del.button'));
     setz('#del-titel', tr('del.title'));
     setz('#btn-del-go', tr('del.now'));
@@ -621,7 +633,32 @@
   var werte = {};          // id -> state
   var current = null;      // gewaehlter Kanal
   var openRow = null;
+  /* Der Klappzustand ist eine Ansichtssache, keine Konfiguration - er
+     gehoert in den Browser, nicht in die Objektdatenbank. Sonst schriebe
+     jeder Klick auf ein Dreieck in die Instanz. */
+  var KLAPP_SCHLUESSEL = 'alias-workbench.baum';
+
   var aufgeklappt = {};    // Baumknoten
+  var alleKlapp = null;    // null = Vorgabe (zwei Ebenen), true/false = alles
+
+  (function ladeKlappstand() {
+    try {
+      var roh = window.localStorage.getItem(KLAPP_SCHLUESSEL);
+      if (!roh) { return; }
+      var d = JSON.parse(roh);
+      if (d && typeof d === 'object') {
+        aufgeklappt = d.knoten || {};
+        alleKlapp = (d.alle === true || d.alle === false) ? d.alle : null;
+      }
+    } catch (e) { /* kaputter oder gesperrter Speicher: dann eben Vorgabe */ }
+  })();
+
+  function merkeKlappstand() {
+    try {
+      window.localStorage.setItem(KLAPP_SCHLUESSEL,
+        JSON.stringify({ knoten: aufgeklappt, alle: alleKlapp }));
+    } catch (e) { /* privater Modus oder voll - nicht der Rede wert */ }
+  }
   var abo = null;          // aktuelles Abo-Muster
 
   function el(tag, cls, txt) {
@@ -853,12 +890,15 @@
       var d = el('div', 'node' + (waehlbar ? ' pick' : ' grp') + (k.id === current ? ' sel' : ''));
 
       var hatKinder = kinderUl.childNodes.length > 0;
-      var auf = filter ? true : (aufgeklappt[k.id] !== undefined ? aufgeklappt[k.id] : tiefe <= 1);
+      var vorgabe = (alleKlapp === null) ? (tiefe <= 1) : alleKlapp;
+      var auf = filter ? true
+        : (aufgeklappt[k.id] !== undefined ? aufgeklappt[k.id] : vorgabe);
       var tw = el('span', 'tw', hatKinder ? (auf ? '▾' : '▸') : '');
       if (hatKinder) {
         tw.addEventListener('click', function (e) {
           e.stopPropagation();
           aufgeklappt[k.id] = !auf;
+          merkeKlappstand();
           zeichneBaum();
         });
       }
@@ -893,6 +933,19 @@
   }
 
   $('#q').addEventListener('input', zeichneBaum);
+
+  /* Alles auf, alles zu. Die einzeln gemerkten Knoten fallen dabei weg -
+     sonst bliebe ein Zweig zu, den man eben ausdruecklich zugeklappt hat,
+     und „alles auf" waere gelogen. */
+  function klappeAlle(auf) {
+    aufgeklappt = {};
+    alleKlapp = auf;
+    merkeKlappstand();
+    zeichneBaum();
+  }
+  var bAuf = $('#btn-auf'), bZu = $('#btn-zu');
+  if (bAuf) { bAuf.addEventListener('click', function () { klappeAlle(true); }); }
+  if (bZu) { bZu.addEventListener('click', function () { klappeAlle(false); }); }
 
   var baumModusVorher = null;
 
@@ -1614,6 +1667,7 @@
     for (var i = 1; i <= teile.length; i++) {
       aufgeklappt[teile.slice(0, i).join('.')] = true;
     }
+    merkeKlappstand();
     zeichneBaum();
 
     var sel = document.querySelector('#tree .node.sel');

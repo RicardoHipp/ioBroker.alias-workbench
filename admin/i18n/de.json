@@ -406,5 +406,7 @@
   "tv.fallback": "Ersatzquellen",
   "tv.addFallback": "Ersatzquelle hinzufügen",
   "tv.removeFallback": "entfernen",
-  "tv.fallbackHint": "Findet die Werkbank den Punkt oben nicht — oder das Feld nicht darin —, probiert sie diese der Reihe nach. Der erste Weg, bei dem Punkt und Feld wirklich da sind, wird genommen."
+  "tv.fallbackHint": "Findet die Werkbank den Punkt oben nicht — oder das Feld nicht darin —, probiert sie diese der Reihe nach. Der erste Weg, bei dem Punkt und Feld wirklich da sind, wird genommen.",
+  "tree.expandAll": "alles aufklappen",
+  "tree.collapseAll": "alles zuklappen"
 }

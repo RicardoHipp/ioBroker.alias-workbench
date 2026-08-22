@@ -406,5 +406,7 @@
   "tv.fallback": "Fallback sources",
   "tv.addFallback": "Add fallback source",
   "tv.removeFallback": "remove",
-  "tv.fallbackHint": "If the workbench cannot find the datapoint above — or the field inside it — it tries these in order. The first one where both really exist is used."
+  "tv.fallbackHint": "If the workbench cannot find the datapoint above — or the field inside it — it tries these in order. The first one where both really exist is used.",
+  "tree.expandAll": "expand all",
+  "tree.collapseAll": "collapse all"
 }
