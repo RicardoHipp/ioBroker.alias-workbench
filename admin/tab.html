@@ -2250,7 +2250,10 @@
     mqttKarte(host, current);
 
     if (!objects[current]) {
-      var ko = el('div', 'aside w');
+      /* Kein Warnton: das ist bei MQTT der Normalfall und nichts, was
+         man beheben koennte oder sollte. Vorher stand hier ein gelber
+         Kasten an praktisch jedem Tasmota-Geraet. */
+      var ko = el('div', 'aside');
       ko.appendChild(el('b', null, tr('result.noObject')));
       ko.appendChild(document.createTextNode(tr('result.noObjectText')));
       host.appendChild(ko);
