@@ -19,8 +19,6 @@
   "tree.looksLikeDevice": "sieht wie ein einzelnes Gerät aus",
   "result.header": "Was der type-detector daraus macht",
   "result.pickSomething": "Links einen Kanal, ein Gerät oder einen Ordner wählen.",
-  "result.noObject": "Das ist normal. ",
-  "result.noObjectText": "In ioBroker gibt es dieses Gerät nicht als eigenes Objekt, sondern nur seine Datenpunkte — MQTT legt für die Ebenen darüber nichts an. Deshalb sieht der type-detector hier kein Gerät. Der Alias, den du gerade baust, wird genau dieses fehlende Gerät.",
   "result.tooManyStates": "Das wäre ein Gerät mit {0} Zuständen — meist ist damit der falsche Knoten gewählt. Im Baum links tragen die Knoten, die wie ein einzelnes Gerät aussehen, einen Punkt. Du kannst es trotzdem so bauen.",
   "result.allAnyway": "Trotzdem alle ",
   "result.newlyCreated": "wird neu angelegt",

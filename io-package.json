@@ -1,8 +1,12 @@
 {
   "common": {
     "name": "alias-workbench",
-    "version": "0.0.15",
+    "version": "0.0.16",
     "news": {
+      "0.0.16": {
+        "en": "Removed the confusing note about missing MQTT objects",
+        "de": "Die verwirrende Meldung über fehlende MQTT-Objekte entfernt"
+      },
       "0.0.15": {
         "en": "MQTT section moved up under the identification and collapsible",
         "de": "MQTT-Bereich unter die Erkennung gerückt und zuklappbar"

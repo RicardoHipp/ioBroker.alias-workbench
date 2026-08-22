@@ -64,6 +64,20 @@ Early. Usable, but not finished.
 - Missing: mass creation, "who uses this alias", re-applying a changed template
   to the devices built from it
 
+## Why the tree shows devices that do not exist
+
+With MQTT, ioBroker only creates objects for the datapoints themselves. A topic
+like `SmartHome/Bastelzimmer/Gartenpumpe/stat/POWER` produces one object for
+`stat.POWER` — the level `Gartenpumpe` is only part of a name, not an object.
+
+The type-detector, however, looks for a `channel` or `device` to group
+datapoints under. It finds none, so it recognises no device, and Alexa, Matter
+and Material have nothing to attach to.
+
+That gap is what the alias fills: `alias.0.…Gartenpumpe` is a real channel with
+proper roles beneath it. The workbench therefore lets you pick such a
+non-existent node in the tree and build a device out of it.
+
 ## How it works
 
 ```

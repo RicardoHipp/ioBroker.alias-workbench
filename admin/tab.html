@@ -2250,13 +2250,13 @@
     mqttKarte(host, current);
 
     if (!objects[current]) {
-      /* Kein Warnton: das ist bei MQTT der Normalfall und nichts, was
-         man beheben koennte oder sollte. Vorher stand hier ein gelber
-         Kasten an praktisch jedem Tasmota-Geraet. */
-      var ko = el('div', 'aside');
-      ko.appendChild(el('b', null, tr('result.noObject')));
-      ko.appendChild(document.createTextNode(tr('result.noObjectText')));
-      host.appendChild(ko);
+      /* Hier stand eine Erklaerung, dass MQTT fuer Zwischenebenen keine
+         Objekte anlegt. Sie ist richtig, half aber niemandem: kein
+         Risiko, keine Handlung, nichts anders zu machen. Und sie
+         widersprach dem Erkennungskasten drei Zeilen darueber, der
+         gleichzeitig „Identifiziert als: Tasmota-Steckdose" meldete.
+         Wer nichts damit anfangen kann, soll es auch nicht lesen
+         muessen — das Wissen steht im README, nicht in der Oberflaeche. */
     }
 
     /* --- welcher Punkt sitzt auf welchem Platz --- */
