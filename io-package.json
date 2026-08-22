@@ -1,8 +1,12 @@
 {
   "common": {
     "name": "alias-workbench",
-    "version": "0.0.17",
+    "version": "0.0.18",
     "news": {
+      "0.0.18": {
+        "en": "Changes card reports both directions, and finds changes on source drafts too",
+        "de": "Die Änderungs-Karte meldet beide Richtungen und findet Änderungen auch am Quellentwurf"
+      },
       "0.0.17": {
         "en": "Changes card only reports real deviations",
         "de": "Die Änderungs-Karte meldet nur noch echte Abweichungen"

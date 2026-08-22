@@ -392,5 +392,8 @@
   "mq.rowWorking": "…",
   "mq.intro": "Not every Tasmota is set up the same way. A missing or mute point is not a fault in itself — it only matters once an alias is meant to switch through it, or a template needs it for detection.",
   "mq.instantOffShort": "feedback delayed",
-  "diff.wouldBeRemoved": "deselected — exists in the alias and would be removed"
+  "diff.wouldBeRemoved": "deselected — exists in the alias and would be removed",
+  "diff.wouldBeAdded": "ticked on — will be added when updating",
+  "diff.addedWithPlace": "ticked on — has a slot in the {0} pattern",
+  "diff.addedNoPlace": "ticked on — has no slot in the {0} pattern, goes to the info device"
 }

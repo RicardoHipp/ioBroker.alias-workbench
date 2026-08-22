@@ -270,8 +270,12 @@ entry in `SPRACHEN` in `admin/tab.html` — nothing else.
 
 ### 0.0.17
 
-- The changes card only reports real deviations. Points the template proposes
-  unticked are no longer listed as if someone had deselected them
+- The changes card only reports real deviations, in both directions: a point
+  deselected against the baseline, and one ticked on against it. Points the
+  template proposes unticked are no longer listed as if someone had
+  deselected them
+- Role, unit, formula and source changes are now also found on a draft built
+  from the source, not only on one built from an existing alias
 
 ### 0.0.16
 

@@ -2651,21 +2651,40 @@
     }
     var zielBasis = e.ziel || e.kanal;
 
+    /* Womit wird verglichen? Gibt es den Alias schon, ist er die
+       Grundlinie — dann zaehlt, was sich gegenueber dem Gespeicherten
+       aendert. Gibt es ihn noch nicht, ist es der Vorschlag der
+       Vorlage. */
+    var aliasDa = !!objects[zielBasis];
+
     e.states.forEach(function (s) {
       if (s.manuell) { raus.push({ n: s.n || '(ohne Namen)', was: tr('diff.newByHand') }); return; }
-      if (!s.on) {
-        /* Nur melden, wenn es wirklich eine Abweichung ist: entweder
-           steht der Punkt im gespeicherten Alias und verschwaende, oder
-           die Vorlage hatte ihn vorgeschlagen und jemand hat ihn
-           weggeklickt. */
-        var imAlias = !!objects[zielBasis + '.' + s.n];
-        if (!imAlias && !warVorgabeAn(s)) { return; }
+
+      var imAlias = !!objects[zielBasis + '.' + s.n];
+      var grundlinieAn = aliasDa ? imAlias : warVorgabeAn(s);
+
+      /* Beide Richtungen melden. Vorher wurde nur das Abwaehlen
+         betrachtet — wer einen Punkt zusaetzlich anhakte, sah davon
+         nichts, obwohl das genauso eine Abweichung ist. */
+      if (!s.on && grundlinieAn) {
         raus.push({ n: s.n, was: imAlias ? tr('diff.wouldBeRemoved')
           : (hatPlatz(s.role) ? tr('diff.deselectedWithPlace', e.want)
                               : tr('diff.deselectedNoPlace', e.want)) });
         return;
       }
-      var o = objects[s.urId];
+      if (s.on && !grundlinieAn) {
+        raus.push({ n: s.n, was: aliasDa ? tr('diff.wouldBeAdded')
+          : (hatPlatz(s.role) ? tr('diff.addedWithPlace', e.want)
+                              : tr('diff.addedNoPlace', e.want)) });
+        return;
+      }
+      if (!s.on) { return; }
+
+      /* Der Vergleich der Einzelheiten lief bisher ueber s.urId, das
+         nur bei einem Entwurf aus einem fertigen Alias gesetzt ist. Bei
+         einem Entwurf aus der Quelle blieb er stumm, obwohl es den
+         Alias gibt — Rollenwechsel fielen dort durch. */
+      var o = objects[s.urId] || objects[zielBasis + '.' + s.n];
       if (!o) { return; }
       var c = o.common || {}, a = c.alias || {}, q = aliasQuellen(o);
       if ((c.role || '') !== s.role) { raus.push({ n: s.n, was: tr('diff.roleChange', c.role || '—', s.role) }); }
