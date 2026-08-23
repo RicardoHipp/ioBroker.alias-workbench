@@ -268,6 +268,58 @@ entry in `SPRACHEN` in `admin/tab.html` — nothing else.
 
 ## Changelog
 
+### 0.0.40
+
+Same question asked twice, answered two different ways — and the second
+answer was wrong.
+
+A Tasmota power strip with four outputs becomes four aliases. That was never
+in doubt. A Homematic two-channel actuator with `Licht_Bar` on channel 1 and
+`Licht_Esstisch` on channel 2 became **one** alias in 0.0.39, and channel 1
+simply fell off the list. Same situation, opposite outcome.
+
+What is right: **as many aliases as there are things you operate
+separately.** Not as many as there are devices, not as many as there are
+channels.
+
+And the awkward part — the data does not say which is which:
+
+```
+Licht_Bar_Esstisch   channel 1  STATE (switch, writable)  "Licht_Bar"
+                     channel 2  STATE (switch, writable)  "Licht_Esstisch"
+                                                          → 2 things
+
+Wohnzimmer_Dimmer    channel 1  LEVEL (level.dimmer, writable)  "Wohnzimmer_Dimmer:1"
+                     channel 2  LEVEL (level.dimmer, writable)  "Wohnzimmer_Dimmer:2"
+                     channel 3  LEVEL (level.dimmer, writable)  "Wohnzimmer_Dimmer:3"
+                                                          → 1 thing
+```
+
+Two lamps in one case, three virtual channels of one output in the other,
+and technically indistinguishable. The only difference is a name somebody
+typed.
+
+So the workbench stops guessing where it cannot know, and offers both ways —
+exactly as it already does for a Tasmota with several outputs:
+
+```
+[ als ein Gerät erzeugen … ]     [ je Kanal ein Gerät, 2 Stück … ]
+```
+
+The tooltip on the second names what would appear: `alias.0.Licht_Bar
+(socket)`, `alias.0.Licht_Esstisch (socket)`. A line above the list says why
+there are two buttons.
+
+Taken along, because the result is useless without it: **the target proposal
+uses the object's name**. It used to be the last part of the ID, so a
+Homematic device landed at `alias.0.NEQ1660737` and one of its channels at
+`alias.0.1`. Now it is `alias.0.Licht_Bar_Esstisch` and `alias.0.Licht_Bar`.
+
+Still open, and visible in the dry run: the points of a per-channel alias are
+named after the source (`STATE`) rather than the pattern slot (`SET`), and the
+maintenance data of the shared channel 0 — LOWBAT, UNREACH, RSSI — is not
+offered when a single channel is edited.
+
 ### 0.0.39
 
 Homematic. A thermostat there is a `device` with its data spread over two
@@ -310,6 +362,25 @@ from channel 0. One alias, both channels.
 
 No change for Tasmota: those points carry no roles at all. Verified across
 14 devices — same template, same checks as before.
+
+Two things that only became visible once Homematic devices opened at all:
+
+- **A raw draft now ticks only what has a slot in the recognised pattern.**
+  Everything was ticked before; that passed unnoticed with a Tasmota and its
+  eight points, but a window contact brings 26 and a thermostat 42, most of
+  them alarm mirrors and maintenance innards that appear in no pattern.
+  Writing those into an alias is not modelling a device, it is copying one.
+  Three cases stay untouched: an existing alias (every tick there is a
+  decision already made — unticking means deleting), a template (it decides
+  for itself), and the case where nothing has a slot. The three buttons above
+  the list remain; "all" is one click away
+- **Three of the 51 patterns are keyed differently from the type they
+  report** — `blinds`→`blind`, `mediaPlayer`→`media`, `levelSlider`→`slider`.
+  Using the reported type as a key hit nothing: at the roller shutter `blind`
+  dropped out of the pattern list, the field showed `socket`, and switching
+  patterns no longer adapted the roles. The maths had been right all along,
+  the display and the offer were not. Everything now speaks types, including
+  "all 51 patterns", which used to hand out keys the detector cannot match
 
 ### 0.0.38
 

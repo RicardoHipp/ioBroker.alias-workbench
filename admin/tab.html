@@ -1331,10 +1331,40 @@
     return Object.keys(m).sort();
   })();
 
+  /* Der Detektor meldet einen Typ, sein Musterverzeichnis ist aber nach
+     Schluesseln geordnet — und bei dreien von 51 sind das zwei
+     verschiedene Woerter:
+
+         blinds      -> type blind
+         mediaPlayer -> type media
+         levelSlider -> type slider
+
+     Wer den gemeldeten Typ als Schluessel nimmt, greift ins Leere. Beim
+     Terassenrollladen fiel dadurch „blind" aus der Musterliste, das
+     Auswahlfeld stand auf „socket", und ein Wechsel des Musters passte die
+     Rollen nicht mehr an — gerechnet wurde die ganze Zeit richtig, nur
+     angezeigt und angeboten wurde etwas anderes. */
+  var TYP_ZU_MUSTER = (function () {
+    var m = {};
+    if (D) {
+      Object.keys(D.patterns).forEach(function (k) {
+        var t = D.patterns[k].type;
+        if (t && t !== k) { m[t] = k; }
+      });
+    }
+    return m;
+  })();
+
+  /* Das Muster zu einem Typ — oder zu einem Schluessel, beides geht. */
+  function musterVon(typ) {
+    if (!D || !typ) { return null; }
+    return D.patterns[typ] || (TYP_ZU_MUSTER[typ] ? D.patterns[TYP_ZU_MUSTER[typ]] : null) || null;
+  }
+
   /* Welche Rolle faende im gewaehlten Muster einen Platz? */
   function plaetzeFuerRollen(musterName) {
     var raus = {};
-    var mu = musterName && D.patterns[musterName];
+    var mu = musterName && musterVon(musterName);
     if (!mu) { return raus; }
     ROLLEN.forEach(function (r) {
       mu.states.forEach(function (st) {
@@ -1345,7 +1375,9 @@
     return raus;
   }
 
-  var VORSCHAU = ['socket', 'light', 'dimmer', 'blinds', 'thermostat', 'temperature', 'humidity', 'info'];
+  /* Typen, keine Musterschluessel — `e.want` und das Auswahlfeld fuehren
+     ueberall den Typ. Bei „blind" sind die beiden verschieden. */
+  var VORSCHAU = ['socket', 'light', 'dimmer', 'blind', 'thermostat', 'temperature', 'humidity', 'info'];
 
   /* Vorlagennamen duerfen je Sprache anders lauten: entweder eine
      Zeichenkette oder ein Objekt wie { de: '...', en: '...' }. */
@@ -1977,7 +2009,7 @@
   /* Rollen an ein anderes Muster anpassen — generisch ueber defaultRole,
      nicht je Vorlage ausprogrammiert. */
   function anMusterAnpassen(e, neuTyp) {
-    var alt = D.patterns[e.want], neu = D.patterns[neuTyp];
+    var alt = musterVon(e.want), neu = musterVon(neuTyp);
     if (!alt || !neu) { return; }
 
     function slotVon(muster, rolle) {
@@ -2006,10 +2038,18 @@
   }
 
   /* Wo der Alias landen wuerde: alias.0.<Ordner>.<Geraet> */
+  /* Wohin ein neuer Alias vorgeschlagen wird.
+
+     Frueher immer das letzte Stueck der Kennung — bei einer Homematic also
+     `alias.0.NEQ1660737`, und bei einem Kanal davon schlicht `alias.0.1`.
+     Wo ein Objekt einen Namen traegt, ist der gemeint. */
   function zielId(kanal) {
     var t = kanal.split('.');
-    var name = t.pop();
+    var name = zusatzName(kanal) || t.pop();
+    if (zusatzName(kanal)) { t.pop(); }
     var raum = t.length > 2 ? t[t.length - 1] : '';
+    /* Punkte im Namen wuerden eine Unterebene aufmachen. */
+    name = String(name).replace(/\./g, '_');
     return raum ? ('alias.0.' + raum + '.' + name) : ('alias.0.' + name);
   }
 
@@ -2052,6 +2092,73 @@
   function zeichneWennFrei() {
     if (tipptGerade()) { setTimeout(zeichneWennFrei, 400); return; }
     zeichneErgebnis();
+  }
+
+  /* Welche Kanaele eines Geraets ergaeben fuer sich ein Geraet?
+
+     Die Frage ist nicht zu umgehen und nicht sicher zu beantworten. Ein
+     Zweifach-Aktor hat zwei Kanaele mit je einem eigenen STATE — das sind
+     zwei Lampen. Ein Dimmer hat drei Kanaele mit je einem eigenen LEVEL —
+     das ist ein Dimmer, die anderen beiden sind virtuelle Kanaele
+     desselben Ausgangs. In den Daten sehen beide Faelle gleich aus.
+
+     Also wird nicht geraten, sondern gefragt: gibt es mehrere solcher
+     Kanaele, bietet die Fussleiste beide Wege an — genau wie bei einer
+     Tasmota mit mehreren Ausgaengen. Die Zahl steht am Knopf, die
+     Entscheidung trifft der Mensch.
+
+     Das Ergebnis wird gemerkt: `zeichneErgebnis` laeuft bei jedem
+     eintreffenden Wert, und der Detektor je Kanal ist zu teuer, um ihn
+     sekuendlich zu wiederholen. */
+  var kanalGeraeteCache = {};
+
+  function steuerKanaele(dev) {
+    if (!objects[dev] || objects[dev].type !== 'device') { return []; }
+    if (kanalGeraeteCache[dev]) { return kanalGeraeteCache[dev]; }
+    var raus = [];
+    var pre = dev + '.';
+    keysSorted.forEach(function (id) {
+      if (id.indexOf(pre) !== 0) { return; }
+      if (id.slice(pre.length).indexOf('.') !== -1) { return; }   /* nur direkte Kinder */
+      if (!objects[id] || objects[id].type !== 'channel') { return; }
+      var e2 = baueEntwurf(id);
+      if (!e2.states.length) { return; }
+      var f = erkenneEntwurf(e2, null).filter(function (x) { return x.type !== 'info'; });
+      if (!f.length) { return; }
+      /* Nur zaehlen, was einen Pflichtplatz wirklich besetzt — sonst
+         gilt jeder Kanal mit irgendeinem Messwert als Geraet. */
+      if (!f[0].states.some(function (st) { return st.required && st.id; })) { return; }
+      raus.push({ id: id, typ: f[0].type, name: zusatzName(id) || id.slice(pre.length) });
+    });
+    kanalGeraeteCache[dev] = raus;
+    return raus;
+  }
+
+  /* Ein fertiger Entwurf fuer einen Knoten, so wie ihn `waehle` erzeugen
+     wuerde — Vorlage, sonst Rohentwurf mit erkanntem Muster und der
+     Vorbelegung „nur was einen Platz hat". Gebraucht wird das, wenn aus
+     mehreren Kanaelen auf einmal Aliase entstehen sollen. */
+  function entwurfFuer(id) {
+    var v = vorschlag(id);
+    if (v) { return v; }
+    var e2 = baueEntwurf(id);
+    if (!e2.states.length) { return null; }
+    var f = erkenneEntwurf(e2, null);
+    e2.wantAuto = f.length ? f[0].type : null;
+    e2.want = e2.wantAuto;
+    var funde = e2.want ? erkenneEntwurf(e2, e2.want) : f;
+    var haupt = funde.length ? funde[0] : null;
+    var platz = {};
+    if (haupt) {
+      haupt.states.forEach(function (x) {
+        if (x.id) { platz[x.id.slice(id.length + 1)] = x.name; }
+      });
+    }
+    if (Object.keys(platz).length) {
+      e2.states.forEach(function (st) { st.on = !!platz[st.n]; });
+    }
+    e2.vorbelegt = true;
+    return e2;
   }
 
   function waehle(id, fertig) {
@@ -2577,23 +2684,28 @@
     var vlbl = el('span', 'feldlabel', tr('pattern.label'));
     vw.appendChild(vlbl);
     var sel = el('select', 'musterwahl');
-    var liste = e.alleMuster ? Object.keys(D.patterns).sort() : VORSCHAU.slice();
+    /* Auch hier Typen, nicht Schluessel: wer „blinds" waehlte, bekam
+       einen Entwurf fuer einen Typ, den der Detektor nicht kennt. */
+    var liste = e.alleMuster
+      ? Object.keys(D.patterns).map(function (k) { return D.patterns[k].type || k; })
+          .filter(function (t, i, a) { return a.indexOf(t) === i; }).sort()
+      : VORSCHAU.slice();
     /* Auch das urspruenglich erkannte Muster gehoert dauerhaft in die
        Liste. Sonst fiel rgbSingle heraus, sobald man einmal auf light
        gewechselt hatte — und der Weg zurueck fuehrte nur ueber
        „alle 51 Muster". */
     [e.wantAuto, e.want].forEach(function (m0) {
-      if (m0 && D.patterns[m0] && liste.indexOf(m0) === -1) { liste.unshift(m0); }
+      if (m0 && musterVon(m0) && liste.indexOf(m0) === -1) { liste.unshift(m0); }
     });
     liste.forEach(function (m) {
-      if (!D.patterns[m]) { return; }
+      if (!musterVon(m)) { return; }
 
       /* Die Vorschau muss vorhersagen, was das Auswaehlen wirklich tut.
          Beim Vorschlag werden Lampe und Steckdose samt Rollen neu gebaut —
          also auch hier gegen den umgebauten Entwurf pruefen. Sonst stuende
          hier „SET fehlt", und nach dem Klick passte trotzdem alles. */
       var pruefE = e, umgebaut = false;
-      if (e.vorschlag && !e.roh && m !== e.want && D.patterns[m]) {
+      if (e.vorschlag && !e.roh && m !== e.want && musterVon(m)) {
         var kopie = JSON.parse(JSON.stringify({ kanal: e.kanal, states: e.states, want: e.want }));
         anMusterAnpassen(kopie, m);
         if (kopie.states.some(function (x, i) { return x.role !== e.states[i].role; })) {
@@ -2604,7 +2716,7 @@
       var r = erkenneEntwurf(pruefE, m);
       var mark;
       if (!r.length) {
-        var fehlend = D.patterns[m].states.filter(function (x) { return x.required; })
+        var fehlend = musterVon(m).states.filter(function (x) { return x.required; })
           .map(function (x) { return x.name; });
         mark = fehlend.length ? ('✕ ' + tr('pattern.missing', fehlend.join(', ')))
                               : tr('pattern.doesNotFit');
@@ -2622,7 +2734,7 @@
       /* Beim Vorschlag reicht es nicht, das Muster umzustellen — die Rollen
          entscheiden. switch.light passt auf kein socket-SET. Also den
          Vorschlag mit den passenden Rollen neu bauen. */
-      if (e.vorschlag && !e.roh && D.patterns[neuTyp]) {
+      if (e.vorschlag && !e.roh && musterVon(neuTyp)) {
         anMusterAnpassen(e, neuTyp);
         openRow = null;
         zeichneErgebnis();
@@ -3082,6 +3194,40 @@
       });
     }
 
+    /* Vorbelegung eines Rohentwurfs: angehakt ist, was im erkannten Muster
+       einen Platz findet.
+
+       Vorher war alles an. Bei einer Tasmota mit acht Punkten ging das
+       durch; ein Homematic-Fensterkontakt bringt 26 mit, ein Thermostat
+       42, und die meisten davon sind Alarmspiegel und Wartungsinnereien,
+       die in keinem Muster vorkommen. Wer die alle in einen Alias schreibt,
+       hat das Geraet nicht abgebildet, sondern abgeschrieben.
+
+       Drei Faelle bleiben ausgenommen:
+       - **Ein bestehender Alias.** Dort ist jeder Haken eine Entscheidung,
+         die schon getroffen wurde; abwaehlen hiesse loeschen.
+       - **Eine Vorlage.** Die bestimmt selbst, was an ist (`vorgabeAus`).
+       - **Kein einziger Punkt mit Platz.** Dann bliebe die Liste leer, und
+         eine leere Liste hilft niemandem.
+
+       Einmalig, gemerkt in `vorbelegt` — sonst wuerde jedes Neuzeichnen
+       zurueckstellen, was der Nutzer gerade dazugewaehlt hat. Die drei
+       Knoepfe darueber bleiben, „alle" ist einen Klick entfernt. */
+    if (!e.vorbelegt && !e.vorlage && current.indexOf('alias.') !== 0) {
+      e.vorbelegt = true;
+      if (e.states.some(function (s) { return !!platzVon[s.n]; })) {
+        e.states.forEach(function (s) { s.on = !!platzVon[s.n]; });
+      }
+    }
+
+    /* Mehrere Kanaele, die fuer sich ein Geraet ergeben? Einmal rechnen,
+       am Entwurf merken — der Hinweis in der Karte und die Knoepfe unten
+       lesen dasselbe Ergebnis. */
+    if (e.kanalGeraete === undefined) {
+      e.kanalGeraete = (!(e.instanzen && e.instanzen.length > 1) && current.indexOf('alias.') !== 0)
+        ? steuerKanaele(current) : [];
+    }
+
     /* --- Gerätekarte --- */
     var card = el('div', 'card');
     var strip = el('div', 'strip');
@@ -3116,6 +3262,15 @@
     });
     if (mets.childNodes.length) { strip.appendChild(mets); }
     card.appendChild(strip);
+
+    /* Ein Satz dazu, warum unten zwei Knoepfe stehen. Ohne ihn klickt man
+       auf eine Zahl und weiss nicht, was sie bedeutet. */
+    if (e.kanalGeraete && e.kanalGeraete.length > 1) {
+      var hk = el('div', 'aside');
+      hk.style.margin = '0 0 9px';
+      hk.textContent = tr('result.channelsHint', e.kanalGeraete.length);
+      card.appendChild(hk);
+    }
 
     /* --- Werkzeugleiste --- */
     var bar = el('div', 'listbar');
@@ -3223,7 +3378,7 @@
     /* --- Freie Plaetze des gewaehlten Musters --- */
     var belegteSlots = {};
     Object.keys(platzVon).forEach(function (n) { belegteSlots[platzVon[n]] = 1; });
-    var muster = e.want && D.patterns[e.want];
+    var muster = e.want && musterVon(e.want);
     var freie = muster ? muster.states.filter(function (st) {
       return !belegteSlots[st.name] && !st.multiple;
     }) : [];
@@ -3340,6 +3495,7 @@
     var bd = $('#btn-dry');
     var ba = $('#btn-dry-alle');
     var mehr = e.instanzen && e.instanzen.length > 1;
+    var mehrK = !mehr && (e.kanalGeraete || []).length > 1;
     tplKnopf(true);
     delKnopf(!!objects[zielId2] && zielId2.indexOf('alias.') === 0);
     if (bd) {
@@ -3348,15 +3504,24 @@
          ausgewählten Ausgang" waere lang und sagt weniger. */
       bd.textContent = mehr
         ? (objects[zielId2] ? tr('write.updateNamed', e.zielName) : tr('write.createNamed', e.zielName))
-        : (objects[zielId2] ? tr('write.updateAlias') : tr('write.createAlias'));
+        : mehrK
+          ? (objects[zielId2] ? tr('write.updateAsOne') : tr('write.createAsOne'))
+          : (objects[zielId2] ? tr('write.updateAlias') : tr('write.createAlias'));
       bd.title = zielId2;
     }
     if (ba) {
-      ba.hidden = !mehr;
+      ba.hidden = !mehr && !mehrK;
       if (mehr) {
         ba.textContent = tr('write.createAll', e.instanzen.length);
         ba.title = e.instanzen.map(function (n) {
           return (e.zielOrdner || '') + '.' + (e.kanalname || 'POWER' + n).replace(String(e.instanz), n);
+        }).join(String.fromCharCode(10));
+      } else if (mehrK) {
+        ba.textContent = tr('write.createPerChannel', e.kanalGeraete.length);
+        /* Im Hinweis stehen die Namen, die entstehen wuerden — sonst
+           klickt man auf eine Zahl und weiss nicht, was danach dasteht. */
+        ba.title = e.kanalGeraete.map(function (k) {
+          return (e.zielOrdner || '') + '.' + k.name + '   (' + k.typ + ')';
         }).join(String.fromCharCode(10));
       }
     }
@@ -3555,7 +3720,7 @@
 
   function unterschiede(e) {
     var raus = [];
-    var mu = e.want && D.patterns[e.want];
+    var mu = e.want && musterVon(e.want);
     function hatPlatz(rolle) {
       if (!mu || !rolle) { return false; }
       return mu.states.some(function (st) {
@@ -3848,7 +4013,7 @@
     selRole.addEventListener('change', function () { s.role = selRole.value; neu(); });
     rb.appendChild(selRole);
 
-    var must = e.want && D.patterns[e.want];
+    var must = e.want && musterVon(e.want);
     if (must) {
       var treffer = null;
       must.states.forEach(function (p) {
@@ -4147,6 +4312,22 @@
      nur der gezeigte oder alle — die uebrigen kommen frisch aus der Vorlage,
      Aenderungen von Hand gelten nur fuer den gezeigten Ausgang. */
   function zuSchreiben(alleAusgaenge) {
+    /* Je Kanal ein Geraet: fuer jeden steuerbaren Kanal ein eigener
+       Entwurf, benannt nach dem Kanal — nicht nach seiner Nummer. Aus
+       „Kanal 1" wird `Licht_Bar`, weil das der Name ist, den jemand ihm
+       gegeben hat. */
+    if (alleAusgaenge && entwurf.kanalGeraete && entwurf.kanalGeraete.length > 1) {
+      var ordner = entwurf.zielOrdner;
+      return entwurf.kanalGeraete.map(function (k) {
+        var v = entwurfFuer(k.id);
+        if (!v) { return null; }
+        v.zielOrdner = ordner;
+        v.zielName = k.name;
+        v.ziel = ordner + '.' + k.name;
+        uebernehmeBestand(v);
+        return v;
+      }).filter(Boolean);
+    }
     if (!alleAusgaenge || !entwurf.instanzen || entwurf.instanzen.length < 2) { return [entwurf]; }
     return entwurf.instanzen.map(function (n) {
       if (String(n) === String(entwurf.instanz)) { return entwurf; }
@@ -5970,7 +6151,7 @@
     selRole.addEventListener('change', function () { setzen(selRole.value); });
     rb.appendChild(selRole);
 
-    var must = geraetetyp && D && D.patterns[geraetetyp];
+    var must = geraetetyp && musterVon(geraetetyp);
     if (must) {
       var treffer = null;
       must.states.forEach(function (pp) {

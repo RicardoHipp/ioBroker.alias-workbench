@@ -1,6 +1,6 @@
 {
   "name": "iobroker.alias-workbench",
-  "version": "0.0.39",
+  "version": "0.0.40",
   "description": "Shows what the type-detector makes of a channel, with live values",
   "author": {
     "name": "Ricardo Hipp",
