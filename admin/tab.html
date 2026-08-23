@@ -1374,7 +1374,18 @@
         n: istAlias ? kurzName : kurzName.replace(/\./g, '_'),
         urId: istAlias ? id : undefined,
         on: true,
-        role: istAlias ? (c.role || '') : '',
+        /* Die Rolle der Quelle uebernehmen, wenn es eine gibt.
+
+           Frueher blieb sie im Quellenmodus leer — gedacht fuer Tasmota,
+           wo `cmnd.POWER` schlicht „text" heisst und die richtige Rolle
+           erst aus der Vorlage kommt. Adapter mit gepflegten Rollen
+           bestraft das: hm-rpc liefert `level.temperature` fuer
+           SET_POINT_TEMPERATURE und `value.temperature` fuer
+           ACTUAL_TEMPERATURE, die Werkbank warf beides weg und meldete
+           dann „keine Rolle" und „nichts erkannt". Typ und Einheit hat sie
+           von jeher uebernommen; die Rolle auszunehmen war nicht zu
+           begruenden. Ueberschreiben laesst sie sich weiterhin. */
+        role: c.role || '',
         typ: c.type || '',
         unit: c.unit || '',
         /* Ohne die Werteliste bleibt jeder Platz mit statesDefined leer —
@@ -2340,6 +2351,25 @@
       return abgedeckt.some(function (g) { return p === g || p.indexOf(g + '.') === 0; });
     }
 
+    /* Ein Objekt vom Typ `device` ist ein Geraet — was darunter liegt,
+       sind seine Kanaele, nicht eigene Geraete. Homematic verteilt einen
+       Heizkoerperthermostaten auf zwei davon: Wartung in :0, Funktion in
+       :1. Gemessen ueber 39 Geraete findet der Detektor auf der
+       Geraeteebene jedes Mal mehr als im besten einzelnen Kanal —
+       thermostat 7/13 gegen info 8/12. Wer die Kanaele einzeln zaehlt,
+       macht aus einem Thermostaten zwei Halbe. */
+    pfade.forEach(function (pfad) {
+      if (schonDrin(pfad)) { return; }
+      if (!objects[pfad] || objects[pfad].type !== 'device') { return; }
+      var b = null;
+      VORLAGEN.forEach(function (v) {
+        var t = pruefeVorlage(v, pfad);
+        if (t.passt && (!b || t.punkte > b.punkte)) { b = t; }
+      });
+      geraete.push({ id: pfad, vorlage: b ? b.vorlage : null, punkte: b ? b.punkte : 0 });
+      abgedeckt.push(pfad);
+    });
+
     pfade.forEach(function (pfad) {
       if (schonDrin(pfad)) { return; }
       if (SPARTEN.indexOf(pfad.split('.').pop()) !== -1) { return; }
@@ -2461,7 +2491,12 @@
     /* Sehr viele Punkte heisst fast immer: falscher Knoten gewaehlt.
        Nicht sperren, aber auch nicht ungefragt 1000 Zeilen zeichnen. */
     var VIEL = 40;
-    if (!e.vorschlag && e.states.length > VIEL && !e.trotzdem) {
+    /* Ein `device` ist die Ebene, auf der das Geraet gemeint ist — auch
+       wenn viele Punkte darunter haengen. Ohne diese Ausnahme landete
+       jedes Homematic-Geraet in der Uebersicht „2 Geraete darunter" und
+       liess sich nur kanalweise bearbeiten. */
+    var istGeraetObjekt = !!(objects[current] && objects[current].type === 'device');
+    if (!e.vorschlag && !istGeraetObjekt && e.states.length > VIEL && !e.trotzdem) {
       /* Sind darunter mehrere eigenstaendige Geraete, ist eine Uebersicht
          nuetzlicher als die blosse Warnung: sie zeigt je Geraet, welche
          Vorlage greift und ob es schon einen Alias gibt. Die Funktion gab

@@ -268,6 +268,49 @@ entry in `SPRACHEN` in `admin/tab.html` — nothing else.
 
 ## Changelog
 
+### 0.0.39
+
+Homematic. A thermostat there is a `device` with its data spread over two
+channels — maintenance in `:0`, the actual heating in `:1`. The workbench
+sent you to a folder overview and let you edit one channel at a time, so
+whichever you picked, half the device was missing.
+
+Ran the real detector over all 39 devices on the test system. The device
+level wins every single time:
+
+```
+HK_Bastelzimmer      device: thermostat 7/13     best channel: info 8/12
+Heizung_Badezimmer   device: thermostat 9/13     best channel: info 7/11
+Licht_Küche          device: socket     4/12     best channel: info 7/11
+Terassenrollladen    device: blind      5/18     best channel: info 6/11
+Wohnzimmer_Dimmer    device: dimmer     5/16     best channel: info 6/11
+FK_Terassentür       device: window     4/6      best channel: info 6/10
+```
+
+An alias is not a copy of the hardware tree — it is one flat, logical
+device. That is the whole point of it, and the detector agrees: it collects
+across channel boundaries.
+
+- **An object of type `device` is a device**, not a place to look below. It
+  no longer lands in the folder overview, whatever the point count, and
+  `geraeteDarunter` no longer counts its channels as devices of their own
+- **Roles from the source are kept.** They used to be dropped in source
+  mode — written for Tasmota, where `cmnd.POWER` is called "text" and the
+  real role comes from the template. Adapters that curate their roles were
+  punished for it: hm-rpc ships `level.temperature` for
+  SET_POINT_TEMPERATURE and `value.temperature` for ACTUAL_TEMPERATURE, and
+  the workbench threw both away and then reported "nothing recognised".
+  Type and unit were always taken over; excluding the role could not be
+  justified
+
+`HK_Bastelzimmer` now opens as **thermostat**, and "only what belongs to the
+device" narrows its 42 points to the 10 that have a slot — SET, ACTUAL,
+MODE, BOOST, PARTY, VALVE from channel 1, LOWBAT, VOLTAGE, RSSI, UNREACH
+from channel 0. One alias, both channels.
+
+No change for Tasmota: those points carry no roles at all. Verified across
+14 devices — same template, same checks as before.
+
 ### 0.0.38
 
 The tree showed the last part of the ID and nothing else. Where an adapter
