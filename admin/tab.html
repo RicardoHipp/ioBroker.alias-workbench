@@ -118,6 +118,15 @@
     color:var(--ink-3); text-transform:uppercase; letter-spacing:.04em;
     font-family:var(--sans); font-weight:700; flex:0 0 auto;
   }
+  .tree .idstueck { flex:0 0 auto; }
+  /* Der Name weicht zurueck: gedaempft, und er ist es, der gekuerzt wird,
+     wenn die Spalte nicht reicht. Die Kennung bleibt vollstaendig. */
+  .tree .nam, .nm3 .nam {
+    color:var(--ink-3); font-family:var(--sans); font-size:11px;
+    flex:0 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis;
+  }
+  .nm3 .nam { margin-left:8px; }
+  .tree .node.sel .nam { color:var(--accent-ink); opacity:.85; }
   .tree .cnt { margin-left:auto; font-size:9.5px; color:var(--ink-3); }
   .tree .node.sel .cnt { color:var(--accent-ink); }
   /* 11 px waren zu klein, um als Schaltflaeche erkannt zu werden — und
@@ -1001,6 +1010,27 @@
     zeichneErgebnis();
   });
 
+  /* Der Name eines Objekts — aber nur, wenn er mehr sagt als die ID.
+
+     Bei Adaptern, die Seriennummern als Kennung nehmen, steht im Baum
+     sonst nichts Lesbares: `000A1D89902F6C` ist HK_Bastelzimmer,
+     `AFDCMSTESFOHWVAXIDNBDQQROIYQ` ist „Ricardo (Self)". Gemessen am
+     Produktivsystem sagt bei 1575 von 2532 Behaeltern der Name mehr als
+     die Kennung; bei 569 ist er dasselbe Wort, bei 388 gibt es keinen.
+     Die letzten beiden Faelle bleiben so kurz wie bisher. */
+  function zusatzName(id) {
+    var o = objects[id];
+    if (!o) { return ''; }
+    var n = txt(o.common && o.common.name).trim();
+    if (!n) { return ''; }
+    return (n === String(id).split('.').pop()) ? '' : n;
+  }
+
+  /* Wonach die Zeile gelesen und sortiert wird. */
+  function anzeigeText(k) {
+    return zusatzName(k.id) || k.name;
+  }
+
   function baueBaum() {
     var wurzel = { kinder: {}, id: '', name: '' };
     var alles = experte();
@@ -1132,12 +1162,28 @@
 
   function renderKinder(knoten, filter, tiefe) {
     var ul = el('ul');
-    Object.keys(knoten.kinder).sort().forEach(function (name) {
-      var k = knoten.kinder[name];
+    /* Sortiert wird nach dem, was dasteht — sonst steht die Liste in einer
+       Ordnung, die niemand sieht: bei hm-rpc nach Seriennummer, wo doch
+       FK_* und HK_* beieinander gehoeren. `numeric` dazu, damit POWER2 vor
+       POWER10 kommt. Einmal rechnen, nicht bei jedem Vergleich. */
+    var reihen = Object.keys(knoten.kinder).map(function (n) {
+      var kk = knoten.kinder[n];
+      return { k: kk, zus: zusatzName(kk.id) };
+    });
+    reihen.sort(function (a, b) {
+      return String(a.zus || a.k.name).localeCompare(String(b.zus || b.k.name),
+        undefined, { numeric: true, sensitivity: 'base' });
+    });
+
+    reihen.forEach(function (reihe) {
+      var k = reihe.k;
       if (!k._zust) { return; }
       if (k.art === 'state' && tiefe > 0) { return; }   // Zustaende zeigt die rechte Seite
 
-      var passt = !filter || k.id.toLowerCase().indexOf(filter) !== -1;
+      /* Der Filter sucht auch im Namen. Wer „Badezimmer" tippt, meint
+         FK_Badezimmer — und nicht die Seriennummer, die er nicht kennt. */
+      var passt = !filter || k.id.toLowerCase().indexOf(filter) !== -1 ||
+                  (reihe.zus && reihe.zus.toLowerCase().indexOf(filter) !== -1);
       var kinderUl = renderKinder(k, filter, tiefe + 1);
       var kinderPassen = kinderUl.childNodes.length > 0;
       if (!passt && !kinderPassen) { return; }
@@ -1163,7 +1209,12 @@
       var kk = el('span', 'kind', k.art ? k.art.slice(0, 3) : '·');
       if (!k.art) { kk.title = tr('tree.noObjectHint'); }
       d.appendChild(kk);
-      d.appendChild(el('span', null, k.name));
+      d.appendChild(el('span', 'idstueck', k.name));
+      if (reihe.zus) {
+        var nm2 = el('span', 'nam', reihe.zus);
+        d.appendChild(nm2);
+        d.title = k.id + '  ·  ' + reihe.zus;
+      }
       if (waehlbar) {
         if (wohlGeraet(k)) {
           var pk = el('span', 'geraetepunkt', '●');
@@ -2470,13 +2521,15 @@
        man es auch aendern kann. */
     var head = el('div', 'rhead');
     var links = el('div');
-    links.appendChild(el('div', 'id', current.split('.').pop()));
+    /* Oben steht, was links angeklickt wurde — und das ist jetzt der Name,
+       wo es einen gibt. Die Kennung steht unverkuerzt in der Zeile
+       darunter; doppelt braucht sie in der Unterzeile nicht zu stehen. */
+    var kopfName = zusatzName(current);
+    links.appendChild(el('div', 'id', kopfName || current.split('.').pop()));
     links.appendChild(el('div', 'pfad', current));
 
     var sub = el('div', 'sub');
-    var nm = txt(obj.common && obj.common.name);
-    sub.appendChild(document.createTextNode((objects[current] ? obj.type : tr('result.noObjectShort')) +
-      (nm && nm !== current.split('.').pop() ? '  ·  ' + nm : '') + '  ·  ' +
+    sub.appendChild(document.createTextNode((objects[current] ? obj.type : tr('result.noObjectShort')) + '  ·  ' +
       (direkt.length !== alleZust.length
         ? tr('result.statesDirect', alleZust.length, direkt.length)
         : tr('result.states', alleZust.length))));
@@ -3280,7 +3333,9 @@
 
     var head = el('div', 'rhead');
     var links = el('div');
-    links.appendChild(el('div', 'id', wurzel));
+    var ordnerName = zusatzName(wurzel);
+    links.appendChild(el('div', 'id', ordnerName || wurzel.split('.').pop()));
+    links.appendChild(el('div', 'pfad', wurzel));
     links.appendChild(el('div', 'sub',
       tr('folder.devicesBelow', geraete.length, kindZustaende(wurzel).length)));
     head.appendChild(links);
@@ -3316,7 +3371,14 @@
       row.style.gridTemplateColumns = '1fr 190px 130px 12px';
       row.tabIndex = 0;
 
+      /* Ohne den Namen heissen die Kanaele eines Homematic-Geraets hier
+         schlicht „0" und „1". */
+      var gName = zusatzName(g.id);
       var nm = el('span', 'nm3', g.id.slice(wurzel.length + 1));
+      if (gName) {
+        nm.appendChild(el('span', 'nam', gName));
+        nm.title = g.id + '  ·  ' + gName;
+      }
       row.appendChild(nm);
 
       var vl = el('span', 'ro2');

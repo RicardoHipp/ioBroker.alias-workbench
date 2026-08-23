@@ -268,6 +268,37 @@ entry in `SPRACHEN` in `admin/tab.html` — nothing else.
 
 ## Changelog
 
+### 0.0.38
+
+The tree showed the last part of the ID and nothing else. Where an adapter
+uses serial numbers as identifiers, that leaves you staring at this:
+
+```
+0000DBE9A2B8AF                 is  FK_Badezimmer
+000A1D89902F6C                 is  HK_Bastelzimmer
+AFDCMSTESFOHWVAXIDNBDQQROIYQ   is  Ricardo (Self)
+amzn1~HH1IL5GNFYTV23J          is  Michael Sauters Zuhause
+```
+
+Counted over 2532 containers on the production system: for **1575 of them
+the name says more than the ID**, for 569 it is the same word, and 388 have
+none. So the name is added only where it adds something — the other 957 rows
+stay exactly as short as before.
+
+- **Tree**: the name follows the ID in a muted tone, and it is the name that
+  gets truncated when the column runs out, never the ID. Tooltip carries both
+- **Header on the right**: the name moved to the top line, where what you
+  clicked belongs; the full ID stays in the small line below and no longer
+  appears twice
+- **Folder overview**: without this, the channels of a Homematic device were
+  listed as `0` and `1`
+- **The filter searches names too.** Typing "Badezimmer" now finds
+  `FK_Badezimmer`. Before it only looked at the ID — the one thing nobody
+  knows by heart
+- **Sorted by what is displayed**, not by the ID underneath. At hm-rpc that
+  finally puts FK_* and HK_* together instead of ordering them by serial
+  number. `numeric` collation as well, so POWER2 comes before POWER10
+
 ### 0.0.37
 
 A device is a node with data points under it — not a node carrying a

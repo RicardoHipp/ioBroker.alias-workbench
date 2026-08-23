@@ -1,7 +1,7 @@
 {
   "common": {
     "name": "alias-workbench",
-    "version": "0.0.37",
+    "version": "0.0.38",
     "news": {
       "0.0.34": {
         "en": "Foldable things now look foldable — plus/minus on sections, bigger triangles in the tree",
