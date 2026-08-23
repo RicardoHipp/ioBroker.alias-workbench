@@ -3060,7 +3060,7 @@
     }
     /* Nur der Name, kein Pfad mehr: seit der Kopf oben zeigt, was links
        gewaehlt wurde, stand er hier ein zweites Mal. */
-    strip.appendChild(el('div', 'nm2', nm || current.split('.').pop()));
+    strip.appendChild(el('div', 'nm2', kopfName || current.split('.').pop()));
 
     var LBL = { ELECTRIC_POWER: 'Leistung', CONSUMPTION: 'Verbrauch', VOLTAGE: 'Spannung',
                 CURRENT: 'Strom', ACTUAL: 'Position', FREQUENCY: 'Frequenz' };

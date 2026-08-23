@@ -299,6 +299,14 @@ stay exactly as short as before.
   finally puts FK_* and HK_* together instead of ordering them by serial
   number. `numeric` collation as well, so POWER2 comes before POWER10
 
+Shipped broken and fixed the same hour: moving the name out of the sub-line
+left one use of the old variable behind, four hundred lines further down in
+the same function. `Uncaught ReferenceError: nm is not defined` — and with it
+the whole right-hand pane for every node that has a device pattern. It went
+unnoticed because I checked a single channel that has none. The mass click-
+through that would have caught it on the first node now sits in the test plan
+as a rule: run it after every change to `zeichneErgebnis`, never a spot check.
+
 ### 0.0.37
 
 A device is a node with data points under it — not a node carrying a
