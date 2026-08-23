@@ -205,6 +205,7 @@
   "pattern.usualOnly": "nur die üblichen",
   "result.allAnyway": "Trotzdem alle ",
   "result.channelsHint": "Dieses Gerät hat {0} Kanäle, die für sich ein Gerät ergeben. Unten kannst du wählen: ein Alias für alles, oder einer je Kanal.",
+  "result.extraSwitches": "Mit dabei: {0} Punkte aus weiteren Kanälen, für die das {1}-Muster keinen Platz hat. Sie werden angelegt, gelten aber nicht als Schalter oder Rückmeldung des Geräts. Für getrennte Bedienung unten „je Kanal ein Gerät\" wählen.",
   "result.header": "Was der type-detector daraus macht",
   "result.newlyCreated": "wird neu angelegt",
   "result.noObjectShort": "kein Objekt",

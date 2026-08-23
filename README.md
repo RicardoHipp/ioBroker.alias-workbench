@@ -315,10 +315,38 @@ uses the object's name**. It used to be the last part of the ID, so a
 Homematic device landed at `alias.0.NEQ1660737` and one of its channels at
 `alias.0.1`. Now it is `alias.0.Licht_Bar_Esstisch` and `alias.0.Licht_Bar`.
 
-Still open, and visible in the dry run: the points of a per-channel alias are
-named after the source (`STATE`) rather than the pattern slot (`SET`), and the
-maintenance data of the shared channel 0 — LOWBAT, UNREACH, RSSI — is not
-offered when a single channel is edited.
+**"As one device" now means all of it.** It used to take only the required
+slot of the other channels, so the second lamp got a switch but no feedback:
+
+```
+before                          after
+  0_LOWBAT   → LOWBAT             0_LOWBAT   → LOWBAT
+  0_RSSI_PEER→ RSSI               0_RSSI_PEER→ RSSI
+  0_UNREACH  → UNREACH            0_UNREACH  → UNREACH
+  2_STATE    → SET                1_STATE      (no slot)   ← Licht_Bar
+  2_WORKING  → WORKING            1_WORKING    (no slot)   ← Licht_Bar
+                                  2_STATE    → SET         ← Licht_Esstisch
+                                  2_WORKING  → WORKING     ← Licht_Esstisch
+```
+
+A line above the list says what that means: these points are created but do
+not count as the device's switch or feedback, and for separate control there
+is the other button.
+
+**A point is now recognised by its source, not its name.** If an alias
+already holds a point reading from the same place, that is the same point —
+and the name already there wins. Without it, any change to how the workbench
+names points would produce duplicates in existing aliases, and worse: an
+update would delete the old name and create the new one, breaking every
+widget and script pointing at it.
+
+Still open: the points of a per-channel alias are named after the source
+(`STATE`) rather than the pattern slot (`SET`); at a device with several
+named channels the numbers `1_STATE` and `2_STATE` do not say which lamp is
+which; and the maintenance data of the shared channel 0 is not offered when a
+single channel is edited. Naming the points after their channel was tried and
+reverted — it produced duplicates against existing aliases and cost the
+pattern its recognition.
 
 ### 0.0.39
 

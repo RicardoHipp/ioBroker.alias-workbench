@@ -2127,8 +2127,15 @@
       if (!f.length) { return; }
       /* Nur zaehlen, was einen Pflichtplatz wirklich besetzt — sonst
          gilt jeder Kanal mit irgendeinem Messwert als Geraet. */
+      /* Alles, was der Kanal an Plaetzen belegt — nicht nur die
+         Pflichtplaetze. Sonst kaeme beim Zweifach-Aktor der Schalter des
+         zweiten Kanals mit, seine Rueckmeldung WORKING aber nicht: ein
+         Licht mit Schalter, das andere ohne Statusanzeige. */
+      var pflicht = f[0].states.filter(function (st) { return st.id; })
+        .map(function (st) { return st.id; });
       if (!f[0].states.some(function (st) { return st.required && st.id; })) { return; }
-      raus.push({ id: id, typ: f[0].type, name: zusatzName(id) || id.slice(pre.length) });
+      raus.push({ id: id, typ: f[0].type, name: zusatzName(id) || id.slice(pre.length),
+                  pflicht: pflicht });
     });
     kanalGeraeteCache[dev] = raus;
     return raus;
@@ -3213,19 +3220,32 @@
        Einmalig, gemerkt in `vorbelegt` — sonst wuerde jedes Neuzeichnen
        zurueckstellen, was der Nutzer gerade dazugewaehlt hat. Die drei
        Knoepfe darueber bleiben, „alle" ist einen Klick entfernt. */
-    if (!e.vorbelegt && !e.vorlage && current.indexOf('alias.') !== 0) {
-      e.vorbelegt = true;
-      if (e.states.some(function (s) { return !!platzVon[s.n]; })) {
-        e.states.forEach(function (s) { s.on = !!platzVon[s.n]; });
-      }
-    }
-
     /* Mehrere Kanaele, die fuer sich ein Geraet ergeben? Einmal rechnen,
        am Entwurf merken — der Hinweis in der Karte und die Knoepfe unten
        lesen dasselbe Ergebnis. */
     if (e.kanalGeraete === undefined) {
       e.kanalGeraete = (!(e.instanzen && e.instanzen.length > 1) && current.indexOf('alias.') !== 0)
         ? steuerKanaele(current) : [];
+    }
+
+    if (!e.vorbelegt && !e.vorlage && current.indexOf('alias.') !== 0) {
+      e.vorbelegt = true;
+      if (e.states.some(function (s) { return !!platzVon[s.n]; })) {
+        e.states.forEach(function (s) { s.on = !!platzVon[s.n]; });
+      }
+      /* „Als ein Geraet" muss halten, was es sagt: alles, was dieses Geraet
+         schaltet, gehoert hinein. Das Muster hat aber nur einen Platz dafuer
+         — bei einem Zweifach-Aktor bekaeme ihn Kanal 2, und Kanal 1 fiele
+         stillschweigend weg. Ein Alias, dem heimlich ein Licht fehlt, ist
+         schlimmer als einer mit einem Punkt zu viel. Also kommen die
+         Pflichtpunkte der anderen Kanaele mit dazu; dass sie keinen Platz
+         finden, steht als Hinweis darueber. */
+      (e.kanalGeraete || []).forEach(function (k) {
+        (k.pflicht || []).forEach(function (pid) {
+          var kurz = pid.slice(current.length + 1).replace(/\./g, '_');
+          e.states.forEach(function (st) { if (st.n === kurz) { st.on = true; } });
+        });
+      });
     }
 
     /* --- Gerätekarte --- */
@@ -3270,6 +3290,24 @@
       hk.style.margin = '0 0 9px';
       hk.textContent = tr('result.channelsHint', e.kanalGeraete.length);
       card.appendChild(hk);
+
+      /* Wie viele angehakte Punkte sind Schalter, fuer die das Muster
+         keinen Platz hat? Genau die, die eben dazugekommen sind. */
+      var ohnePlatz = 0;
+      e.kanalGeraete.forEach(function (k) {
+        (k.pflicht || []).forEach(function (pid) {
+          var kurz = pid.slice(current.length + 1).replace(/\./g, '_');
+          e.states.forEach(function (st) {
+            if (st.n === kurz && st.on && !platzVon[st.n]) { ohnePlatz++; }
+          });
+        });
+      });
+      if (ohnePlatz) {
+        var hw = el('div', 'aside w');
+        hw.style.margin = '0 0 9px';
+        hw.textContent = tr('result.extraSwitches', ohnePlatz, e.want || '?');
+        card.appendChild(hw);
+      }
     }
 
     /* --- Werkzeugleiste --- */
@@ -3686,7 +3724,11 @@
     if (e.kanal === e.ziel) { return; }
 
     var kennt = {};
-    e.states.forEach(function (s) { if (s.n) { kennt[s.n] = s; } });
+    var kenntQuelle = {};
+    e.states.forEach(function (s) {
+      if (s.n) { kennt[s.n] = s; }
+      if (s.srcR) { kenntQuelle[s.srcR] = s; }
+    });
 
     /* Erstens: was der Vorschlag kennt und im Alias steht, wird angehakt. */
     Object.keys(kennt).forEach(function (n) {
@@ -3703,6 +3745,25 @@
       var n = id.slice(e.ziel.length + 1);
       if (n.indexOf('.') !== -1 || kennt[n]) { return; }
       var o = objects[id], c = o.common || {}, a = c.alias || {}, q = aliasQuellen(o);
+
+      /* Derselbe Punkt unter anderem Namen? Dann ist es kein zweiter,
+         sondern derselbe — und der Name, der schon im Alias steht, gilt.
+
+         Sonst entstuenden Dubletten, sobald die Werkbank ihre Namensgebung
+         aendert: der Entwurf nennt einen Punkt heute `Licht_Bar_STATE`, im
+         Alias steht er als `1_STATE`, und beide kaemen in die Liste. Und
+         schlimmer: ein Aktualisieren wuerde `1_STATE` loeschen und
+         `Licht_Bar_STATE` anlegen — jedes Widget und jedes Skript, das auf
+         den alten Namen zeigt, liefe ins Leere. Was einmal steht, bleibt
+         stehen; neue Punkte bekommen den neuen Namen. */
+      if (q.read && kenntQuelle[q.read] && !objects[e.ziel + '.' + kenntQuelle[q.read].n]) {
+        var vorhanden = kenntQuelle[q.read];
+        vorhanden.n = n;
+        vorhanden.on = true;
+        vorhanden.ausBestand = true;
+        kennt[n] = vorhanden;
+        return;
+      }
       var nm = txt(c.name);
       e.states.push({
         n: n, on: true, ausBestand: true, nurImAlias: true,

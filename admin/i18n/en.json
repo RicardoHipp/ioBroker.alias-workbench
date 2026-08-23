@@ -205,6 +205,7 @@
   "pattern.usualOnly": "the usual ones only",
   "result.allAnyway": "All anyway ",
   "result.channelsHint": "This device has {0} channels that make sense on their own. Choose below: one alias for all of it, or one per channel.",
+  "result.extraSwitches": "Included: {0} points from other channels that the {1} pattern has no slot for. They are created, but do not count as the device’s switch or feedback. For separate control, use \"one device per channel\" below.",
   "result.header": "What the type-detector makes of it",
   "result.newlyCreated": "will be created",
   "result.noObjectShort": "no object",
