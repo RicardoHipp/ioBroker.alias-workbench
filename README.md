@@ -340,13 +340,28 @@ names points would produce duplicates in existing aliases, and worse: an
 update would delete the old name and create the new one, breaking every
 widget and script pointing at it.
 
+**And you can tell the lamps apart.** `1_STATE` and `2_STATE` said nothing
+about which one is Licht_Bar. Renaming the points was tried first and
+reverted — it produced duplicates against existing aliases, and an update
+would have deleted the old name and created the new one, breaking every
+widget pointing at it. The caption does the job without any of that:
+
+```
+ID            common.name
+1_STATE       Licht_Bar STATE
+1_WORKING     Licht_Bar WORKING
+2_STATE       Licht_Esstisch STATE
+2_WORKING     Licht_Esstisch WORKING
+0_LOWBAT      0_LOWBAT                 (channel 0 has no name of its own)
+```
+
+The ID stays put, so nothing breaks; the object browser shows the caption in
+the column beside it. A device whose channels are called `<device>:<number>`
+gets no caption — there is nothing to tell apart there.
+
 Still open: the points of a per-channel alias are named after the source
-(`STATE`) rather than the pattern slot (`SET`); at a device with several
-named channels the numbers `1_STATE` and `2_STATE` do not say which lamp is
-which; and the maintenance data of the shared channel 0 is not offered when a
-single channel is edited. Naming the points after their channel was tried and
-reverted — it produced duplicates against existing aliases and cost the
-pattern its recognition.
+(`STATE`) rather than the pattern slot (`SET`), and the maintenance data of
+the shared channel 0 is not offered when a single channel is edited.
 
 ### 0.0.39
 

@@ -1393,6 +1393,40 @@
     return String(v);
   }
 
+  /* Der Name eines Kanals, wenn ihm jemand einen gegeben hat.
+
+     `zusatzName` ist hier zu grosszuegig: hm-rpc benennt jeden Kanal
+     schematisch `<Geraet>:<Nummer>` — `Licht_Bar_Esstisch:0`. Das weicht
+     zwar von der Kennung `0` ab, sagt aber nichts, was nicht schon
+     danebensteht. Ein eigener Name ist erst `Licht_Bar`. */
+  function eigenerKanalName(id) {
+    var n = zusatzName(id);
+    if (!n) { return ''; }
+    var nr = String(id).split('.').pop();
+    return (n.slice(-(nr.length + 1)) === ':' + nr) ? '' : n;
+  }
+
+  /* Woran man im fertigen Alias erkennt, welcher Kanal gemeint ist.
+
+     Die Kennung bleibt `1_STATE` — sie umzubenennen hiesse, bei jedem
+     bestehenden Alias den Punkt zu loeschen und neu anzulegen, und jedes
+     Widget und Skript, das darauf zeigt, liefe ins Leere. Die Beschriftung
+     dagegen ist frei: sie landet in `common.name`, steht im Objektbrowser
+     in der Spalte daneben und bricht nichts.
+
+         1_STATE     Licht_Bar STATE
+         2_STATE     Licht_Esstisch STATE
+
+     Bei einem Geraet mit nur einem benannten Kanal — dem Normalfall —
+     entsteht keine Beschriftung; dort gibt es nichts zu unterscheiden. */
+  function kanalBeschriftung(kanal, kurzName) {
+    var t = String(kurzName).split('.');
+    if (t.length < 2) { return ''; }
+    var kn = eigenerKanalName(kanal + '.' + t[0]);
+    if (!kn) { return ''; }
+    return kn + ' ' + t.slice(1).join(' ');
+  }
+
   function baueEntwurf(kanal) {
     var istAlias = (kanal.indexOf('alias.') === 0);
     var e = { kanal: kanal, states: [], want: null, wantAuto: null, alleMuster: false };
@@ -1431,7 +1465,7 @@
         srcW: istAlias ? (q.einfach ? '' : (q.write || '')) : (c.write ? id : ''),
         f: (typeof a.read === 'string') ? a.read : '',
         fw: (typeof a.write === 'string') ? a.write : '',
-        caption: istAlias ? txt(c.name) : '',
+        caption: istAlias ? txt(c.name) : kanalBeschriftung(kanal, kurzName),
         manuell: false
       });
     });
@@ -2134,7 +2168,7 @@
       var pflicht = f[0].states.filter(function (st) { return st.id; })
         .map(function (st) { return st.id; });
       if (!f[0].states.some(function (st) { return st.required && st.id; })) { return; }
-      raus.push({ id: id, typ: f[0].type, name: zusatzName(id) || id.slice(pre.length),
+      raus.push({ id: id, typ: f[0].type, name: eigenerKanalName(id) || id.slice(pre.length),
                   pflicht: pflicht });
     });
     kanalGeraeteCache[dev] = raus;
