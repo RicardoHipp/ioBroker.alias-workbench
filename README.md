@@ -268,6 +268,44 @@ entry in `SPRACHEN` in `admin/tab.html` — nothing else.
 
 ## Changelog
 
+### 0.0.36
+
+The tree follows the admin's expert mode. Without it, `system.*` and `enum.*`
+are gone — 28 of 157 rows on the test system, and not one of them is anything
+you would build a device alias from.
+
+The admin keeps the setting in two stages, and we read it the same way:
+
+```js
+const f = sessionStorage.getItem("App.expertMode");
+expertMode = f ? f === "true" : !!systemConfig.common.expertMode;
+```
+
+The switch in the toolbar is per browser session; underneath sits the lasting
+default in `system.config`. The tab runs in an iframe of the same origin, so
+it reads the same storage — and it receives a `storage` event when the switch
+is flipped, so it follows without a reload. Measured both.
+
+What gets hidden is the admin's own rule, word for word:
+
+```
+system, enum, _design/, *.admin, common.expert === true
+```
+
+The last one is the useful one: an adapter can mark a point as expert-only.
+On the test system exactly one does — `backitup.0.info.dropboxTokens`, an
+access token, which has no business in a list of alias sources.
+
+Two deliberate differences:
+
+- The filter sits in **building** the tree, not in drawing it. Otherwise a
+  folder would count states nobody can see
+- The **source list in the detail pane stays unfiltered**. An alias that
+  reads from `system.adapter.mqtt-client.0.alive` has to remain editable —
+  hiding it there would make someone's own wiring vanish under their hands
+
+If the selected node is one that disappears, the selection is cleared with it.
+
 ### 0.0.35
 
 A full test run over every function, and eleven things came back. The plan is

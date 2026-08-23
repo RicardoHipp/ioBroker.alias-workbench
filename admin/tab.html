@@ -619,6 +619,9 @@
     socket.emit('getObject', 'system.config', function (err, obj) {
       if (beantwortet) { return; }
       beantwortet = true;
+      /* Der Expertenmodus steht an derselben Stelle — einmal fragen reicht
+         fuer beides. */
+      expertenVorgabe = !!(!err && obj && obj.common && obj.common.expertMode);
       var l = (!err && obj && obj.common && obj.common.language) || vorgabe;
       weiter(l);
     });
@@ -954,10 +957,60 @@
   /* ================== Baum ================== */
   /* Aus den flachen IDs einen Baum bauen. Nur Zweige, die irgendwo
      Zustaende enthalten — der Rest ist fuer uns Laerm. */
+  /* ================== Expertenmodus ==================
+     Der Admin fuehrt ihn zweistufig: der Schalter oben rechts gilt nur fuer
+     diese Browsersitzung und steht im sessionStorage, darunter liegt die
+     dauerhafte Vorgabe in system.config. Genau diese Reihenfolge steht auch
+     im Admin-Bundle:
+
+       const f = sessionStorage.getItem("App.expertMode");
+       expertMode = f ? f === "true" : !!systemConfig.common.expertMode;
+
+     Der Reiter laeuft im iframe derselben Herkunft, liest also denselben
+     Speicher — und bekommt beim Umschalten ein storage-Ereignis, ohne dass
+     ihn jemand neu laden muss. */
+  var expertenVorgabe = false;
+
+  function experte() {
+    var f = null;
+    try { f = window.sessionStorage.getItem('App.expertMode'); } catch (e) { /* gesperrt */ }
+    return f ? (f === 'true') : expertenVorgabe;
+  }
+
+  /* Was nur Experten sehen. Woertlich dieselbe Regel wie im Objektbrowser
+     des Admin, damit die Werkbank nicht ihre eigene Wahrheit pflegt. Das
+     letzte Stueck ist das nuetzlichste: ein Adapter kann einen Punkt selbst
+     als Expertensache markieren — Zugangstoken etwa tun das. */
+  function nurFuerExperten(id, o) {
+    if (id === 'system' || id.indexOf('system.') === 0) { return true; }
+    if (id === 'enum' || id.indexOf('enum.') === 0) { return true; }
+    if (id.indexOf('_design/') === 0) { return true; }
+    if (id.slice(-6) === '.admin') { return true; }
+    return !!(o && o.common && o.common.expert);
+  }
+
+  window.addEventListener('storage', function (e) {
+    if (e.key !== 'App.expertMode') { return; }
+    /* Steht die Auswahl in einem Zweig, den es gleich nicht mehr gibt, muss
+       sie weg — sonst zeigt die rechte Seite ein Geraet, das links fehlt. */
+    if (current && !experte() && nurFuerExperten(current, objects[current])) {
+      current = null;
+      entwurf = null;
+    }
+    zeichneBaum();
+    zeichneErgebnis();
+  });
+
   function baueBaum() {
     var wurzel = { kinder: {}, id: '', name: '' };
+    var alles = experte();
     keysSorted.forEach(function (id) {
       var o = objects[id];
+      /* Gefiltert wird beim Bauen, nicht beim Zeichnen: sonst zaehlte ein
+         Ordner Zustaende mit, die niemand sieht. Die Quellenauswahl im
+         Detailfenster bleibt bewusst ungefiltert — ein Alias, der aus
+         system.adapter.…alive liest, muss bearbeitbar bleiben. */
+      if (!alles && nurFuerExperten(id, o)) { return; }
       var teile = id.split('.');
       var k = wurzel;
       var pfad = '';
