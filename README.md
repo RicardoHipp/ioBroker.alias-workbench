@@ -268,6 +268,75 @@ entry in `SPRACHEN` in `admin/tab.html` — nothing else.
 
 ## Changelog
 
+### 0.0.35
+
+A full test run over every function, and eleven things came back. The plan is
+now a document of its own — `testplan.md`, one numbered check per line, so the
+next run starts where this one left off instead of from memory.
+
+**Recognition**
+
+- A multi-output template found no outputs at all unless the `cmnd` objects
+  already existed. `Garten-Ventilinsel`, `Wohnzimmer.Couch` and `NSPanel`
+  report POWER1..n in `tele/STATE` and have no `cmnd` point yet — exactly the
+  case 0.0.29 built the "possible commands" recognition for. The set taken
+  from object names was empty and went into the intersection anyway, so the
+  intersection was always empty. An empty set means "nothing known here", not
+  "no outputs here", and is now dropped
+
+**Templates**
+
+- The **try-out never hit anything**. Every template reported "0 devices
+  matched", including the one that recognises twenty devices in the sources
+  tab. `pruefeVorlage` also checks `erkennung.inhalt` and needs the *value* of
+  a point for that — and values are only loaded for the selected channel.
+  In the templates tab nothing is selected. The missing values are now
+  fetched once and the sheet redrawn
+- Deriving a template from a device wrote the formula into the field name:
+  `feld: "POWER === 'ON'"`. The pattern that pulls the field out of
+  `JSON.parse(val).X` took everything to the end of the line. It now accepts
+  only a real field path; anything else stays a formula
+- Deriving still lost the fallback sources (`lesenSonst`, open since 0.0.23).
+  The draft now carries every reading route it was given, not just the one
+  that happened to work today
+
+**Losing things**
+
+- Updating an alias from the alias tab wrote `native: {}` over **every**
+  data point — template, origin slot and the `vonHand` mark, all gone. The
+  channel kept its origin, the points lost theirs
+- "Create the missing send points" in the dry-run dialog discarded the target
+  you had typed. The dialog then listed objects for a different folder than
+  the one in the field, and "create now" would have written them there
+- Typing a folder name and then clicking "create" in a row: the first click
+  did nothing. Leaving the field redrew the pane and replaced the button
+  before the click reached it
+
+**Smaller**
+
+- Choosing a JSON field forced the type to `number`. Picking `POWER` ("ON")
+  or `Wifi.SSId` left the point as a number, and a slot the pattern holds as
+  boolean lost its default — `switch.light` plus `number` is no device any
+  more. The type is now derived from the actual value, and only when none is
+  set
+- In the alias tab the source list offered no `cmnd` points at all, so a
+  hand-added point could never get a write target. The root was cut at the
+  branch (`…RGB.tele`) instead of the device
+- With nothing selected, the footer kept the buttons and the object count of
+  whatever was there before — after deleting an alias, and after coming back
+  from the templates tab
+
+Two more came out of the second run, once the try-out worked at all:
+
+- It found only one multi-output device instead of four. The candidate search
+  looked for the first required point (`cmnd.POWER%N%`) and nothing else, so
+  a device that has no `cmnd` object yet never became a candidate. It now
+  also searches over the points named in `erkennung.inhalt`
+- Every template was scored as if it were your own — and an own template gets
+  a 1000 point head start. Socket claimed 18 wins, lamp 23, on 26 devices;
+  only one template can win a device. Counted properly it is 18 and 5, and
+  the wins across all five templates now add up to exactly the 30 devices
+
 ### 0.0.34
 
 Four places fold open, and none of them looked like it. Measured before:

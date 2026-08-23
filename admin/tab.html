@@ -1518,7 +1518,16 @@
       return raus;
     });
 
-    mengen = mengen.concat(ausJson);
+    /* Leere Mengen fliegen raus. Eine Pflichtangabe, zu der es kein
+       einziges Objekt gibt, sagt „hier weiss ich nichts" — nicht „hier
+       gibt es keine Ausgaenge". Frueher ging genau diese leere Menge in
+       den Schnitt ein und machte ihn immer leer: eine Ventilinsel, die
+       POWER1..4 in tele/STATE meldet, aber noch keinen cmnd-Punkt hat,
+       fand keinen einzigen Ausgang. Das ist derselbe Fall, fuer den die
+       Erkennung aus moeglichen Befehlen gebaut wurde. */
+    mengen = mengen.concat(ausJson).filter(function (m) {
+      return Object.keys(m).length > 0;
+    });
     if (!mengen.length) { return [null]; }
 
     /* nur Nummern, die in allen Pflichtangaben vorkommen */
@@ -1777,7 +1786,14 @@
         states: z.werteliste || undefined,
         manuell: false,
         ausVorlage: z.name,
-        hinweis: z.hinweis || ''
+        hinweis: z.hinweis || '',
+        /* Alle Lesewege mitnehmen, nicht nur den, der heute gegriffen hat.
+           Wer aus diesem Geraet eine Vorlage macht, soll die Ersatzquellen
+           behalten — sonst faellt die neue Vorlage bei jedem Geraet um, das
+           seine IP an einer anderen Stelle fuehrt. */
+        wege: wege.map(function (w) {
+          return { punkt: w.punkt, feld: w.feld, formel: w.leseformel };
+        })
       });
     });
 
@@ -2092,8 +2108,17 @@
     return String(v).slice(0, 30) + (s.unit ? ' ' + s.unit : '');
   }
 
+  /* Steckt in der Formel nichts als ein ausgepacktes JSON-Feld? Dann ist
+     es eines — sonst ist es eine Formel und bleibt eine.
+
+     `(.+)` nahm frueher alles bis zum Zeilenende mit. Aus
+     `JSON.parse(val).POWER === "ON"` wurde damit das „Feld"
+     `POWER === "ON"`; eine daraus abgeleitete Vorlage trug den Vergleich
+     im Feldnamen, und die Feldauswahl im Detail zeigte ihn als Eintrag. */
+  var FELDPFAD = /^JSON\.parse\(val\)\.([A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*)$/;
+
   function feldAusFormel(f) {
-    var m = /^JSON\.parse\(val\)\.(.+)$/.exec(f || '');
+    var m = FELDPFAD.exec(f || '');
     return m ? m[1] : '';
   }
 
@@ -2140,7 +2165,17 @@
     e.states.forEach(function (s) {
       if (!s.srcR) { return; }
       var t = s.srcR.split('.');
-      wurzeln[t.slice(0, Math.max(2, t.length - 1)).join('.')] = 1;
+      var w = t.slice(0, Math.max(2, t.length - 1));
+      wurzeln[w.join('.')] = 1;
+      /* Endet die Wurzel auf einer Sparte, gehoert das Geraet darueber
+         dazu. Sonst sammelt die Liste nur Geschwister derselben Sparte:
+         wer einen Punkt aus tele/STATE liest, bekam ausschliesslich
+         tele-Punkte angeboten und konnte kein Schreibziel in cmnd
+         waehlen — die acht cmnd-Punkte einer Farblampe fehlten
+         vollstaendig. */
+      if (w.length > 2 && SPARTEN.indexOf(w[w.length - 1]) > -1) {
+        wurzeln[w.slice(0, w.length - 1).join('.')] = 1;
+      }
     });
     Object.keys(wurzeln).forEach(function (w) {
       keysSorted.forEach(function (k) { if (k.indexOf(w + '.') === 0) { dazu(k); } });
@@ -2268,6 +2303,25 @@
     if (bck) { bck.disabled = false; }
     if (!current || !entwurf) {
       host.appendChild(el('div', 'empty', tr('result.pickSomething')));
+      /* Nichts gewaehlt heisst: keine Knoepfe fuer ein Geraet, das es
+         gerade nicht gibt. Nach dem Loeschen eines Alias und nach der
+         Rueckkehr aus dem Vorlagen-Tab stand hier weiter „Alias
+         aktualisieren", „Alle 4 erzeugen", „Pruefungen 7 ✓" und unten
+         die Objektzahl von vorhin samt Geraetetyp. Die Knoepfe waren
+         wirkungslos, gelesen hat man sie trotzdem. */
+      var bd0 = $('#btn-dry');
+      bd0.disabled = true;
+      /* Auch die Beschriftung zuruecksetzen: „Alias aktualisieren" stand
+         sonst noch da, obwohl es den Alias nicht mehr gibt. */
+      bd0.textContent = tr('write.createAlias');
+      var dAlle = $('#btn-dry-alle'); if (dAlle) { dAlle.hidden = true; }
+      tplKnopf(false);
+      delKnopf(false);
+      var bc0 = $('#btn-checks');
+      if (bc0) { bc0.disabled = true; }
+      var chip0 = $('#checkchip');
+      if (chip0) { chip0.textContent = ''; chip0.className = ''; }
+      $('#foot').textContent = tr('app.objectsCount', keysSorted.length);
       return;
     }
 
@@ -2492,9 +2546,16 @@
       };
       var uebernehmen = function () {
         var t = saeubern(iO.value);
-        e.zielOrdner = t ? ('alias.0.' + t) : 'alias.0';
+        var neuerOrdner = t ? ('alias.0.' + t) : 'alias.0';
+        if (neuerOrdner === e.zielOrdner) { return; }
+        e.zielOrdner = neuerOrdner;
         entwurfAngefasst();
-        zeichneErgebnis();
+        /* Kurz warten, statt sofort neu zu zeichnen. Wer im Feld tippt und
+           dann auf „anlegen" drueckt, loest mit dem Mausdruck erst das
+           Verlassen des Feldes aus — zeichnet man da sofort neu, ist der
+           Knopf weg, bevor der Klick bei ihm ankommt, und der erste Klick
+           tut nichts. Gemessen an Kuehlschrank und Warmwasser. */
+        setTimeout(zeichneErgebnis, 250);
       };
 
       var markiert = -1;
@@ -3503,7 +3564,18 @@
       selF.addEventListener('click', function (ev) { ev.stopPropagation(); });
       selF.addEventListener('change', function () {
         s.f = selF.value ? ('JSON.parse(val).' + selF.value) : '';
-        if (selF.value) { s.typ = 'number'; }
+        /* Den Typ nur vorschlagen, wenn keiner feststeht. Vorher stand
+           hier hart `number` — nach der Wahl von POWER („ON") oder
+           Wifi.SSId stand der Punkt auf Zahl, und ein Platz, den das
+           Muster als boolean fuehrt, verlor seine Vorgabe: aus
+           switch.light + number wird kein Geraet mehr. */
+        if (selF.value && !s.typ) {
+          var j = jsonVon(s.srcR);
+          var w = j ? feldWert(j, selF.value) : undefined;
+          if (typeof w === 'boolean') { s.typ = 'boolean'; }
+          else if (typeof w === 'number') { s.typ = 'number'; }
+          else if (typeof w === 'string') { s.typ = 'string'; }
+        }
         neu();
       });
       var lF = el('label', 'fld');
@@ -3811,13 +3883,23 @@
       if (s.states) { common.states = s.states; }
 
       var nat = {};
-      if (s.nurImAlias && objects[id] && objects[id].native) {
+      var altNat = (objects[id] && objects[id].native)
+        ? JSON.parse(JSON.stringify(objects[id].native)) : null;
+      if (s.nurImAlias && altNat) {
         /* Ein Punkt, den es nur im Alias gibt, behaelt seinen Vermerk —
            sonst schreibt ihn ein Aktualisieren der Vorlage zu, aus der er
            nie kam. */
-        nat = JSON.parse(JSON.stringify(objects[id].native));
+        nat = altNat;
       } else if (s.manuell) { nat.vonHand = true; }
       else if (e.vorlage) { nat.vorlage = e.vorlage; nat.ausZustand = s.ausVorlage || s.n; }
+      else if (altNat) {
+        /* Aus dem Aliasmodus heraus gibt es keine Vorlage, und `manuell`
+           steht nur beim frischen Hinzufuegen. Ohne diesen Fall schrieb
+           ein Aktualisieren `native: {}` ueber jeden Punkt und loeschte
+           damit Vorlage, Herkunftsplatz und die Marke `vonHand` — der
+           Kanal behielt seine Herkunft, die Punkte verloren sie. */
+        nat = altNat;
+      }
 
       raus.push({ id: id, neu: !objects[id], obj: { type: 'state', common: common, native: nat } });
     });
@@ -4035,8 +4117,23 @@
                 indexNeu();
                 nachziehenErledigt();
                 zeichneBaum();
-                if (current) { waehle(current, function () { zeigeTrockenlauf(trockenAlle); }); }
-                else { zeigeTrockenlauf(trockenAlle); }
+                /* Der Neuaufbau wirft das Ziel weg, das im Feld steht —
+                   danach zeigte der Dialog Objekte fuer einen anderen
+                   Ordner an als eingegeben, und „Jetzt anlegen" haette
+                   sie dort auch angelegt. Also merken und zurueckgeben. */
+                var altZiel = entwurf
+                  ? { o: entwurf.zielOrdner, n: entwurf.zielName } : null;
+                if (current) {
+                  waehle(current, function () {
+                    if (altZiel && entwurf) {
+                      entwurf.zielOrdner = altZiel.o;
+                      entwurf.zielName = altZiel.n;
+                      entwurf.angefasst = true;
+                      zeichneErgebnis();
+                    }
+                    zeigeTrockenlauf(trockenAlle);
+                  });
+                } else { zeigeTrockenlauf(trockenAlle); }
               }
             });
           });
@@ -5576,7 +5673,9 @@
     pk.style.marginBottom = '11px';
     var ph2 = el('div', 'ch');
     ph2.appendChild(el('span', 'typ', tr('tpls.tryout')));
-    var treffer = erf.length ? probelauf(ohneUnterstrich(v)) : [];
+    if (erf.length) { probeWerteHolen(ohneUnterstrich(v), zeichneErgebnis); }
+    var treffer = erf.length
+      ? probelauf(ohneUnterstrich(v), v._quelle === 'benutzer') : [];
     var gew = treffer.filter(function (t) { return t.gewinnt; }).length;
     ph2.appendChild(el('span', 'chip ' + (gew ? 'ok' : 'warn'), tr('tpls.hits', treffer.length, gew)));
     pk.appendChild(ph2);
@@ -6380,6 +6479,18 @@
       if (s.dec !== undefined && s.dec !== '') { zu.nachkommastellen = Number(s.dec); }
       if (s.states) { zu.werteliste = s.states; }
       if (s.hinweis) { zu.hinweis = s.hinweis; }
+      /* Was die Vorlage sonst noch als Lesequelle kannte. Der gerade
+         genommene Weg steht schon in `lesen` und faellt hier weg. */
+      if (s.wege && s.wege.length > 1) {
+        var rest = s.wege.filter(function (w) { return w.punkt !== zu.lesen; })
+          .map(function (w) {
+            var o = { punkt: w.punkt };
+            if (w.feld) { o.feld = w.feld; }
+            if (w.formel) { o.formel = w.formel; }
+            return o;
+          });
+        if (rest.length) { zu.lesenSonst = (rest.length === 1) ? rest[0] : rest; }
+      }
       return zu;
     });
 
@@ -6403,30 +6514,86 @@
      hatPunkt fuer tausende Knoten die Kleinschreibkarte aufbauen, und das
      dauert auf einer grossen Anlage sichtbar lange. */
   function kandidatenFuer(v) {
-    var erf = (v.erkennung || {}).erforderlich || [];
+    var erk = v.erkennung || {};
+    var erf = erk.erforderlich || [];
     if (!erf.length) { return []; }
     var ph = v.mehrfach ? (v.mehrfach.platzhalter || '%N%') : null;
-    var vorn = ph ? String(erf[0]).split(ph)[0] : String(erf[0]);
-    if (!vorn) { return []; }
-    var suche = ('.' + vorn).toLowerCase();
     var raus = {};
-    keysSorted.forEach(function (id) {
-      if (id.indexOf('alias.') === 0) { return; }
-      if (!objects[id] || objects[id].type !== 'state') { return; }
-      var i = id.toLowerCase().indexOf(suche);
-      if (i < 1) { return; }
-      var kanal = id.slice(0, i);
-      if (kanal.split('.').length >= 3) { raus[kanal] = 1; }
-    });
+
+    function sammle(pfad) {
+      var vorn = ph ? String(pfad).split(ph)[0] : String(pfad);
+      if (!vorn) { return; }
+      var suche = ('.' + vorn).toLowerCase();
+      keysSorted.forEach(function (id) {
+        if (id.indexOf('alias.') === 0) { return; }
+        if (!objects[id] || objects[id].type !== 'state') { return; }
+        var i = id.toLowerCase().indexOf(suche);
+        if (i < 1) { return; }
+        var kanal = id.slice(0, i);
+        if (kanal.split('.').length >= 3) { raus[kanal] = 1; }
+      });
+    }
+
+    sammle(erf[0]);
+    /* Auch ueber die Inhaltspruefung suchen. Ein Geraet, das seine
+       Ausgaenge nur in tele/STATE meldet und noch keinen cmnd-Punkt hat,
+       waere sonst kein Kandidat — der Probelauf einer Mehrfach-Vorlage
+       fand ein Geraet statt vier. Was am Ende wirklich passt, entscheidet
+       `pruefeVorlage`; hier geht es nur darum, niemanden zu uebersehen. */
+    Object.keys(erk.inhalt || {}).forEach(sammle);
+
     return Object.keys(raus).sort();
   }
 
+  /* Der Probelauf braucht Werte, nicht nur Objekte.
+     `pruefeVorlage` prueft auch `erkennung.inhalt` und schaut dafuer in
+     den Wert des Punktes — steht dort nichts, gilt die Vorlage als
+     unpassend. Geladen werden die Werte aber nur fuer den gewaehlten
+     Kanal, und im Vorlagen-Tab ist keiner gewaehlt. Also meldete jede
+     Vorlage mit `inhalt` „0 Geraete getroffen", auch die, die im
+     Quellen-Tab zwanzig Geraete erkennt.
+
+     Hier werden die fehlenden Werte einmal nachgeladen und danach neu
+     gezeichnet. Was einmal vergeblich abgefragt wurde, wird nicht wieder
+     abgefragt — sonst laedt ein Punkt ohne Wert endlos. */
+  var probeGeholt = {};
+
+  function probeWerteHolen(v, danach) {
+    var erk = v.erkennung || {};
+    if (!erk.inhalt) { return false; }
+    var ph = v.mehrfach ? (v.mehrfach.platzhalter || '%N%') : null;
+    var fehlt = [];
+    kandidatenFuer(v).forEach(function (kanal) {
+      Object.keys(erk.inhalt).forEach(function (p0) {
+        var pfad = ph ? String(p0).split(ph).join('1') : p0;
+        var id = hatPunkt(kanal, pfad);
+        if (id && werte[id] === undefined && !probeGeholt[id]) { fehlt.push(id); }
+      });
+    });
+    if (!fehlt.length) { return false; }
+    var offen = fehlt.length;
+    fehlt.forEach(function (id) {
+      probeGeholt[id] = 1;
+      socket.emit('getState', id, function (err, st) {
+        if (!err && st) { werte[id] = st; }
+        if (--offen === 0) { danach(); }
+      });
+    });
+    return true;
+  }
+
   /* Was faengt diese Vorlage, und wer gewinnt dort heute? */
-  function probelauf(vorlage) {
+  function probelauf(vorlage, alsEigene) {
     /* Nie am Original arbeiten — sonst stuende hinterher _quelle im
        gespeicherten JSON. */
     var neu = JSON.parse(JSON.stringify(vorlage));
-    neu._quelle = 'benutzer';
+    /* Nur rechnen, was auch zutrifft. Eine eigene Vorlage bekommt in der
+       Bewertung 1000 Punkte Vorsprung; setzte man das hier immer, meldete
+       das Blatt einer mitgelieferten Vorlage Siege, die sie nie erringt —
+       Steckdose 18 und Lampe 23 „gewonnen" bei 26 Geraeten, obwohl je
+       Geraet nur eine gewinnen kann. Im Dialog „Als Vorlage speichern"
+       stimmt es dagegen: dort wird sie gerade zu einer eigenen. */
+    if (alsEigene) { neu._quelle = 'benutzer'; }
     var raus = [];
     kandidatenFuer(neu).forEach(function (p) {
       var t = pruefeVorlage(neu, p);
@@ -6792,7 +6959,10 @@
     ph.appendChild(el('span', 'typ', tr('tpls.tryout')));
     var treffer = [];
     var fehlerErk = !neu.erkennung.erforderlich.length;
-    if (!fehlerErk) { treffer = probelauf(neu); }
+    if (!fehlerErk) {
+      probeWerteHolen(neu, zeichneVorlagenDialog);
+      treffer = probelauf(neu, true);
+    }
     var gew = treffer.filter(function (t) { return t.gewinnt; }).length;
     var wech = treffer.filter(function (t) { return t.wechsel; }).length;
     ph.appendChild(el('span', 'chip ' + (gew ? 'ok' : 'warn'), tr('tpls.hits', treffer.length, gew)));
