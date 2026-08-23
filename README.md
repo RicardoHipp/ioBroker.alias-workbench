@@ -268,6 +268,38 @@ entry in `SPRACHEN` in `admin/tab.html` — nothing else.
 
 ## Changelog
 
+### 0.0.37
+
+A device is a node with data points under it — not a node carrying a
+particular `type`. The tree decided by type, and that made eight devices in a
+grown installation untouchable: their alias objects are `folder`, not
+`channel`.
+
+Who is right? The object schema says `"state" - parent should be of channel,
+device, instance or host` — but *should*, and by the same sentence every
+`channel` would need a `device` above it, which no alias channel anywhere
+has. The alias documentation says nothing at all about the container; it only
+knows that `alias.0` holds states. And the type-detector the workbench is
+built on is explicit, in its own source:
+
+```js
+// a state needs to be in a channel, device, folder or such
+case 'channel':
+case 'device':
+case 'folder':
+```
+
+`folder` sits in the same branch as the other two. The workbench was stricter
+than its own foundation.
+
+- A **folder with data points directly under it is selectable** and gets the
+  device dot. Folders holding only channels or further folders stay out —
+  those are signposts, not devices. On the production system that is 8 of 46
+- **Updating no longer changes the container type.** New devices are created
+  as `channel`, the common form and the one closest to the schema; anything
+  that already exists keeps what it has. Turning someone's folder into a
+  channel to paper over a shortcoming of ours is not a fix
+
 ### 0.0.36
 
 The tree follows the admin's expert mode. Without it, `system.*` and `enum.*`

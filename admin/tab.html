@@ -1088,10 +1088,30 @@
      Nur wo gar kein Objekt existiert (MQTT legt fuer Zwischenebenen keins
      an), muss geraten werden: dann der oberste Knoten, unter dem die
      Datenpunkte hoechstens zwei Ebenen tief liegen. */
+  /* Liegen unmittelbar unter diesem Knoten Datenpunkte? Dann ist er ein
+     Geraet, egal was in seinem Typ steht. */
+  function hatDirekteZustaende(k) {
+    return Object.keys(k.kinder).some(function (n) {
+      return k.kinder[n].art === 'state';
+    });
+  }
+
   function istWaehlbar(k) {
     if (k.art === 'state' || !k._zust) { return false; }
     if (k.art === 'channel' || k.art === 'device') { return true; }
-    if (k.art === 'folder' || k.art === 'meta') { return false; }
+    /* Ein Ordner mit eigenen Datenpunkten ist ein Geraet, das jemand als
+       Ordner angelegt hat — der Alias-Manager tut das, Skripte tun es, der
+       Admin selbst tut es. Der type-detector sieht das genauso; in seinem
+       Quelltext steht woertlich „a state needs to be in a channel, device,
+       folder or such", und `folder` steht dort in einem Zweig mit den
+       beiden anderen. Die Werkbank war hier strenger als das Werkzeug,
+       auf dem sie aufbaut: acht Geraete einer gewachsenen Anlage liessen
+       sich nicht anfassen.
+
+       Ordner, unter denen nur weitere Ordner oder Kanaele liegen, bleiben
+       aussen vor — das sind Wegweiser, keine Geraete. */
+    if (k.art === 'folder') { return hatDirekteZustaende(k); }
+    if (k.art === 'meta') { return false; }
     if (k.art) { return false; }
     /* Notbehelf nur dort, wo im ganzen Zweig keine Typen gepflegt sind.
        Wo es getypte Kanäle gibt, sollen die das Gerät sein. */
@@ -1105,6 +1125,7 @@
   /* Sieht dieser Knoten wie ein einzelnes Geraet aus? Nur ein Hinweis. */
   function wohlGeraet(k) {
     if (k.art === 'channel' || k.art === 'device') { return true; }
+    if (k.art === 'folder') { return hatDirekteZustaende(k); }
     if (k.art) { return false; }
     return k._tiefe <= 2 && (!k._eltern || k._eltern._tiefe > 2);
   }
@@ -3906,8 +3927,14 @@
     /* Einen von Hand vergebenen Kanalnamen nicht durch die Kennung
        ersetzen. */
     var altName = txt(objects[ziel] && objects[ziel].common && objects[ziel].common.name);
+    /* Neu angelegt wird ein Kanal — das ist die verbreitete Form und die,
+       die dem Objektschema am naechsten kommt. Was es schon gibt, behaelt
+       aber seinen Typ: ein Aktualisieren soll nicht nebenbei aus einem
+       Ordner einen Kanal machen. Der Aliasmechanismus schaut ohnehin nur
+       auf die Datenpunkte, nicht auf ihren Behaelter. */
+    var altTyp = objects[ziel] && objects[ziel].type;
     raus.push({ id: ziel, neu: !objects[ziel], obj: {
-      type: 'channel',
+      type: (altTyp === 'folder' || altTyp === 'device') ? altTyp : 'channel',
       common: { name: altName || teile[teile.length - 1] },
       native: kanalNative
     } });
