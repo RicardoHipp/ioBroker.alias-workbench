@@ -1,0 +1,916 @@
+  /* Farb- und Formensprache des Admin 8 (gemessen am Produktivsystem,
+     25.08.2026): Slate-Grau statt Warmgrau, Akzentblau #137BF8, Karten
+     12 px rund mit 1px #E2E8F0 und hauchduennem Schatten, Knoepfe 8 px,
+     Chips als getoente Pillen (Farbe mit ~16% Deckung als Grund, die
+     volle Farbe als Schrift). */
+  :root {
+    --ground:#F1F5F9; --surface:#FFFFFF; --surface-2:#F1F5F9; --surface-3:#E2E8F0;
+    --ink:#101827; --ink-2:#475569; --ink-3:#8A94A6;
+    --line:#E2E8F0; --line-strong:#CBD5E1;
+    --accent:#137BF8; --accent-ink:#FFFFFF; --accent-soft:#DCEAFD;
+    --hover:#4B9BFA; --hover-ink:#FFFFFF;
+    --ok:#1E8E3E; --ok-soft:#DCEDE2;
+    --warn:#C77700; --warn-soft:#F7EBD8;
+    --bad:#C0392B; --bad-soft:#F8E3DF;
+    --shadow:0 1px 2px rgba(15,23,42,.05);
+    --shadow-hoch:0 1px 2px rgba(15,23,42,.06), 0 10px 30px rgba(15,23,42,.12);
+    --sans:"Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;
+    --mono:"Cascadia Mono","Cascadia Code",ui-monospace,"JetBrains Mono",Consolas,monospace;
+    --pfeil:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M0 0h10L5 6z' fill='%238A94A6'/%3E%3C/svg%3E");
+    --r:8px;        /* Knoepfe, Felder, Zeilen */
+    --r-lg:12px;    /* Karten, Dialoge, Kaesten */
+    --r-sm:6px;     /* kleine Marken */
+  }
+  /* Vier Farbthemen des Admin (Sonnen-Knopf, gemessen an 8.0.2 am
+     25.08.2026): modernLight #137BF8, modernDark #137BF8 auf #121A26,
+     klassisch light #3399CC, klassisch dark #4DABF5 auf #121212. Der
+     Admin nennt sein Thema in der Reiter-Adresse (react=...), tab.html
+     setzt daraus data-adminthema. Ist es gesetzt, gilt genau diese
+     Palette; ohne (Reiter direkt geoeffnet) faellt die Werkbank auf die
+     Systemeinstellung hell/dunkel zurueck. */
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-adminthema]) {
+      --ground:#0B1220; --surface:#101a2c; --surface-2:#182338; --surface-3:#223045;
+      --ink:#E2E8F0; --ink-2:#A7B4C6; --ink-3:#6E7E95;
+      --line:#223045; --line-strong:#334760;
+      --accent:#5CA5F9; --accent-ink:#081527; --accent-soft:#16304F;
+      --hover:#0B62D6; --hover-ink:#FFFFFF;
+      --ok:#5FBF80; --ok-soft:#122C1C;
+      --warn:#D3A44A; --warn-soft:#302713;
+      --bad:#E1806C; --bad-soft:#33201C;
+      --shadow:0 1px 2px rgba(0,0,0,.4);
+      --shadow-hoch:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+      --pfeil:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M0 0h10L5 6z' fill='%236E7E95'/%3E%3C/svg%3E");
+    }
+  }
+  /* modernLight ist die Grundpalette oben — der blosse Attributwert
+     schaltet nur den Dunkel-Rueckfall ab. */
+  :root[data-adminthema="modernDark"] {
+    --ground:#0C1320; --surface:#121A26; --surface-2:#1A2434; --surface-3:#243349;
+    --ink:#E8EDF5; --ink-2:#A9B6C9; --ink-3:#6E7E95;
+    --line:#243349; --line-strong:#33475F;
+    --accent:#137BF8; --accent-ink:#FFFFFF; --accent-soft:#16304F;
+    --hover:#0B62D6; --hover-ink:#FFFFFF;
+    --ok:#5FBF80; --ok-soft:#122C1C;
+    --warn:#D3A44A; --warn-soft:#302713;
+    --bad:#E1806C; --bad-soft:#33201C;
+    --shadow:0 1px 2px rgba(0,0,0,.4);
+    --shadow-hoch:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+    --pfeil:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M0 0h10L5 6z' fill='%236E7E95'/%3E%3C/svg%3E");
+  }
+  :root[data-adminthema="light"] {
+    --ground:#F0F0F0; --surface:#FFFFFF; --surface-2:#F0F0F0; --surface-3:#E2E2E2;
+    --ink:#212121; --ink-2:#525252; --ink-3:#8C8C8C;
+    --line:#E0E0E0; --line-strong:#C6C6C6;
+    --accent:#3399CC; --accent-ink:#FFFFFF; --accent-soft:#DBEEF7;
+    --hover:#76D0FD; --hover-ink:#212121;
+    --ok:#388E3C; --ok-soft:#DFF0E0;
+    --warn:#C77700; --warn-soft:#F7EBD8;
+    --bad:#C0392B; --bad-soft:#F8E3DF;
+    --shadow:0 1px 2px rgba(0,0,0,.06);
+    --shadow-hoch:0 1px 2px rgba(0,0,0,.08), 0 10px 30px rgba(0,0,0,.14);
+    --pfeil:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M0 0h10L5 6z' fill='%238C8C8C'/%3E%3C/svg%3E");
+  }
+  :root[data-adminthema="dark"] {
+    --ground:#0F0F0F; --surface:#1B1B1B; --surface-2:#252525; --surface-3:#303030;
+    --ink:#FFFFFF; --ink-2:#C9C9C9; --ink-3:#909090;
+    --line:#2E2E2E; --line-strong:#414141;
+    --accent:#4DABF5; --accent-ink:#FFFFFF; --accent-soft:#173A57;
+    --hover:#3577AB; --hover-ink:#FFFFFF;
+    --ok:#66BB6A; --ok-soft:#143318;
+    --warn:#D3A44A; --warn-soft:#302713;
+    --bad:#E1806C; --bad-soft:#33201C;
+    --shadow:0 1px 2px rgba(0,0,0,.5);
+    --shadow-hoch:0 1px 2px rgba(0,0,0,.5), 0 10px 30px rgba(0,0,0,.45);
+    --pfeil:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M0 0h10L5 6z' fill='%23909090'/%3E%3C/svg%3E");
+  }
+
+  * { box-sizing:border-box; }
+  /* Grundgestalt aller tx-Felder, per :where() ohne Gewicht: jede
+     Bereichsregel (.detail, .zielbar, .musterwahl ...) gewinnt. Ohne
+     diese Grundlage fielen Felder in Bereichen ohne eigene Regel auf
+     die Browservoreinstellung zurueck - im Vorlagenblatt standen sie
+     in Arial mit eckigen Kanten (Ricardo, 25.08.2026). */
+  :where(input.tx, select.tx) {
+    font-family:var(--mono); font-size:12px; padding:4px 7px;
+    border:1px solid var(--line-strong); border-radius:var(--r-sm);
+    background-color:var(--surface); color:var(--ink);
+  }
+  :where(input.tx, select.tx):disabled { color:var(--ink-3); background-color:var(--surface-2); }
+  /* Alle Haekchen in der Akzentfarbe des Themas - nicht nur die der
+     Zustandsliste. Die im Vorlagenblatt blieben browserblau. */
+  input[type="checkbox"], input[type="radio"] { accent-color:var(--accent); }
+
+  /* Jedes Auswahlfeld traegt denselben Pfeil - nicht den des Browsers.
+     Groesse nach dem festgelegten Mass der Klapp-Pfeile (14px-Klasse,
+     siehe .ca2): Dreieck 10×6. */
+  select.tx, input.musterwahl, input.rollenwahl {
+    appearance:none; -webkit-appearance:none;
+    background-image:var(--pfeil); background-repeat:no-repeat;
+    background-position:right 7px center; background-size:10px 6px;
+    padding-right:24px;
+  }
+  html, body { height:100%; }
+  /* Spalte: Banner und Kopfzeile nehmen ihre Hoehe, der Rest gehoert der
+     Arbeitsflaeche. Vorher bekam .split volle 100% und schob die Fussleiste
+     genau um die Hoehe von Banner plus Kopf unter den Rand. */
+  body {
+    margin:0; background:var(--ground); color:var(--ink);
+    font-family:var(--sans); font-size:14px; line-height:1.5;
+    -webkit-font-smoothing:antialiased; overflow:hidden;
+    display:flex; flex-direction:column; height:100%;
+  }
+  header.top { flex:0 0 auto; }
+  code,.mono { font-family:var(--mono); font-variant-ligatures:none; }
+  :focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+  [hidden] { display:none !important; }
+
+  header.top {
+    display:flex; align-items:center; gap:12px; padding:9px 16px;
+    background:var(--surface); border-bottom:1px solid var(--line); flex-wrap:wrap;
+  }
+  header.top h1 { margin:0; font-size:15px; font-weight:650; }
+  header.top .meta { font-family:var(--mono); font-size:11px; color:var(--ink-3); }
+  header.top .sp { flex:1; }
+  .conn { font-size:11.5px; font-family:var(--mono); padding:2px 10px; border-radius:999px; }
+  .conn.on  { background:var(--ok-soft);  color:var(--ok); }
+  .conn.off { background:var(--bad-soft); color:var(--bad); }
+
+  .split {
+    display:grid; grid-template-columns:minmax(280px,32%) minmax(0,1fr);
+    flex:1 1 auto; min-height:0;
+  }
+  @media (max-width:880px) {
+    body { overflow:auto; display:block; height:auto; }
+    .split { grid-template-columns:minmax(0,1fr); height:auto; }
+    .pickpane { height:240px; }
+  }
+  .pickpane, .respane { display:flex; flex-direction:column; min-height:0; min-width:0; }
+  .pickpane { background:var(--surface); border-right:1px solid var(--line); }
+  .respane { background:var(--ground); }
+
+  .panehead {
+    padding:7px 11px; border-bottom:1px solid var(--line); background:var(--surface);
+    display:flex; align-items:center; gap:8px; flex:0 0 auto;
+  }
+  .panehead .lbl { font-size:9.5px; font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:var(--ink-3); }
+  .search {
+    flex:1; min-width:0; font-family:var(--mono); font-size:12px;
+    padding:4px 8px; border:1px solid var(--line-strong); border-radius:var(--r-sm);
+    background:var(--ground); color:var(--ink);
+  }
+  .scroll { overflow:auto; flex:1 1 auto; min-height:0; }
+
+  .tree { font-family:var(--mono); font-size:12.5px; padding:5px 3px 24px; }
+  .tree ul { list-style:none; margin:0; padding-left:12px; }
+  .tree > ul { padding-left:1px; }
+  .tree .node {
+    display:flex; align-items:center; gap:5px; padding:2px 6px;
+    border-radius:var(--r); white-space:nowrap;
+  }
+  .tree .node.pick { cursor:pointer; }
+  /* Mauszeiger und Auswahl wie im Objekt-Explorer des Admin: zwei
+     Blautoene je Thema, die Auswahl (dunkler) gewinnt gegen den
+     Mauszeiger. Kinderfarben erben, sonst staende blasses Grau auf
+     kraeftigem Blau. */
+  .tree .node.pick:hover:not(.sel) { background:var(--hover); color:var(--hover-ink); }
+  /* Ueber der gewaehlten Zeile bleibt die Auswahl dominant - der Zeiger
+     dunkelt sie nur leicht ab (Material: Zustand + Ueberlagerung, der
+     fluechtige Hinweis ersetzt nicht den festen Zustand). Der Admin
+     selbst laesst dort die Hover-Farbe gewinnen; die Konvention ist
+     andersherum, und Ricardo hat sich fuer die Konvention entschieden. */
+  .tree .node.sel:hover { background:color-mix(in srgb, var(--accent) 90%, #000); }
+  .tree .node.pick:hover:not(.sel) .nam,
+  .tree .node.pick:hover:not(.sel) .cnt,
+  .tree .node.pick:hover:not(.sel) .grp { color:inherit; opacity:.85; }
+  .tree .node.pick:hover:not(.sel) .kind { background:rgba(255,255,255,.3); color:inherit; }
+  .tree .node.pick:hover:not(.sel) .geraetepunkt { color:inherit; }
+  .tree .node.sel { background:var(--accent); color:var(--accent-ink); font-weight:600; }
+  .tree .node.sel .kind { background:rgba(255,255,255,.22); color:inherit; }
+  /* Die Vorlagenliste benutzt dieselben Knotenzeilen, hat aber statt
+     `kind`/`nam`/`cnt` ein Abzeichen, einen Namen und rechts die Kennung.
+     Auf der Akzentflaeche muessen die drei mitziehen, sonst steht auf der
+     markierten Zeile graue Schrift auf farbigem Grund. */
+  .tree .node.sel .chip { background:rgba(255,255,255,.22); color:var(--accent-ink); border-color:transparent; }
+  .tree .node.sel .nm { color:var(--accent-ink); }
+  .tree .node.sel > span { color:var(--accent-ink) !important; }
+  .tree .kind {
+    font-size:8px; padding:0 4px; border-radius:4px; background:var(--surface-3);
+    color:var(--ink-3); text-transform:uppercase; letter-spacing:.04em;
+    font-family:var(--sans); font-weight:700; flex:0 0 auto;
+  }
+  .tree .idstueck { flex:0 0 auto; }
+  /* Der Name weicht zurueck: gedaempft, und er ist es, der gekuerzt wird,
+     wenn die Spalte nicht reicht. Die Kennung bleibt vollstaendig. */
+  .tree .nam, .nm3 .nam {
+    color:var(--ink-3); font-family:var(--sans); font-size:11px;
+    flex:0 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis;
+  }
+  .nm3 .nam { margin-left:8px; }
+  .tree .node.sel .nam { color:var(--accent-ink); opacity:.85; }
+  .tree .cnt { margin-left:auto; font-size:9.5px; color:var(--ink-3); }
+  .tree .node.sel .cnt { color:var(--accent-ink); }
+  /* 11 px waren zu klein, um als Schaltflaeche erkannt zu werden — und
+     in der blassesten Farbe der Oberflaeche. Als Mindestmass fuer eine
+     Trefferflaeche gelten 24 px; so weit gehen wir hier nicht, aber
+     deutlich naeher heran. */
+  .tree .tw {
+    cursor:pointer; width:18px; text-align:center; color:var(--ink-2);
+    flex:0 0 auto; font-size:12px; line-height:1; border-radius:var(--r-sm);
+  }
+  .tree .tw:hover { color:var(--accent); background:var(--accent-soft); }
+  .tree .grp { color:var(--ink-3); }
+
+  .resscroll { overflow:auto; flex:1 1 auto; min-height:0; padding:14px; }
+  .resinner { max-width:820px; margin:0 auto; display:flex; flex-direction:column; gap:13px; }
+
+  .rhead .id { font-family:var(--mono); font-size:16px; font-weight:700; word-break:break-all; }
+  .rhead .pfad {
+    font-family:var(--mono); font-size:11px; color:var(--ink-3);
+    margin-top:3px; word-break:break-all;
+  }
+  .rhead .sub { font-family:var(--mono); font-size:11.5px; color:var(--ink-3); margin-top:2px; }
+
+  .card {
+    background:var(--surface); border:1px solid var(--line); border-radius:var(--r-lg);
+    box-shadow:var(--shadow); overflow:hidden;
+  }
+  .card > .ch {
+    display:flex; align-items:center; gap:10px; padding:9px 13px;
+    border-bottom:1px solid var(--line); background:var(--surface-2); flex-wrap:wrap;
+  }
+  .card > .ch .typ { font-family:var(--mono); font-size:15px; font-weight:700; color:var(--accent); }
+  .card.infod { border-style:dashed; }
+  .card.infod > .ch .typ { color:var(--ink-3); }
+
+  .slot {
+    display:grid; grid-template-columns:15px 130px 1fr auto; gap:9px; align-items:center;
+    padding:5px 13px; border-bottom:1px solid var(--line); font-family:var(--mono); font-size:12px;
+  }
+  .slot:last-child { border-bottom:0; }
+  .slot .mk { text-align:center; }
+  .slot.hit .mk { color:var(--ok); }
+  .slot.miss .mk { color:var(--bad); }
+  .slot.free .mk { color:var(--ink-3); }
+  .slot .sn { font-weight:600; }
+  .slot.free .sn, .slot.free .who { color:var(--ink-3); }
+  .slot .who { color:var(--ink-2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .slot .v { font-variant-numeric:tabular-nums; white-space:nowrap; color:var(--ink); }
+  .slot .rx { font-size:10px; color:var(--ink-3); }
+  /* Vorlagentabelle: erst die drei Entscheidungen, dann der Text. Ein
+     langer Name darf nichts mehr verschieben — deshalb feste Spalten
+     zuerst, und die Textspalten duerfen schrumpfen (min-width:0). */
+  .vzeile { grid-template-columns:66px 58px 84px minmax(0,1.4fr) minmax(0,1fr); }
+  .vzeile > * { min-width:0; }
+  .vzeile .sn { word-break:break-all; font-weight:600; }
+  .vzeile .pf { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .vkopf { font-weight:600; opacity:.7; }
+  .vkopf > span { font-size:10px; color:var(--ink-3); }
+
+  .stlist .row {
+    display:grid; grid-template-columns:1fr 170px 110px 13px; gap:9px; align-items:center;
+    padding:6px 13px; border-bottom:1px solid var(--line); font-size:12.5px; cursor:pointer;
+  }
+  .stlist .row:last-of-type { border-bottom:0; }
+  .stlist .row:hover { background:var(--surface-2); }
+  .stlist .row.open { background:var(--surface-2); }
+  .stlist .row .nm { font-family:var(--mono); font-weight:600; overflow:hidden; text-overflow:ellipsis; }
+  .stlist .row .nm em { font-style:normal; font-weight:400; color:var(--ink-3); font-size:11px; margin-left:6px; }
+  .stlist .row .ro { font-family:var(--mono); font-size:11px; color:var(--ink-3); overflow:hidden; text-overflow:ellipsis; }
+  .stlist .row .vl { font-family:var(--mono); text-align:right; font-variant-numeric:tabular-nums; overflow:hidden; text-overflow:ellipsis; }
+  .stlist .row .ca { font-size:9px; color:var(--ink-3); text-align:center; }
+
+  .detail {
+    padding:11px 13px 13px 26px; background:var(--surface-2);
+    border-bottom:1px solid var(--line); font-family:var(--mono); font-size:11.5px;
+  }
+  .detail .dr { display:grid; grid-template-columns:88px 1fr; gap:8px; padding:3px 0; align-items:start; }
+  .detail .k {
+    font-family:var(--sans); font-size:9px; text-transform:uppercase; letter-spacing:.06em;
+    color:var(--ink-3); font-weight:700; padding-top:3px;
+  }
+  .detail .raw {
+    background:var(--surface); border:1px solid var(--line); border-radius:var(--r-sm);
+    padding:5px 6px; word-break:break-all; color:var(--ink-2);
+    max-height:80px; overflow:auto; line-height:1.5;
+  }
+  .detail .res { font-size:14px; font-weight:700; font-variant-numeric:tabular-nums; }
+
+  /* Vergleich im Trockenlauf: links der Bestand, rechts was entstuende,
+     Zeile gegen Zeile wie in einem Vergleichswerkzeug (Ricardo,
+     25.08.2026). Geaenderte Zeilen gelb, entfallende rot, neue gruen;
+     die leere Gegenzeile bleibt gedeckelt, damit die Luecke sichtbar
+     ist statt nur weiss zu wirken. */
+  .dvgl {
+    display:grid; grid-template-columns:1fr 1fr; gap:0 8px;
+    margin:4px 12px 10px; align-items:stretch;
+  }
+  .dvgl .dkopf {
+    font-family:var(--sans); font-size:8.5px; letter-spacing:.06em;
+    text-transform:uppercase; color:var(--ink-3); font-weight:700;
+    padding:0 5px 3px;
+  }
+  .dvgl .dz {
+    font-family:var(--mono); font-size:11px; line-height:1.55;
+    white-space:pre-wrap; word-break:break-all; padding:0 5px;
+    color:var(--ink-2); border-left:2px solid transparent;
+  }
+  .dvgl .dz.anders { background:var(--warn-soft); color:var(--ink); border-left-color:var(--warn); }
+  .dvgl .dz.l.weg { background:var(--bad-soft); color:var(--ink); border-left-color:var(--bad); }
+  .dvgl .dz.r.dazu { background:var(--ok-soft); color:var(--ink); border-left-color:var(--ok); }
+  .dvgl .dz.r.weg, .dvgl .dz.l.dazu { background:var(--surface-2); }
+
+  .chip {
+    display:inline-flex; align-items:center; gap:4px; font-size:10px; font-weight:700;
+    letter-spacing:.04em; text-transform:uppercase; padding:2px 8px; border-radius:999px; white-space:nowrap;
+  }
+  .chip.ok{background:var(--ok-soft);color:var(--ok);} .chip.warn{background:var(--warn-soft);color:var(--warn);}
+  .chip.bad{background:var(--bad-soft);color:var(--bad);} .chip.mut{background:var(--surface-3);color:var(--ink-3);}
+
+  .aside {
+    font-size:12px; color:var(--ink-2); line-height:1.6;
+    background:var(--surface); border:1px solid var(--line); border-left:2px solid var(--accent);
+    padding:9px 11px; border-radius:0 var(--r-lg) var(--r-lg) 0;
+  }
+  .aside.w { border-left-color:var(--warn); }
+  .aside b { color:var(--ink); }
+
+  .empty { color:var(--ink-3); font-size:13px; padding:36px 8px; text-align:center; }
+  /* Der Erklaertext der leeren Seite: lesbar breit, nicht ueber die
+     ganze Flaeche gezogen, zweiter Absatz gedaempft. */
+  .leerhilfe { max-width:520px; margin:0 auto; text-align:left; line-height:1.6; }
+
+  /* Der Auswahlbaum im Tauschdialog: feste Hoehe, damit der Dialog nicht
+     bei jedem Aufklappen springt, und eigener Rahmen wie ein Feld. */
+  .tauschbaum {
+    height:230px; overflow:auto; margin-top:4px;
+    border:1px solid var(--line-strong); border-radius:var(--r-sm);
+    background:var(--surface); padding:4px 0;
+  }
+  .tauschbaum .node { cursor:default; }
+  .tauschbaum .node.pick { cursor:pointer; }
+  .tauschbaum .empty { padding:18px 8px; }
+
+  /* „Vorlage: x" an einer Zeile, deren Bestand von der Vorlage abweicht -
+     gedaempfter als die Marke „geaendert", es ist ja nur ein Angebot. */
+  .erow .geae.tplabw { color:var(--ink-3); background:var(--surface-2); }
+  .leerhilfe .lh2 { margin-top:11px; font-size:12px; color:var(--ink-3); }
+
+  .footbar {
+    flex:0 0 auto; border-top:1px solid var(--line); background:var(--surface);
+    padding:8px 14px; display:flex; gap:9px; align-items:center; flex-wrap:wrap;
+    position:sticky; bottom:0; z-index:2;
+  }
+  button.btn {
+    font:inherit; font-size:12.5px; border-radius:var(--r); padding:5px 11px;
+    border:1px solid var(--line-strong); background:var(--surface); color:var(--ink); cursor:pointer;
+  }
+  button.btn:hover:not(:disabled) { background:var(--surface-2); }
+  button.btn:disabled { opacity:.4; cursor:not-allowed; }
+  /* Ein laufender Knopf traegt einen Drehkreis - sonst sieht gesperrt
+     aus wie tot, obwohl gerade gearbeitet wird. */
+  /* box-sizing:border-box gilt projektweit - der Ring ist also samt
+     Rand 12 px hoch, und -6 px setzen ihn exakt auf die Mitte. Rechts
+     genug Luft, damit er nicht am Text klebt. */
+  button.laedt { position:relative; padding-right:30px; opacity:.75; }
+  button.laedt::after {
+    content:""; position:absolute; right:9px; top:50%; margin-top:-6px;
+    width:12px; height:12px; border-radius:50%;
+    border:2px solid var(--line-strong); border-top-color:var(--accent);
+    animation:drehkreis .8s linear infinite;
+  }
+  @keyframes drehkreis { to { transform:rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) {
+    button.laedt::after { animation:none; border-top-color:var(--line-strong); }
+  }
+  /* Warum die Knoepfe links daneben gesperrt sind. */
+  .sperrgrund { font-size:11.5px; color:var(--warn); }
+
+  /* ---- Kopf mit Musterwahl ---- */
+  .rhead { display:flex; gap:12px; align-items:flex-start; flex-wrap:wrap; justify-content:space-between; }
+  .verdictwrap {
+    border:1px solid var(--ok); background:var(--ok-soft); border-radius:var(--r);
+    padding:6px 8px; display:flex; flex-direction:column; gap:5px; align-items:flex-start;
+  }
+  .verdictwrap.bad { border-color:var(--bad); background:var(--bad-soft); }
+  .musterwahl {
+    font-family:var(--mono); font-size:14px; font-weight:700;
+    border:1px solid var(--line-strong); border-radius:var(--r-sm);
+    background-color:var(--surface); color:var(--ink);
+    padding:2px 24px 2px 6px; width:290px; max-width:290px;
+  }
+  .vmeta { display:flex; gap:5px; align-items:center; flex-wrap:wrap; }
+
+  /* ---- Geraetekarte ---- */
+
+  /* ---- Werkzeugleiste + Kopfzeile der Liste ---- */
+  .listbar { display:flex; align-items:center; gap:7px; flex-wrap:wrap; padding:6px 15px;
+             border-top:1px solid var(--line); border-bottom:1px solid var(--line);
+             background:var(--surface-2); font-size:11px; color:var(--ink-2); }
+  .listbar .cnt { font-family:var(--mono); font-weight:600; color:var(--ink); }
+  .listbar .sp2 { flex:1; }
+  /* Zweite Zeile fuer die Auswahlknoepfe: `flex-basis:100%` erzwingt den
+     Umbruch, damit sie immer geschlossen untereinander stehen statt je
+     nach Fensterbreite anders zu brechen. */
+  .listbar .chipzeile {
+    flex:0 0 100%; display:flex; gap:7px; flex-wrap:wrap;
+    align-items:center; margin-top:5px;
+  }
+  .listbar .chipzeile .weit { margin-left:auto; }
+  .listbar button { font:inherit; font-size:11px; cursor:pointer; border:1px solid var(--line-strong);
+                    border-radius:999px; padding:1px 10px; background:var(--surface); color:var(--ink-2); }
+  .listbar button:hover { background:var(--surface-3); color:var(--ink); }
+  /* Der Vorschlagsknopf meldet sich, wenn er neu erscheint - drei Wellen,
+     dann Ruhe. Ein Ring statt eines Farbwechsels: an einem Knopf liest
+     sich Blinken als „kaputt", ein Ring als „hier". */
+  @keyframes knopfPochen {
+    0%   { box-shadow:0 0 0 0 color-mix(in srgb, var(--accent) 50%, transparent); }
+    70%  { box-shadow:0 0 0 8px color-mix(in srgb, var(--accent) 0%, transparent); }
+    100% { box-shadow:0 0 0 0 color-mix(in srgb, var(--accent) 0%, transparent); }
+  }
+  .listbar button.frisch { animation:knopfPochen 1s ease-out 3;
+                           border-color:var(--accent); color:var(--accent); }
+  @media (prefers-reduced-motion: reduce) {
+    .listbar button.frisch { animation:none; }
+  }
+  .lhead { display:grid; grid-template-columns:19px 14px 1fr 150px 105px 12px; gap:8px;
+           padding:4px 15px; border-bottom:1px solid var(--line);
+           font-size:8.5px; letter-spacing:.06em; text-transform:uppercase; font-weight:700; color:var(--ink-3); }
+  .lhead .r { text-align:right; }
+  .erow { display:grid; grid-template-columns:19px 14px 1fr 150px 105px 15px; gap:8px; align-items:center;
+          padding:6px 15px; border-bottom:1px solid var(--line); font-size:12.5px; cursor:pointer; }
+  .erow:last-of-type { border-bottom:0; }
+  .erow:hover, .erow.open { background:var(--surface-2); }
+  /* Abgewaehlt heisst ausgegraut, nicht durchgestrichen - der Haken
+     fehlt ja sichtbar, und durchgestrichen liest sich der Name schlecht. */
+  .erow.skip { opacity:.42; }
+  .erow input[type="checkbox"] { accent-color:var(--accent); cursor:pointer; margin:0; }
+  .erow .mk2 { text-align:center; font-size:11px; }
+  .erow .mk2.ok { color:var(--ok); } .erow .mk2.bad { color:var(--bad); } .erow .mk2.out { color:var(--ink-3); }
+  .erow .nm3 { font-family:var(--mono); font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .erow .nm3 em { font-style:normal; font-weight:400; color:var(--ink-3); font-size:10.5px; margin-left:6px; }
+  .erow .nm3 .hand { font-family:var(--sans); font-size:8px; font-weight:700; letter-spacing:.05em;
+                     text-transform:uppercase; background:var(--surface-3); color:var(--ink-3);
+                     padding:0 6px; border-radius:999px; margin-left:6px; }
+  .erow .nm3 .geae { font-family:var(--sans); font-size:8px; font-weight:700; letter-spacing:.05em;
+                     text-transform:uppercase; background:var(--warn-soft); color:var(--warn);
+                     padding:0 6px; border-radius:999px; margin-left:6px; }
+  .erow .nm3 .rat { font-family:var(--sans); font-size:8px; font-weight:700; letter-spacing:.05em;
+                    text-transform:uppercase; background:var(--accent-soft); color:var(--accent);
+                    padding:0 6px; border-radius:999px; margin-left:6px; }
+  .erow .nm3 .ratknopf { font-family:var(--sans); font-size:11px; cursor:pointer; margin-left:5px;
+                         color:var(--ink-3); padding:0 4px; border-radius:var(--r-sm); }
+  .erow .nm3 .ratknopf:hover { background:var(--surface-3); color:var(--ink); }
+  .ratleiste { display:flex; align-items:center; gap:9px; flex-wrap:wrap;
+               padding:6px 15px; border-bottom:1px solid var(--line);
+               background:color-mix(in srgb, var(--accent) 7%, transparent); }
+  .ratleiste .zq { color:var(--ink-2); font-size:11.5px; }
+  .erow .ro2 { font-family:var(--mono); font-size:10.5px; color:var(--ink-3); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .erow .ro2.warnrole { color:var(--warn); font-weight:700; }
+  .erow .vl2 { font-family:var(--mono); text-align:right; font-variant-numeric:tabular-nums;
+               overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  /* Der Pfeil ist die einzige Anzeige, dass eine Zeile mehr hergibt —
+     bei 8,5px in Grau war er nicht zu sehen. Gleiche Groesse, gleiche
+     Seite und gleiches Verhalten in beiden Listen. */
+  /* Kartenkopf, der sich auf- und zuklappen laesst. */
+  .ch.klappbar { cursor:pointer; transition:background .12s; }
+  .ch.klappbar:hover { background:var(--surface-2); }
+  .ch.klappbar .klappz { color:var(--ink-2); margin-right:2px; }
+  .ch.klappbar:hover .klappz { color:var(--accent); }
+
+  /* 11 px am Zeilenende waren kaum zu sehen. Groesser, kraeftiger, und die
+     ganze Zeile faerbt sich beim Ueberfahren — die klappt naemlich auf,
+     nicht nur das Zeichen. */
+  .erow .ca2, .slot .ca2 { font-size:14px; line-height:1; color:var(--ink-2);
+                           text-align:center; transition:color .12s; }
+  .erow:hover .ca2, .slot.vklick:hover .ca2 { color:var(--accent); }
+  .erow.open .ca2, .slot.vklick.offen .ca2 { color:var(--accent); }
+  .slot.vklick { cursor:pointer; }
+  .slot.vklick:hover, .slot.vklick.offen { background:var(--surface-2); }
+
+  .addrow { display:flex; align-items:center; gap:7px; width:100%; font:inherit; font-size:12.5px;
+            cursor:pointer; padding:8px 15px; border:0; border-top:1px dashed var(--line-strong);
+            background:var(--surface); color:var(--accent); font-weight:600; text-align:left; }
+  .addrow:hover { background:var(--accent-soft); }
+
+  /* ---- Bearbeitungsfelder im Detail ---- */
+  .detail .fields { display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end; }
+  .detail .fld { display:flex; flex-direction:column; gap:2px; }
+  .detail .fld > span { font-family:var(--sans); font-size:8.5px; letter-spacing:.06em;
+                        text-transform:uppercase; color:var(--ink-3); font-weight:700; }
+  .detail input.tx, .detail select.tx {
+    font-family:var(--mono); font-size:11.5px; padding:3px 5px;
+    border:1px solid var(--line-strong); border-radius:var(--r-sm); background-color:var(--surface); color:var(--ink);
+  }
+  .detail select.tx { padding-right:24px; }
+  .detail input.tx.w { width:100%; } .detail select.tx.w { width:100%; }
+  .detail input.tx.miss, .detail select.tx.miss { border-color:var(--bad); background:var(--bad-soft); }
+  .detail .sugg { font-family:var(--sans); font-size:10px; color:var(--ink-3); padding-top:3px; }
+  .detail .sugg b { color:var(--accent); font-weight:600; }
+
+  dialog { border:1px solid var(--line-strong); border-radius:var(--r-lg); background:var(--surface);
+           color:var(--ink); padding:0; max-width:560px; width:calc(100% - 32px);
+           box-shadow:var(--shadow-hoch); }
+  dialog::backdrop { background:rgba(8,14,16,.55); }
+  dialog h3 { margin:0; padding:11px 15px; font-size:13.5px; border-bottom:1px solid var(--line); background:var(--surface-2); }
+  dialog .dbody { padding:15px; font-size:13px; max-height:60vh; overflow:auto; }
+  .hint { font-size:10.5px; color:var(--ink-3); line-height:1.45; }
+  dialog .dfoot { padding:11px 15px; border-top:1px solid var(--line); display:flex; gap:8px;
+                  justify-content:flex-end; background:var(--surface-2); }
+  ul.checks { list-style:none; margin:0; padding:0; font-size:12.5px; }
+  ul.checks li { display:grid; grid-template-columns:15px 1fr auto; gap:9px; padding:6px 0;
+                 border-bottom:1px solid var(--line); align-items:baseline; }
+  ul.checks li:last-child { border-bottom:0; }
+  ul.checks .m.ok { color:var(--ok); } ul.checks .m.bad { color:var(--bad); }
+  ul.checks .m.warn { color:var(--warn); } ul.checks .m.mut { color:var(--ink-3); }
+  ul.checks .det { font-family:var(--mono); font-size:11px; color:var(--ink-3); }
+  #checkchip { margin-left:5px; }
+
+  .suggestbox { border:1px solid var(--accent); background:var(--accent-soft); border-radius:var(--r-lg);
+                padding:10px 12px; display:flex; gap:13px; align-items:flex-start; flex-wrap:wrap; }
+  .suggestbox .txt { flex:1; min-width:220px; }
+  /* Flex, damit der Aufklapper rechts andocken kann. Umbrechen darf sie:
+     bei langen Vorlagennamen rutscht er sonst aus dem Kasten. */
+  .suggestbox .hd {
+    font-weight:650; margin-bottom:2px;
+    display:flex; align-items:baseline; gap:7px; flex-wrap:wrap;
+  }
+  .suggestbox ul { margin:5px 0 0; padding-left:16px; font-family:var(--mono);
+                   font-size:11px; color:var(--ink-2); line-height:1.7; }
+  .suggestbox .acts { display:flex; gap:7px; flex-wrap:wrap; }
+
+  button.btn.primary { background:var(--accent); border-color:var(--accent); color:var(--accent-ink); font-weight:600; }
+  button.btn.primary:hover:not(:disabled) { filter:brightness(1.08); background:var(--accent); }
+
+  /* Beide Leisten (Raum/Funktion und Ablegen unter/Name) teilen ein
+     Raster mit fester Beschriftungsspalte - so stehen die vier Felder
+     gleich breit und exakt untereinander. */
+  .zielbar {
+    display:grid; grid-template-columns:96px minmax(140px,1fr) 96px minmax(140px,1fr);
+    gap:6px 9px; align-items:center;
+    background:var(--surface); border:1px solid var(--line); border-radius:var(--r-lg);
+    /* Rechts mehr Rand, damit das Bild der Funktion daneben Platz hat.
+       Das Bild haengt absolut am Feldrahmen; ohne diesen Rand lief es auf
+       schmalen Fenstern aus der Leiste heraus - gemessen bei 760 px, wo
+       die Leiste die volle Breite fuellt (26.08.2026).
+
+       Der Rand gilt fuer BEIDE Leisten, auch die ohne Bild: sonst waeren
+       die `1fr`-Spalten verschieden breit und Ordner- und Namensfeld
+       stuenden nicht mehr unter Raum und Funktion (S8). */
+    padding:8px 41px 8px 11px;
+  }
+  /* Rechtsbuendig an ihr Feld geschmiegt - linksbuendig klaffte
+     zwischen kurzer Beschriftung und Feld eine Luecke. */
+  .zielbar .zl { font-size:9px; letter-spacing:.06em; text-transform:uppercase;
+                 font-weight:700; color:var(--ink-3);
+                 justify-self:end; text-align:right; }
+  /* Die Vorschlags-Marke steht in Zeile 2, in der Spalte ihres Feldes.
+     Beides muss ausdruecklich dastehen: nur mit Spalte nahm sie am
+     automatischen Einsortieren teil und schob dessen Zeiger in Zeile 2 -
+     alles nach ihr (Funktion samt Feld) rutschte mit. Voll platziert
+     liegt sie ausserhalb des Flusses, und Zeile 1 bleibt Zeile 1.
+     In den Feldrahmen darf sie auch nicht - dort verschob sie Kreuz
+     und Aufklappliste. */
+  .zielbar .vorschlagsmarke { justify-self:start; margin-top:-2px; }
+  .zielbar .vorschlagsmarke.raum { grid-row:2; grid-column:2; }
+  .zielbar .vorschlagsmarke.funktion { grid-row:2; grid-column:4; }
+  .zielbar .tx { width:100%; font-family:var(--mono); font-size:12px; padding:3px 7px;
+                 border:1px solid var(--line-strong); border-radius:var(--r-sm);
+                 background:var(--ground); color:var(--ink); }
+  /* Die entstehende ID immer auf eigener Zeile, links buendig. */
+  .zielbar .zid {
+    grid-column:1 / -1;
+    font-family:var(--mono); font-size:12.5px; font-weight:700;
+    color:var(--accent); word-break:break-all;
+  }
+
+  .umschalter { display:inline-flex; border:1px solid var(--line-strong); border-radius:var(--r); overflow:hidden; flex:0 0 auto; }
+  .umschalter button {
+    font:inherit; font-size:11px; padding:3px 9px; border:0; cursor:pointer;
+    background:var(--surface); color:var(--ink-3);
+  }
+  .umschalter button + button { border-left:1px solid var(--line-strong); }
+  .umschalter button.an { background:var(--accent); color:var(--accent-ink); font-weight:600; }
+  /* Die Modusleiste bekam eine eigene Zeile: „Quellen/Aliase" benannte die
+     Datenquelle, nicht die Absicht - wer zum ersten Mal draufschaut, weiss
+     nicht, wo er anfaengt (Ricardo, 25.08.2026). In der Filterzeile war
+     fuer die laengeren Texte kein Platz. */
+  .modusleiste { padding-bottom:0; border-bottom:0; }
+  .umschalter.breit { display:flex; width:100%; }
+  .umschalter.breit button { flex:1; font-size:12px; padding:5px 6px; white-space:nowrap; }
+
+  .tree .geraetepunkt { margin-left:auto; font-size:8px; color:var(--accent); }
+  .tree .node.sel .geraetepunkt { color:var(--accent-ink); }
+  .tree .geraetepunkt + .cnt { margin-left:5px; }
+
+  .erow .fehltnoch {
+    margin-left:7px; font-style:normal; font-size:10px; font-weight:700;
+    letter-spacing:.04em; text-transform:uppercase;
+    color:var(--warn); background:var(--warn-soft);
+    border-radius:999px; padding:1px 7px;
+  }
+
+  .klapp {
+    border:1px solid var(--line); background:var(--surface); color:var(--ink-3);
+    border-radius:var(--r-sm); width:24px; height:24px; cursor:pointer;
+    padding:0; flex:none; display:inline-flex; align-items:center; justify-content:center;
+  }
+  /* Dieselben Ordner wie im Objektbrowser des Admin: aufgeklappt ist der
+     leere Umriss, zugeklappt der gefuellte. */
+  .klapp svg { width:15px; height:15px; fill:currentColor; display:block; }
+  .klapp:hover { border-color:var(--accent); color:var(--accent); }
+
+  .freikopf {
+    display:flex; align-items:center; gap:8px; padding:6px 15px;
+    border-top:1px solid var(--line); border-bottom:1px solid var(--line);
+    background:var(--surface-2); font-size:9px; letter-spacing:.06em;
+    text-transform:uppercase; font-weight:700; color:var(--ink-3);
+  }
+  .freikopf .cnt2 { margin-left:auto; font-family:var(--mono); letter-spacing:0; text-transform:none; font-weight:400; }
+  .freirow {
+    display:grid; grid-template-columns:19px 150px 180px 1fr; gap:9px; align-items:center;
+    padding:4px 15px; border-bottom:1px solid var(--line); cursor:pointer;
+    font-family:var(--mono); font-size:11.5px; color:var(--ink-3);
+  }
+  .freirow:hover { background:var(--accent-soft); color:var(--ink); }
+  .freirow .mk3 { text-align:center; color:var(--accent); font-weight:700; }
+  .freirow .sn2 { font-weight:600; }
+  .freirow .rl2 { color:var(--ink-2); }
+  .freirow .rx2 { font-size:10px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .freirow.pflicht { background:var(--bad-soft); color:var(--bad); }
+  .freirow.pflicht .mk3, .freirow.pflicht .rl2, .freirow.pflicht .rx2 { color:var(--bad); }
+  .freirow.pflicht .rx2 { font-weight:700; }
+
+  /* Ein Abschnittskopf muss aussehen wie etwas, auf das man druecken
+     kann. Ein Zeichen allein reicht nicht — man sieht es schlicht nicht.
+     Deshalb eine eigene Flaeche, die beim Ueberfahren deutlicher wird. */
+  .klappz { display:inline-flex; align-items:center; justify-content:center;
+            width:18px; height:18px; flex:0 0 auto; }
+  .klappz svg { width:15px; height:15px; fill:currentColor; display:block; }
+
+  .warum { margin-top:5px; font-size:11.5px; color:var(--ink-3); }
+  /* Der Aufklapper steht in der Kopfzeile ganz rechts. `margin-left:auto`
+     schiebt ihn dorthin, ohne dass die Kopfzeile etwas davon wissen muss. */
+  .suggestbox .hd .wkopf {
+    display:inline-flex; align-items:center; gap:6px; cursor:pointer;
+    margin-left:auto; padding:2px 7px; border-radius:var(--r-sm);
+    font-size:11.5px; font-weight:400; color:var(--ink-3);
+    user-select:none; transition:background .12s, color .12s;
+    white-space:nowrap;
+  }
+  .suggestbox .hd .wkopf .klappz { color:var(--ink-2); font-size:10px; }
+  .suggestbox .hd .wkopf:hover { color:var(--ink); background:var(--surface-2); }
+  .suggestbox .hd .wkopf:hover .klappz { color:var(--accent); }
+  .warum .wleib { margin:0; }
+  .warum .wleib ul { margin:0; padding-left:16px; }
+  .warum .wleib li { margin:1px 0; }
+  .warum .wtrenn {
+    margin:7px 0 3px; font-size:9.5px; letter-spacing:.05em;
+    text-transform:uppercase; font-weight:700; color:var(--ink-3);
+  }
+
+  .suggestbox .hd { display:flex; align-items:center; flex-wrap:wrap; }
+
+  .suggestbox { flex-direction:column; align-items:stretch; gap:9px; }
+  .suggestbox .hd { width:100%; }
+  .suggestbox .verdictwrap { padding:5px 8px; }
+  .suggestbox .verdictwrap .musterwahl { font-size:13px; }
+
+  .feldlabel { font-size:8.5px; letter-spacing:.06em; text-transform:uppercase;
+               font-weight:700; color:var(--ink-3); }
+  .feld { display:flex; flex-direction:column; gap:3px; }
+  /* Oberkante ausgerichtet: die Beschriftungen stehen auf einer Linie,
+     die Felder darunter auch - und Marken, die unter dem Musterfeld
+     dazukommen, wachsen nach unten, ohne die Zeile zu verschieben.
+     (Unterkanten-Ausrichtung schob genau dann das Feld nach oben.) */
+  .suggestbox .acts { display:flex; gap:18px; align-items:flex-start; flex-wrap:wrap; width:100%; }
+  /* Ein Feld ohne Beschriftung (der Knopf) startet um deren Hoehe tiefer,
+     damit es auf der Feldlinie liegt. */
+  .suggestbox .acts .knoepfe { margin-top:16px; }
+  /* Vorlage und Ausgang teilen ein Aussehen - dieselbe Schrift und
+     dieselben Ecken wie die uebrigen Felder. */
+  .suggestbox .acts select.tx {
+    font-family:var(--mono); font-size:12px; padding:3px 6px;
+    border:1px solid var(--line-strong); border-radius:var(--r-sm);
+    background-color:var(--surface); color:var(--ink); max-width:270px;
+    padding-right:24px;
+  }
+  .suggestbox .verdictwrap {
+    border:0; background:none; padding:0; gap:3px; align-items:stretch;
+  }
+  /* Gleiche Strichstaerke wie Vorlage und Ausgang daneben - halbfett
+     wirkte wie eine andere Schrift in der Zeile. */
+  .suggestbox .verdictwrap .musterwahl { font-weight:400; width:250px; max-width:250px; }
+  .suggestbox .vmeta { font-size:10.5px; color:var(--ink-3); gap:6px; }
+  .suggestbox .luecke { flex:1 1 20px; }
+  .suggestbox .knoepfe { display:flex; gap:7px; align-items:flex-end; }
+  button.btn.schmal { font-size:11px; padding:3px 9px; }
+  /* NACH der schmal-Regel, sonst ueberschreibt deren Kurzform-padding
+     den Platz fuer den Ring und er liegt auf dem Text (Ricardo,
+     25.08.2026 - „einfach mal ueber dem Wort"). */
+  button.btn.laedt { padding-right:30px; }
+
+  /* Punktliste der MQTT-Karte: Pillen und Knoepfe fuellen ihre Spalte -
+     alle gleich breit, Knoepfe einzeilig. */
+  .mchip .chip { width:100%; justify-content:center; }
+  .mknopf .btn { width:100%; white-space:nowrap; }
+  .leise { color:var(--ink-3); }
+
+  /* Alle Auswahlfelder der Zeile gleich hoch, sonst sitzen sie versetzt. */
+  /* Alle Felder der Zeile gleich hoch - Dropdown wie Eingabefeld. */
+  .suggestbox .acts select, .suggestbox .acts .musterwahl {
+    height:26px; box-sizing:border-box; font-size:12px;
+  }
+  .suggestbox .acts .feld, .suggestbox .acts .verdictwrap { justify-content:flex-start; }
+
+  .enumbar { margin-top:5px; }
+  /* Das Angebot, eine Zuordnung zu uebernehmen. Es steht in der Zeile,
+     nicht als Fenster davor - wer es nicht will, uebersieht es folgenlos. */
+  /* Das Angebot steht unter dem Feld, an dem gerade gearbeitet wurde -
+     eine eigene Zeile, damit es nicht in der Leiste untergeht. */
+  .uebernahme {
+    grid-column:1 / -1;
+    display:flex; align-items:center; gap:8px;
+    margin:0;
+  }
+  .uebernahme .zq { color:var(--ink-2); font-size:11.5px; }
+  .btn.mini { padding:2px 9px; font-size:11px; line-height:1.6; }
+  .btn.mini.wichtig {
+    background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600;
+  }
+  .btn.mini.wichtig:hover { filter:brightness(1.08); }
+  /* Leise Fassung: mit passender Vorlage ist Raten nur ein Nebenweg.
+     Der Rahmen bleibt (schwache Linienfarbe) - ganz ohne laese sich der
+     Knopf wie eine Beschriftung (Ricardo, 25.08.2026). */
+  button.btn.mini.leise { border-color:var(--line); background:transparent; color:var(--ink-3); }
+  button.btn.mini.leise:hover:not(:disabled) { background:var(--surface-2); color:var(--ink); }
+  /* Ein Angebot, das gerade erschienen ist, pocht dreimal - danach ist
+     Ruhe. Es taucht dort auf, wo man eben getippt hat, aber der Blick
+     haengt am Zeichen, das man zuletzt gesetzt hat, nicht an der Zeile
+     darunter. Drei Sekunden reichen, um es zu bemerken; laenger waere
+     Zappeln. Bei jedem Neuzeichnen erneut zu pochen waere genau das,
+     deshalb traegt nur das frisch erschienene Angebot die Marke. */
+  /* Es pocht die Frage, nicht der Knopf.
+
+     Zuerst lag die Bewegung auf dem „ja“ - das liest sich als Aufforderung,
+     ihn zu druecken, dabei ist die Antwort offen. Neu ist die Frage, also
+     zieht sie den Blick auf sich, und der Knopf wartet ruhig daneben. */
+  .uebernahme .zq {
+    padding:2px 7px; border-radius:var(--r);
+    background:transparent; transition:background .3s;
+  }
+  @keyframes fragePochen {
+    0%   { background:transparent; }
+    30%  { background:color-mix(in srgb, var(--accent) 20%, transparent); }
+    70%  { background:color-mix(in srgb, var(--accent) 20%, transparent); }
+    100% { background:transparent; }
+  }
+  .uebernahme.frisch .zq {
+    animation:fragePochen 1s ease-in-out 3;
+    color:var(--ink);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .uebernahme.frisch .zq {
+      animation:none;
+      background:color-mix(in srgb, var(--accent) 14%, transparent);
+    }
+  }
+  .enumbar .enumfeld { padding-right:22px; }
+
+  /* Trockenlauf: eine Zeile je Objekt, das JSON aufklappbar darunter. */
+  details.zeile > summary {
+    cursor:pointer; list-style:none; display:flex; align-items:flex-start; gap:7px;
+  }
+  details.zeile > summary::-webkit-details-marker { display:none; }
+  details.zeile > summary::before {
+    content:'\25b8'; color:var(--ink-3); font-size:11px; width:9px; flex:none;
+    line-height:19px;
+  }
+  details.zeile[open] > summary::before { content:'\25be'; }
+  /* Ziel und Quelle als zwei Zeilen, die Beschriftungen darueber
+     ausgerichtet: erste Spalte so breit wie das laengste Wort. */
+  details.zeile > summary .zpaar {
+    display:grid; grid-template-columns:auto minmax(0, 1fr); gap:1px 8px;
+    min-width:0; flex:1;
+  }
+  details.zeile > summary .zlabel {
+    font-size:10.5px; color:var(--ink-3); text-transform:uppercase;
+    letter-spacing:.03em; line-height:19px;
+  }
+  details.zeile > summary .zid, details.zeile > summary .zq {
+    font-family:var(--mono); line-height:19px;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  details.zeile > summary .zid { font-size:12px; font-weight:600; }
+  details.zeile > summary .zq { font-size:11.5px; color:var(--ink-2); }
+
+  .namzeile { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .sprungknopf { font-family:var(--mono); font-size:11px; padding:2px 8px; flex:none; }
+  /* Die Musterwahl in der Werkzeugleiste: waagerecht statt untereinander,
+     damit sie neben die Filter passt. */
+  .listbar .verdictwrap.inbar {
+    flex-direction:row; align-items:center; gap:7px; padding:3px 7px; margin-left:auto;
+  }
+  .listbar .verdictwrap.inbar .musterwahl { font-size:12px; width:230px; max-width:230px; }
+  .listbar .verdictwrap.inbar .vmeta { margin:0; }
+
+  .feldwrap { position:relative; display:block; min-width:0; }
+  /* Das Musterfeld ist ein Eingabefeld, sieht aber aus wie das Auswahlfeld
+     davor - mit dem Pfeil rechts, damit erkennbar bleibt, dass sich hier
+     etwas aufklappt. */
+  input.musterwahl { cursor:pointer; }
+  /* Die uebliche Auswahl plus die Umschaltzeile sind neun Zeilen. Bei den
+     200 px der Ordnerliste faengt genau dort das Scrollen an, und der
+     Umschalter steht unter der Kante — also etwas mehr Platz. */
+  .vorschlaege.musterliste { max-height:280px; }
+  /* Beim Aufklappen leert sich das Feld, damit man sofort tippen kann.
+     Damit dann noch erkennbar ist, was gerade gewaehlt ist, traegt die
+     Zeile eine eigene Marke — nicht dieselbe wie die Tastaturauswahl,
+     sonst waeren beim Blaettern zwei Zeilen gleich hervorgehoben. */
+  .vorschlaege .vz.gewaehlt { font-weight:700; color:var(--ink); }
+  .vorschlaege .vz.gewaehlt::before { content:'\2022\00a0'; color:var(--accent); }
+  input.musterwahl:focus { cursor:text; }
+  .vorschlaege .vz .tiefer { margin-left:auto; }
+  .vorschlaege {
+    position:absolute; top:calc(100% + 2px); left:0; z-index:40; min-width:100%;
+    background:var(--surface); border:1px solid var(--line-strong); border-radius:var(--r);
+    box-shadow:var(--shadow-hoch); max-height:200px; overflow:auto; padding:2px 0;
+  }
+  .vorschlaege .vz {
+    padding:4px 9px; font-family:var(--mono); font-size:11.5px;
+    cursor:pointer; white-space:nowrap; color:var(--ink-2);
+  }
+  .vorschlaege .vz:hover, .vorschlaege .vz.an { background:var(--accent-soft); color:var(--accent); }
+
+  .zielbar .ordnerfeld { padding-right:22px; }
+  #move-body .ordnerfeld { padding-right:22px; }
+  /* Kreuz aus zwei gedrehten Strichen statt eines Schriftzeichens —
+     dessen Grundlinie sitzt je nach Schriftart nicht mittig im Kreis. */
+  .feldx {
+    position:absolute; right:5px; top:50%; margin-top:-8px;
+    width:16px; height:16px; padding:0; border:0; border-radius:50%;
+    cursor:pointer; background:var(--surface-3); font-size:0; line-height:0;
+  }
+  .feldx::before, .feldx::after {
+    content:""; position:absolute; left:50%; top:50%;
+    width:9px; height:1.5px; background:var(--ink-3); border-radius:1px;
+  }
+  .feldx::before { transform:translate(-50%,-50%) rotate(45deg); }
+  .feldx::after  { transform:translate(-50%,-50%) rotate(-45deg); }
+  /* Das Bild der gewaehlten Aufzaehlung. Es steht RECHTS NEBEN dem Feld,
+     im freien Raum vor der naechsten Beschriftung - im Feld haette es
+     Text verdraengt. Absolut zum Feldrahmen, damit das Spaltenraster
+     unberuehrt bleibt und die Zielzeile darunter buendig stehen bleibt.
+     `pointer-events:none`: ein Klick daneben soll nichts ausloesen. */
+  .feldikon {
+    position:absolute; left:100%; margin-left:7px; top:50%; margin-top:-11px;
+    width:22px; height:22px; pointer-events:none;
+  }
+  .feldikon img { width:22px; height:22px; display:block; }
+  .feldikon.blass img { opacity:.45; }
+  /* „neu" sitzt als Ecke AUF dem Bild, unten rechts - so gehoert die
+     Auskunft sichtbar zu diesem einen Bild und braucht keine eigene
+     Breite (Ricardo, 26.08.2026). */
+  .feldikon .ikneu {
+    position:absolute; right:-4px; bottom:-3px;
+    font-family:var(--sans); font-size:7.5px; font-weight:700;
+    line-height:1; letter-spacing:.02em; text-transform:lowercase;
+    padding:1.5px 2.5px; border-radius:var(--r-sm);
+    background:var(--accent); color:var(--accent-ink);
+    box-shadow:0 0 0 1.5px var(--surface-1);
+  }
+  .feldx:hover { background:var(--bad-soft); }
+  .feldx:hover::before, .feldx:hover::after { background:var(--bad); }
+
+  .vorschlaege .vz { display:flex; align-items:center; gap:8px; }
+  .vorschlaege .vz .tiefer { margin-left:auto; color:var(--ink-3); font-weight:700;
+                             cursor:pointer; padding:0 5px; border-radius:var(--r-sm); }
+  .vorschlaege .vz .tiefer:hover { background:var(--surface-3); color:var(--ink); }
+  .vorschlaege .vz.zurueck { color:var(--ink-3); border-bottom:1px solid var(--line); }
+  /* Aufklapp-Zeilen (alle Rollen / alle Muster): sehen nach Handlung
+     aus, nicht nach Eintrag. */
+  .vorschlaege .vz.mehr { color:var(--accent); font-weight:600;
+    border-top:1px solid var(--line); }
+  .vorschlaege .vz.mehr:hover { background:var(--accent-soft); color:var(--accent); }
+  /* Gruppenkoepfe in Auswahllisten: Beschriftung, keine Wahlzeile.
+     Der Trennstrich steht ueber dem Kopf - er trennt Gruppe von Gruppe.
+     Unter dem Kopf trennte er ihn von seinen eigenen Eintraegen
+     (Ricardo, 25.08.2026). */
+  .vorschlaege .vz.gruppe {
+    cursor:default; margin-top:3px; padding-top:7px;
+    font-family:var(--sans); font-size:9px; font-weight:700;
+    letter-spacing:.06em; text-transform:uppercase; color:var(--ink-3);
+    border-top:1px solid var(--line);
+  }
+  .vorschlaege .vz.gruppe:first-child { border-top:0; margin-top:0; padding-top:4px; }
+  .vorschlaege .vz.gruppe:hover { background:none; color:var(--ink-3); }
+  .vorschlaege .vz.gruppe .tiefer { cursor:default; font-weight:400;
+    letter-spacing:0; text-transform:none; }
+  .vorschlaege .vz.gruppe .tiefer:hover { background:none; color:var(--ink-3); }
+  .vorschlaege.rollenliste { max-height:320px; min-width:300px; }
+  .vorschlaege .vz.gruppe .tiefer.rfrei { color:var(--ok); }
+  .vorschlaege .vz.gruppe .tiefer.rfrei:hover { color:var(--ok); }
+  .vorschlaege .vz.gruppe .tiefer.rbelegt { color:var(--bad); }
+  .vorschlaege .vz.gruppe .tiefer.rbelegt:hover { color:var(--bad); }
+  .vorschlaege .vz.zurueck:hover { background:var(--surface-2); color:var(--ink); }
+  
