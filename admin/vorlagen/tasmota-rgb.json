@@ -1,12 +1,13 @@
 {
   "id": "tasmota-rgb",
-  "version": 3,
+  "version": 5,
   "rang": 25,
   "name": {
     "de": "Tasmota-Farblampe",
     "en": "Tasmota colour light"
   },
   "geraetetyp": "rgbSingle",
+  "funktion": "light",
   "erkennung": {
     "erforderlich": [
       "tele.STATE",
@@ -23,7 +24,7 @@
       "rolle": "level.color.rgb",
       "typ": "string",
       "lesen": "tele.STATE",
-      "leseformel": "'#' + String(JSON.parse(val).Color).slice(0, 6)",
+      "leseformel": "JSON.parse(val)?.Color ? '#' + String(JSON.parse(val).Color).slice(0, 6) : null",
       "schreiben": "cmnd.Color",
       "schreibformel": "String(val).replace('#', '')",
       "hinweis": "Tasmota liefert die Farbe ohne Raute (F4FFCC), ioBroker und VIS erwarten sie mit. Bei RGBW-Geräten hängen weitere Kanäle hinten an, deshalb die ersten sechs Zeichen. Liest aus tele.STATE und schreibt nach cmnd — die Rückmeldung kommt deshalb erst mit der nächsten Telemetrie, bei TelePeriod 300 also bis zu fünf Minuten später. Tasmota antwortet zwar sofort auf stat/RESULT, aber dort steht nur der eine geänderte Schlüssel; als Lesequelle wäre das unbrauchbar. Abhilfe am Gerät: SetOption59 1 — dann schickt Tasmota tele/STATE bei jeder Änderung mit."
@@ -48,7 +49,7 @@
       "hinweis": "getrennte Quellen: sonst zeigt der Schalter den Befehl statt des Zustands",
       "lesenSonst": {
         "punkt": "tele.STATE",
-        "leseformel": "JSON.parse(val).POWER === 'ON'"
+        "leseformel": "JSON.parse(val)?.POWER === 'ON'"
       }
     },
     {
@@ -58,7 +59,7 @@
       "lesen": "stat.POWER",
       "lesenSonst": {
         "punkt": "tele.STATE",
-        "leseformel": "JSON.parse(val).POWER === 'ON'"
+        "leseformel": "JSON.parse(val)?.POWER === 'ON'"
       }
     },
     {
@@ -85,7 +86,7 @@
       "lesen": "tele.STATE",
       "feld": "Fade",
       "schreiben": "cmnd.Fade",
-      "leseformel": "JSON.parse(val).Fade === \"ON\"",
+      "leseformel": "JSON.parse(val)?.Fade === \"ON\"",
       "schreibformel": "val ? \"ON\" : \"OFF\"",
       "optional": true,
       "vorgabeAus": true,
@@ -220,5 +221,19 @@
       "art": "mqtt-publish",
       "punkt": "cmnd.Dimmer"
     }
-  ]
+  ],
+  "weiterePunkte": {
+    "tele.LWT": "text",
+    "tele.STATE": "json",
+    "tele.SENSOR": "json",
+    "tele.INFO1": "json",
+    "tele.INFO2": "json",
+    "tele.INFO3": "json",
+    "tele.HASS_STATE": "json",
+    "stat.RESULT": "json",
+    "stat.STATUS": "json",
+    "stat.STATUS2": "json",
+    "stat.STATUS5": "json",
+    "stat.STATUS11": "json"
+  }
 }

@@ -1,12 +1,13 @@
 {
   "id": "tasmota-lampe",
-  "version": 4,
+  "version": 6,
   "rang": 10,
   "name": {
     "de": "Tasmota-Lampe",
     "en": "Tasmota light"
   },
   "geraetetyp": "light",
+  "funktion": "light",
   "erkennung": {
     "erforderlich": [
       "cmnd.POWER"
@@ -27,7 +28,7 @@
       "schreibformel": "val ? \"ON\" : \"OFF\"",
       "lesenSonst": {
         "punkt": "tele.STATE",
-        "leseformel": "JSON.parse(val).POWER === 'ON'"
+        "leseformel": "JSON.parse(val)?.POWER === 'ON'"
       }
     },
     {
@@ -38,7 +39,7 @@
       "hinweis": "beim light heisst die Rueckmeldung ON_ACTUAL, nicht ACTUAL",
       "lesenSonst": {
         "punkt": "tele.STATE",
-        "leseformel": "JSON.parse(val).POWER === 'ON'"
+        "leseformel": "JSON.parse(val)?.POWER === 'ON'"
       }
     },
     {
@@ -244,5 +245,19 @@
       "art": "mqtt-publish",
       "punkt": "cmnd.POWER"
     }
-  ]
+  ],
+  "weiterePunkte": {
+    "tele.LWT": "text",
+    "tele.STATE": "json",
+    "tele.SENSOR": "json",
+    "tele.INFO1": "json",
+    "tele.INFO2": "json",
+    "tele.INFO3": "json",
+    "tele.HASS_STATE": "json",
+    "stat.RESULT": "json",
+    "stat.STATUS": "json",
+    "stat.STATUS2": "json",
+    "stat.STATUS5": "json",
+    "stat.STATUS11": "json"
+  }
 }

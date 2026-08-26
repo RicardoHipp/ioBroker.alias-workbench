@@ -1,12 +1,13 @@
 {
   "id": "tasmota-steckdose",
-  "version": 4,
+  "version": 6,
   "rang": 20,
   "name": {
     "de": "Tasmota-Steckdose",
     "en": "Tasmota socket"
   },
   "geraetetyp": "socket",
+  "funktion": "socket",
   "erkennung": {
     "erforderlich": [
       "cmnd.POWER"
@@ -28,7 +29,7 @@
       "hinweis": "getrennte Quellen: sonst zeigt der Schalter den Befehl statt des Zustands",
       "lesenSonst": {
         "punkt": "tele.STATE",
-        "leseformel": "JSON.parse(val).POWER === 'ON'"
+        "leseformel": "JSON.parse(val)?.POWER === 'ON'"
       }
     },
     {
@@ -39,7 +40,7 @@
       "hinweis": "type-detector 6 verlangt sensor.switch oder state.active, blankes state passt nicht mehr",
       "lesenSonst": {
         "punkt": "tele.STATE",
-        "leseformel": "JSON.parse(val).POWER === 'ON'"
+        "leseformel": "JSON.parse(val)?.POWER === 'ON'"
       }
     },
     {
@@ -246,5 +247,19 @@
       "art": "mqtt-publish",
       "punkt": "cmnd.POWER"
     }
-  ]
+  ],
+  "weiterePunkte": {
+    "tele.LWT": "text",
+    "tele.STATE": "json",
+    "tele.SENSOR": "json",
+    "tele.INFO1": "json",
+    "tele.INFO2": "json",
+    "tele.INFO3": "json",
+    "tele.HASS_STATE": "json",
+    "stat.RESULT": "json",
+    "stat.STATUS": "json",
+    "stat.STATUS2": "json",
+    "stat.STATUS5": "json",
+    "stat.STATUS11": "json"
+  }
 }

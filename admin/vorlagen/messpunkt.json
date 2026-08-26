@@ -1,6 +1,6 @@
 {
   "id": "messpunkt",
-  "version": 3,
+  "version": 4,
   "rang": 5,
   "name": {
     "de": "Reiner Messpunkt",
@@ -207,5 +207,19 @@
         }
       ]
     }
-  ]
+  ],
+  "weiterePunkte": {
+    "tele.LWT": "text",
+    "tele.STATE": "json",
+    "tele.SENSOR": "json",
+    "tele.INFO1": "json",
+    "tele.INFO2": "json",
+    "tele.INFO3": "json",
+    "tele.HASS_STATE": "json",
+    "stat.RESULT": "json",
+    "stat.STATUS": "json",
+    "stat.STATUS2": "json",
+    "stat.STATUS5": "json",
+    "stat.STATUS11": "json"
+  }
 }

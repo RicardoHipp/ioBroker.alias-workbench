@@ -1,12 +1,13 @@
 {
   "id": "tasmota-mehrfach",
-  "version": 3,
+  "version": 5,
   "rang": 30,
   "name": {
     "de": "Tasmota mit mehreren Ausgängen",
     "en": "Tasmota with multiple outputs"
   },
   "geraetetyp": "socket",
+  "funktion": "socket",
   "hinweis": {
     "de": "Steckdosenleiste, Ventilinsel, Relaisplatine. Je Ausgang entsteht ein eigenes Gerät, weil ein socket genau ein SET hat. %N% steht für die Ausgangsnummer und wird aus dem Bestand gelesen — Lücken sind erlaubt.",
     "en": "Power strip, valve manifold, relay board. Each output becomes its own device because a socket has exactly one SET. %N% stands for the output number and is read from what exists — gaps are allowed."
@@ -34,7 +35,7 @@
       "schreibformel": "val ? \"ON\" : \"OFF\"",
       "lesenSonst": {
         "punkt": "tele.STATE",
-        "leseformel": "JSON.parse(val).POWER%N% === 'ON'"
+        "leseformel": "JSON.parse(val)?.POWER%N% === 'ON'"
       }
     },
     {
@@ -44,7 +45,7 @@
       "lesen": "stat.POWER%N%",
       "lesenSonst": {
         "punkt": "tele.STATE",
-        "leseformel": "JSON.parse(val).POWER%N% === 'ON'"
+        "leseformel": "JSON.parse(val)?.POWER%N% === 'ON'"
       }
     },
     {
@@ -184,5 +185,19 @@
       "art": "mqtt-publish",
       "punkt": "cmnd.POWER%N%"
     }
-  ]
+  ],
+  "weiterePunkte": {
+    "tele.LWT": "text",
+    "tele.STATE": "json",
+    "tele.SENSOR": "json",
+    "tele.INFO1": "json",
+    "tele.INFO2": "json",
+    "tele.INFO3": "json",
+    "tele.HASS_STATE": "json",
+    "stat.RESULT": "json",
+    "stat.STATUS": "json",
+    "stat.STATUS2": "json",
+    "stat.STATUS5": "json",
+    "stat.STATUS11": "json"
+  }
 }

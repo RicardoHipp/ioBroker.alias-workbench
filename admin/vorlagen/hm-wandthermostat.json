@@ -1,0 +1,228 @@
+{
+  "id": "hm-wandthermostat",
+  "version": 2,
+  "rang": 42,
+  "name": {
+    "de": "HmIP Wandthermostat",
+    "en": "HmIP wall thermostat"
+  },
+  "geraetetyp": "thermostat",
+  "funktion": "heating",
+  "hinweis": "HmIP-WTH und Verwandte — der Thermostat an der Wand. Er misst Temperatur und Luftfeuchte und gibt den Sollwert vor, hat aber kein eigenes Ventil: geregelt wird am Heizkörper. Deshalb fehlt hier VALVE.",
+  "erkennung": {
+    "erforderlich": [
+      "1.SET_POINT_TEMPERATURE",
+      "1.HUMIDITY"
+    ],
+    "verboten": [
+      "1.LEVEL",
+      "4.SECTION"
+    ],
+    "hinweis": "1.HUMIDITY hat nur der Wandthermostat und die Heizgruppe; 1.LEVEL schliesst das Heizkoerperventil aus, 4.SECTION die Gruppe."
+  },
+  "zustaende": [
+    {
+      "name": "SET",
+      "rolle": "level.temperature",
+      "typ": "number",
+      "einheit": "°C",
+      "lesen": "1.SET_POINT_TEMPERATURE",
+      "schreiben": "1.SET_POINT_TEMPERATURE"
+    },
+    {
+      "name": "ACTUAL",
+      "rolle": "value.temperature",
+      "typ": "number",
+      "einheit": "°C",
+      "lesen": "1.ACTUAL_TEMPERATURE"
+    },
+    {
+      "name": "HUMIDITY",
+      "rolle": "value.humidity",
+      "typ": "number",
+      "einheit": "%",
+      "lesen": "1.HUMIDITY",
+      "hinweis": "Die Quelle traegt die Einheit „% rF\"; das thermostat-Muster erwartet an diesem Platz Prozent."
+    },
+    {
+      "name": "MODE",
+      "rolle": "level.mode.thermostat",
+      "typ": "number",
+      "lesen": "1.SET_POINT_MODE",
+      "schreiben": "1.SET_POINT_MODE",
+      "optional": true,
+      "werteliste": {
+        "0": "Automatik",
+        "1": "Manuell",
+        "2": "Urlaub",
+        "3": "Modus 3"
+      },
+      "hinweis": "Der Platz MODE verlangt eine Werteliste - ohne common.states steht im Widget nur eine nackte Zahl. Die Quelle liefert keine mit: hm-rpc meldet den Punkt als INTEGER 0 bis 3 ohne VALUE_LIST.\nBelegt sind 0, 1 und 2. Die Zuordnung steht so in aiohomematic, der Bibliothek hinter der Homematic-Anbindung von Home Assistant: AUTO=0, MANU=1, AWAY=2. Automatik heisst, das Wochenprogramm laeuft; Manuell haelt den eingestellten Sollwert; Urlaub (englisch away) ist der Modus, zu dem PARTY_MODE und PARTY_TIME_START/END gehoeren.\n3 bleibt neutral - bei HmIP kennt aiohomematic keine 3, und Boost laeuft ueber den eigenen Punkt."
+    },
+    {
+      "name": "BOOST",
+      "rolle": "switch.mode.boost",
+      "typ": "boolean",
+      "lesen": "1.BOOST_MODE",
+      "schreiben": "1.BOOST_MODE",
+      "optional": true
+    },
+    {
+      "name": "PARTY",
+      "rolle": "switch.mode.party",
+      "typ": "boolean",
+      "lesen": "1.PARTY_MODE",
+      "optional": true,
+      "vorgabeAus": true,
+      "hinweis": "Nur lesbar. Gehoert zum Urlaubsmodus und wird ueber MODE gesetzt, nicht hier."
+    },
+    {
+      "name": "WINDOW_STATE",
+      "rolle": "value.window",
+      "typ": "number",
+      "lesen": "1.WINDOW_STATE",
+      "optional": true,
+      "vorgabeAus": true,
+      "werteliste": {
+        "0": "zu",
+        "1": "offen"
+      },
+      "hinweis": "Meldet, ob die Fensteroffen-Erkennung zugeschlagen hat. Das thermostat-Muster hat zwar einen Platz WINDOW, der nimmt aber nur sensor.window oder state.window - die Quelle liefert eine Zahl mit value.window. Angehakt landet der Punkt deshalb im info-Geraet. Wer ihn im Thermostat haben will, rechnet ihn per Leseformel auf einen Wahrheitswert um und setzt die Rolle auf sensor.window."
+    },
+    {
+      "name": "LOWBAT",
+      "rolle": "indicator.lowbat",
+      "typ": "boolean",
+      "lesen": "0.LOW_BAT",
+      "lesenSonst": {
+        "punkt": "0.LOWBAT"
+      },
+      "optional": true,
+      "hinweis": "HmIP schreibt LOW_BAT, die aeltere Homematic-Reihe LOWBAT."
+    },
+    {
+      "name": "UNREACH",
+      "rolle": "indicator.maintenance.unreach",
+      "typ": "boolean",
+      "lesen": "0.UNREACH",
+      "optional": true
+    },
+    {
+      "name": "RSSI",
+      "rolle": "value.rssi",
+      "typ": "number",
+      "einheit": "dBm",
+      "lesen": "0.RSSI_DEVICE",
+      "lesenSonst": {
+        "punkt": "0.RSSI_PEER"
+      },
+      "optional": true,
+      "vorgabeAus": true,
+      "hinweis": "RSSI_DEVICE steht zuerst: es ist der Pegel, den die Zentrale vom Geraet empfaengt. RSSI_PEER ist bei Batteriegeraeten oft unbelegt und traegt dann Grenzwerte wie -2147483648."
+    },
+    {
+      "name": "VOLTAGE",
+      "rolle": "value.voltage",
+      "typ": "number",
+      "einheit": "V",
+      "lesen": "0.OPERATING_VOLTAGE",
+      "optional": true,
+      "vorgabeAus": true,
+      "hinweis": "Batteriespannung. Nicht vorgehakt, und der VOLTAGE-Platz des Musters ist dafuer auch nicht gedacht: im type-detector gehoert VOLTAGE zur Messgruppe neben Strom, Verbrauch und Frequenz. Dass die Batterie zur Neige geht, meldet LOWBAT, und das ist vorgehakt."
+    }
+  ],
+  "weiterePunkte": {
+    "*.ACTIVE_PROFILE": "level.mode",
+    "*.ACTUAL_TEMPERATURE": "value.temperature",
+    "*.ACTUAL_TEMPERATURE_STATUS": "value",
+    "*.BOOST_MODE": "switch.mode.boost",
+    "*.BOOST_TIME": "value.interval",
+    "*.BOOTED": "indicator",
+    "*.CARRIER_SENSE_LEVEL": "value",
+    "*.CONFIG_PENDING": "indicator.maintenance",
+    "*.CONFIG_PENDING_ALARM": "indicator.maintenance",
+    "*.CONTROL_DIFFERENTIAL_TEMPERATURE": "level.temperature",
+    "*.CONTROL_MODE": "level.mode.thermostat",
+    "*.DEVICE_IN_BOOTLOADER": "indicator.maintenance",
+    "*.DEVICE_IN_BOOTLOADER_ALARM": "indicator.maintenance",
+    "*.DEW_POINT_ALARM": "indicator.error",
+    "*.DIRECTION": "indicator.direction",
+    "*.DURATION_UNIT": "value",
+    "*.DURATION_VALUE": "value",
+    "*.DUTYCYCLE": "indicator.maintenance",
+    "*.DUTYCYCLE_ALARM": "indicator.maintenance",
+    "*.DUTY_CYCLE": "indicator.maintenance",
+    "*.DUTY_CYCLE_LEVEL": "value",
+    "*.EMERGENCY_OPERATION": "indicator.maintenance",
+    "*.EMERGENCY_OPERATION_ALARM": "indicator.maintenance",
+    "*.ERROR": "indicator.error",
+    "*.ERROR-1_ALARM": "indicator.error",
+    "*.ERROR-2_ALARM": "indicator.error",
+    "*.ERROR-3_ALARM": "indicator.error",
+    "*.ERROR-4_ALARM": "indicator.error",
+    "*.ERROR-5_ALARM": "indicator.error",
+    "*.ERROR-6_ALARM": "indicator.error",
+    "*.ERROR-7_ALARM": "indicator.error",
+    "*.ERROR_CODE": "value",
+    "*.ERROR_OVERHEAT": "indicator.error",
+    "*.ERROR_OVERHEAT_ALARM": "indicator.error",
+    "*.ERROR_OVERLOAD": "indicator.error",
+    "*.ERROR_OVERLOAD_ALARM": "indicator.error",
+    "*.ERROR_REDUCED": "indicator.error",
+    "*.ERROR_REDUCED_ALARM": "indicator.error",
+    "*.FROST_PROTECTION": "indicator",
+    "*.HEATING_COOLING": "level.mode",
+    "*.HUMIDITY": "value.humidity",
+    "*.HUMIDITY_STATUS": "value",
+    "*.INCLUSION_UNSUPPORTED_DEVICE": "indicator.maintenance",
+    "*.INHIBIT": "switch",
+    "*.INSTALL_MODE": "indicator",
+    "*.INSTALL_TEST": "indicator",
+    "*.LEVEL": "level",
+    "*.LEVEL_REAL": "value",
+    "*.LEVEL_STATUS": "value",
+    "*.LOWBAT": "indicator.lowbat",
+    "*.LOWBAT_ALARM": "indicator.lowbat",
+    "*.LOW_BAT": "indicator.lowbat",
+    "*.LOW_BAT_ALARM": "indicator.lowbat",
+    "*.OLD_LEVEL": "button",
+    "*.ON_TIME": "value.interval",
+    "*.OPERATING_VOLTAGE": "value.voltage",
+    "*.OPERATING_VOLTAGE_STATUS": "value",
+    "*.PARTY_MODE": "switch.mode.party",
+    "*.PARTY_SET_POINT_TEMPERATURE": "level.temperature",
+    "*.PARTY_TIME_END": "date.end",
+    "*.PARTY_TIME_START": "date.start",
+    "*.PRESS_LONG": "button.long",
+    "*.PRESS_SHORT": "button",
+    "*.PROCESS": "value",
+    "*.QUICK_VETO_TIME": "value.interval",
+    "*.RAMP_STOP": "button.stop",
+    "*.RAMP_TIME": "value.interval",
+    "*.RSSI_DEVICE": "value.rssi",
+    "*.RSSI_PEER": "value.rssi",
+    "*.SABOTAGE": "indicator.alarm",
+    "*.SABOTAGE_ALARM": "indicator.alarm",
+    "*.SECTION": "value",
+    "*.SECTION_STATUS": "value",
+    "*.SET_POINT_MODE": "level.mode.thermostat",
+    "*.SET_POINT_TEMPERATURE": "level.temperature",
+    "*.STICKY_UNREACH": "indicator.maintenance.unreach",
+    "*.STICKY_UNREACH_ALARM": "indicator.maintenance.unreach",
+    "*.STOP": "button.stop",
+    "*.SWITCH_POINT_OCCURED": "indicator",
+    "*.TEMPERATURE": "value.temperature",
+    "*.UNREACH": "indicator.maintenance.unreach",
+    "*.UNREACH_ALARM": "indicator.maintenance.unreach",
+    "*.UPDATE_PENDING": "indicator.maintenance",
+    "*.UPDATE_PENDING_ALARM": "indicator.maintenance",
+    "*.VALVE_ADAPTION": "indicator.maintenance",
+    "*.VALVE_STATE": "value.valve",
+    "*.VALVE_STATE_ADJUSTMENT_TOO_BIG": "indicator.error",
+    "*.VALVE_STATE_ADJUSTMENT_TOO_SMALL": "indicator.error",
+    "*.VALVE_STATE_ERROR_POSITION": "indicator.error",
+    "*.VALVE_STATE_TOO_TIGHT": "indicator.error",
+    "*.WINDOW_STATE": "value.window",
+    "*.WORKING": "indicator.working"
+  }
+}
