@@ -1,21 +1,22 @@
 {
   "id": "tasmota-rgb",
-  "version": 2,
+  "version": 5,
   "rang": 25,
   "name": {
     "de": "Tasmota-Farblampe",
     "en": "Tasmota colour light"
   },
   "geraetetyp": "rgbSingle",
+  "funktion": "light",
   "erkennung": {
     "erforderlich": [
-      "stat.POWER",
-      "tele.STATE"
+      "tele.STATE",
+      "cmnd.Color"
     ],
     "inhalt": {
       "tele.STATE": "Color"
     },
-    "hinweis": "Das Farbfeld in tele.STATE ist der Unterschied zu einer gewöhnlichen Tasmota. cmnd.POWER steht bewusst nicht in der Pflichtliste — bei einem frisch angelegten Gerät gibt es den Punkt noch nicht, und die Vorlage soll trotzdem greifen."
+    "hinweis": "Das Farbfeld in tele.STATE ist der Unterschied zu einer gewoehnlichen Tasmota. stat.POWER steht nicht in der Pflichtliste - der Punkt entsteht erst beim ersten Schalten, der Zustand steht solange in tele.STATE."
   },
   "zustaende": [
     {
@@ -23,7 +24,7 @@
       "rolle": "level.color.rgb",
       "typ": "string",
       "lesen": "tele.STATE",
-      "leseformel": "'#' + String(JSON.parse(val).Color).slice(0, 6)",
+      "leseformel": "JSON.parse(val)?.Color ? '#' + String(JSON.parse(val).Color).slice(0, 6) : null",
       "schreiben": "cmnd.Color",
       "schreibformel": "String(val).replace('#', '')",
       "hinweis": "Tasmota liefert die Farbe ohne Raute (F4FFCC), ioBroker und VIS erwarten sie mit. Bei RGBW-Geräten hängen weitere Kanäle hinten an, deshalb die ersten sechs Zeichen. Liest aus tele.STATE und schreibt nach cmnd — die Rückmeldung kommt deshalb erst mit der nächsten Telemetrie, bei TelePeriod 300 also bis zu fünf Minuten später. Tasmota antwortet zwar sofort auf stat/RESULT, aber dort steht nur der eine geänderte Schlüssel; als Lesequelle wäre das unbrauchbar. Abhilfe am Gerät: SetOption59 1 — dann schickt Tasmota tele/STATE bei jeder Änderung mit."
@@ -45,13 +46,21 @@
       "lesen": "stat.POWER",
       "schreiben": "cmnd.POWER",
       "schreibformel": "val ? \"ON\" : \"OFF\"",
-      "hinweis": "getrennte Quellen: sonst zeigt der Schalter den Befehl statt des Zustands"
+      "hinweis": "getrennte Quellen: sonst zeigt der Schalter den Befehl statt des Zustands",
+      "lesenSonst": {
+        "punkt": "tele.STATE",
+        "leseformel": "JSON.parse(val)?.POWER === 'ON'"
+      }
     },
     {
       "name": "ON_ACTUAL",
       "rolle": "sensor.light",
       "typ": "boolean",
-      "lesen": "stat.POWER"
+      "lesen": "stat.POWER",
+      "lesenSonst": {
+        "punkt": "tele.STATE",
+        "leseformel": "JSON.parse(val)?.POWER === 'ON'"
+      }
     },
     {
       "name": "EFFECT",
@@ -77,7 +86,7 @@
       "lesen": "tele.STATE",
       "feld": "Fade",
       "schreiben": "cmnd.Fade",
-      "leseformel": "JSON.parse(val).Fade === \"ON\"",
+      "leseformel": "JSON.parse(val)?.Fade === \"ON\"",
       "schreibformel": "val ? \"ON\" : \"OFF\"",
       "optional": true,
       "vorgabeAus": true,
@@ -185,7 +194,18 @@
       "lesen": "tele.STATE",
       "feld": "IPAddress",
       "optional": true,
-      "vorgabeAus": true
+      "vorgabeAus": true,
+      "lesenSonst": [
+        {
+          "punkt": "tele.INFO2",
+          "feld": "Info2.IPAddress"
+        },
+        {
+          "punkt": "stat.STATUS5",
+          "feld": "StatusNET.IPAddress"
+        }
+      ],
+      "hinweis": "Drei Wege, weil keiner allein reicht. tele.STATE steht zuerst, weil es alle paar Minuten frisch kommt und einem Adresswechsel folgt - allerdings fuehrt es die IP erst ab neuerer Firmware mit (gemessen: 12.5.0 nein, 15.5.0 ja). tele.INFO2 schickt eine Tasmota beim Start und laesst es retained stehen; das steht auch bei alter Firmware da, ist aber ein Standbild vom letzten Boot. stat.STATUS5 entsteht, wenn jemand den Status abfragt."
     }
   ],
   "nebenwirkungen": [
@@ -201,5 +221,19 @@
       "art": "mqtt-publish",
       "punkt": "cmnd.Dimmer"
     }
-  ]
+  ],
+  "weiterePunkte": {
+    "tele.LWT": "text",
+    "tele.STATE": "json",
+    "tele.SENSOR": "json",
+    "tele.INFO1": "json",
+    "tele.INFO2": "json",
+    "tele.INFO3": "json",
+    "tele.HASS_STATE": "json",
+    "stat.RESULT": "json",
+    "stat.STATUS": "json",
+    "stat.STATUS2": "json",
+    "stat.STATUS5": "json",
+    "stat.STATUS11": "json"
+  }
 }

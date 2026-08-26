@@ -32,9 +32,9 @@ which pattern slots are filled and which are still free.
 
 **Templates.** A template describes how a device source becomes a finished alias
 device. Templates are plain JSON files, one per template — see
-[Template format](#template-format). Shipped with the adapter:
-Tasmota socket, Tasmota light, Tasmota colour light, Tasmota with multiple
-outputs, measurement point.
+[Template format](#template-format). Sixteen ship with the adapter: four for
+Tasmota, one plain measuring point, and eleven for Homematic — see
+[What the shipped templates cover](#what-the-shipped-templates-cover).
 
 **Your own templates.** Build a device — by hand or by adapting a shipped
 template — and save it as a template of your own. What can be derived is
@@ -48,9 +48,24 @@ matches, which template wins there, and which devices would change hands. See
 output becomes its own channel, grouped under one folder. The output numbers are
 read from what actually exists — gaps are allowed.
 
+**Move, rename, swap the source.** An id cannot be changed in the object store,
+so moving is always: create new, move the enum memberships, delete old — in that
+order, so a failure leaves you with two aliases rather than none. Swapping the
+source keeps the alias untouched and only re-points it, which is what you want
+when a device dies. See [Swapping a source](#swapping-a-source).
+
+**Filling free slots.** A device that matches no pattern is often not an unknown
+device — a role is simply missing. **Suggest free slots** sets roles in the
+draft and lets the detector decide again. It only ever runs on that button, never
+during normal detection, every guessed row is marked, and while any guess is
+undecided the write buttons stay locked. Not deciding is no longer a silent yes.
+
 **Nothing is written without a dry run.** The dry run lists every object that
-would be created, changed or removed, as full JSON. Only from there can you
-write. If a source does not exist, writing is blocked: the js-controller
+would be created, changed or removed, as full JSON. For anything that changes it
+puts **before and after side by side**, line against line, so you can see *what*
+changes instead of only *that* it changes. Field order and trailing commas are
+normalised first — otherwise half the lines light up for no reason. Only from
+there can you write. If a source does not exist, writing is blocked: the js-controller
 remembers a missing source permanently, and only deleting and recreating the
 object fixes it.
 
@@ -58,11 +73,15 @@ object fixes it.
 
 Early. Usable, but not finished.
 
-- Works as an admin tab; the adapter itself runs no process (`mode: none`)
-- German and English
+- Works as an admin tab; the adapter itself runs no process (`mode: none`).
+  The instance exists only to carry the settings.
+- German and English, 550 keys each
 - Not published on npm yet — install from GitHub
-- Missing: mass creation, "who uses this alias", re-applying a changed template
-  to the devices built from it
+- 16 bundled templates: eleven Homematic, four Tasmota, one plain measuring point
+- **Missing:** "who uses this alias" — vis views, Alexa and Google names cannot
+  be searched from here, so a rename warns you instead of pretending to be
+  complete. Exporting a template to a file and reading it back works but is
+  the least tested path.
 
 ## Why the tree shows devices that do not exist
 
@@ -95,6 +114,31 @@ while you experiment.
 The type-detector is a real npm dependency, bundled for the browser with
 esbuild. It is never copied into the source tree — a frozen copy that drifts
 from the library was the main weakness of the existing alias manager.
+
+### How the tab itself is built
+
+The tab is **29 ES modules** under `admin/js/`, loaded by the browser as
+modules. There is no build step for them: what stands in the file is what runs.
+Styling lives in one file, `admin/css/werkbank.css`.
+
+That has a price. A module boundary can be crossed wrongly in ways the browser
+only notices while running, so three checks run before any clicking — they need
+no browser and take two minutes:
+
+```bash
+# 1. does it still bundle? finds missing or misspelled exports
+npx esbuild --bundle admin/js/start.js --outfile=/dev/null --format=esm
+
+# 2. free names — identifiers that are neither declared nor imported
+npm install --no-save acorn@8
+node ../werkzeug/freie-namen.js admin/js node_modules/acorn/dist/acorn.js
+
+# 3. translations: both files carry the same keys, every tr() has one
+```
+
+The second one earns its keep. `socket` was used in `detail.js` without being
+imported — valid JavaScript, and it would only have thrown when someone picked
+a source whose value was not loaded yet.
 
 ## Template format
 
@@ -137,7 +181,7 @@ One JSON file per template under `admin/vorlagen/`. Example:
 | `erkennung.namenshinweis` | only breaks ties between templates that fit equally well |
 | `rang` | last tie-breaker, so the same device is always detected the same way |
 | `optional` | the state is skipped when its source or JSON field is missing |
-| `vorgabeAus` | proposed but unchecked — used for values no pattern has a slot for |
+| `vorgabeAus` | proposed but unchecked — see **What a template ticks by default** below |
 | `feld` | builds the read function `JSON.parse(val).<field>` |
 | `mehrfach` + `%N%` | one device per output; the numbers are read from what exists |
 | `werteliste` | value list for the datapoint — slots like EFFECT are not detected without one |
@@ -153,6 +197,51 @@ template's score.
 Datapoint names are matched case-insensitively as a fallback, because MQTT keeps
 whatever casing was published — the same device family sends `cmnd.POWER` on one
 unit and `cmnd.power` on the next.
+
+## What a template ticks by default
+
+Whether a datapoint has a slot in the type-detector pattern is **not** the
+criterion. That only decides *where* the point ends up — inside the device or
+in a separate info device. It says nothing about whether anyone needs it. The
+`thermostat` pattern has 24 slots, `socket` has 14; everything that could ever
+sit in such a device is listed there, down to frequency and apparent power.
+
+The criterion is purpose: **tick what you need to operate the device and to
+notice when something is wrong.** Setpoint, actual value, and the signals that
+announce a failure — `LOWBAT`, `UNREACH`.
+
+Left unticked: diagnostics. Signal strength, uptime, ramp times, inhibit
+flags. You tick those when you are chasing a problem.
+
+Battery **voltage** looks like it belongs in the first group — it falls
+visibly over weeks while `LOW_BAT` only flips once the change is already due.
+It stays unticked anyway, because the detector has nowhere to put it. Patterns
+are assembled from two shared groups:
+
+```
+maintenance  WORKING UNREACH LOWBAT MAINTAIN ERROR DIRECTION
+             CONNECTED RSSI ON_TIME BATTERY   value.battery   unit %
+metering     ELECTRIC_POWER CURRENT VOLTAGE CONSUMPTION
+             FREQUENCY SPEED POWER            value.voltage   unit V
+```
+
+`VOLTAGE` sits between current and consumption: it is the **mains voltage of a
+metering device**, not a sensor's cell voltage. A window contact has no
+metering group at all, which is why it has no voltage slot — and `BATTERY`,
+the slot it does have, means a percentage. Writing volts into either is
+wrong, so the point is offered and left off.
+
+Two things override that:
+
+- A point that reads the **same source** as an already-ticked one is never
+  ticked. Otherwise the same value sits in the alias twice and the seventh
+  check reports it, rightly. Homematic switch actuators have no separate
+  feedback value — `1.STATE` is both — so their `ON_ACTUAL` stays off.
+- Where the purpose says tick but the pattern has **no slot**, weigh it: the
+  point lands in an info device next to the real one. For a single value that
+  is rarely worth it, and the template's `hinweis` has to say so. And check
+  what a slot **means** before using it — a matching name is not a matching
+  purpose, as the voltage case above shows.
 
 ## Saving your own templates
 
@@ -235,6 +324,118 @@ datapoints. That is deliberate — more evidence should win — and it only affe
 devices you have not built yet: a finished alias records the template it came
 from and keeps it.
 
+## What the shipped templates cover
+
+Sixteen templates come with the adapter. Four Tasmota, one plain measuring
+point — and eleven for Homematic, where the interesting part is not that a
+template matches but that the **right** one does. The devices look alike in the
+data; what separates them is one datapoint each:
+
+| Told apart by | Which is which |
+|---|---|
+| `1.WORKING` | switch actuator, not a window contact — both have `1.STATE` |
+| `2.STATE` | multi-channel actuator; the single-channel template refuses when it is present |
+| `1.LEVEL_REAL` vs `1.STOP` | dimmer vs shutter — both have `1.LEVEL` |
+| `1.ERROR` | classic window contact vs HmIP, which computes a boolean from a number |
+| `0.SABOTAGE` | required for the HmIP contact. Without it, `1.STATE` + `0.LOW_BAT` matched twelve devices, eight of them actuators |
+| `1.LEVEL` / `1.HUMIDITY` / `4.SECTION` | radiator valve vs wall thermostat vs heating group |
+| `1.TEMPERATURE` vs `1.ACTUAL_TEMPERATURE` | a plain sensor vs something that also sets a value |
+
+The CCU's own receivers — `HM-RCV-50`, `HmIP-RCV-50`, `RPI-RF-MOD` — match
+nothing on purpose. Fifty bare `LEVEL` channels are not a device.
+
+When a template is rejected, the picker says why: *"1.LEVEL missing"*, not
+*"does not fit"*. A reason you cannot act on is not a reason.
+
+### Role knowledge beside the rows
+
+A template can carry `weiterePunkte`: roles for datapoints that get no row of
+their own. Without it, "all datapoints of the device" showed *no role* on most
+lines, because hm-rpc simply leaves the field empty. A `*.NAME` wildcard applies
+per channel, so `2.LEVEL` and `3.RAMP_TIME` are covered without listing every
+channel. It changes nothing about which template wins — only raw rows are
+enriched.
+
+## What an existing alias contributes
+
+Pick a source that already has an alias, and the alias wins. Role, type, unit,
+value list, caption, formulas, both sources and the ticks come from what is
+stored — in **both** views, "create alias" and "edit alias".
+
+Before that, the same row carried a different role depending on which tab you
+were in, and refreshing did something different in each. Now refreshing changes
+nothing by itself.
+
+Where the template wants something else, the row says so — *"Template:
+sensor.window"* — and a button above the list offers to apply it. That is a
+click, never a side effect. The caption is exempt: the display name belongs to
+whoever typed it.
+
+## Swapping a source
+
+A device breaks and gets replaced. The alias should stay exactly as it is —
+same id, same recording, same room and function — and only point somewhere
+else. **Swap source…** does that, and it changes only `common.alias.id` per
+datapoint plus `native.quelle` on the channel.
+
+Each datapoint is matched in three steps, and the dialog says which one was
+used:
+
+1. **same relative path** below the new device — `…ABC.1.STATE` → `…XYZ.1.STATE`
+2. **through the template row** — finds `LOWBAT` on a device that spells it
+   `LOWBAT` where the old one said `LOW_BAT`
+3. **guessed** from name or role — deliberately weak, and marked **guessed** so
+   you check it
+
+Rows with no match at all turn red and offer a checkbox: *remove this point
+when swapping*. Leave it unticked and the point stays, still pointing at the
+old source — allowed, but visible.
+
+Two things the dialog is careful about. It names the old source even when the
+device is **gone** — that is the normal case for "device broken". And it warns
+where the new source measures differently: *"Watch out: ACTUAL: value range
+0..100 → 0..255"*. The alias keeps its formulas; if the new device counts
+differently, the numbers are wrong afterwards and nothing else would tell you.
+
+## Room and function
+
+Both live in `enum.rooms.*` / `enum.functions.*`, not on the object — so this
+is the one place where the workbench writes outside `alias.`. Nothing else
+outside that namespace is ever touched.
+
+The proposal comes from, in order: the room already on the source or one of its
+channels, the device name (`FK_Max_Spielzimmer` → `Max_Spielzimmer`), the
+target folder. The function comes from the template's `funktion` field, or from
+the detected type when the template has none.
+
+The admin ships 62 function and 58 room templates, each with a picture. The
+workbench does not copy them; it reads them out of the admin's own bundle at
+runtime, so there are never two lists ageing apart. If that fails, the field
+quietly shows only what exists — and says so in the last row, rather than
+looking empty for no reason.
+
+**The picture is shown before it is written.** Next to each of the two fields
+stands the picture of the chosen enum: solid when one is already stored, faded
+with a small **new** corner when the workbench would add one on writing, and
+nothing at all when the catalogue does not know the name or the switch is off.
+So the settings page is visible in the row itself, instead of having to be
+guessed from a dry run.
+
+## Settings
+
+The instance has no process; its settings only decide how the workbench writes.
+Four switches, all on by default — and if `native` is missing entirely, the same
+defaults apply rather than everything counting as off:
+
+| Switch | What it does |
+|---|---|
+| `ikonRaeume` | add a missing picture to a **room** |
+| `ikonFunktionen` | the same for a **function** |
+| `ikonErsetzen` | also replace an entry that is not a picture. ioBroker's default rooms carry `icon: "Bedroom"` — a bare word that renders as a broken box |
+| `vorlagenVomAdmin` | offer the admin's room and function templates at all |
+
+The tab reads them **once on load**. After saving, reload the tab.
+
 ## Installation
 
 Not on npm yet. On the ioBroker host:
@@ -254,8 +455,15 @@ npm install
 npm run build      # bundles @iobroker/type-detector into admin/detector.js
 ```
 
+`npm run build` touches **only** the detector bundle. The tab's own modules are
+served as they are; editing one and reloading the tab is the whole cycle. On a
+running installation the admin caches adapter files, so `iobroker upload
+alias-workbench` after copying is what makes the browser see the change.
+
 Translations live in `admin/i18n/`. A new language is a new file there and an
-entry in `SPRACHEN` in `admin/tab.html` — nothing else.
+entry in `SPRACHEN` in `admin/js/sprache.js` — nothing else. Watch for strings
+written straight into `admin/tab.html`: they are replaced at runtime, and one
+that nobody wired up stays German forever without anyone noticing.
 
 ## Background
 
@@ -265,124 +473,6 @@ entry in `SPRACHEN` in `admin/tab.html` — nothing else.
   templates cover
 - [ioBroker aliases](https://github.com/ioBroker/ioBroker.docs) — aliases are a
   core feature of the js-controller, not of any adapter
-
-## Changelog
-
-### 0.0.19
-
-- Opening a source whose alias already exists now targets that alias, wherever
-  it lives, and ticks the datapoints it already contains. Before, the workbench
-  proposed a fresh location and unticked boxes — one click could have created a
-  duplicate or dropped points
-- An existing alias is found through the sources of its datapoints, not only
-  through the marker the workbench writes, so hand-built aliases count too
-
-### 0.0.18
-
-- The changes card reports both directions, and finds role, unit, formula and
-  source changes on a draft built from the source as well
-
-### 0.0.17
-
-- The changes card only reports real deviations, in both directions: a point
-  deselected against the baseline, and one ticked on against it. Points the
-  template proposes unticked are no longer listed as if someone had
-  deselected them
-- Role, unit, formula and source changes are now also found on a draft built
-  from the source, not only on one built from an existing alias
-
-### 0.0.16
-
-- Removed the note about missing MQTT objects — it contradicted the
-  identification right above it and helped nobody
-
-### 0.0.15
-
-- The MQTT section sits under the identification and is collapsed by default;
-  the warning stays visible in its header
-
-### 0.0.14
-
-- Every command in the MQTT card carries its own state and its own action —
-  create the point, or allow it to send
-- After such a change detection runs again, because it depends on which points
-  exist
-
-### 0.0.13
-
-- New check: feedback that only arrives with the next telemetry. A point that
-  writes to `cmnd` but reads from `tele` shows the old value for minutes —
-  unless `SetOption59` is on, which the adapter asks the device about and can
-  switch on
-
-### 0.0.12
-
-- New template: Tasmota colour light, on the `rgbSingle` pattern
-- Templates can carry a `werteliste` for their datapoints
-
-### 0.0.11
-
-- MQTT devices: reads the command set from what the device already publishes,
-  creates the missing `cmnd` points with publishing enabled, and can request
-  `Status 11` when nothing is there to read
-- The write-path check is no longer a placeholder: it reports a `cmnd` point
-  that is not allowed to publish, which makes an alias look fine and switch
-  nothing
-
-### 0.0.10
-
-- Tasmota templates also carry the diagnostic values from tele/STATE — uptime,
-  free heap, WiFi quality, SSID, link count, downtime, IP — all proposed
-  unticked
-
-### 0.0.9
-
-- Tasmota templates cover apparent power, reactive power and power factor,
-  proposed but unticked
-
-### 0.0.8
-
-- Slots that require a value list (EFFECT) can be filled again; slots whose
-  type is given as a list no longer produce an invalid `common.type`
-
-### 0.0.7
-
-- Editing a datapoint looks and works the same on a device and on a template
-
-### 0.0.6
-
-- Templates of your own are fully editable in the Templates view, datapoints
-  included
-
-### 0.0.5
-
-- Saving and deleting touch one template at a time, so a failed load can no
-  longer wipe the others
-- Three separate columns per datapoint; all ticks aligned left
-
-### 0.0.4
-
-- `erkennung.verboten`: datapoints that must not exist
-- Multi-output templates can be built from a device assembled by hand
-
-### 0.0.3
-
-- Templates view: list, edit, duplicate, delete, import and export
-- Shipped templates are read-only; an editable copy shadows them
-- `rang` for a new template of yours is numbered from your own templates only,
-  so shipped ranks can never shift it
-
-### 0.0.2
-
-- Save your own templates, stored in the instance configuration
-- Templates are picked by verified evidence first, name hint only as a tie-break
-- A device remembers the template it was built from
-- New template keys: `absolut`, `beschriftung`, `nachkommastellen`
-
-### 0.0.1
-
-- First version. Detector report, live value preview, templates, devices with
-  several outputs, dry run with write and removal, German and English.
 
 ## License
 
@@ -403,8 +493,24 @@ geschrieben wird ausschließlich über einen Trockenlauf, der jedes Objekt vorhe
 als JSON zeigt.
 
 Gerätewissen steckt in Vorlagen — JSON-Dateien, keine Programmzeilen. Eine neue
-Gerätefamilie ist eine neue Datei. Ein fertig gebautes Gerät lässt sich als
-eigene Vorlage sichern; was sich ableiten lässt, wird abgeleitet, der Rest wird
-gefragt — und ein Probelauf zeigt vorher, welche Geräte die neue Vorlage fängt.
-Die dritte Sicht **Vorlagen** verwaltet sie: ansehen, ändern, duplizieren,
-löschen, aus- und einlesen.
+Gerätefamilie ist eine neue Datei. Sechzehn sind dabei: vier für Tasmota, ein
+reiner Messpunkt und elf für Homematic, wo das Kunststück nicht ist, dass eine
+Vorlage greift, sondern dass die **richtige** greift. Ein fertig gebautes Gerät
+lässt sich als eigene Vorlage sichern; was sich ableiten lässt, wird abgeleitet,
+der Rest wird gefragt — und ein Probelauf zeigt vorher, welche Geräte die neue
+Vorlage fängt. Die dritte Sicht **Vorlagen** verwaltet sie: ansehen, ändern,
+duplizieren, löschen, aus- und einlesen.
+
+Gibt es den Alias schon, gewinnt sein Bestand — in beiden Ansichten dasselbe
+Bild. Wo die Vorlage etwas anderes will, steht das an der Zeile, und ein Knopf
+übernimmt es. Auf Klick, nie nebenbei.
+
+Geht ein Gerät kaputt, biegt **Quelle tauschen** den Alias auf das Ersatzgerät
+um, ohne ihn anzufassen: gleiche Kennung, gleiche Aufzeichnung, gleiche
+Zuordnung. Zugeordnet wird über den Pfad, über die Vorlagenzeile oder — sichtbar
+als „vermutet" — geraten.
+
+Raum und Funktion stehen nicht am Objekt, sondern in Aufzählungen. Neben beiden
+Feldern steht das Bild, das dort hinterlegt ist oder beim Schreiben dazukäme —
+letzteres blass und mit einem kleinen **neu**. Damit sieht man vorher, was
+passiert, statt es im Trockenlauf zu suchen.

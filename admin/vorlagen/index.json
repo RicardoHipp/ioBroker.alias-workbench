@@ -5,6 +5,17 @@
     "tasmota-steckdose.json",
     "tasmota-rgb.json",
     "tasmota-lampe.json",
+    "hm-schaltaktor-mehrfach.json",
+    "hm-schaltaktor-lampe.json",
+    "hm-schaltaktor-steckdose.json",
+    "hm-dimmer.json",
+    "hm-rollladen.json",
+    "hm-heizgruppe.json",
+    "hm-heizkoerper.json",
+    "hm-wandthermostat.json",
+    "hm-fensterkontakt-hmip.json",
+    "hm-fensterkontakt-hm.json",
+    "hm-temperatur-feuchte.json",
     "messpunkt.json"
   ]
 }

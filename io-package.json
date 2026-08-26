@@ -1,83 +1,11 @@
 {
   "common": {
     "name": "alias-workbench",
-    "version": "0.0.19",
+    "version": "0.7.12",
     "news": {
-      "0.0.19": {
-        "en": "An existing alias is found and used as the target, with its datapoints ticked",
-        "de": "Ein vorhandener Alias wird gefunden, als Ziel genommen und seine Punkte angehakt"
-      },
-      "0.0.18": {
-        "en": "Changes card reports both directions, and finds changes on source drafts too",
-        "de": "Die Änderungs-Karte meldet beide Richtungen und findet Änderungen auch am Quellentwurf"
-      },
-      "0.0.17": {
-        "en": "Changes card only reports real deviations",
-        "de": "Die Änderungs-Karte meldet nur noch echte Abweichungen"
-      },
-      "0.0.16": {
-        "en": "Removed the confusing note about missing MQTT objects",
-        "de": "Die verwirrende Meldung über fehlende MQTT-Objekte entfernt"
-      },
-      "0.0.15": {
-        "en": "MQTT section moved up under the identification and collapsible",
-        "de": "MQTT-Bereich unter die Erkennung gerückt und zuklappbar"
-      },
-      "0.0.14": {
-        "en": "Per-command action in the MQTT card; detection runs again afterwards",
-        "de": "Handlung je Befehl in der MQTT-Karte; die Erkennung läuft danach neu"
-      },
-      "0.0.13": {
-        "en": "Feedback check, with SetOption59 read from the device and switchable",
-        "de": "Prüfung der Rückmeldung, SetOption59 wird abgefragt und lässt sich einschalten"
-      },
-      "0.0.12": {
-        "en": "New template for Tasmota colour lights on the rgbSingle pattern",
-        "de": "Neue Vorlage für Tasmota-Farblampen auf dem rgbSingle-Muster"
-      },
-      "0.0.11": {
-        "en": "Determine MQTT send commands and create the missing cmnd points",
-        "de": "Sendebefehle eines MQTT-Geräts ermitteln und fehlende cmnd-Punkte anlegen"
-      },
-      "0.0.10": {
-        "en": "Diagnostic values from tele/STATE in the Tasmota templates, unticked",
-        "de": "Diagnosewerte aus tele/STATE in den Tasmota-Vorlagen, abgewählt"
-      },
-      "0.0.9": {
-        "en": "Tasmota templates cover apparent power, reactive power and power factor",
-        "de": "Tasmota-Vorlagen decken Schein- und Blindleistung und den Leistungsfaktor ab"
-      },
-      "0.0.8": {
-        "en": "Slots that need a value list (EFFECT) can be filled again",
-        "de": "Plätze mit Werteliste (EFFECT) lassen sich wieder belegen"
-      },
-      "0.0.7": {
-        "en": "Editing a datapoint looks the same on a device and on a template",
-        "de": "Ein Datenpunkt sieht am Gerät und an der Vorlage gleich aus"
-      },
-      "0.0.6": {
-        "en": "Templates of your own are fully editable, datapoints included",
-        "de": "Eigene Vorlagen lassen sich vollständig bearbeiten, samt Datenpunkten"
-      },
-      "0.0.5": {
-        "en": "Saving touches one template at a time; clearer columns per datapoint",
-        "de": "Speichern fasst nur eine Vorlage an; klarere Spalten je Datenpunkt"
-      },
-      "0.0.4": {
-        "en": "Forbidden datapoints in detection; multi-output templates from a hand-built device",
-        "de": "Verbotene Datenpunkte in der Erkennung; Mehrfachvorlagen aus einem von Hand gebauten Gerät"
-      },
-      "0.0.3": {
-        "en": "Templates view: manage, duplicate, delete, import and export templates",
-        "de": "Sicht Vorlagen: verwalten, duplizieren, löschen, ein- und ausgeben"
-      },
-      "0.0.2": {
-        "en": "Save your own templates; detection weighs verified evidence first",
-        "de": "Eigene Vorlagen speichern; Erkennung wertet zuerst die Belege"
-      },
-      "0.0.1": {
-        "en": "First read-only version: detector report and live values for any channel",
-        "de": "Erste Fassung, nur lesend: Detektor-Bericht und Live-Werte für jeden Kanal"
+      "0.7.12": {
+        "en": "Tab rebuilt as ES modules; eleven Homematic templates; settings page; swap the source of an alias; picture preview beside room and function.",
+        "de": "Reiter in ES-Modulen; elf Homematic-Vorlagen; Einstellungsseite; Quelle eines Alias tauschen; Bildvorschau neben Raum und Funktion."
       }
     },
     "titleLang": {
@@ -102,7 +30,7 @@
     "connectionType": "local",
     "dataSource": "push",
     "adminUI": {
-      "config": "none",
+      "config": "json",
       "tab": "materialize"
     },
     "adminTab": {
@@ -143,7 +71,12 @@
     "noIntro": true,
     "extIcon": "https://raw.githubusercontent.com/RicardoHipp/ioBroker.alias-workbench/main/admin/alias-workbench.png"
   },
-  "native": {},
+  "native": {
+    "ikonRaeume": true,
+    "ikonFunktionen": true,
+    "ikonErsetzen": true,
+    "vorlagenVomAdmin": true
+  },
   "objects": [],
   "instanceObjects": []
 }

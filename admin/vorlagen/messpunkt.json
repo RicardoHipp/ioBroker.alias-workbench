@@ -1,6 +1,6 @@
 {
   "id": "messpunkt",
-  "version": 3,
+  "version": 4,
   "rang": 5,
   "name": {
     "de": "Reiner Messpunkt",
@@ -195,7 +195,31 @@
       "feld": "IPAddress",
       "optional": true,
       "vorgabeAus": true,
-      "hinweis": "Erst ab neueren Firmwarestaenden in tele.STATE — sonst wird der Punkt weggelassen."
+      "hinweis": "Drei Wege, weil keiner allein reicht. tele.STATE steht zuerst, weil es alle paar Minuten frisch kommt und einem Adresswechsel folgt - allerdings fuehrt es die IP erst ab neuerer Firmware mit (gemessen: 12.5.0 nein, 15.5.0 ja). tele.INFO2 schickt eine Tasmota beim Start und laesst es retained stehen; das steht auch bei alter Firmware da, ist aber ein Standbild vom letzten Boot. stat.STATUS5 entsteht, wenn jemand den Status abfragt.",
+      "lesenSonst": [
+        {
+          "punkt": "tele.INFO2",
+          "feld": "Info2.IPAddress"
+        },
+        {
+          "punkt": "stat.STATUS5",
+          "feld": "StatusNET.IPAddress"
+        }
+      ]
     }
-  ]
+  ],
+  "weiterePunkte": {
+    "tele.LWT": "text",
+    "tele.STATE": "json",
+    "tele.SENSOR": "json",
+    "tele.INFO1": "json",
+    "tele.INFO2": "json",
+    "tele.INFO3": "json",
+    "tele.HASS_STATE": "json",
+    "stat.RESULT": "json",
+    "stat.STATUS": "json",
+    "stat.STATUS2": "json",
+    "stat.STATUS5": "json",
+    "stat.STATUS11": "json"
+  }
 }

@@ -1,12 +1,13 @@
 {
   "id": "tasmota-mehrfach",
-  "version": 2,
+  "version": 5,
   "rang": 30,
   "name": {
     "de": "Tasmota mit mehreren Ausgängen",
     "en": "Tasmota with multiple outputs"
   },
   "geraetetyp": "socket",
+  "funktion": "socket",
   "hinweis": {
     "de": "Steckdosenleiste, Ventilinsel, Relaisplatine. Je Ausgang entsteht ein eigenes Gerät, weil ein socket genau ein SET hat. %N% steht für die Ausgangsnummer und wird aus dem Bestand gelesen — Lücken sind erlaubt.",
     "en": "Power strip, valve manifold, relay board. Each output becomes its own device because a socket has exactly one SET. %N% stands for the output number and is read from what exists — gaps are allowed."
@@ -17,9 +18,12 @@
   "kanalname": "POWER%N%",
   "erkennung": {
     "erforderlich": [
-      "stat.POWER%N%",
       "cmnd.POWER%N%"
-    ]
+    ],
+    "inhalt": {
+      "tele.STATE": "POWER%N%"
+    },
+    "hinweis": "stat.POWER steht bewusst nicht in der Pflichtliste: den Punkt legt der mqtt-Adapter erst an, wenn das Geraet zum ersten Mal geschaltet hat. Vorher haette die Vorlage nie gegriffen, obwohl der Schaltzustand die ganze Zeit in tele.STATE steht - von dort liest sie ersatzweise. cmnd.POWER bleibt dagegen Pflicht: es ist der Beleg dafuer, dass hier ueberhaupt etwas zu schalten ist. Ohne ihn wuerde jeder blosse Messpunkt mit Relaismeldung als Steckdose durchgehen. Die Nummern der Ausgaenge liest die Vorlage aus den Feldern POWER1, POWER2 ... in tele.STATE, nicht aus vorhandenen Objekten."
   },
   "zustaende": [
     {
@@ -28,13 +32,21 @@
       "typ": "boolean",
       "lesen": "stat.POWER%N%",
       "schreiben": "cmnd.POWER%N%",
-      "schreibformel": "val ? \"ON\" : \"OFF\""
+      "schreibformel": "val ? \"ON\" : \"OFF\"",
+      "lesenSonst": {
+        "punkt": "tele.STATE",
+        "leseformel": "JSON.parse(val)?.POWER%N% === 'ON'"
+      }
     },
     {
       "name": "ACTUAL",
       "rolle": "sensor.switch",
       "typ": "boolean",
-      "lesen": "stat.POWER%N%"
+      "lesen": "stat.POWER%N%",
+      "lesenSonst": {
+        "punkt": "tele.STATE",
+        "leseformel": "JSON.parse(val)?.POWER%N% === 'ON'"
+      }
     },
     {
       "name": "ELECTRIC_POWER",
@@ -44,7 +56,8 @@
       "lesen": "tele.SENSOR",
       "feld": "ENERGY.Power",
       "optional": true,
-      "hinweis": "gemeinsamer Messblock — alle Ausgänge teilen sich einen"
+      "hinweis": "Die meisten Mehrfachsteckdosen messen nur gesamt. Angehakt bekaeme jeder Ausgang denselben Wert, und die Summe erschiene vierfach. Nur anhaken, wenn dieses Modell je Ausgang misst.",
+      "vorgabeAus": true
     },
     {
       "name": "CONSUMPTION",
@@ -53,7 +66,9 @@
       "einheit": "kWh",
       "lesen": "tele.SENSOR",
       "feld": "ENERGY.Total",
-      "optional": true
+      "optional": true,
+      "vorgabeAus": true,
+      "hinweis": "Die meisten Mehrfachsteckdosen messen nur gesamt. Angehakt bekaeme jeder Ausgang denselben Wert, und die Summe erschiene vierfach. Nur anhaken, wenn dieses Modell je Ausgang misst."
     },
     {
       "name": "UNREACH",
@@ -152,7 +167,17 @@
       "feld": "IPAddress",
       "optional": true,
       "vorgabeAus": true,
-      "hinweis": "Erst ab neueren Firmwarestaenden in tele.STATE — sonst wird der Punkt weggelassen."
+      "hinweis": "Drei Wege, weil keiner allein reicht. tele.STATE steht zuerst, weil es alle paar Minuten frisch kommt und einem Adresswechsel folgt - allerdings fuehrt es die IP erst ab neuerer Firmware mit (gemessen: 12.5.0 nein, 15.5.0 ja). tele.INFO2 schickt eine Tasmota beim Start und laesst es retained stehen; das steht auch bei alter Firmware da, ist aber ein Standbild vom letzten Boot. stat.STATUS5 entsteht, wenn jemand den Status abfragt.",
+      "lesenSonst": [
+        {
+          "punkt": "tele.INFO2",
+          "feld": "Info2.IPAddress"
+        },
+        {
+          "punkt": "stat.STATUS5",
+          "feld": "StatusNET.IPAddress"
+        }
+      ]
     }
   ],
   "nebenwirkungen": [
@@ -160,5 +185,19 @@
       "art": "mqtt-publish",
       "punkt": "cmnd.POWER%N%"
     }
-  ]
+  ],
+  "weiterePunkte": {
+    "tele.LWT": "text",
+    "tele.STATE": "json",
+    "tele.SENSOR": "json",
+    "tele.INFO1": "json",
+    "tele.INFO2": "json",
+    "tele.INFO3": "json",
+    "tele.HASS_STATE": "json",
+    "stat.RESULT": "json",
+    "stat.STATUS": "json",
+    "stat.STATUS2": "json",
+    "stat.STATUS5": "json",
+    "stat.STATUS11": "json"
+  }
 }
