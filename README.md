@@ -137,7 +137,7 @@ One JSON file per template under `admin/vorlagen/`. Example:
 | `erkennung.namenshinweis` | only breaks ties between templates that fit equally well |
 | `rang` | last tie-breaker, so the same device is always detected the same way |
 | `optional` | the state is skipped when its source or JSON field is missing |
-| `vorgabeAus` | proposed but unchecked — used for values no pattern has a slot for |
+| `vorgabeAus` | proposed but unchecked — see **What a template ticks by default** below |
 | `feld` | builds the read function `JSON.parse(val).<field>` |
 | `mehrfach` + `%N%` | one device per output; the numbers are read from what exists |
 | `werteliste` | value list for the datapoint — slots like EFFECT are not detected without one |
@@ -153,6 +153,51 @@ template's score.
 Datapoint names are matched case-insensitively as a fallback, because MQTT keeps
 whatever casing was published — the same device family sends `cmnd.POWER` on one
 unit and `cmnd.power` on the next.
+
+## What a template ticks by default
+
+Whether a datapoint has a slot in the type-detector pattern is **not** the
+criterion. That only decides *where* the point ends up — inside the device or
+in a separate info device. It says nothing about whether anyone needs it. The
+`thermostat` pattern has 24 slots, `socket` has 14; everything that could ever
+sit in such a device is listed there, down to frequency and apparent power.
+
+The criterion is purpose: **tick what you need to operate the device and to
+notice when something is wrong.** Setpoint, actual value, and the signals that
+announce a failure — `LOWBAT`, `UNREACH`.
+
+Left unticked: diagnostics. Signal strength, uptime, ramp times, inhibit
+flags. You tick those when you are chasing a problem.
+
+Battery **voltage** looks like it belongs in the first group — it falls
+visibly over weeks while `LOW_BAT` only flips once the change is already due.
+It stays unticked anyway, because the detector has nowhere to put it. Patterns
+are assembled from two shared groups:
+
+```
+maintenance  WORKING UNREACH LOWBAT MAINTAIN ERROR DIRECTION
+             CONNECTED RSSI ON_TIME BATTERY   value.battery   unit %
+metering     ELECTRIC_POWER CURRENT VOLTAGE CONSUMPTION
+             FREQUENCY SPEED POWER            value.voltage   unit V
+```
+
+`VOLTAGE` sits between current and consumption: it is the **mains voltage of a
+metering device**, not a sensor's cell voltage. A window contact has no
+metering group at all, which is why it has no voltage slot — and `BATTERY`,
+the slot it does have, means a percentage. Writing volts into either is
+wrong, so the point is offered and left off.
+
+Two things override that:
+
+- A point that reads the **same source** as an already-ticked one is never
+  ticked. Otherwise the same value sits in the alias twice and the seventh
+  check reports it, rightly. Homematic switch actuators have no separate
+  feedback value — `1.STATE` is both — so their `ON_ACTUAL` stays off.
+- Where the purpose says tick but the pattern has **no slot**, weigh it: the
+  point lands in an info device next to the real one. For a single value that
+  is rarely worth it, and the template's `hinweis` has to say so. And check
+  what a slot **means** before using it — a matching name is not a matching
+  purpose, as the voltage case above shows.
 
 ## Saving your own templates
 
@@ -312,7 +357,7 @@ there are two buttons.
 
 Taken along, because the result is useless without it: **the target proposal
 uses the object's name**. It used to be the last part of the ID, so a
-Homematic device landed at `alias.0.NEQ1660737` and one of its channels at
+Homematic device landed at `alias.0.NEQ0000000` and one of its channels at
 `alias.0.1`. Now it is `alias.0.Licht_Bar_Esstisch` and `alias.0.Licht_Bar`.
 
 **"As one device" now means all of it.** It used to take only the required
@@ -431,8 +476,8 @@ The tree showed the last part of the ID and nothing else. Where an adapter
 uses serial numbers as identifiers, that leaves you staring at this:
 
 ```
-0000DBE9A2B8AF                 is  FK_Badezimmer
-000A1D89902F6C                 is  HK_Bastelzimmer
+0000AAAAAAAAAA                 is  FK_Badezimmer
+000ABBBBBBBBBB                 is  HK_Bastelzimmer
 AFDCMSTESFOHWVAXIDNBDQQROIYQ   is  Ricardo (Self)
 amzn1~HH1IL5GNFYTV23J          is  Michael Sauters Zuhause
 ```
@@ -927,8 +972,8 @@ publishes retained on start, and it can be asked for with `Status 5`.
   nobody finds it — the template had the point, and there was no way to learn
   why it never showed
 
-Measured after the change: Lavalampe 192.168.179.60 (from INFO2), Karbonator
-192.168.179.225 (from STATE), power strip 192.168.179.71 (from STATUS5).
+Measured after the change: Lavalampe 192.168.0.60 (from INFO2), Karbonator
+192.168.0.225 (from STATE), power strip 192.168.0.71 (from STATUS5).
 
 ### 0.0.21
 

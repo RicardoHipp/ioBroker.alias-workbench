@@ -1,7 +1,7 @@
 {
   "common": {
     "name": "alias-workbench",
-    "version": "0.0.40",
+    "version": "0.7.12",
     "news": {
       "0.0.34": {
         "en": "Foldable things now look foldable — plus/minus on sections, bigger triangles in the tree",
@@ -106,7 +106,7 @@
     "connectionType": "local",
     "dataSource": "push",
     "adminUI": {
-      "config": "none",
+      "config": "json",
       "tab": "materialize"
     },
     "adminTab": {
@@ -147,7 +147,12 @@
     "noIntro": true,
     "extIcon": "https://raw.githubusercontent.com/RicardoHipp/ioBroker.alias-workbench/main/admin/alias-workbench.png"
   },
-  "native": {},
+  "native": {
+    "ikonRaeume": true,
+    "ikonFunktionen": true,
+    "ikonErsetzen": true,
+    "vorlagenVomAdmin": true
+  },
   "objects": [],
   "instanceObjects": []
 }
