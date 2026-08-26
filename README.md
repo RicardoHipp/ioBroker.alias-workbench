@@ -32,9 +32,9 @@ which pattern slots are filled and which are still free.
 
 **Templates.** A template describes how a device source becomes a finished alias
 device. Templates are plain JSON files, one per template — see
-[Template format](#template-format). Shipped with the adapter:
-Tasmota socket, Tasmota light, Tasmota colour light, Tasmota with multiple
-outputs, measurement point.
+[Template format](#template-format). Sixteen ship with the adapter: four for
+Tasmota, one plain measuring point, and eleven for Homematic — see
+[What the shipped templates cover](#what-the-shipped-templates-cover).
 
 **Your own templates.** Build a device — by hand or by adapting a shipped
 template — and save it as a template of your own. What can be derived is
@@ -48,9 +48,24 @@ matches, which template wins there, and which devices would change hands. See
 output becomes its own channel, grouped under one folder. The output numbers are
 read from what actually exists — gaps are allowed.
 
+**Move, rename, swap the source.** An id cannot be changed in the object store,
+so moving is always: create new, move the enum memberships, delete old — in that
+order, so a failure leaves you with two aliases rather than none. Swapping the
+source keeps the alias untouched and only re-points it, which is what you want
+when a device dies. See [Swapping a source](#swapping-a-source).
+
+**Filling free slots.** A device that matches no pattern is often not an unknown
+device — a role is simply missing. **Suggest free slots** sets roles in the
+draft and lets the detector decide again. It only ever runs on that button, never
+during normal detection, every guessed row is marked, and while any guess is
+undecided the write buttons stay locked. Not deciding is no longer a silent yes.
+
 **Nothing is written without a dry run.** The dry run lists every object that
-would be created, changed or removed, as full JSON. Only from there can you
-write. If a source does not exist, writing is blocked: the js-controller
+would be created, changed or removed, as full JSON. For anything that changes it
+puts **before and after side by side**, line against line, so you can see *what*
+changes instead of only *that* it changes. Field order and trailing commas are
+normalised first — otherwise half the lines light up for no reason. Only from
+there can you write. If a source does not exist, writing is blocked: the js-controller
 remembers a missing source permanently, and only deleting and recreating the
 object fixes it.
 
@@ -58,11 +73,15 @@ object fixes it.
 
 Early. Usable, but not finished.
 
-- Works as an admin tab; the adapter itself runs no process (`mode: none`)
-- German and English
+- Works as an admin tab; the adapter itself runs no process (`mode: none`).
+  The instance exists only to carry the settings.
+- German and English, 550 keys each
 - Not published on npm yet — install from GitHub
-- Missing: mass creation, "who uses this alias", re-applying a changed template
-  to the devices built from it
+- 16 bundled templates: eleven Homematic, four Tasmota, one plain measuring point
+- **Missing:** "who uses this alias" — vis views, Alexa and Google names cannot
+  be searched from here, so a rename warns you instead of pretending to be
+  complete. Exporting a template to a file and reading it back works but is
+  the least tested path.
 
 ## Why the tree shows devices that do not exist
 
@@ -95,6 +114,31 @@ while you experiment.
 The type-detector is a real npm dependency, bundled for the browser with
 esbuild. It is never copied into the source tree — a frozen copy that drifts
 from the library was the main weakness of the existing alias manager.
+
+### How the tab itself is built
+
+The tab is **29 ES modules** under `admin/js/`, loaded by the browser as
+modules. There is no build step for them: what stands in the file is what runs.
+Styling lives in one file, `admin/css/werkbank.css`.
+
+That has a price. A module boundary can be crossed wrongly in ways the browser
+only notices while running, so three checks run before any clicking — they need
+no browser and take two minutes:
+
+```bash
+# 1. does it still bundle? finds missing or misspelled exports
+npx esbuild --bundle admin/js/start.js --outfile=/dev/null --format=esm
+
+# 2. free names — identifiers that are neither declared nor imported
+npm install --no-save acorn@8
+node ../werkzeug/freie-namen.js admin/js node_modules/acorn/dist/acorn.js
+
+# 3. translations: both files carry the same keys, every tr() has one
+```
+
+The second one earns its keep. `socket` was used in `detail.js` without being
+imported — valid JavaScript, and it would only have thrown when someone picked
+a source whose value was not loaded yet.
 
 ## Template format
 
@@ -280,6 +324,118 @@ datapoints. That is deliberate — more evidence should win — and it only affe
 devices you have not built yet: a finished alias records the template it came
 from and keeps it.
 
+## What the shipped templates cover
+
+Sixteen templates come with the adapter. Four Tasmota, one plain measuring
+point — and eleven for Homematic, where the interesting part is not that a
+template matches but that the **right** one does. The devices look alike in the
+data; what separates them is one datapoint each:
+
+| Told apart by | Which is which |
+|---|---|
+| `1.WORKING` | switch actuator, not a window contact — both have `1.STATE` |
+| `2.STATE` | multi-channel actuator; the single-channel template refuses when it is present |
+| `1.LEVEL_REAL` vs `1.STOP` | dimmer vs shutter — both have `1.LEVEL` |
+| `1.ERROR` | classic window contact vs HmIP, which computes a boolean from a number |
+| `0.SABOTAGE` | required for the HmIP contact. Without it, `1.STATE` + `0.LOW_BAT` matched twelve devices, eight of them actuators |
+| `1.LEVEL` / `1.HUMIDITY` / `4.SECTION` | radiator valve vs wall thermostat vs heating group |
+| `1.TEMPERATURE` vs `1.ACTUAL_TEMPERATURE` | a plain sensor vs something that also sets a value |
+
+The CCU's own receivers — `HM-RCV-50`, `HmIP-RCV-50`, `RPI-RF-MOD` — match
+nothing on purpose. Fifty bare `LEVEL` channels are not a device.
+
+When a template is rejected, the picker says why: *"1.LEVEL missing"*, not
+*"does not fit"*. A reason you cannot act on is not a reason.
+
+### Role knowledge beside the rows
+
+A template can carry `weiterePunkte`: roles for datapoints that get no row of
+their own. Without it, "all datapoints of the device" showed *no role* on most
+lines, because hm-rpc simply leaves the field empty. A `*.NAME` wildcard applies
+per channel, so `2.LEVEL` and `3.RAMP_TIME` are covered without listing every
+channel. It changes nothing about which template wins — only raw rows are
+enriched.
+
+## What an existing alias contributes
+
+Pick a source that already has an alias, and the alias wins. Role, type, unit,
+value list, caption, formulas, both sources and the ticks come from what is
+stored — in **both** views, "create alias" and "edit alias".
+
+Before that, the same row carried a different role depending on which tab you
+were in, and refreshing did something different in each. Now refreshing changes
+nothing by itself.
+
+Where the template wants something else, the row says so — *"Template:
+sensor.window"* — and a button above the list offers to apply it. That is a
+click, never a side effect. The caption is exempt: the display name belongs to
+whoever typed it.
+
+## Swapping a source
+
+A device breaks and gets replaced. The alias should stay exactly as it is —
+same id, same recording, same room and function — and only point somewhere
+else. **Swap source…** does that, and it changes only `common.alias.id` per
+datapoint plus `native.quelle` on the channel.
+
+Each datapoint is matched in three steps, and the dialog says which one was
+used:
+
+1. **same relative path** below the new device — `…ABC.1.STATE` → `…XYZ.1.STATE`
+2. **through the template row** — finds `LOWBAT` on a device that spells it
+   `LOWBAT` where the old one said `LOW_BAT`
+3. **guessed** from name or role — deliberately weak, and marked **guessed** so
+   you check it
+
+Rows with no match at all turn red and offer a checkbox: *remove this point
+when swapping*. Leave it unticked and the point stays, still pointing at the
+old source — allowed, but visible.
+
+Two things the dialog is careful about. It names the old source even when the
+device is **gone** — that is the normal case for "device broken". And it warns
+where the new source measures differently: *"Watch out: ACTUAL: value range
+0..100 → 0..255"*. The alias keeps its formulas; if the new device counts
+differently, the numbers are wrong afterwards and nothing else would tell you.
+
+## Room and function
+
+Both live in `enum.rooms.*` / `enum.functions.*`, not on the object — so this
+is the one place where the workbench writes outside `alias.`. Nothing else
+outside that namespace is ever touched.
+
+The proposal comes from, in order: the room already on the source or one of its
+channels, the device name (`FK_Max_Spielzimmer` → `Max_Spielzimmer`), the
+target folder. The function comes from the template's `funktion` field, or from
+the detected type when the template has none.
+
+The admin ships 62 function and 58 room templates, each with a picture. The
+workbench does not copy them; it reads them out of the admin's own bundle at
+runtime, so there are never two lists ageing apart. If that fails, the field
+quietly shows only what exists — and says so in the last row, rather than
+looking empty for no reason.
+
+**The picture is shown before it is written.** Next to each of the two fields
+stands the picture of the chosen enum: solid when one is already stored, faded
+with a small **new** corner when the workbench would add one on writing, and
+nothing at all when the catalogue does not know the name or the switch is off.
+So the settings page is visible in the row itself, instead of having to be
+guessed from a dry run.
+
+## Settings
+
+The instance has no process; its settings only decide how the workbench writes.
+Four switches, all on by default — and if `native` is missing entirely, the same
+defaults apply rather than everything counting as off:
+
+| Switch | What it does |
+|---|---|
+| `ikonRaeume` | add a missing picture to a **room** |
+| `ikonFunktionen` | the same for a **function** |
+| `ikonErsetzen` | also replace an entry that is not a picture. ioBroker's default rooms carry `icon: "Bedroom"` — a bare word that renders as a broken box |
+| `vorlagenVomAdmin` | offer the admin's room and function templates at all |
+
+The tab reads them **once on load**. After saving, reload the tab.
+
 ## Installation
 
 Not on npm yet. On the ioBroker host:
@@ -299,8 +455,15 @@ npm install
 npm run build      # bundles @iobroker/type-detector into admin/detector.js
 ```
 
+`npm run build` touches **only** the detector bundle. The tab's own modules are
+served as they are; editing one and reloading the tab is the whole cycle. On a
+running installation the admin caches adapter files, so `iobroker upload
+alias-workbench` after copying is what makes the browser see the change.
+
 Translations live in `admin/i18n/`. A new language is a new file there and an
-entry in `SPRACHEN` in `admin/tab.html` — nothing else.
+entry in `SPRACHEN` in `admin/js/sprache.js` — nothing else. Watch for strings
+written straight into `admin/tab.html`: they are replaced at runtime, and one
+that nobody wired up stays German forever without anyone noticing.
 
 ## Background
 
@@ -310,893 +473,6 @@ entry in `SPRACHEN` in `admin/tab.html` — nothing else.
   templates cover
 - [ioBroker aliases](https://github.com/ioBroker/ioBroker.docs) — aliases are a
   core feature of the js-controller, not of any adapter
-
-## Changelog
-
-### 0.0.40
-
-Same question asked twice, answered two different ways — and the second
-answer was wrong.
-
-A Tasmota power strip with four outputs becomes four aliases. That was never
-in doubt. A Homematic two-channel actuator with `Licht_Bar` on channel 1 and
-`Licht_Esstisch` on channel 2 became **one** alias in 0.0.39, and channel 1
-simply fell off the list. Same situation, opposite outcome.
-
-What is right: **as many aliases as there are things you operate
-separately.** Not as many as there are devices, not as many as there are
-channels.
-
-And the awkward part — the data does not say which is which:
-
-```
-Licht_Bar_Esstisch   channel 1  STATE (switch, writable)  "Licht_Bar"
-                     channel 2  STATE (switch, writable)  "Licht_Esstisch"
-                                                          → 2 things
-
-Wohnzimmer_Dimmer    channel 1  LEVEL (level.dimmer, writable)  "Wohnzimmer_Dimmer:1"
-                     channel 2  LEVEL (level.dimmer, writable)  "Wohnzimmer_Dimmer:2"
-                     channel 3  LEVEL (level.dimmer, writable)  "Wohnzimmer_Dimmer:3"
-                                                          → 1 thing
-```
-
-Two lamps in one case, three virtual channels of one output in the other,
-and technically indistinguishable. The only difference is a name somebody
-typed.
-
-So the workbench stops guessing where it cannot know, and offers both ways —
-exactly as it already does for a Tasmota with several outputs:
-
-```
-[ als ein Gerät erzeugen … ]     [ je Kanal ein Gerät, 2 Stück … ]
-```
-
-The tooltip on the second names what would appear: `alias.0.Licht_Bar
-(socket)`, `alias.0.Licht_Esstisch (socket)`. A line above the list says why
-there are two buttons.
-
-Taken along, because the result is useless without it: **the target proposal
-uses the object's name**. It used to be the last part of the ID, so a
-Homematic device landed at `alias.0.NEQ0000000` and one of its channels at
-`alias.0.1`. Now it is `alias.0.Licht_Bar_Esstisch` and `alias.0.Licht_Bar`.
-
-**"As one device" now means all of it.** It used to take only the required
-slot of the other channels, so the second lamp got a switch but no feedback:
-
-```
-before                          after
-  0_LOWBAT   → LOWBAT             0_LOWBAT   → LOWBAT
-  0_RSSI_PEER→ RSSI               0_RSSI_PEER→ RSSI
-  0_UNREACH  → UNREACH            0_UNREACH  → UNREACH
-  2_STATE    → SET                1_STATE      (no slot)   ← Licht_Bar
-  2_WORKING  → WORKING            1_WORKING    (no slot)   ← Licht_Bar
-                                  2_STATE    → SET         ← Licht_Esstisch
-                                  2_WORKING  → WORKING     ← Licht_Esstisch
-```
-
-A line above the list says what that means: these points are created but do
-not count as the device's switch or feedback, and for separate control there
-is the other button.
-
-**A point is now recognised by its source, not its name.** If an alias
-already holds a point reading from the same place, that is the same point —
-and the name already there wins. Without it, any change to how the workbench
-names points would produce duplicates in existing aliases, and worse: an
-update would delete the old name and create the new one, breaking every
-widget and script pointing at it.
-
-**And you can tell the lamps apart.** `1_STATE` and `2_STATE` said nothing
-about which one is Licht_Bar. Renaming the points was tried first and
-reverted — it produced duplicates against existing aliases, and an update
-would have deleted the old name and created the new one, breaking every
-widget pointing at it. The caption does the job without any of that:
-
-```
-ID            common.name
-1_STATE       Licht_Bar STATE
-1_WORKING     Licht_Bar WORKING
-2_STATE       Licht_Esstisch STATE
-2_WORKING     Licht_Esstisch WORKING
-0_LOWBAT      0_LOWBAT                 (channel 0 has no name of its own)
-```
-
-The ID stays put, so nothing breaks; the object browser shows the caption in
-the column beside it. A device whose channels are called `<device>:<number>`
-gets no caption — there is nothing to tell apart there.
-
-Still open: the points of a per-channel alias are named after the source
-(`STATE`) rather than the pattern slot (`SET`), and the maintenance data of
-the shared channel 0 is not offered when a single channel is edited.
-
-### 0.0.39
-
-Homematic. A thermostat there is a `device` with its data spread over two
-channels — maintenance in `:0`, the actual heating in `:1`. The workbench
-sent you to a folder overview and let you edit one channel at a time, so
-whichever you picked, half the device was missing.
-
-Ran the real detector over all 39 devices on the test system. The device
-level wins every single time:
-
-```
-HK_Bastelzimmer      device: thermostat 7/13     best channel: info 8/12
-Heizung_Badezimmer   device: thermostat 9/13     best channel: info 7/11
-Licht_Küche          device: socket     4/12     best channel: info 7/11
-Terassenrollladen    device: blind      5/18     best channel: info 6/11
-Wohnzimmer_Dimmer    device: dimmer     5/16     best channel: info 6/11
-FK_Terassentür       device: window     4/6      best channel: info 6/10
-```
-
-An alias is not a copy of the hardware tree — it is one flat, logical
-device. That is the whole point of it, and the detector agrees: it collects
-across channel boundaries.
-
-- **An object of type `device` is a device**, not a place to look below. It
-  no longer lands in the folder overview, whatever the point count, and
-  `geraeteDarunter` no longer counts its channels as devices of their own
-- **Roles from the source are kept.** They used to be dropped in source
-  mode — written for Tasmota, where `cmnd.POWER` is called "text" and the
-  real role comes from the template. Adapters that curate their roles were
-  punished for it: hm-rpc ships `level.temperature` for
-  SET_POINT_TEMPERATURE and `value.temperature` for ACTUAL_TEMPERATURE, and
-  the workbench threw both away and then reported "nothing recognised".
-  Type and unit were always taken over; excluding the role could not be
-  justified
-
-`HK_Bastelzimmer` now opens as **thermostat**, and "only what belongs to the
-device" narrows its 42 points to the 10 that have a slot — SET, ACTUAL,
-MODE, BOOST, PARTY, VALVE from channel 1, LOWBAT, VOLTAGE, RSSI, UNREACH
-from channel 0. One alias, both channels.
-
-No change for Tasmota: those points carry no roles at all. Verified across
-14 devices — same template, same checks as before.
-
-Two things that only became visible once Homematic devices opened at all:
-
-- **A raw draft now ticks only what has a slot in the recognised pattern.**
-  Everything was ticked before; that passed unnoticed with a Tasmota and its
-  eight points, but a window contact brings 26 and a thermostat 42, most of
-  them alarm mirrors and maintenance innards that appear in no pattern.
-  Writing those into an alias is not modelling a device, it is copying one.
-  Three cases stay untouched: an existing alias (every tick there is a
-  decision already made — unticking means deleting), a template (it decides
-  for itself), and the case where nothing has a slot. The three buttons above
-  the list remain; "all" is one click away
-- **Three of the 51 patterns are keyed differently from the type they
-  report** — `blinds`→`blind`, `mediaPlayer`→`media`, `levelSlider`→`slider`.
-  Using the reported type as a key hit nothing: at the roller shutter `blind`
-  dropped out of the pattern list, the field showed `socket`, and switching
-  patterns no longer adapted the roles. The maths had been right all along,
-  the display and the offer were not. Everything now speaks types, including
-  "all 51 patterns", which used to hand out keys the detector cannot match
-
-### 0.0.38
-
-The tree showed the last part of the ID and nothing else. Where an adapter
-uses serial numbers as identifiers, that leaves you staring at this:
-
-```
-0000AAAAAAAAAA                 is  FK_Badezimmer
-000ABBBBBBBBBB                 is  HK_Bastelzimmer
-AFDCMSTESFOHWVAXIDNBDQQROIYQ   is  Ricardo (Self)
-amzn1~HH1IL5GNFYTV23J          is  Michael Sauters Zuhause
-```
-
-Counted over 2532 containers on the production system: for **1575 of them
-the name says more than the ID**, for 569 it is the same word, and 388 have
-none. So the name is added only where it adds something — the other 957 rows
-stay exactly as short as before.
-
-- **Tree**: the name follows the ID in a muted tone, and it is the name that
-  gets truncated when the column runs out, never the ID. Tooltip carries both
-- **Header on the right**: the name moved to the top line, where what you
-  clicked belongs; the full ID stays in the small line below and no longer
-  appears twice
-- **Folder overview**: without this, the channels of a Homematic device were
-  listed as `0` and `1`
-- **The filter searches names too.** Typing "Badezimmer" now finds
-  `FK_Badezimmer`. Before it only looked at the ID — the one thing nobody
-  knows by heart
-- **Sorted by what is displayed**, not by the ID underneath. At hm-rpc that
-  finally puts FK_* and HK_* together instead of ordering them by serial
-  number. `numeric` collation as well, so POWER2 comes before POWER10
-
-Shipped broken and fixed the same hour: moving the name out of the sub-line
-left one use of the old variable behind, four hundred lines further down in
-the same function. `Uncaught ReferenceError: nm is not defined` — and with it
-the whole right-hand pane for every node that has a device pattern. It went
-unnoticed because I checked a single channel that has none. The mass click-
-through that would have caught it on the first node now sits in the test plan
-as a rule: run it after every change to `zeichneErgebnis`, never a spot check.
-
-### 0.0.37
-
-A device is a node with data points under it — not a node carrying a
-particular `type`. The tree decided by type, and that made eight devices in a
-grown installation untouchable: their alias objects are `folder`, not
-`channel`.
-
-Who is right? The object schema says `"state" - parent should be of channel,
-device, instance or host` — but *should*, and by the same sentence every
-`channel` would need a `device` above it, which no alias channel anywhere
-has. The alias documentation says nothing at all about the container; it only
-knows that `alias.0` holds states. And the type-detector the workbench is
-built on is explicit, in its own source:
-
-```js
-// a state needs to be in a channel, device, folder or such
-case 'channel':
-case 'device':
-case 'folder':
-```
-
-`folder` sits in the same branch as the other two. The workbench was stricter
-than its own foundation.
-
-- A **folder with data points directly under it is selectable** and gets the
-  device dot. Folders holding only channels or further folders stay out —
-  those are signposts, not devices. On the production system that is 8 of 46
-- **Updating no longer changes the container type.** New devices are created
-  as `channel`, the common form and the one closest to the schema; anything
-  that already exists keeps what it has. Turning someone's folder into a
-  channel to paper over a shortcoming of ours is not a fix
-
-### 0.0.36
-
-The tree follows the admin's expert mode. Without it, `system.*` and `enum.*`
-are gone — 28 of 157 rows on the test system, and not one of them is anything
-you would build a device alias from.
-
-The admin keeps the setting in two stages, and we read it the same way:
-
-```js
-const f = sessionStorage.getItem("App.expertMode");
-expertMode = f ? f === "true" : !!systemConfig.common.expertMode;
-```
-
-The switch in the toolbar is per browser session; underneath sits the lasting
-default in `system.config`. The tab runs in an iframe of the same origin, so
-it reads the same storage — and it receives a `storage` event when the switch
-is flipped, so it follows without a reload. Measured both.
-
-What gets hidden is the admin's own rule, word for word:
-
-```
-system, enum, _design/, *.admin, common.expert === true
-```
-
-The last one is the useful one: an adapter can mark a point as expert-only.
-On the test system exactly one does — `backitup.0.info.dropboxTokens`, an
-access token, which has no business in a list of alias sources.
-
-Two deliberate differences:
-
-- The filter sits in **building** the tree, not in drawing it. Otherwise a
-  folder would count states nobody can see
-- The **source list in the detail pane stays unfiltered**. An alias that
-  reads from `system.adapter.mqtt-client.0.alive` has to remain editable —
-  hiding it there would make someone's own wiring vanish under their hands
-
-If the selected node is one that disappears, the selection is cleared with it.
-
-### 0.0.35
-
-A full test run over every function, and eleven things came back. The plan is
-now a document of its own — `testplan.md`, one numbered check per line, so the
-next run starts where this one left off instead of from memory.
-
-**Recognition**
-
-- A multi-output template found no outputs at all unless the `cmnd` objects
-  already existed. `Garten-Ventilinsel`, `Wohnzimmer.Couch` and `NSPanel`
-  report POWER1..n in `tele/STATE` and have no `cmnd` point yet — exactly the
-  case 0.0.29 built the "possible commands" recognition for. The set taken
-  from object names was empty and went into the intersection anyway, so the
-  intersection was always empty. An empty set means "nothing known here", not
-  "no outputs here", and is now dropped
-
-**Templates**
-
-- The **try-out never hit anything**. Every template reported "0 devices
-  matched", including the one that recognises twenty devices in the sources
-  tab. `pruefeVorlage` also checks `erkennung.inhalt` and needs the *value* of
-  a point for that — and values are only loaded for the selected channel.
-  In the templates tab nothing is selected. The missing values are now
-  fetched once and the sheet redrawn
-- Deriving a template from a device wrote the formula into the field name:
-  `feld: "POWER === 'ON'"`. The pattern that pulls the field out of
-  `JSON.parse(val).X` took everything to the end of the line. It now accepts
-  only a real field path; anything else stays a formula
-- Deriving still lost the fallback sources (`lesenSonst`, open since 0.0.23).
-  The draft now carries every reading route it was given, not just the one
-  that happened to work today
-
-**Losing things**
-
-- Updating an alias from the alias tab wrote `native: {}` over **every**
-  data point — template, origin slot and the `vonHand` mark, all gone. The
-  channel kept its origin, the points lost theirs
-- "Create the missing send points" in the dry-run dialog discarded the target
-  you had typed. The dialog then listed objects for a different folder than
-  the one in the field, and "create now" would have written them there
-- Typing a folder name and then clicking "create" in a row: the first click
-  did nothing. Leaving the field redrew the pane and replaced the button
-  before the click reached it
-
-**Smaller**
-
-- Choosing a JSON field forced the type to `number`. Picking `POWER` ("ON")
-  or `Wifi.SSId` left the point as a number, and a slot the pattern holds as
-  boolean lost its default — `switch.light` plus `number` is no device any
-  more. The type is now derived from the actual value, and only when none is
-  set
-- In the alias tab the source list offered no `cmnd` points at all, so a
-  hand-added point could never get a write target. The root was cut at the
-  branch (`…RGB.tele`) instead of the device
-- With nothing selected, the footer kept the buttons and the object count of
-  whatever was there before — after deleting an alias, and after coming back
-  from the templates tab
-
-Two more came out of the second run, once the try-out worked at all:
-
-- It found only one multi-output device instead of four. The candidate search
-  looked for the first required point (`cmnd.POWER%N%`) and nothing else, so
-  a device that has no `cmnd` object yet never became a candidate. It now
-  also searches over the points named in `erkennung.inhalt`
-- Every template was scored as if it were your own — and an own template gets
-  a 1000 point head start. Socket claimed 18 wins, lamp 23, on 26 devices;
-  only one template can win a device. Counted properly it is 18 and 5, and
-  the wins across all five templates now add up to exactly the 30 devices
-
-### 0.0.34
-
-Four places fold open, and none of them looked like it. Measured before:
-
-```
-tree            11 px wide, --ink-3, the palest colour in the interface
-state rows      11 px, at the very end of the row
-MQTT card       11 px, at the very end of the header
-why block        9 px
-```
-
-24 px is the usual minimum for a mouse target. We were at 9 to 11.
-
-The symbol was the smaller half of the problem. A header that does not look
-like a button is not recognised as one, whatever sits at its edge.
-
-- **Sections** — MQTT card and the why block — now carry a **plus/minus**, on
-  the left where reading starts, and their header is a surface that darkens
-  when hovered. A section is not a tree node: "there is more here" is a
-  different statement from "it continues over there". The admin bundle uses
-  both shapes, so either is at home in ioBroker
-- **The tree** keeps its triangle — that is what everyone expects there, from
-  Explorer to the object browser. 18 px instead of 11, one shade stronger
-- **State rows** keep the arrow at the end, at 14 px instead of 11
-
-The paths for plus and minus are taken from the admin's own bundle, like the
-folder icons in 0.0.26.
-
-### 0.0.33
-
-Two answers to the same question sat in two places, and neither was in a
-good one. Why a template was chosen hid in the tooltip of a small **i**,
-where nobody looks. What it left out stood open below it and filled the
-screen — six lines on Solar_Balkon.
-
-- Both now share **one foldable block**. Folded it is a single line that
-  still carries the number: "Weggelassen, weil die Quelle fehlt: 6". Unfolded
-  it lists the skipped points and, below them, why the template matched
-- The **i** is gone, along with its styling
-- The fold state survives redrawing and switching devices, like the MQTT card
-
-Measured on Solar_Balkon: 226 px down to 21 px.
-
-Worth noting what was hidden in that tooltip all along:
-
-```
-cmnd.POWER vorhanden
-tele.STATE enthält POWER
-Name gibt keinen Hinweis — „Tasmota-Steckdose" ist die Vorgabe,
-aus MQTT sind sie nicht unterscheidbar
-```
-
-That is the actual reasoning behind a detection, and until now you had to
-hover a 15-pixel circle to read it.
-
-### 0.0.32
-
-Changing the target folder and then creating a missing send datapoint threw
-the change away. Measured — three edits, then one datapoint created:
-
-```
-                  before                    after
-target folder     alias.0.MeinOrdner.…      alias.0.Bastelzimmer.…   reset
-RSSI unticked     [ ] RSSI                  [x] RSSI                 back on
-point added by hand   [x] !                 gone
-```
-
-So every edit was lost, not just the folder.
-
-The obvious repair — save the edits and put them back after the rebuild —
-would have been the wrong one. It adds a second place that maintains the same
-state, and every new property would have to be remembered there or vanish
-silently. Three of today's faults are of exactly that kind.
-
-The better question was why anything is rebuilt at all. That came from before
-0.0.29, when detection depended on which datapoints existed. Since detection
-reads what the device **can do**, creating a datapoint changes nothing about
-it — the template already matched.
-
-What does change is one detail: the orange "send datapoint not created yet".
-And that was my mistake from 0.0.29 — I stored it in the draft instead of
-looking it up when drawing. A stored mark goes stale the moment the datapoint
-appears, and forces the rebuild that costs everything else.
-
-- The mark is now looked up while drawing, not remembered
-- A draft you have edited is no longer rebuilt by any background reload. One
-  flag, set where you make an edit, checked in one place — instead of a list
-  of fields that can be forgotten
-- Switching devices still starts fresh, as it should
-
-### 0.0.31
-
-Clicking into the target folder field showed the suggestion list for a
-heartbeat and then lost it, with no chance to click anything.
-
-The cause was not the list. Every incoming value rebuilt the whole right-hand
-side:
-
-```js
-socket.on('stateChange', function (id, state) {
-  werte[id] = state;
-  if (current) { zeichneErgebnis(); }     // on every single value
-});
-```
-
-Solar_Balkon reports about once a second. So once a second the page was
-rebuilt from scratch — taking the open list, the focus, and anything half
-typed with it. Anything that takes longer than a second to do was impossible
-on such a device.
-
-- Values are now collected for 700 ms and drawn once
-- Nothing is redrawn while the focus sits in a field of the right-hand side —
-  it waits until you are done. The same guard covers the delayed draws in
-  `waehle` and the subscription's catch-up
-- Values keep flowing: measured six redraws in six seconds when nothing has
-  focus
-
-Still worth doing later: a value arriving should update the one cell it
-belongs to, not rebuild the panel. Once a second for a whole panel is a lot
-of work for a new reading.
-
-### 0.0.30
-
-The heading answered the wrong question. It showed the alias id — the answer
-to "what will be created" — while the obvious question when looking at the
-right-hand side is "where am I?". You clicked a device on the left, and the
-name of something else appeared on the right.
-
-```
-before   alias.0.Bastelzimmer.Bastelzimmer_Decklenlicht_RGB
-         WIRD AKTUALISIERT · aus mqtt-client.0.… · kein Objekt · 11 Zustände
-
-after    Bastelzimmer_Decklenlicht_RGB
-         mqtt-client.0.SmartHome.Bastelzimmer.Bastelzimmer_Decklenlicht_RGB
-         kein Objekt · 11 Zustände
-```
-
-- The heading now carries the **selected node**: its name, the full path
-  below it in small type, then type and state count
-- Where the alias goes, and whether it already exists, is said **once** — in
-  the target row, next to the id it concerns, where it can also be changed.
-  It now covers both cases, "already exists" and "will be created"; before,
-  "will be updated" sat in the heading and "already exists" ten centimetres
-  further down, two wordings for the same fact
-- The device card below no longer repeats the path either
-- With the source in the heading, `· kein Objekt ·` finally has a clear
-  referent. It always described the source; above the target id it read as if
-  the target were missing
-
-### 0.0.29
-
-The workbench reads from `tele.STATE` which commands a Tasmota knows — that is
-where "11 send datapoints missing" comes from. Template detection did not use
-that knowledge: it asked whether the **object** `cmnd.POWER` exists, not
-whether the **device** can do POWER. So on a fresh device you had to create
-datapoints first for detection to work, although the workbench already knew
-what stood in front of it.
-
-- A required `cmnd.X` now counts as met if the datapoint exists **or** the
-  device demonstrably knows the command. Only for `cmnd` — `stat` and `tele`
-  appear by themselves once the device sends, so "missing" means something
-  there
-- Where a send datapoint is still absent, the row says so and offers to create
-  it, right where the problem shows
-- Writing stays blocked until it exists. The dry run lists what is missing and
-  offers one button that creates all of them and recalculates
-- The check "publish on the cmnd datapoint" gained a third case: not there at
-  all, there but mute, or sending
-
-Detection changed for 16 of 32 devices on the test system, all of them
-correctly: the RGB ceiling light becomes a colour lamp, Esstischlicht and
-Stehlampe too (they report `Color`), and twelve metering points turn into
-sockets — they really are switchable sockets that measure.
-
-Two faults found while building this:
-
-- The dry run could offer to write **outside `alias.`**. Opened from a
-  callback, the draft had no target yet and `zuSchreiben` fell back to the
-  source — so it listed objects under `mqtt-client`. A hard check now refuses
-  any id that does not start with `alias.`
-- `waehle(id, fertig)` never called back. Its local marker from 0.0.27 was
-  also called `fertig` and shadowed the parameter
-
-### 0.0.28
-
-Creating a datapoint updated the right-hand side but left the tree on the old
-count. Caused by the previous release: the subscription enters the object into
-`objects` and leaves tidying up to its timer. The targeted reload then saw no
-change any more, did not rebuild `keysSorted`, and cancelled that very timer.
-The tree reads from `keysSorted`, so it could not know the point existed —
-no matter how often it was drawn.
-
-- Rebuilding the index is now its own step, and it runs whenever the number of
-  keys no longer matches — regardless of who changed `objects`
-
-Measured: `cmnd 1 → cmnd 2`, device `● 8 → ● 9`, in one redraw.
-
-### 0.0.27
-
-Four datapoints had been written to **`undefined.cmnd.POWER1…4`** — real
-objects in the database, with the correct topic and role, just filed in a
-place that does not exist.
-
-Two stretches of code set the state of the MQTT card. The dialog set the
-channel, redrawing the card did not:
-
-```js
-function zeigeMqttDialog(kanal) { mqttStand = l; mqttStand.kanal = kanal; }
-function mqttKarte(host, kanal) { mqttStand = l; }          // channel lost
-```
-
-With the dialog open, any redraw dropped the channel, and the next click
-built the id from `undefined`. The gap had always been there, but before
-0.0.20 there was hardly ever a redraw while a dialog stood open — the object
-subscription introduced then woke it up. A fix for one fault had armed
-another.
-
-- `mqttKarte` sets the channel too
-- After its own writes the workbench now reloads **only what changed** — one
-  object, or one device branch. `ladeObjekte()` re-read the entire database
-  for a single datapoint: 332 objects here, some 24 500 on a grown
-  installation
-- The subscription compares `type`, `common` and `native` before redrawing.
-  `ts` and `from` change on every write even when nothing else does
-- Whoever reloads on their own cancels the subscription's pending redraw
-- `waehle()` no longer paints the raw draft immediately. It waits 150 ms and
-  only shows it if loading really takes that long
-
-Measured on one click of "create", before and after:
-
-```
-before   tree 2×, right-hand side 4×    (52 ms, 114 ms, 614 ms, 644 ms)
-after    tree 1×, right-hand side 1×    (12 ms, 78 ms)
-```
-
-Selecting a device went from two redraws to one.
-
-### 0.0.26
-
-- The two fold buttons now carry the **same folder icons the admin object
-  browser uses** — the outlined folder for "expand all", the filled one for
-  "collapse all". The paths are taken verbatim from the admin's own bundle, so
-  the shapes match rather than merely resemble. Inline SVG, no icon font, no
-  external request
-
-### 0.0.25
-
-The tree opened the first two levels every time and forgot anything you
-folded yourself as soon as the tab was reloaded.
-
-- What you fold open or closed is **remembered**, and it survives a reload
-- Two buttons next to the filter: **all open** and **all closed**
-- Stored in the browser's `localStorage`, not in the instance object — the
-  fold state is a matter of view, and this way no click on a triangle writes
-  to the database
-
-Folding everything open or closed clears the individually remembered nodes.
-Otherwise a branch you had deliberately closed would stay closed, and "all
-open" would be a lie. Once you use either button, the old default of two
-levels does not come back on its own — from then on the tree does what you
-last told it.
-
-### 0.0.24
-
-Measured on the Lavalampe, before and after a firmware update — same device,
-same wiring:
-
-```
-12.5.0   tele.STATE without IPAddress
-15.5.0   tele.STATE with IPAddress, in every telemetry
-```
-
-Uptime 490 s, telemetry 6 s old: that is not the boot message. So the newer
-firmware carries the address permanently, and the earlier explanation in
-0.0.22 — "only in the first message after a boot" — was wrong. It is the
-firmware, not the moment.
-
-- IP now reads **`tele.STATE` first**, then `tele.INFO2`, then `stat.STATUS5`.
-  STATE arrives every few minutes and follows a DHCP change; INFO2 is a still
-  from the last boot and would keep showing the old address until the device
-  restarts
-
-### 0.0.23
-
-`lesenSonst` survived copying and editing a template, but there was no field
-for it — you could only change it by exporting the template, editing the file
-and importing it again.
-
-- The state detail in the template view now has an **Fallback sources** block:
-  datapoint, JSON field and formula per entry, one line each, with add and
-  remove
-- A line that is still empty stays while you edit — otherwise it would vanish
-  in the same breath and could never be filled in. It is dropped when the
-  template is saved or exported, so nothing half-finished ends up in the file
-- All three shapes are read: a plain datapoint name, one object, or a list
-
-Not fixed yet, and worth knowing: deriving a template **from a device** still
-loses the fallback sources. The template is rebuilt from the draft, and the
-draft only remembers the source that happened to win on that one device.
-
-### 0.0.22
-
-All five templates carried an IP datapoint — it just never appeared. Measured
-on the test system: **4 of 31 devices** had `IPAddress` in `tele.STATE`. For
-the rest the point was dropped, and nothing said so.
-
-Tasmota puts `IPAddress` into `tele/STATE` only in the first message after a
-boot, never again. It lives permanently in `tele/INFO2`, which the device
-publishes retained on start, and it can be asked for with `Status 5`.
-
-- IP now reads from **`tele.INFO2` · `Info2.IPAddress`**, falls back to
-  `tele.STATE` · `IPAddress`, and finally to `stat.STATUS5` ·
-  `StatusNET.IPAddress`. `lesenSonst` accepts a list, not just one entry
-- A fallback source is now taken when the **field** is missing too, not only
-  when the whole object is. `tele.INFO2` without the IP inside used to drop
-  the point although `tele.STATE` had it
-- "Ask the device for its commands" sends `Status 5` alongside `Status 11`, so
-  the IP arrives with it
-- **What a template leaves out is now visible**, under the identification
-  line, with the reason: "IP: neither in tele.INFO2 · Info2.IPAddress nor in
-  tele.STATE · IPAddress". Before it sat in the tooltip of a small i, where
-  nobody finds it — the template had the point, and there was no way to learn
-  why it never showed
-
-Measured after the change: Lavalampe 192.168.0.60 (from INFO2), Karbonator
-192.168.0.225 (from STATE), power strip 192.168.0.71 (from STATUS5).
-
-### 0.0.21
-
-The multi-output template did not fit the printer power strip — and the reason
-turned out to sit in all four Tasmota templates.
-
-They required `stat.POWER`. That datapoint appears only after the device has
-been switched once: Tasmota never publishes to `cmnd`, and `stat/POWER` is
-sent on a change. On a freshly bound device neither exists, so the template
-could never match — even though the switch state sits in `tele/STATE` the
-whole time, as `POWER` or as `POWER1`, `POWER2` …
-
-- `stat.POWER` is no longer required in any of the four. Templates now name a
-  **fallback source**: `stat.POWER` if it exists, `tele.STATE` otherwise. The
-  channel keeps the faster path where it is available
-- The outputs of a multi-output device are found in the **JSON keys of
-  `tele.STATE`**, not only in existing objects. The power strip reports
-  POWER1…POWER4 there long before any `stat.POWER1` exists
-- `cmnd.POWER` stays required, deliberately. It is the evidence that there is
-  something to switch here at all — without it every measuring point that
-  reports a relay would pass as a socket. Measured: Solar_Balkon has no
-  `cmnd.POWER` and stays a measurement point, Solar_Garten has one and is
-  correctly a socket
-- Placeholders are now substituted in formulas too. A multi-output template
-  with a formula would have looked for a field literally called `POWER%N%`
-- `inhalt` in the detection block also gets the placeholder, so
-  `{"tele.STATE": "POWER%N%"}` works
-- **Energy per output is off by default.** Most power strips meter as a whole;
-  ticked, each of four outputs would carry the same total, and the sum would
-  appear four times over. The hint says so, and a strip that really meters per
-  output can still have them
-
-Also fixed while testing this: **"Remove alias" removed only one output** of a
-multi-output device and left the rest orphaned. The dialog now offers to take
-all outputs of the device — off by default, listing what else would go.
-
-### 0.0.20
-
-A systematic test of the whole adapter on the test system turned up 26
-findings. All are fixed.
-
-The heavy ones, all of the same family — the draft did not know the alias
-that already existed:
-
-- A datapoint you add by hand was written correctly but had vanished from the
-  list the next time you opened the device. `uebernehmeBestand` could only
-  tick what the draft already knew; anything that lived only in the alias was
-  invisible. Now those points join the draft, with their own role, formula and
-  source
-- The change card was blind to exactly those points. Switching the template on
-  a finished alias reported "1 open" while the dry run listed seven affected
-  datapoints
-- Updating from the alias view overwrote `native.quelle` with the alias itself
-  and dropped `vorlage`, `vorlageVersion` and `geraetetyp` — the whole origin,
-  without warning. A hand-given channel name was overwritten too
-- `common.states` was lost when reading a finished alias, so every slot with
-  `statesDefined` counted as empty. The workbench claimed a gap in an alias
-  its own detector reads as complete
-- Slots without a `defaultRole` — BRIGHTNESS in the rgbSingle pattern — got no
-  role at all, never filled their slot, and could be added over and over. The
-  role is now derived from the pattern's expression
-
-Things the workbench could not do:
-
-- **Remove an alias.** There was no button, and the obvious detour failed:
-  untick everything and the dry run refuses to write. Now there is a dialog
-  that lists what disappears, and empty parent folders go with it
-- **Notice objects created elsewhere.** The usual path — create `cmnd.POWER`,
-  switch once, and mqtt-client creates `stat.POWER` — left the display stuck
-  on "stat.POWER missing" until you reloaded the tab. Object changes are now
-  subscribed
-- **Show the folder overview.** `zeichneOrdner` existed but was never called.
-  Wiring it up exposed a second bug: `cmnd`, `stat` and `tele` were counted as
-  devices of their own, turning one NSPanel into three
-
-Wording and display:
-
-- "übrig geblieben" in the dry run meant "will be deleted" — and the same red
-  number also covered points that stay. Now counted separately, and the
-  numbers follow the checkboxes
-- The badge "will be created / will be updated" was missing wherever no
-  template matched, and "no object" sat under the target id while describing
-  the source
-- German leftovers in the English interface, in the error messages of all
-  places: "SET fehlt", "kein Objekt", "passt nicht"
-- The detected pattern dropped out of the pattern list after one switch, so
-  there was no way back except through "all 51 patterns"
-- The SetOption59 answer lives in `stat.RESULT`, where the next command
-  overwrites it — the finding fell back to "unknown" after a single switch.
-  It is now remembered with its age
-- Saving an own template did not raise its version, which would have left
-  every device looking up to date forever
-- A template could contradict itself, listing the same point as required and
-  as forbidden; that is now refused with an explanation
-- "Ask the device for its commands" gave no feedback at all
-- The command list re-sorted itself by state, so the row you just worked on
-  jumped away under the cursor
-- The dialog badge counted the missing points while the button created only
-  the preselected ones — "10 missing" above "Create (4)"
-- The boolean formula hint appeared under every field, including voltages
-- In template view the device buttons stayed visible, and the search filter
-  survived the switch, leaving the tree at "nothing found"
-- 18 unused i18n keys removed
-
-New: a seventh check, **no duplicate point** — it catches two datapoints that
-read and write exactly the same thing, which is what a template switch leaves
-behind when the old one called the switch ON and the new one calls it SET.
-
-### 0.0.19
-
-- Opening a source whose alias already exists now targets that alias, wherever
-  it lives, and ticks the datapoints it already contains. Before, the workbench
-  proposed a fresh location and unticked boxes — one click could have created a
-  duplicate or dropped points
-- An existing alias is found through the sources of its datapoints, not only
-  through the marker the workbench writes, so hand-built aliases count too
-
-### 0.0.18
-
-- The changes card reports both directions, and finds role, unit, formula and
-  source changes on a draft built from the source as well
-
-### 0.0.17
-
-- The changes card only reports real deviations, in both directions: a point
-  deselected against the baseline, and one ticked on against it. Points the
-  template proposes unticked are no longer listed as if someone had
-  deselected them
-- Role, unit, formula and source changes are now also found on a draft built
-  from the source, not only on one built from an existing alias
-
-### 0.0.16
-
-- Removed the note about missing MQTT objects — it contradicted the
-  identification right above it and helped nobody
-
-### 0.0.15
-
-- The MQTT section sits under the identification and is collapsed by default;
-  the warning stays visible in its header
-
-### 0.0.14
-
-- Every command in the MQTT card carries its own state and its own action —
-  create the point, or allow it to send
-- After such a change detection runs again, because it depends on which points
-  exist
-
-### 0.0.13
-
-- New check: feedback that only arrives with the next telemetry. A point that
-  writes to `cmnd` but reads from `tele` shows the old value for minutes —
-  unless `SetOption59` is on, which the adapter asks the device about and can
-  switch on
-
-### 0.0.12
-
-- New template: Tasmota colour light, on the `rgbSingle` pattern
-- Templates can carry a `werteliste` for their datapoints
-
-### 0.0.11
-
-- MQTT devices: reads the command set from what the device already publishes,
-  creates the missing `cmnd` points with publishing enabled, and can request
-  `Status 11` when nothing is there to read
-- The write-path check is no longer a placeholder: it reports a `cmnd` point
-  that is not allowed to publish, which makes an alias look fine and switch
-  nothing
-
-### 0.0.10
-
-- Tasmota templates also carry the diagnostic values from tele/STATE — uptime,
-  free heap, WiFi quality, SSID, link count, downtime, IP — all proposed
-  unticked
-
-### 0.0.9
-
-- Tasmota templates cover apparent power, reactive power and power factor,
-  proposed but unticked
-
-### 0.0.8
-
-- Slots that require a value list (EFFECT) can be filled again; slots whose
-  type is given as a list no longer produce an invalid `common.type`
-
-### 0.0.7
-
-- Editing a datapoint looks and works the same on a device and on a template
-
-### 0.0.6
-
-- Templates of your own are fully editable in the Templates view, datapoints
-  included
-
-### 0.0.5
-
-- Saving and deleting touch one template at a time, so a failed load can no
-  longer wipe the others
-- Three separate columns per datapoint; all ticks aligned left
-
-### 0.0.4
-
-- `erkennung.verboten`: datapoints that must not exist
-- Multi-output templates can be built from a device assembled by hand
-
-### 0.0.3
-
-- Templates view: list, edit, duplicate, delete, import and export
-- Shipped templates are read-only; an editable copy shadows them
-- `rang` for a new template of yours is numbered from your own templates only,
-  so shipped ranks can never shift it
-
-### 0.0.2
-
-- Save your own templates, stored in the instance configuration
-- Templates are picked by verified evidence first, name hint only as a tie-break
-- A device remembers the template it was built from
-- New template keys: `absolut`, `beschriftung`, `nachkommastellen`
-
-### 0.0.1
-
-- First version. Detector report, live value preview, templates, devices with
-  several outputs, dry run with write and removal, German and English.
 
 ## License
 
@@ -1217,8 +493,24 @@ geschrieben wird ausschließlich über einen Trockenlauf, der jedes Objekt vorhe
 als JSON zeigt.
 
 Gerätewissen steckt in Vorlagen — JSON-Dateien, keine Programmzeilen. Eine neue
-Gerätefamilie ist eine neue Datei. Ein fertig gebautes Gerät lässt sich als
-eigene Vorlage sichern; was sich ableiten lässt, wird abgeleitet, der Rest wird
-gefragt — und ein Probelauf zeigt vorher, welche Geräte die neue Vorlage fängt.
-Die dritte Sicht **Vorlagen** verwaltet sie: ansehen, ändern, duplizieren,
-löschen, aus- und einlesen.
+Gerätefamilie ist eine neue Datei. Sechzehn sind dabei: vier für Tasmota, ein
+reiner Messpunkt und elf für Homematic, wo das Kunststück nicht ist, dass eine
+Vorlage greift, sondern dass die **richtige** greift. Ein fertig gebautes Gerät
+lässt sich als eigene Vorlage sichern; was sich ableiten lässt, wird abgeleitet,
+der Rest wird gefragt — und ein Probelauf zeigt vorher, welche Geräte die neue
+Vorlage fängt. Die dritte Sicht **Vorlagen** verwaltet sie: ansehen, ändern,
+duplizieren, löschen, aus- und einlesen.
+
+Gibt es den Alias schon, gewinnt sein Bestand — in beiden Ansichten dasselbe
+Bild. Wo die Vorlage etwas anderes will, steht das an der Zeile, und ein Knopf
+übernimmt es. Auf Klick, nie nebenbei.
+
+Geht ein Gerät kaputt, biegt **Quelle tauschen** den Alias auf das Ersatzgerät
+um, ohne ihn anzufassen: gleiche Kennung, gleiche Aufzeichnung, gleiche
+Zuordnung. Zugeordnet wird über den Pfad, über die Vorlagenzeile oder — sichtbar
+als „vermutet" — geraten.
+
+Raum und Funktion stehen nicht am Objekt, sondern in Aufzählungen. Neben beiden
+Feldern steht das Bild, das dort hinterlegt ist oder beim Schreiben dazukäme —
+letzteres blass und mit einem kleinen **neu**. Damit sieht man vorher, was
+passiert, statt es im Trockenlauf zu suchen.

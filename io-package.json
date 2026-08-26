@@ -3,85 +3,9 @@
     "name": "alias-workbench",
     "version": "0.7.12",
     "news": {
-      "0.0.34": {
-        "en": "Foldable things now look foldable — plus/minus on sections, bigger triangles in the tree",
-        "de": "Aufklappbares sieht jetzt danach aus — Plus/Minus an Abschnitten, größere Dreiecke im Baum"
-      },
-      "0.0.33": {
-        "en": "Why this template, and what it left out — one foldable block instead of a tooltip and a wall of text",
-        "de": "Warum diese Vorlage und was sie weglässt — ein aufklappbarer Block statt Tooltip und Textwand"
-      },
-      "0.0.32": {
-        "en": "Creating a datapoint no longer discards what you had set up",
-        "de": "Einen Datenpunkt anzulegen verwirft nicht mehr, was man eingestellt hat"
-      },
-      "0.0.31": {
-        "en": "Incoming values no longer tear the page away while you are typing",
-        "de": "Eintreffende Werte ziehen die Seite nicht mehr weg, während man tippt"
-      },
-      "0.0.30": {
-        "en": "The heading shows what you picked on the left, not what will be created",
-        "de": "Die Kopfzeile zeigt, was links gewählt wurde — nicht, was daraus entsteht"
-      },
-      "0.0.29": {
-        "en": "Templates are recognised from what a device can do, not from which datapoints happen to exist",
-        "de": "Vorlagen werden daran erkannt, was ein Gerät kann — nicht daran, welche Punkte zufällig schon da sind"
-      },
-      "0.0.28": {
-        "en": "The tree updates again after creating a datapoint",
-        "de": "Der Baum zieht nach, wenn ein Datenpunkt angelegt wird"
-      },
-      "0.0.27": {
-        "en": "Datapoints no longer land under \"undefined\", and the page stops redrawing itself twice",
-        "de": "Datenpunkte landen nicht mehr unter „undefined\", und die Seite baut sich nicht mehr zweimal auf"
-      },
-      "0.0.26": {
-        "en": "The fold buttons use the same folder icons as the admin object browser",
-        "de": "Die Klappknöpfe tragen dieselben Ordnersymbole wie der Objektbrowser"
-      },
-      "0.0.25": {
-        "en": "The tree remembers what you folded open, plus buttons for all open and all closed",
-        "de": "Der Baum merkt sich, was aufgeklappt war — dazu zwei Knöpfe für alles auf und alles zu"
-      },
-      "0.0.24": {
-        "en": "IP is read from tele.STATE first — the source that stays current",
-        "de": "Die IP wird zuerst aus tele.STATE gelesen — der Quelle, die aktuell bleibt"
-      },
-      "0.0.23": {
-        "en": "Fallback sources can now be seen and edited in the template view",
-        "de": "Ersatzquellen lassen sich jetzt im Vorlagen-Tab sehen und ändern"
-      },
-      "0.0.22": {
-        "en": "IP now really arrives — three sources instead of one, and what is left out says why",
-        "de": "Die IP kommt jetzt wirklich an — drei Quellen statt einer, und Weggelassenes sagt warum"
-      },
-      "0.0.21": {
-        "en": "Tasmota templates no longer need stat.POWER, which only appears after the first switch",
-        "de": "Tasmota-Vorlagen brauchen kein stat.POWER mehr — den Punkt gibt es erst nach dem ersten Schalten"
-      },
-      "0.0.20": {
-        "en": "Systemtest across the whole adapter — 26 findings, all fixed",
-        "de": "Systemtest über den ganzen Adapter — 26 Befunde, alle behoben"
-      },
-      "0.0.19": {
-        "en": "An existing alias is found and used as the target, with its datapoints ticked",
-        "de": "Ein vorhandener Alias wird gefunden, als Ziel genommen und seine Punkte angehakt"
-      },
-      "0.0.18": {
-        "en": "Changes card reports both directions, and finds changes on source drafts too",
-        "de": "Die Änderungs-Karte meldet beide Richtungen und findet Änderungen auch am Quellentwurf"
-      },
-      "0.0.17": {
-        "en": "Changes card only reports real deviations",
-        "de": "Die Änderungs-Karte meldet nur noch echte Abweichungen"
-      },
-      "0.0.16": {
-        "en": "Removed the confusing note about missing MQTT objects",
-        "de": "Die verwirrende Meldung über fehlende MQTT-Objekte entfernt"
-      },
-      "0.0.15": {
-        "en": "MQTT section moved up under the identification and collapsible",
-        "de": "MQTT-Bereich unter die Erkennung gerückt und zuklappbar"
+      "0.7.12": {
+        "en": "Tab rebuilt as ES modules; eleven Homematic templates; settings page; swap the source of an alias; picture preview beside room and function.",
+        "de": "Reiter in ES-Modulen; elf Homematic-Vorlagen; Einstellungsseite; Quelle eines Alias tauschen; Bildvorschau neben Raum und Funktion."
       }
     },
     "titleLang": {
