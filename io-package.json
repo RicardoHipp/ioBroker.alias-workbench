@@ -52,12 +52,12 @@
     "readme": "https://github.com/RicardoHipp/ioBroker.alias-workbench/blob/main/README.md",
     "dependencies": [
       {
-        "js-controller": ">=5.0.0"
+        "js-controller": ">=6.0.11"
       }
     ],
     "globalDependencies": [
       {
-        "admin": ">=6.0.0"
+        "admin": ">=7.6.20"
       }
     ],
     "licenseInformation": {

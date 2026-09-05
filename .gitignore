@@ -13,3 +13,6 @@ Thumbs.db
 *.part
 t.js
 i18n-umbau.py
+
+# Vom repochecker angelegt
+.commitinfo

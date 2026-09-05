@@ -4,6 +4,8 @@
 
 Build ioBroker aliases from templates — and see whether they actually work.
 
+*(Eine Kurzfassung auf Deutsch steht in [README_de.md](README_de.md).)*
+
 ---
 
 ## Why
@@ -126,14 +128,14 @@ only notices while running, so three checks run before any clicking — they nee
 no browser and take two minutes:
 
 ```bash
-# 1. does it still bundle? finds missing or misspelled exports
+#1. does it still bundle? finds missing or misspelled exports
 npx esbuild --bundle admin/js/start.js --outfile=/dev/null --format=esm
 
-# 2. free names — identifiers that are neither declared nor imported
+#2. free names — identifiers that are neither declared nor imported
 npm install --no-save acorn@8
 node ../werkzeug/freie-namen.js admin/js node_modules/acorn/dist/acorn.js
 
-# 3. translations: both files carry the same keys, every tr() has one
+#3. translations: both files carry the same keys, every tr() has one
 ```
 
 The second one earns its keep. `socket` was used in `detail.js` without being
@@ -438,15 +440,15 @@ The tab reads them **once on load**. After saving, reload the tab.
 
 ## Installation
 
-Not on npm yet. On the ioBroker host:
+Not in the ioBroker repository yet, so install it from this repository:
 
-```bash
-cd /opt/iobroker
-npm install https://github.com/RicardoHipp/ioBroker.alias-workbench/tarball/main
-iobroker add alias-workbench
-```
+1. Open the ioBroker admin and switch on the **expert mode**.
+2. Go to **Adapters** and press the **install from own URL** button (the cat icon).
+3. Choose the **From URL** tab and enter
+   `https://github.com/RicardoHipp/ioBroker.alias-workbench/tarball/main`.
+4. Create an instance of the adapter.
 
-Then open the admin and pick **Alias Workbench** in the left menu.
+Then reload the admin and pick **Alias Workbench** in the left menu.
 
 ## Development
 
@@ -474,43 +476,35 @@ that nobody wired up stays German forever without anyone noticing.
 - [ioBroker aliases](https://github.com/ioBroker/ioBroker.docs) — aliases are a
   core feature of the js-controller, not of any adapter
 
+## Changelog
+
+### 0.7.12
+* Tab rebuilt as ES modules
+* Eleven Homematic templates
+* Settings page
+* Swap the source of an alias
+* Picture preview beside room and function
+
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT License
 
----
+Copyright (c) 2026 Ricardo Hipp <ricardo.hipp@googlemail.com>
 
-## Kurzfassung auf Deutsch
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
-Ein Alias ist schnell angelegt und sieht danach immer gut aus. Ob er etwas
-taugt, entscheidet sich an Dingen, die man **nicht sieht**: ob die Rollen ein
-Gerät ergeben, ob die Quelle überhaupt existiert und einen Wert hat, ob die
-Leseformel eine Zahl liefert und ob der Schreibweg funktioniert.
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
 
-Diese Werkbank zeigt alle vier, **während** du baust. Der echte type-detector
-läuft gegen einen Entwurf im Speicher, die Werte werden live gerechnet, und
-geschrieben wird ausschließlich über einen Trockenlauf, der jedes Objekt vorher
-als JSON zeigt.
-
-Gerätewissen steckt in Vorlagen — JSON-Dateien, keine Programmzeilen. Eine neue
-Gerätefamilie ist eine neue Datei. Sechzehn sind dabei: vier für Tasmota, ein
-reiner Messpunkt und elf für Homematic, wo das Kunststück nicht ist, dass eine
-Vorlage greift, sondern dass die **richtige** greift. Ein fertig gebautes Gerät
-lässt sich als eigene Vorlage sichern; was sich ableiten lässt, wird abgeleitet,
-der Rest wird gefragt — und ein Probelauf zeigt vorher, welche Geräte die neue
-Vorlage fängt. Die dritte Sicht **Vorlagen** verwaltet sie: ansehen, ändern,
-duplizieren, löschen, aus- und einlesen.
-
-Gibt es den Alias schon, gewinnt sein Bestand — in beiden Ansichten dasselbe
-Bild. Wo die Vorlage etwas anderes will, steht das an der Zeile, und ein Knopf
-übernimmt es. Auf Klick, nie nebenbei.
-
-Geht ein Gerät kaputt, biegt **Quelle tauschen** den Alias auf das Ersatzgerät
-um, ohne ihn anzufassen: gleiche Kennung, gleiche Aufzeichnung, gleiche
-Zuordnung. Zugeordnet wird über den Pfad, über die Vorlagenzeile oder — sichtbar
-als „vermutet" — geraten.
-
-Raum und Funktion stehen nicht am Objekt, sondern in Aufzählungen. Neben beiden
-Feldern steht das Bild, das dort hinterlegt ist oder beim Schreiben dazukäme —
-letzteres blass und mit einem kleinen **neu**. Damit sieht man vorher, was
-passiert, statt es im Trockenlauf zu suchen.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
