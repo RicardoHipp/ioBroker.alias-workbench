@@ -1255,6 +1255,15 @@ export function zeigeVerlegen() {
 
   iO.addEventListener('input', function () { ordnerMalen(false); malen(); });
   iN.addEventListener('input', malen);
+  /* Beim Verlassen steht im Feld, was auch geschrieben wird. Die
+     Zielleiste haelt es seit dem 26.08.2026 so; hier blieb „Dimmer Neu,
+     Test." stehen, waehrend die Vorschau darunter schon
+     `Dimmer_Neu_Test` zeigte - dieselbe Lage wie D19, nur umgekehrt
+     herum: das Ziel stimmte, das Feld log. Gefunden 05.09.2026 (T19). */
+  iN.addEventListener('change', function () {
+    var sauber = kennungtauglich(iN.value);
+    if (sauber && sauber !== iN.value) { iN.value = sauber; malen(); }
+  });
   malen();
   if (!$('#dlg-move').open) { $('#dlg-move').showModal(); }
   setTimeout(function () { iN.focus(); iN.select(); }, 0);
