@@ -478,6 +478,12 @@ that nobody wired up stays German forever without anyone noticing.
 
 ## Changelog
 
+### 0.8.0
+* Settings page in eleven languages
+* ESLint and a CI workshop; checks run before every commit
+* The buttons at the bottom follow the mode
+* New description
+
 ### 0.7.12
 * Tab rebuilt as ES modules
 * Eleven Homematic templates

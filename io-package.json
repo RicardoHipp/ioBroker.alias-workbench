@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "alias-workbench",
-    "version": "0.7.12",
+    "version": "0.8.0",
     "news": {
+      "0.8.0": {
+        "en": "Ready for the repository: settings page in eleven languages, ESLint and a CI workshop, checks that run before every commit. The buttons at the bottom now follow the mode. New description.",
+        "de": "Bereit fürs Repository: Einstellungsseite in elf Sprachen, ESLint und eine CI-Werkstatt, Prüfungen vor jedem Commit. Die Knöpfe unten richten sich jetzt nach dem Modus. Neue Beschreibung.",
+        "ru": "Готово для репозитория: страница настроек на одиннадцати языках, ESLint и CI-мастерская, проверки перед каждым коммитом. Кнопки внизу теперь зависят от режима. Новое описание.",
+        "pt": "Pronto para o repositório: página de definições em onze idiomas, ESLint e uma oficina de CI, verificações antes de cada commit. Os botões em baixo seguem agora o modo. Nova descrição.",
+        "nl": "Klaar voor de repository: instellingenpagina in elf talen, ESLint en een CI-werkplaats, controles voor elke commit. De knoppen onderaan volgen nu de modus. Nieuwe beschrijving.",
+        "fr": "Prêt pour le dépôt : page de réglages en onze langues, ESLint et un atelier CI, vérifications avant chaque commit. Les boutons du bas suivent désormais le mode. Nouvelle description.",
+        "it": "Pronto per il repository: pagina delle impostazioni in undici lingue, ESLint e un’officina CI, controlli prima di ogni commit. I pulsanti in basso seguono ora la modalità. Nuova descrizione.",
+        "es": "Listo para el repositorio: página de ajustes en once idiomas, ESLint y un taller de CI, comprobaciones antes de cada commit. Los botones de abajo ahora siguen el modo. Nueva descripción.",
+        "pl": "Gotowe do repozytorium: strona ustawień w jedenastu językach, ESLint i warsztat CI, sprawdzenia przed każdym commitem. Przyciski na dole podążają teraz za trybem. Nowy opis.",
+        "uk": "Готово до репозиторію: сторінка налаштувань одинадцятьма мовами, ESLint і CI-майстерня, перевірки перед кожним комітом. Кнопки внизу тепер залежать від режиму. Новий опис.",
+        "zh-cn": "已为仓库做好准备：十一种语言的设置页面、ESLint 与 CI 工作流、每次提交前的检查。底部按钮现在会随模式变化。全新的说明文字。"
+      },
       "0.7.12": {
         "en": "Tab rebuilt as ES modules; eleven Homematic templates; settings page; swap the source of an alias; picture preview beside room and function.",
         "de": "Reiter in ES-Modulen; elf Homematic-Vorlagen; Einstellungsseite; Quelle eines Alias tauschen; Bildvorschau neben Raum und Funktion.",
