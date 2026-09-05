@@ -1,89 +1,105 @@
 {
-  "i18n": false,
+  "i18n": true,
   "type": "panel",
   "items": {
     "_kopf": {
       "type": "staticText",
-      "text": {
-        "en": "The Alias Workbench has no running process — everything happens in the Admin tab. These settings control how it writes.",
-        "de": "Die Alias-Werkbank hat keinen laufenden Prozess — alles geschieht im Admin-Reiter. Diese Einstellungen bestimmen, wie sie schreibt."
+      "text": "cfg.head",
+      "style": {
+        "marginBottom": 12,
+        "fontSize": 13,
+        "opacity": 0.75
       },
-      "style": { "marginBottom": 12, "fontSize": 13, "opacity": 0.75 },
       "newLine": true,
-      "xs": 12, "sm": 12, "md": 12, "lg": 12, "xl": 12
+      "xs": 12,
+      "sm": 12,
+      "md": 12,
+      "lg": 12,
+      "xl": 12
     },
-
     "_ikonKopf": {
       "type": "header",
       "size": 3,
-      "text": { "en": "Icons for rooms and functions", "de": "Bilder für Räume und Funktionen" },
+      "text": "cfg.iconHead",
       "newLine": true,
-      "xs": 12, "sm": 12, "md": 12, "lg": 12, "xl": 12
+      "xs": 12,
+      "sm": 12,
+      "md": 12,
+      "lg": 12,
+      "xl": 12
     },
     "_ikonText": {
       "type": "staticText",
-      "text": {
-        "en": "Admin ships 62 function and 58 room templates, each with an icon. When the workbench creates an enumeration, it takes the icon from there. Existing enumerations keep whatever they have — unless you allow it to fill in what is missing. Nothing is ever written without the dry run showing it first.",
-        "de": "Der Admin bringt 62 Funktions- und 58 Raumvorlagen mit, jede mit einem Bild. Legt die Werkbank eine Aufzählung neu an, nimmt sie es von dort. Vorhandene Aufzählungen behalten, was sie haben — es sei denn, sie darf Fehlendes ergänzen. Geschrieben wird nie etwas, das der Trockenlauf nicht vorher gezeigt hat."
+      "text": "cfg.iconText",
+      "style": {
+        "marginBottom": 8,
+        "fontSize": 12,
+        "opacity": 0.7
       },
-      "style": { "marginBottom": 8, "fontSize": 12, "opacity": 0.7 },
       "newLine": true,
-      "xs": 12, "sm": 12, "md": 12, "lg": 12, "xl": 12
+      "xs": 12,
+      "sm": 12,
+      "md": 12,
+      "lg": 12,
+      "xl": 12
     },
-
     "ikonRaeume": {
       "type": "checkbox",
-      "label": { "en": "Add missing icons to rooms", "de": "Fehlende Bilder bei Räumen ergänzen" },
-      "help": {
-        "en": "Applies when a room has no icon at all and a template of the same name or ID exists.",
-        "de": "Greift, wenn ein Raum gar kein Bild hat und es eine Vorlage gleichen Namens oder gleicher Kennung gibt."
-      },
+      "label": "cfg.roomsLabel",
+      "help": "cfg.roomsHelp",
       "default": true,
       "newLine": true,
-      "xs": 12, "sm": 12, "md": 6, "lg": 6, "xl": 6
+      "xs": 12,
+      "sm": 12,
+      "md": 6,
+      "lg": 6,
+      "xl": 6
     },
     "ikonFunktionen": {
       "type": "checkbox",
-      "label": { "en": "Add missing icons to functions", "de": "Fehlende Bilder bei Funktionen ergänzen" },
-      "help": {
-        "en": "Same for functions. Enumerations mirrored from a HomeMatic CCU never carry an icon.",
-        "de": "Dasselbe für Funktionen. Aus einer Homematic-Zentrale gespiegelte Aufzählungen führen nie ein Bild."
-      },
+      "label": "cfg.funcsLabel",
+      "help": "cfg.funcsHelp",
       "default": true,
-      "xs": 12, "sm": 12, "md": 6, "lg": 6, "xl": 6
+      "xs": 12,
+      "sm": 12,
+      "md": 6,
+      "lg": 6,
+      "xl": 6
     },
     "ikonErsetzen": {
       "type": "checkbox",
-      "label": { "en": "Also replace unusable icon entries", "de": "Auch unbrauchbare Bildeinträge ersetzen" },
-      "help": {
-        "en": "The Admin setup wizard leaves a bare name such as \"Playroom\" in the icon field, which no longer resolves to a picture and shows as a broken box. With this on, the workbench replaces it. It overwrites a field that is not empty — the dry run names it explicitly.",
-        "de": "Der Einrichtungsassistent des Admin hinterlässt im Bildfeld einen bloßen Namen wie „Playroom\", der zu keinem Bild mehr führt und als kaputtes Kästchen erscheint. Ist dies an, ersetzt die Werkbank ihn. Damit wird ein nicht leeres Feld überschrieben — der Trockenlauf benennt das eigens."
-      },
+      "label": "cfg.replaceLabel",
+      "help": "cfg.replaceHelp",
       "default": true,
       "newLine": true,
-      "xs": 12, "sm": 12, "md": 12, "lg": 12, "xl": 12
+      "xs": 12,
+      "sm": 12,
+      "md": 12,
+      "lg": 12,
+      "xl": 12
     },
-
     "_quelleKopf": {
       "type": "header",
       "size": 3,
-      "text": { "en": "Where the templates come from", "de": "Woher die Vorlagen kommen" },
+      "text": "cfg.sourceHead",
       "newLine": true,
-      "xs": 12, "sm": 12, "md": 12, "lg": 12, "xl": 12
+      "xs": 12,
+      "sm": 12,
+      "md": 12,
+      "lg": 12,
+      "xl": 12
     },
     "vorlagenVomAdmin": {
       "type": "checkbox",
-      "label": {
-        "en": "Offer the Admin's room and function templates",
-        "de": "Die Raum- und Funktionsvorlagen des Admin anbieten"
-      },
-      "help": {
-        "en": "The workbench reads them at runtime from the Admin's own bundle instead of keeping a copy that would age with every update. If that fails, the selection lists simply show what already exists — no error, just fewer entries.",
-        "de": "Die Werkbank liest sie zur Laufzeit aus dem Bundle des Admin, statt eine Kopie zu pflegen, die bei jedem Update altert. Misslingt das, zeigen die Auswahllisten nur den Bestand — kein Fehler, nur weniger Auswahl."
-      },
+      "label": "cfg.adminTplLabel",
+      "help": "cfg.adminTplHelp",
       "default": true,
       "newLine": true,
-      "xs": 12, "sm": 12, "md": 12, "lg": 12, "xl": 12
+      "xs": 12,
+      "sm": 12,
+      "md": 12,
+      "lg": 12,
+      "xl": 12
     }
   }
 }

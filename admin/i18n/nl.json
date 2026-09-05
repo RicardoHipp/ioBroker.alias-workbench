@@ -1,0 +1,14 @@
+{
+  "cfg.head": "De Alias-werkbank heeft geen draaiend proces — alles gebeurt in het Admin-tabblad. Deze instellingen bepalen hoe er geschreven wordt.",
+  "cfg.iconHead": "Pictogrammen voor ruimtes en functies",
+  "cfg.iconText": "Admin levert 62 functie- en 58 ruimtesjablonen, elk met een pictogram. Wanneer de werkbank een opsomming aanmaakt, neemt zij het pictogram daarvandaan. Bestaande opsommingen behouden wat ze hebben — tenzij u toestaat dat ontbrekende worden aangevuld. Er wordt nooit iets geschreven zonder dat de proefrun het eerst toont.",
+  "cfg.roomsLabel": "Ontbrekende pictogrammen bij ruimtes aanvullen",
+  "cfg.roomsHelp": "Geldt wanneer een ruimte helemaal geen pictogram heeft en er een sjabloon met dezelfde naam of ID bestaat.",
+  "cfg.funcsLabel": "Ontbrekende pictogrammen bij functies aanvullen",
+  "cfg.funcsHelp": "Hetzelfde voor functies. Opsommingen die vanaf een HomeMatic-CCU worden gespiegeld, hebben nooit een pictogram.",
+  "cfg.replaceLabel": "Ook onbruikbare pictogramvermeldingen vervangen",
+  "cfg.replaceHelp": "De installatiewizard van Admin laat in het pictogramveld een kale naam als \"Playroom\" achter, die niet langer naar een afbeelding verwijst en als een kapot kadertje verschijnt. Staat dit aan, dan vervangt de werkbank hem. Daarbij wordt een niet-leeg veld overschreven — de proefrun benoemt dat uitdrukkelijk.",
+  "cfg.sourceHead": "Waar de sjablonen vandaan komen",
+  "cfg.adminTplLabel": "De ruimte- en functiesjablonen van Admin aanbieden",
+  "cfg.adminTplHelp": "De werkbank leest ze tijdens het uitvoeren uit de bundel van Admin zelf, in plaats van een kopie bij te houden die bij elke update veroudert. Mislukt dat, dan tonen de keuzelijsten alleen wat er al is — geen fout, alleen minder items."
+}

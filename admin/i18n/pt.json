@@ -1,0 +1,14 @@
+{
+  "cfg.head": "A Bancada de Alias não tem processo em execução — tudo acontece no separador do Admin. Estas definições determinam como escreve.",
+  "cfg.iconHead": "Ícones para divisões e funções",
+  "cfg.iconText": "O Admin inclui 62 modelos de função e 58 modelos de divisão, cada um com um ícone. Quando a bancada cria uma enumeração, retira o ícone daí. As enumerações existentes mantêm o que têm — a menos que permita preencher o que falta. Nada é escrito sem que a simulação o mostre primeiro.",
+  "cfg.roomsLabel": "Adicionar ícones em falta às divisões",
+  "cfg.roomsHelp": "Aplica-se quando uma divisão não tem qualquer ícone e existe um modelo com o mesmo nome ou ID.",
+  "cfg.funcsLabel": "Adicionar ícones em falta às funções",
+  "cfg.funcsHelp": "O mesmo para as funções. As enumerações espelhadas de uma CCU HomeMatic nunca têm ícone.",
+  "cfg.replaceLabel": "Substituir também entradas de ícone inutilizáveis",
+  "cfg.replaceHelp": "O assistente de configuração do Admin deixa no campo do ícone um nome simples como «Playroom», que já não corresponde a nenhuma imagem e aparece como uma caixa partida. Com esta opção ligada, a bancada substitui-o. Isso sobrescreve um campo que não está vazio — a simulação indica-o explicitamente.",
+  "cfg.sourceHead": "De onde vêm os modelos",
+  "cfg.adminTplLabel": "Oferecer os modelos de divisão e função do Admin",
+  "cfg.adminTplHelp": "A bancada lê-os em tempo de execução a partir do próprio pacote do Admin, em vez de manter uma cópia que envelheceria a cada atualização. Se isso falhar, as listas de seleção mostram apenas o que já existe — não é um erro, apenas menos entradas."
+}

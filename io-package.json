@@ -5,16 +5,43 @@
     "news": {
       "0.7.12": {
         "en": "Tab rebuilt as ES modules; eleven Homematic templates; settings page; swap the source of an alias; picture preview beside room and function.",
-        "de": "Reiter in ES-Modulen; elf Homematic-Vorlagen; Einstellungsseite; Quelle eines Alias tauschen; Bildvorschau neben Raum und Funktion."
+        "de": "Reiter in ES-Modulen; elf Homematic-Vorlagen; Einstellungsseite; Quelle eines Alias tauschen; Bildvorschau neben Raum und Funktion.",
+        "ru": "Вкладка перестроена на ES-модули; одиннадцать шаблонов Homematic; страница настроек; замена источника алиаса; предпросмотр значка рядом с комнатой и функцией.",
+        "pt": "Separador reconstruído como módulos ES; onze modelos Homematic; página de definições; trocar a fonte de um alias; pré-visualização da imagem junto a divisão e função.",
+        "nl": "Tabblad herbouwd als ES-modules; elf Homematic-sjablonen; instellingenpagina; de bron van een alias wisselen; afbeeldingsvoorbeeld naast ruimte en functie.",
+        "fr": "Onglet reconstruit en modules ES ; onze modèles Homematic ; page de réglages ; changer la source d'un alias ; aperçu de l'image à côté de la pièce et de la fonction.",
+        "it": "Scheda ricostruita come moduli ES; undici modelli Homematic; pagina delle impostazioni; sostituzione della sorgente di un alias; anteprima dell’immagine accanto a stanza e funzione.",
+        "es": "Pestaña reconstruida como módulos ES; once plantillas Homematic; página de ajustes; cambiar la fuente de un alias; vista previa de la imagen junto a la habitación y la función.",
+        "pl": "Zakładka przebudowana na moduły ES; jedenaście szablonów Homematic; strona ustawień; zamiana źródła aliasu; podgląd obrazka obok pomieszczenia i funkcji.",
+        "uk": "Вкладку перебудовано на ES-модулі; одинадцять шаблонів Homematic; сторінка налаштувань; заміна джерела аліаса; попередній перегляд зображення поруч із кімнатою та функцією.",
+        "zh-cn": "选项卡重构为 ES 模块；十一个 Homematic 模板；设置页面；更换别名的来源；房间和功能旁的图片预览。"
       }
     },
     "titleLang": {
       "en": "Alias Workbench",
-      "de": "Alias-Werkbank"
+      "de": "Alias-Werkbank",
+      "ru": "Верстак алиасов",
+      "pt": "Bancada de alias",
+      "nl": "Alias-werkbank",
+      "fr": "Établi d'alias",
+      "it": "Banco di lavoro alias",
+      "es": "Banco de trabajo de alias",
+      "pl": "Warsztat aliasów",
+      "uk": "Верстак аліасів",
+      "zh-cn": "别名工作台"
     },
     "desc": {
       "en": "Shows what the type-detector makes of a channel, with live values. Build aliases from templates and see whether they work.",
-      "de": "Zeigt, was der type-detector aus einem Kanal macht, mit echten Werten. Aliase aus Vorlagen bauen und sehen, ob sie funktionieren."
+      "de": "Zeigt, was der type-detector aus einem Kanal macht, mit echten Werten. Aliase aus Vorlagen bauen und sehen, ob sie funktionieren.",
+      "ru": "Показывает, что type-detector делает из канала, с текущими значениями. Создавайте алиасы из шаблонов и проверяйте, работают ли они.",
+      "pt": "Mostra o que o type-detector faz de um canal, com valores ao vivo. Crie aliases a partir de modelos e veja se funcionam.",
+      "nl": "Laat zien wat de type-detector van een kanaal maakt, met live waarden. Bouw aliassen op basis van sjablonen en zie of ze werken.",
+      "fr": "Montre ce que le type-detector fait d'un canal, avec des valeurs en direct. Créez des alias à partir de modèles et vérifiez s'ils fonctionnent.",
+      "it": "Mostra cosa il type-detector fa di un canale, con valori in tempo reale. Crea alias da modelli e verifica se funzionano.",
+      "es": "Muestra lo que el type-detector hace de un canal, con valores en vivo. Cree alias a partir de plantillas y compruebe si funcionan.",
+      "pl": "Pokazuje, co type-detector robi z kanału, z wartościami na żywo. Twórz aliasy z szablonów i sprawdzaj, czy działają.",
+      "uk": "Показує, що type-detector робить з каналу, з поточними значеннями. Створюйте аліаси з шаблонів і перевіряйте, чи вони працюють.",
+      "zh-cn": "显示 type-detector 如何解析一个通道，并附带实时值。从模板构建别名并检查它们是否有效。"
     },
     "authors": [
       "Ricardo"

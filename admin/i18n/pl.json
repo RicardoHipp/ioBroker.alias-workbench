@@ -1,0 +1,14 @@
+{
+  "cfg.head": "Warsztat aliasów nie ma działającego procesu — wszystko dzieje się w zakładce Admina. Te ustawienia określają, jak zapisuje.",
+  "cfg.iconHead": "Ikony dla pomieszczeń i funkcji",
+  "cfg.iconText": "Admin dostarcza 62 szablony funkcji i 58 szablonów pomieszczeń, każdy z ikoną. Gdy warsztat tworzy wyliczenie, pobiera ikonę stamtąd. Istniejące wyliczenia zachowują to, co mają — chyba że pozwolisz uzupełnić braki. Nic nie jest zapisywane bez uprzedniego pokazania przez próbny przebieg.",
+  "cfg.roomsLabel": "Uzupełniać brakujące ikony pomieszczeń",
+  "cfg.roomsHelp": "Działa, gdy pomieszczenie nie ma żadnej ikony, a istnieje szablon o tej samej nazwie lub ID.",
+  "cfg.funcsLabel": "Uzupełniać brakujące ikony funkcji",
+  "cfg.funcsHelp": "To samo dotyczy funkcji. Wyliczenia odwzorowane z centrali HomeMatic nigdy nie mają ikony.",
+  "cfg.replaceLabel": "Zastępować także nieprzydatne wpisy ikon",
+  "cfg.replaceHelp": "Kreator konfiguracji Admina pozostawia w polu ikony samą nazwę, np. „Playroom”, która nie prowadzi już do żadnego obrazka i wyświetla się jako uszkodzona ramka. Przy włączonej opcji warsztat ją zastępuje. Nadpisywane jest wtedy niepuste pole — próbny przebieg wskazuje to osobno.",
+  "cfg.sourceHead": "Skąd pochodzą szablony",
+  "cfg.adminTplLabel": "Oferować szablony pomieszczeń i funkcji z Admina",
+  "cfg.adminTplHelp": "Warsztat odczytuje je w czasie działania z własnego pakietu Admina, zamiast utrzymywać kopię, która starzałaby się z każdą aktualizacją. Jeśli się to nie powiedzie, listy wyboru pokazują tylko to, co już istnieje — to nie błąd, po prostu mniej pozycji."
+}

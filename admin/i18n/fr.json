@@ -1,0 +1,14 @@
+{
+  "cfg.head": "L'Établi d'alias n'a aucun processus en cours — tout se passe dans l'onglet Admin. Ces réglages déterminent la manière dont il écrit.",
+  "cfg.iconHead": "Icônes pour les pièces et les fonctions",
+  "cfg.iconText": "L'Admin fournit 62 modèles de fonction et 58 modèles de pièce, chacun avec une icône. Lorsque l'établi crée une énumération, il y prend l'icône. Les énumérations existantes conservent ce qu'elles ont — sauf si vous autorisez le complément de ce qui manque. Rien n'est jamais écrit sans que la simulation ne l'ait montré au préalable.",
+  "cfg.roomsLabel": "Compléter les icônes manquantes des pièces",
+  "cfg.roomsHelp": "S'applique lorsqu'une pièce n'a aucune icône et qu'un modèle du même nom ou du même ID existe.",
+  "cfg.funcsLabel": "Compléter les icônes manquantes des fonctions",
+  "cfg.funcsHelp": "Idem pour les fonctions. Les énumérations reprises d'une centrale HomeMatic ne portent jamais d'icône.",
+  "cfg.replaceLabel": "Remplacer aussi les entrées d'icône inutilisables",
+  "cfg.replaceHelp": "L'assistant de configuration de l'Admin laisse dans le champ d'icône un simple nom tel que « Playroom », qui ne renvoie plus à aucune image et s'affiche comme un cadre cassé. Si cette option est activée, l'établi le remplace. Un champ non vide est alors écrasé — la simulation le signale explicitement.",
+  "cfg.sourceHead": "D'où viennent les modèles",
+  "cfg.adminTplLabel": "Proposer les modèles de pièce et de fonction de l'Admin",
+  "cfg.adminTplHelp": "L'établi les lit à l'exécution depuis le bundle de l'Admin plutôt que de conserver une copie qui vieillirait à chaque mise à jour. En cas d'échec, les listes de sélection n'affichent que l'existant — pas d'erreur, simplement moins d'entrées."
+}
