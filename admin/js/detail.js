@@ -6,6 +6,7 @@ import { el } from './basis.js';
 import { tr } from './sprache.js';
 import { wertVon, jsonFelder, feldAusFormel, feldFormel, feldWert, jsonVon } from './werte.js';
 import { musterVon, erkenneEntwurf } from './erkennung.js';
+import { musterName } from './musternamen.js';
 import { rollenFeld } from './rollenwahl.js';
 import { opt , quellenAuswahl } from './entwurf.js';
 import { zeichneErgebnis, entwurfAngefasst } from './ergebnis.js';
@@ -204,9 +205,9 @@ export function detailZeile(e, s, idx) {
     if (treffer) {
       hin.appendChild(document.createTextNode(tr('pattern.fitsOn')));
       hin.appendChild(el('b', null, String(treffer.role)));
-      hin.appendChild(document.createTextNode(tr('pattern.toSlot', treffer.name, e.want)));
+      hin.appendChild(document.createTextNode(tr('pattern.toSlot', treffer.name, musterName(e.want) || e.want)));
     } else {
-      hin.textContent = tr('pattern.noPlaceLong', e.want);
+      hin.textContent = tr('pattern.noPlaceLong', musterName(e.want) || e.want);
     }
     rb.appendChild(hin);
   }

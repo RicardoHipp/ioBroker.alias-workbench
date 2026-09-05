@@ -10,7 +10,7 @@ import { tr, sprachtext, sprache } from './sprache.js';
 import { katalogFehlt } from './katalog.js';
 import { funktionsAuswahl, kennungZuFunktion } from './aufzaehlungen.js';
 import { musterVon } from './erkennung.js';
-import { musterZeile } from './musternamen.js';
+import { musterZeile, musterName } from './musternamen.js';
 import { ladeVorlagen, aendereVorlagen, setzeMeta, pruefeVorlage, INSTANZ_ID } from './vorlagen.js';
 import { kindZustaende, hatPunkt, feldAusFormel } from './werte.js';
 import { opt } from './entwurf.js';
@@ -558,9 +558,9 @@ function rollenBlock(rolle, geraetetyp, setzen) {
     if (treffer) {
       hin.appendChild(document.createTextNode(tr('pattern.fitsOn')));
       hin.appendChild(el('b', null, String(treffer.role)));
-      hin.appendChild(document.createTextNode(tr('pattern.toSlot', treffer.name, geraetetyp)));
+      hin.appendChild(document.createTextNode(tr('pattern.toSlot', treffer.name, musterName(geraetetyp) || geraetetyp)));
     } else {
-      hin.textContent = tr('pattern.noPlaceLong', geraetetyp);
+      hin.textContent = tr('pattern.noPlaceLong', musterName(geraetetyp) || geraetetyp);
     }
     rb.appendChild(hin);
   }
