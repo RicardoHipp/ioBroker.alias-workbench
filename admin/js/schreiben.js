@@ -4,25 +4,30 @@
 
 import { S } from './zustand.js';
 import { socket } from './verbindung.js';
-import { $, el, kurz } from './basis.js';
+import { $, el } from './basis.js';
 import { tr, txt } from './sprache.js';
 import { enums, ladeEnums } from './enums.js';
-import { enumsVon, neueEnum } from './aufzaehlungen.js';
-import { ikonCache, ikonErlaubt, ikonNachtrag, vorlageZu, holeIkon } from './katalog.js';
-import { holeZweig, indexNeu } from './objekte.js';
+import { enumsVon } from './aufzaehlungen.js';
+import './katalog.js';
+import { holeZweig, indexNeu , nachziehenErledigt } from './objekte.js';
 import { zeichneBaum } from './baum.js';
-import { kindZustaende, aliasQuellen, wertVon } from './werte.js';
-import { ausgangName, instanzenVon, setzeInstanz, schreibZiel } from './vorlagen.js';
-import { waehle, tipptGerade, aliasFuer, ordnerUnterAlias, gemeinsameKanaele,
-         kennungtauglich } from './entwurf.js';
+import './werte.js';
+import { ausgangName, vorschlag } from './vorlagen.js';
+import {
+  waehle,
+  ordnerUnterAlias,
+  gemeinsameKanaele,
+  kennungtauglich,
+  entwurfFuer
+} from './entwurf.js';
 import { zeichneErgebnis } from './ergebnis.js';
-import { entwurfFuer } from './entwurf.js';
-import { uebernehmeBestand } from './zuordnung.js';
-import { enumAenderungen, setzeZiel } from './zuordnung.js';
+
+import { uebernehmeBestand , enumAenderungen, setzeZiel } from './zuordnung.js';
+
 import { mqttEinzelnStill } from './mqtt.js';
-import { nachziehenErledigt } from './objekte.js';
+
 import { rateBehalten } from './vorschlagen.js';
-import { vorschlag } from './vorlagen.js';
+
 
 export var EIGENE_COMMON = ['name', 'role', 'type', 'read', 'write', 'alias', 'unit', 'states'];
 
@@ -132,7 +137,7 @@ export function zeilenVergleich(altText, neuText) {
    alphabetisch. */
 var VORRANG = {
   '': ['type', 'common', 'native'],
-  'common': ['name', 'role', 'type', 'read', 'write', 'unit', 'states', 'alias'],
+  common: ['name', 'role', 'type', 'read', 'write', 'unit', 'states', 'alias'],
   'common.alias': ['id', 'read', 'write']
 };
 function ordne(o, pfad) {
@@ -978,7 +983,7 @@ export function sucheInSkripten(kennung, fertig) {
         });
         fertigMit();
       });
-  } catch (e) { fertigMit(); }
+  } catch { fertigMit(); }
 }
 
 export function zeigeVerlegen() {

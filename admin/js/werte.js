@@ -6,8 +6,8 @@
 
 import { S } from './zustand.js';
 import { socket } from './verbindung.js';
-import { tr, txt } from './sprache.js';
-import { zeichneWennFrei } from './entwurf.js';
+import { tr } from './sprache.js';
+import './entwurf.js';
 
 /* Direkt nachschlagen — die Vorlagen nennen den Pfad ja vollstaendig
    ("stat.POWER"). Vorher lief das ueber alle Objekte, was beim Pruefen
@@ -38,7 +38,7 @@ export function hatPunkt(kanal, endung) {
 export function jsonVon(id) {
   var st = S.werte[id];
   if (!st || typeof st.val !== 'string') { return null; }
-  try { return JSON.parse(st.val); } catch (e) { return null; }
+  try { return JSON.parse(st.val); } catch { return null; }
 }
 
 export function feldWert(obj, pfad) {
@@ -178,7 +178,7 @@ export function jsonFelder(id) {
   var st = S.werte[id];
   if (!st || typeof st.val !== 'string') { return null; }
   var o;
-  try { o = JSON.parse(st.val); } catch (e) { return null; }
+  try { o = JSON.parse(st.val); } catch { return null; }
   if (!o || typeof o !== 'object') { return null; }
   var raus = [];
   (function geh(x, pfad, tiefe) {

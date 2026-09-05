@@ -2,19 +2,19 @@
 
 import { S } from './zustand.js';
 import { socket } from './verbindung.js';
-import { $, el, kurz } from './basis.js';
+import { el } from './basis.js';
 import { tr } from './sprache.js';
-import { wertVon, fmt, jsonFelder, feldAusFormel, alsZieltyp, auswerten, feldFormel } from './werte.js';
-import { ROLLEN, rolleVonPlatz, musterVon, erkenneEntwurf } from './erkennung.js';
+import { wertVon, jsonFelder, feldAusFormel, feldFormel, feldWert, jsonVon } from './werte.js';
+import { musterVon, erkenneEntwurf } from './erkennung.js';
 import { rollenFeld } from './rollenwahl.js';
-import { opt } from './entwurf.js';
+import { opt , quellenAuswahl } from './entwurf.js';
 import { zeichneErgebnis, entwurfAngefasst } from './ergebnis.js';
-import { quellenAuswahl } from './entwurf.js';
+
 import { rateBehalten } from './vorschlagen.js';
 import { dtZeile } from './vorlagenblatt.js';
-import { mqttEinzeln } from './mqtt.js';
-import { feldWert, jsonVon } from './werte.js';
-import { plaetzeFuerRollen } from './erkennung.js';
+import './mqtt.js';
+
+
 
 /* ================== Aufgeklappte Zeile: hier wird bearbeitet ================== */
 export function detailZeile(e, s, idx) {

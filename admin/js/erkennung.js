@@ -73,7 +73,7 @@ export function plaetzeFuerRollen(musterName) {
   ROLLEN.forEach(function (r) {
     mu.states.forEach(function (st) {
       if (raus[r] || !st.role) { return; }
-      try { if (new RegExp(st.role.source || st.role).test(r)) { raus[r] = st.name; } } catch (e) {}
+      try { if (new RegExp(st.role.source || st.role).test(r)) { raus[r] = st.name; } } catch { /* unbrauchbarer Ausdruck in der Vorlage: zaehlt nicht */ }
     });
   });
   return raus;
@@ -116,7 +116,7 @@ export function erkenneEntwurf(e, nurTyp) {
   var opt2 = { id: e.kanal, objects: m, _keysOptional: keys, _keysOptionalSorted: true,
                _usedIdsOptional: [], ignoreCache: true };
   if (nurTyp) { opt2.allowedTypes = [nurTyp]; }
-  try { return new D.ChannelDetector().detect(opt2) || []; } catch (err) { return []; }
+  try { return new D.ChannelDetector().detect(opt2) || []; } catch { return []; }
 }
 
 

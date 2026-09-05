@@ -6,13 +6,13 @@
 
 import { S } from './zustand.js';
 import { D, $, el } from './basis.js';
-import { kleinKarte, hatPunkt, jsonVon, feldWert, kindZustaende, feldFormel } from './werte.js';
+import { hatPunkt, jsonVon, feldWert, kindZustaende, feldFormel } from './werte.js';
 import { eigenerKanalName, merkeHakenVorgabe } from './entwurf.js';
-import { tasmotaBefehle, befehlsWissen } from './mqtt.js';
+import { tasmotaBefehle } from './mqtt.js';
 import { socket } from './verbindung.js';
-import { holeText, kurz } from './basis.js';
-import { tr, sprachtext, txt } from './sprache.js';
-import { musterVon, rolleVonPlatz, TYP_ZU_MUSTER, erkenneEntwurf } from './erkennung.js';
+
+import { tr, sprachtext } from './sprache.js';
+import { musterVon } from './erkennung.js';
 
 /* Welche Instanz — der Reiter wird mit ?<instanz>&noFooter geladen. */
 var INSTANZ = (function () {
@@ -272,20 +272,6 @@ export function befehlMoeglich(kanal, pfad) {
 
 function punktErfuellt(kanal, pfad) {
   return !!hatPunkt(kanal, pfad) || befehlMoeglich(kanal, pfad);
-}
-
-/* Nur die Struktur pruefen — ohne in Rohwerte zu schauen. Braucht man
-   fuer die Frage „Ordner oder Geraet?", die schon vor dem Laden der
-   Werte beantwortet sein muss. */
-function passtStrukturell(kanal) {
-  return S.VORLAGEN.some(function (v) {
-    var erk = v.erkennung || {};
-    var erf = erk.erforderlich || [];
-    if (!erf.length) { return false; }
-    if ((erk.verboten || []).some(function (e) { return hatPunkt(kanal, e); })) { return false; }
-    if (v.mehrfach) { return instanzenVon(v, kanal).length > 0; }
-    return erf.every(function (e) { return hatPunkt(kanal, e); });
-  });
 }
 
 /* Passt die Vorlage auf diesen Kanal? Liefert null oder eine Bewertung. */
@@ -564,7 +550,7 @@ export function anMusterAnpassen(e, neuTyp) {
     var s = null;
     muster.states.forEach(function (st) {
       if (s || !st.role) { return; }
-      try { if (new RegExp(st.role.source || st.role).test(rolle)) { s = st; } } catch (x) {}
+      try { if (new RegExp(st.role.source || st.role).test(rolle)) { s = st; } } catch { /* dito: eine kaputte Rolle macht die Vorlage nicht passend */ }
     });
     return s;
   }

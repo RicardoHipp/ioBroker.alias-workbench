@@ -30,7 +30,7 @@ import { musterVon, erkenneEntwurf } from './erkennung.js';
 function wortListe(t) {
   return String(t || '')
     .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
-    .replace(/[_.\-]+/g, ' ')
+    .replace(/[_.-]+/g, ' ')
     .toLowerCase().trim().split(/\s+/).filter(Boolean);
 }
 
@@ -166,7 +166,7 @@ export function rateMoeglich(e) {
 export function ratePlaetze(e, trocken) {
   var lage = rateLage(e);
   if (!lage) { return 0; }
-  var mu = lage.mu, namenDa = lage.namenDa;
+  var namenDa = lage.namenDa;
   var freiePlaetze = lage.freiePlaetze, freieZeilen = lage.freieZeilen;
 
   /* 2. Stellen und Melden zusammenfuehren.

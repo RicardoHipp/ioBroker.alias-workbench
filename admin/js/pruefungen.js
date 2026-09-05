@@ -3,10 +3,10 @@
 import { S } from './zustand.js';
 import { $, el } from './basis.js';
 import { tr } from './sprache.js';
-import { wertVon, auswerten } from './werte.js';
-import { erkenneEntwurf } from './erkennung.js';
-import { sofortRueckmeldung, gemerktesSo59, mqttLage } from './mqtt.js';
-import { mqttEinstellung } from './mqtt.js';
+import { wertVon } from './werte.js';
+import './erkennung.js';
+import { sofortRueckmeldung, mqttEinstellung } from './mqtt.js';
+
 
 /* Kommt die Rueckmeldung sofort oder erst mit der naechsten Telemetrie?
 

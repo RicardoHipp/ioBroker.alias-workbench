@@ -1,7 +1,7 @@
 import { holeText } from './basis.js';
 import { txt } from './sprache.js';
 import { einst } from './einstellungen.js';
-import { enums } from './enums.js';
+import './enums.js';
 
 /* Die Vorlagen des Admin - geliehen, nicht kopiert.
 
@@ -65,9 +65,9 @@ function sucheEnumChunk(welle, gesehen, tiefe) {
       if (treffer || gesehen[f]) { return; }
       gesehen[f] = true;
       return holeText('/' + f).then(function (t) {
-        var m = t.match(/Enums-[A-Za-z0-9_\-]+\.js/);
+        var m = t.match(/Enums-[A-Za-z0-9_-]+\.js/);
         if (m) { treffer = m[0]; return; }
-        (t.match(/[A-Za-z0-9_\-.]+-[A-Za-z0-9_\-]{8}\.js/g) || []).forEach(function (x) {
+        (t.match(/[A-Za-z0-9_.-]+-[A-Za-z0-9_-]{8}\.js/g) || []).forEach(function (x) {
           var q = x.indexOf('assets/') === 0 ? x : 'assets/' + x;
           if (!gesehen[q]) { naechste.push(q); }
         });
@@ -102,7 +102,7 @@ function listenAus(text) {
       if (Array.isArray(l) && l.length > 20 && l[0] && l[0]._id && l[0].name) {
         raus.push(l);
       }
-    } catch (e) { /* keine Liste, weiter */ }
+    } catch { /* keine Liste, weiter */ }
   }
   return raus;
 }
@@ -139,7 +139,7 @@ export function ladeEnumVorlagen(nachher) {
     /* Fehlt eine, liegt sie in einer der Dateien, die der Chunk nennt.
        Kurze Namen zuerst: die Listen stecken in kleinen Bausteinen, das
        Riesenbuendel des Geraetemanagers waere sonst der erste Griff. */
-    var dateien = (src.match(/[A-Za-z0-9_\-.]+-[A-Za-z0-9_\-]{8}\.js/g) || [])
+    var dateien = (src.match(/[A-Za-z0-9_.-]+-[A-Za-z0-9_-]{8}\.js/g) || [])
       .filter(function (x, i, a) { return a.indexOf(x) === i; })
       .sort(function (a, b) { return a.length - b.length; })
       .slice(0, 60);

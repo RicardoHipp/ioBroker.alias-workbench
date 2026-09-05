@@ -4,14 +4,14 @@
 
 import { S } from './zustand.js';
 import { socket } from './verbindung.js';
-import { D, $, el, kurz } from './basis.js';
-import { tr, txt } from './sprache.js';
-import { enums } from './enums.js';
-import { zusatzName, anzeigeText, setzeModus, zeichneBaum, merkeKlappstand } from './baum.js';
-import { kindZustaende, direkteZustaende, aliasQuellen, holeWerte, kleinKarte } from './werte.js';
-import { erkenneEntwurf, abbild } from './erkennung.js';
-import { vorschlag } from './vorlagen.js';
-import { pruefeVorlage } from './vorlagen.js';
+import { $ } from './basis.js';
+import { txt } from './sprache.js';
+import './enums.js';
+import { zusatzName, setzeModus, zeichneBaum, merkeKlappstand } from './baum.js';
+import { kindZustaende, aliasQuellen, holeWerte } from './werte.js';
+import { erkenneEntwurf } from './erkennung.js';
+import { vorschlag , pruefeVorlage } from './vorlagen.js';
+
 import { zeichneErgebnis } from './ergebnis.js';
 
 /* Der Name eines Kanals, wenn ihm jemand einen gegeben hat.

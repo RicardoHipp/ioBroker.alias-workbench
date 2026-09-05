@@ -1,7 +1,7 @@
 /* Der Anlauf: sobald die Verbindung steht, laedt alles in fester
    Reihenfolge - Sprache, Geraetewissen, Vorlagen, Objekte. */
 
-import './ergebnis.js';
+import { zeichneErgebnis } from './ergebnis.js';
 import { socket } from './verbindung.js';
 import { $ } from './basis.js';
 import { tr, ladeSprache, beschrifteHtml } from './sprache.js';
@@ -10,7 +10,7 @@ import { ladeBefehlswissen } from './mqtt.js';
 import { ladeVorlagen, setzeMeta } from './vorlagen.js';
 import { ladeMusterNamen } from './musternamen.js';
 import { S } from './zustand.js';
-import { zeichneErgebnis } from './ergebnis.js';
+
 
 /* ================== Verbindung ================== */
 socket.on('connect', function () {

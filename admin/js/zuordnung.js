@@ -2,18 +2,23 @@
    Aufzaehlungen aendert, und was der Bestand dem Vorschlag voraus hat. */
 
 import { S } from './zustand.js';
-import { $, el } from './basis.js';
+import { el } from './basis.js';
 import { tr, txt } from './sprache.js';
 import { enums } from './enums.js';
-import { enumListe, enumsVon, neueEnum, raumVorschlag, funktionVorschlag,
-         funktionZuKennung } from './aufzaehlungen.js';
+import {
+  enumListe,
+  enumsVon,
+  neueEnum,
+  raumVorschlag,
+  funktionVorschlag
+} from './aufzaehlungen.js';
 import { enumVorlagen, katalogFehlt, ikonCache, ikonErlaubt, ikonNachtrag,
          ikonTaugt, vorlageZu, holeIkon } from './katalog.js';
 import { kindZustaende, aliasQuellen } from './werte.js';
-import { aliasFuer } from './entwurf.js';
+import { aliasFuer, zielId } from './entwurf.js';
 import { zeichneErgebnis, entwurfAngefasst, angebotFrisch } from './ergebnis.js';
-import { opt } from './entwurf.js';
-import { zielId } from './entwurf.js';
+
+
 import { ausgangName } from './vorlagen.js';
 import { musterVon } from './erkennung.js';
 
@@ -616,7 +621,7 @@ export function unterschiede(e) {
     if (!mu || !rolle) { return false; }
     return mu.states.some(function (st) {
       if (!st.role) { return false; }
-      try { return new RegExp(st.role.source || st.role).test(rolle); } catch (x) { return false; }
+      try { return new RegExp(st.role.source || st.role).test(rolle); } catch { return false; }
     });
   }
   /* Was die Vorlage von sich aus vorgeschlagen hat. Ein Punkt, der

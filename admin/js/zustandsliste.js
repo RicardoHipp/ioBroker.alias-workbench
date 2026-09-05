@@ -7,7 +7,7 @@
    werden oben bei der Musterwahl gebaut und hier nur eingehaengt. */
 
 import { S } from './zustand.js';
-import { el, kurz } from './basis.js';
+import { el } from './basis.js';
 import { tr } from './sprache.js';
 import { erkenneEntwurf, musterVon, rolleVonPlatz } from './erkennung.js';
 import { kindZustaende, wertVon, fmt } from './werte.js';
@@ -133,7 +133,7 @@ export function berechnePlaetze(e, haupt) {
 }
 
 export function baueListe(host, e, pl, rateKnopf, musterBlock) {
-  var platzVon = pl.platzVon, platzAnzahl = pl.platzAnzahl, imInfo = pl.imInfo;
+  var platzVon = pl.platzVon, platzAnzahl = pl.platzAnzahl;
 
   /* --- Gerätekarte ---
 
@@ -324,7 +324,6 @@ export function baueListe(host, e, pl, rateKnopf, musterBlock) {
   /* --- Zustandsliste --- */
   e.states.forEach(function (s, i) {
     var pl = platzVon[s.n];
-    var info = imInfo[s.n];
     var unfertig = (!s.n || !s.srcR);
     var row = el('div', 'erow' + (s.on ? '' : ' skip') + (S.openRow === i ? ' open' : ''));
     row.tabIndex = 0;

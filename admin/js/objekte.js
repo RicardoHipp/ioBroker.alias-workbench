@@ -10,16 +10,16 @@
 
 import { S } from './zustand.js';
 import { socket } from './verbindung.js';
-import { $ } from './basis.js';
-import { tr } from './sprache.js';
+import './basis.js';
+import './sprache.js';
 import { ladeEinstellungen } from './einstellungen.js';
 import { zeigeObjektzahl } from './vorlagen.js';
 import { enums, ladeEnums } from './enums.js';
 import { ladeEnumVorlagen } from './katalog.js';
 import { zeichneBaum } from './baum.js';
-import { waehle } from './entwurf.js';
+import { waehle , tipptGerade } from './entwurf.js';
 import { zeichneErgebnis, neuZeichnenOderAufbauen } from './ergebnis.js';
-import { tipptGerade } from './entwurf.js';
+
 
 /* ================== Objekte holen ================== */
 export var ARTEN = ['device', 'channel', 'folder', 'state'];

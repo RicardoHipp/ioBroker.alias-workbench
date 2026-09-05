@@ -8,9 +8,9 @@ import { S } from './zustand.js';
 import { socket } from './verbindung.js';
 import { $, el, klappZeichen } from './basis.js';
 import { tr } from './sprache.js';
-import { kleinKarte, hatPunkt, jsonVon, kindZustaende, jsonFelder } from './werte.js';
-import { tipptGerade } from './entwurf.js';
-import { zeichneErgebnis, neuZeichnenOderAufbauen } from './ergebnis.js';
+import { hatPunkt, jsonVon, kindZustaende } from './werte.js';
+import './entwurf.js';
+import { zeichneErgebnis } from './ergebnis.js';
 import { holeZweig, holeObjekt, uebernimmObjekt } from './objekte.js';
 
 /* ================== MQTT-Geraete ==================
@@ -523,7 +523,7 @@ function so59(kanal, knopf, wert) {
 /* Status 11 aktiv anfordern. Eine Abfrage — sie schaltet nichts.
    Antwortet das Geraet nicht, muss das dranstehen: vorher klickte man
    und es passierte sichtbar gar nichts. */
-function mqttFragen(kanal, knopf) {
+function mqttFragen(kanal, _knopf) {
   var g = mqttGeraet(kanal);
   if (!g) { return; }
   abfrageLaeuft[kanal] = true;

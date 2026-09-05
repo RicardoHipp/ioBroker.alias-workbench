@@ -15,13 +15,15 @@
   "engines": {
     "node": ">= 20"
   },
-  "dependencies": {},
   "devDependencies": {
+    "@iobroker/eslint-config": "^2.3.4",
     "@iobroker/type-detector": "^6.0.0",
     "esbuild": "^0.25.0"
   },
   "scripts": {
-    "build": "esbuild src/detector-bundle.js --bundle --minify --format=iife --target=es2019 --outfile=admin/detector.js"
+    "build": "esbuild src/detector-bundle.js --bundle --minify --format=iife --target=es2019 --outfile=admin/detector.js",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
   },
   "files": [
     "admin/",

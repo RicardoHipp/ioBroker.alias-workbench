@@ -5,21 +5,20 @@
 
 import { S } from './zustand.js';
 import { socket } from './verbindung.js';
-import { D, $, el, klappZeichen, kurz } from './basis.js';
-import { tr, txt, sprachtext, sprache } from './sprache.js';
-import { enumVorlagen, katalogFehlt } from './katalog.js';
+import { D, $, el, kurz } from './basis.js';
+import { tr, sprachtext, sprache } from './sprache.js';
+import { katalogFehlt } from './katalog.js';
 import { funktionsAuswahl, kennungZuFunktion } from './aufzaehlungen.js';
-import { musterVon, rolleVonPlatz, ROLLEN, erkenneEntwurf } from './erkennung.js';
+import { musterVon } from './erkennung.js';
 import { musterZeile } from './musternamen.js';
-import { ladeVorlagen, aendereVorlagen, setzeMeta, pruefeVorlage,
-         instanzenVon, setzeInstanz, INSTANZ_ID } from './vorlagen.js';
-import { holeWerte, kindZustaende, hatPunkt, kleinKarte } from './werte.js';
-import { eigenerKanalName, opt } from './entwurf.js';
+import { ladeVorlagen, aendereVorlagen, setzeMeta, pruefeVorlage, INSTANZ_ID } from './vorlagen.js';
+import { kindZustaende, hatPunkt, feldAusFormel } from './werte.js';
+import { opt } from './entwurf.js';
 import { zeichneErgebnis } from './ergebnis.js';
 import { delKnopf } from './schreiben.js';
-import { plaetzeFuerRollen } from './erkennung.js';
+
 import { rollenFeld } from './rollenwahl.js';
-import { feldAusFormel } from './werte.js';
+
 
 /* ================== Vorlagen verwalten ==================
    Dritte Sicht neben Quellen und Aliasen: links die Vorlagen, rechts
@@ -423,15 +422,15 @@ export function zeichneVorlagenBlatt(host) {
   if (eigen) {
     var np = el('div');
     np.style.padding = '9px 12px 11px';
-    var nb = el('button', 'btn schmal', tr('tv.addState'));
-    nb.addEventListener('click', function () {
+    var nKnopf = el('button', 'btn schmal', tr('tv.addState'));
+    nKnopf.addEventListener('click', function () {
       vAendern(function (x) {
         x.zustaende = x.zustaende || [];
         x.zustaende.push({ name: 'NEU', typ: 'mixed', lesen: '', optional: true });
         vOffeneZeile = x.zustaende.length - 1;
       });
     });
-    np.appendChild(nb);
+    np.appendChild(nKnopf);
     zk.appendChild(np);
   }
   /* Das Rollenwissen ist kein Zeilenbestand - nur ein Vermerk, dass es
@@ -838,11 +837,11 @@ function vZeilenDetail(z, nr) {
 
   zeile2.appendChild(haken(tr('tpls.absolute'), !!z.absolut,
     function (zz, an) { if (an) { zz.absolut = true; } else { delete zz.absolut; } }));
-  var wb = el('button', 'btn schmal', tr('tv.removeState'));
-  wb.addEventListener('click', function () {
+  var wKnopf = el('button', 'btn schmal', tr('tv.removeState'));
+  wKnopf.addEventListener('click', function () {
     vAendern(function (x) { x.zustaende.splice(nr, 1); vOffeneZeile = null; });
   });
-  zeile2.appendChild(wb);
+  zeile2.appendChild(wKnopf);
   dtZeile(d, tr('tv.inTemplate'), zeile2);
 
   var hw = el('div', 'sugg');
@@ -889,7 +888,7 @@ export function vEinlesenDatei(datei) {
   var leser = new FileReader();
   leser.onload = function () {
     var roh;
-    try { roh = JSON.parse(String(leser.result)); } catch (e) { roh = null; }
+    try { roh = JSON.parse(String(leser.result)); } catch { roh = null; }
     var fehler = vPruefeEingelesen(roh);
     if (fehler) {
       vEinlesen = null;

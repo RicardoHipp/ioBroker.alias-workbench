@@ -7,7 +7,7 @@
 import { S } from './zustand.js';
 import { $, el } from './basis.js';
 import { tr, txt, expertenVorgabe } from './sprache.js';
-import { enums } from './enums.js';
+import './enums.js';
 import { waehle } from './entwurf.js';
 import { zeichneErgebnis } from './ergebnis.js';
 import { zeichneVorlagenListe } from './vorlagenblatt.js';
@@ -24,14 +24,14 @@ var KLAPP_SCHLUESSEL = 'alias-workbench.baum';
       S.aufgeklappt = d.knoten || {};
       S.alleKlapp = (d.alle === true || d.alle === false) ? d.alle : null;
     }
-  } catch (e) { /* kaputter oder gesperrter Speicher: dann eben Vorgabe */ }
+  } catch { /* kaputter oder gesperrter Speicher: dann eben Vorgabe */ }
 })();
 
 export function merkeKlappstand() {
   try {
     window.localStorage.setItem(KLAPP_SCHLUESSEL,
       JSON.stringify({ knoten: S.aufgeklappt, alle: S.alleKlapp }));
-  } catch (e) { /* privater Modus oder voll - nicht der Rede wert */ }
+  } catch { /* privater Modus oder voll - nicht der Rede wert */ }
 }
 
 /* ================== Expertenmodus ==================
@@ -49,7 +49,7 @@ export function merkeKlappstand() {
 
 export function experte() {
   var f = null;
-  try { f = window.sessionStorage.getItem('App.expertMode'); } catch (e) { /* gesperrt */ }
+  try { f = window.sessionStorage.getItem('App.expertMode'); } catch { /* gesperrt */ }
   return f ? (f === 'true') : expertenVorgabe;
 }
 

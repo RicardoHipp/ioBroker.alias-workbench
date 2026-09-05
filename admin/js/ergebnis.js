@@ -1,59 +1,58 @@
 import { S } from './zustand.js';
 import './start.js';
 import { socket } from './verbindung.js';
-import { D, $, el, klappZeichen, holeText } from './basis.js';
-import { tr, ladeSprache, beschrifteHtml, sprache, expertenVorgabe, txt, sprachtext } from './sprache.js';
-import { einst, instanzId, ladeEinstellungen } from './einstellungen.js';
-import { enums, ladeEnums } from './enums.js';
-import { INSTANZ_ID, setzeMeta, ladeVorlagen, aendereVorlagen, instanzenVon,
-         setzeInstanz, ausgangName, befehlMoeglich, pruefeVorlage, schreibZiel,
-         wendeAn, vorschlag, anMusterAnpassen } from './vorlagen.js';
-import { ratePlaetze, rateZurueckEine, rateZurueck, rateBehalten,
-         rateAnzahl } from './vorschlagen.js';
-import { kurz } from './basis.js';
-import { dtZeile, vEinlesenDatei } from './vorlagenblatt.js';
+import { D, $, el, klappZeichen } from './basis.js';
+import { tr, sprachtext } from './sprache.js';
+import './einstellungen.js';
+import './enums.js';
+import { ausgangName, pruefeVorlage, vorschlag } from './vorlagen.js';
+import { rateAnzahl } from './vorschlagen.js';
+
+import {
+  vEinlesenDatei,
+  zeichneVorlagenBlatt,
+  tplKnopf,
+  zeigeVorlagenDialog,
+  speichereVorlageAusDialog
+} from './vorlagenblatt.js';
 import { baueZielleiste } from './zielleiste.js';
 import { baueMusterwahl } from './musterwahl.js';
 import { berechnePlaetze, baueListe } from './zustandsliste.js';
-import { eigenerKanalName, kanalBeschriftung, baueEntwurf, alleUndVorlage,
-         knotenDa, quelleVon, springeZu, zielId, steuerKanaele,
-         gemeinsameKanaele, entwurfFuer, waehle, quellenAuswahl,
-         geraeteDarunter, aliasFuer, ordnerUnterAlias, tipptGerade,
-         zeichneWennFrei, opt } from './entwurf.js';
-import { enumAenderungen, enumZeile, setzeEnums, enumAlsOrdner, setzeZiel,
-         uebernehmeBestand, unterschiede } from './zuordnung.js';
-import { detailZeile } from './detail.js';
+import {
+  alleUndVorlage,
+  knotenDa,
+  quelleVon,
+  springeZu,
+  waehle,
+  geraeteDarunter,
+  aliasFuer,
+  tipptGerade,
+  opt,
+  vorlagenAbweichung,
+  vorlageAnwenden,
+  bestandVorrang
+} from './entwurf.js';
+import { setzeEnums, setzeZiel, unterschiede } from './zuordnung.js';
+import './detail.js';
 import { zeigeTausch, tauscheAus } from './quellentausch.js';
-import { vorlagenAbweichung, vorlageAnwenden, bestandVorrang } from './entwurf.js';
-import { pruefungRueckmeldung, pruefungDopplung, pruefungSenden,
-         baueChecks } from './pruefungen.js';
-import { EIGENE_COMMON, mitFremdem, stabil, unveraendert, baueObjekte,
-         verwaiste, pruefeSchreiben, zuSchreiben, zeigeTrockenlauf,
-         zeigeLoeschen, zeichneLoeschen, loescheAlias, zeigeVerlegen,
-         verlegeAlias, delKnopf, leereOrdnerRaeumen, schreibeObjekte,
-         sucheInSkripten } from './schreiben.js';
-import { vorlageMitId, zeichneVorlagenBlatt, textIn, vorlagenVorbereiten,
-         baueVorlage, probelauf, tplKnopf, zeigeVorlagenDialog,
-         zeichneVorlagenDialog, speichereVorlageAusDialog } from './vorlagenblatt.js';
-import { ladeBefehlswissen, tasmotaBefehle, befehlsWissen, sofortRueckmeldung,
-         mqttKarte, mqttEinzeln, mqttEinzelnStill, zeigeMqttDialog,
-         mqttSchreiben, mqttGeraet, mqttLage, gemerktesSo59,
-         mqttEinstellung } from './mqtt.js';
-import { kleinKarte, hatPunkt, jsonVon, feldWert, kindZustaende,
-         direkteZustaende, aliasQuellen, holeWerte, auswerten, alsZieltyp,
-         wertVon, fmt, feldAusFormel, jsonFelder } from './werte.js';
-import { neueEnum, enumListe, enumsVon, enumVonQuelle, raumVorschlag,
-         funktionZuKennung, funktionsAuswahl, kennungZuFunktion,
-         funktionVorschlag, TYP_ZU_VORLAGE } from './aufzaehlungen.js';
-import { rolleAusAusdruck, rolleVonPlatz, ROLLEN, TYP_ZU_MUSTER, musterVon,
-         plaetzeFuerRollen, VORSCHAU, abbild, erkenneEntwurf } from './erkennung.js';
-import { merkeKlappstand, experte, nurFuerExperten, zusatzName, anzeigeText,
-         zeichneBaum, hatDirekteZustaende, istWaehlbar, wohlGeraet,
-         setzeModus } from './baum.js';
-import { ARTEN, ladeObjekte, horcheAufObjekte, uebernimmObjekt, indexNeu,
-         indexStimmtNicht, holeObjekt, holeZweig, nachziehenErledigt } from './objekte.js';
-import { enumVorlagen, katalogFehlt, ikonCache, ladeEnumVorlagen, holeIkon,
-         ikonErlaubt, ikonNachtrag, ikonTaugt, vorlageZu } from './katalog.js';
+
+import { baueChecks } from './pruefungen.js';
+import {
+  zeigeTrockenlauf,
+  zeigeLoeschen,
+  loescheAlias,
+  zeigeVerlegen,
+  delKnopf,
+  schreibeObjekte
+} from './schreiben.js';
+
+import { mqttKarte, mqttSchreiben } from './mqtt.js';
+import { kindZustaende, direkteZustaende } from './werte.js';
+import './aufzaehlungen.js';
+import { erkenneEntwurf } from './erkennung.js';
+import { zusatzName } from './baum.js';
+import './objekte.js';
+import './katalog.js';
 
 /* Das Aufklapp-Flag von „Warum diese Vorlage“ - lag versehentlich im
    MQTT-Block und wanderte beim Schnitt mit; es gehoert hierher. */
@@ -653,7 +652,7 @@ var warumAuf = false;
 
   /* Pruefungen, Fusszeile und die Knopfleiste unten - beschriftet
      nach dem, was der Klick tatsaechlich tut. */
-  function setzeKnoepfe(e, haupt, pflichtFehlt, infoNamen) {
+  function setzeKnoepfe(e, haupt, pflichtFehlt, _infoNamen) {
     baueChecks(e, haupt, pflichtFehlt);
 
     /* Der Knopf soll sagen, was er tut — nicht, wie er es tut. */
