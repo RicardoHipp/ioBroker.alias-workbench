@@ -88,4 +88,8 @@ jobs:
       - uses: ioBroker/testing-action-deploy@v1
         with:
           node-version: '24.x'
+          # Ohne diese Zeile laeuft der Job durch, veroeffentlicht aber
+          # nichts: das Token liegt als Secret im Repository und muss
+          # hier ausdruecklich uebergeben werden.
+          npm-token: ${{ secrets.NPM_TOKEN }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
