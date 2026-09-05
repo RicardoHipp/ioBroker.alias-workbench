@@ -548,17 +548,5 @@
   "write.willKeep": "kept: {0}",
   "write.willRemove": "removed: {0}",
   "write.writeSourceMissing": "{0}: the send datapoint {1} does not exist yet",
-  "write.writing": "writing …",
-  "cfg.head": "The Alias Workbench has no running process — everything happens in the Admin tab. These settings control how it writes.",
-  "cfg.iconHead": "Icons for rooms and functions",
-  "cfg.iconText": "Admin ships 62 function and 58 room templates, each with an icon. When the workbench creates an enumeration, it takes the icon from there. Existing enumerations keep whatever they have — unless you allow it to fill in what is missing. Nothing is ever written without the dry run showing it first.",
-  "cfg.roomsLabel": "Add missing icons to rooms",
-  "cfg.roomsHelp": "Applies when a room has no icon at all and a template of the same name or ID exists.",
-  "cfg.funcsLabel": "Add missing icons to functions",
-  "cfg.funcsHelp": "Same for functions. Enumerations mirrored from a HomeMatic CCU never carry an icon.",
-  "cfg.replaceLabel": "Also replace unusable icon entries",
-  "cfg.replaceHelp": "The Admin setup wizard leaves a bare name such as \"Playroom\" in the icon field, which no longer resolves to a picture and shows as a broken box. With this on, the workbench replaces it. It overwrites a field that is not empty — the dry run names it explicitly.",
-  "cfg.sourceHead": "Where the templates come from",
-  "cfg.adminTplLabel": "Offer the Admin's room and function templates",
-  "cfg.adminTplHelp": "The workbench reads them at runtime from the Admin's own bundle instead of keeping a copy that would age with every update. If that fails, the selection lists simply show what already exists — no error, just fewer entries."
+  "write.writing": "writing …"
 }

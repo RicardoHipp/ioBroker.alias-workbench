@@ -548,17 +548,5 @@
   "write.willKeep": "bleiben stehen: {0}",
   "write.willRemove": "entfernt: {0}",
   "write.writeSourceMissing": "{0}: den Sendepunkt {1} gibt es noch nicht",
-  "write.writing": "schreibe …",
-  "cfg.head": "Die Alias-Werkbank hat keinen laufenden Prozess — alles geschieht im Admin-Reiter. Diese Einstellungen bestimmen, wie sie schreibt.",
-  "cfg.iconHead": "Bilder für Räume und Funktionen",
-  "cfg.iconText": "Der Admin bringt 62 Funktions- und 58 Raumvorlagen mit, jede mit einem Bild. Legt die Werkbank eine Aufzählung neu an, nimmt sie es von dort. Vorhandene Aufzählungen behalten, was sie haben — es sei denn, sie darf Fehlendes ergänzen. Geschrieben wird nie etwas, das der Trockenlauf nicht vorher gezeigt hat.",
-  "cfg.roomsLabel": "Fehlende Bilder bei Räumen ergänzen",
-  "cfg.roomsHelp": "Greift, wenn ein Raum gar kein Bild hat und es eine Vorlage gleichen Namens oder gleicher Kennung gibt.",
-  "cfg.funcsLabel": "Fehlende Bilder bei Funktionen ergänzen",
-  "cfg.funcsHelp": "Dasselbe für Funktionen. Aus einer Homematic-Zentrale gespiegelte Aufzählungen führen nie ein Bild.",
-  "cfg.replaceLabel": "Auch unbrauchbare Bildeinträge ersetzen",
-  "cfg.replaceHelp": "Der Einrichtungsassistent des Admin hinterlässt im Bildfeld einen bloßen Namen wie „Playroom“, der zu keinem Bild mehr führt und als kaputtes Kästchen erscheint. Ist dies an, ersetzt die Werkbank ihn. Damit wird ein nicht leeres Feld überschrieben — der Trockenlauf benennt das eigens.",
-  "cfg.sourceHead": "Woher die Vorlagen kommen",
-  "cfg.adminTplLabel": "Die Raum- und Funktionsvorlagen des Admin anbieten",
-  "cfg.adminTplHelp": "Die Werkbank liest sie zur Laufzeit aus dem Bundle des Admin, statt eine Kopie zu pflegen, die bei jedem Update altert. Misslingt das, zeigen die Auswahllisten nur den Bestand — kein Fehler, nur weniger Auswahl."
+  "write.writing": "schreibe …"
 }
