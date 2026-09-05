@@ -73,4 +73,29 @@ export default [
             globals: { window: 'readonly' },
         },
     },
+    {
+        // Die Tests laufen unter mocha in Node, als CommonJS -
+        // @iobroker/testing gibt es nicht als ES-Modul.
+        files: ['test/**/*.js'],
+        languageOptions: {
+            sourceType: 'commonjs',
+            globals: {
+                require: 'readonly',
+                module: 'writable',
+                __dirname: 'readonly',
+                process: 'readonly',
+                describe: 'readonly',
+                it: 'readonly',
+                before: 'readonly',
+                after: 'readonly',
+                beforeEach: 'readonly',
+                afterEach: 'readonly',
+            },
+        },
+        rules: {
+            '@typescript-eslint/no-require-imports': 'off',
+            'unicorn/prefer-module': 'off',
+            'no-undef': 'error',
+        },
+    },
 ];

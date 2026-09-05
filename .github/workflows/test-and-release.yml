@@ -1,0 +1,77 @@
+name: Test and Release
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      # Releases werden ueber einen Tag ausgeloest: v0.7.13, v1.0.0 ...
+      - 'v?[0-9]+.[0-9]+.[0-9]+*'
+  pull_request: {}
+
+# Ein neuer Push auf denselben Zweig loest den vorigen Lauf ab, statt
+# sich dahinter anzustellen.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  check-and-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+
+  test:
+    needs: [check-and-lint]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # Die untere Grenze steht in package.json (engines.node >= 20).
+        node-version: [20.x, 22.x, 24.x]
+        os: [ubuntu-latest]
+        include:
+          # Entwickelt wird unter Windows - einmal muss es auch dort laufen.
+          - node-version: 22.x
+            os: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+      - run: npm ci
+      - name: Der Detektor laesst sich buendeln
+        # Geprueft wird, dass der Bau durchlaeuft - nicht, dass er das
+        # eingecheckte admin/detector.js Byte fuer Byte trifft. Das tut
+        # er derzeit naemlich nicht: die eingecheckte Fassung stammt vom
+        # 19.08.2026 und enthaelt 131 Zeichen mehr als ein Bau von heute,
+        # bei unveraendertem src/ und unveraendertem type-detector 6.0.0.
+        # Ausgeliefert wird bewusst die gepruefte Fassung.
+        run: npm run build
+      - name: Der geprueften Fassung nicht in die Quere kommen
+        run: git checkout -- admin/detector.js
+      - run: npm test
+
+  deploy:
+    needs: [check-and-lint, test]
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          registry-url: https://registry.npmjs.org/
+          cache: npm
+      - run: npm ci
+      - name: Auf npm veroeffentlichen
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
