@@ -484,13 +484,6 @@ that nobody wired up stays German forever without anyone noticing.
 * The buttons at the bottom follow the mode
 * New description
 
-### 0.7.12
-* Tab rebuilt as ES modules
-* Eleven Homematic templates
-* Settings page
-* Swap the source of an alias
-* Picture preview beside room and function
-
 ## License
 
 MIT License

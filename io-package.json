@@ -15,19 +15,6 @@
         "pl": "Gotowe do repozytorium: strona ustawień w jedenastu językach, ESLint i warsztat CI, sprawdzenia przed każdym commitem. Przyciski na dole podążają teraz za trybem. Nowy opis.",
         "uk": "Готово до репозиторію: сторінка налаштувань одинадцятьма мовами, ESLint і CI-майстерня, перевірки перед кожним комітом. Кнопки внизу тепер залежать від режиму. Новий опис.",
         "zh-cn": "已为仓库做好准备：十一种语言的设置页面、ESLint 与 CI 工作流、每次提交前的检查。底部按钮现在会随模式变化。全新的说明文字。"
-      },
-      "0.7.12": {
-        "en": "Tab rebuilt as ES modules; eleven Homematic templates; settings page; swap the source of an alias; picture preview beside room and function.",
-        "de": "Reiter in ES-Modulen; elf Homematic-Vorlagen; Einstellungsseite; Quelle eines Alias tauschen; Bildvorschau neben Raum und Funktion.",
-        "ru": "Вкладка перестроена на ES-модули; одиннадцать шаблонов Homematic; страница настроек; замена источника алиаса; предпросмотр значка рядом с комнатой и функцией.",
-        "pt": "Separador reconstruído como módulos ES; onze modelos Homematic; página de definições; trocar a fonte de um alias; pré-visualização da imagem junto a divisão e função.",
-        "nl": "Tabblad herbouwd als ES-modules; elf Homematic-sjablonen; instellingenpagina; de bron van een alias wisselen; afbeeldingsvoorbeeld naast ruimte en functie.",
-        "fr": "Onglet reconstruit en modules ES ; onze modèles Homematic ; page de réglages ; changer la source d'un alias ; aperçu de l'image à côté de la pièce et de la fonction.",
-        "it": "Scheda ricostruita come moduli ES; undici modelli Homematic; pagina delle impostazioni; sostituzione della sorgente di un alias; anteprima dell’immagine accanto a stanza e funzione.",
-        "es": "Pestaña reconstruida como módulos ES; once plantillas Homematic; página de ajustes; cambiar la fuente de un alias; vista previa de la imagen junto a la habitación y la función.",
-        "pl": "Zakładka przebudowana na moduły ES; jedenaście szablonów Homematic; strona ustawień; zamiana źródła aliasu; podgląd obrazka obok pomieszczenia i funkcji.",
-        "uk": "Вкладку перебудовано на ES-модулі; одинадцять шаблонів Homematic; сторінка налаштувань; заміна джерела аліаса; попередній перегляд зображення поруч із кімнатою та функцією.",
-        "zh-cn": "选项卡重构为 ES 模块；十一个 Homematic 模板；设置页面；更换别名的来源；房间和功能旁的图片预览。"
       }
     },
     "titleLang": {

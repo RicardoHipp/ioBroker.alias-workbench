@@ -88,8 +88,8 @@ jobs:
       - uses: ioBroker/testing-action-deploy@v1
         with:
           node-version: '24.x'
-          # Ohne diese Zeile laeuft der Job durch, veroeffentlicht aber
-          # nichts: das Token liegt als Secret im Repository und muss
-          # hier ausdruecklich uebergeben werden.
-          npm-token: ${{ secrets.NPM_TOKEN }}
+          # Kein npm-token: npm kennt dieses Repository als Trusted
+          # Publisher (OIDC), die Anmeldung laeuft ueber `id-token: write`
+          # oben. Solange hier ein Token stuende, wuerde die Action es
+          # bevorzugen und die Vertrauensstellung bliebe ungenutzt.
           github-token: ${{ secrets.GITHUB_TOKEN }}
