@@ -661,8 +661,16 @@ var warumAuf = false;
     var ba = $('#btn-dry-alle');
     var mehr = e.instanzen && e.instanzen.length > 1;
     var mehrK = !mehr && (e.kanalGeraete || []).length > 1;
+    /* Die Knoepfe gehoeren zum Modus, nicht nur zum Objekt: Im Modus
+       „Alias anlegen" wird angelegt, nicht verwaltet — Verlegen, Quelle
+       tauschen und Entfernen haben dort nichts zu suchen. Im Modus
+       „Alias bearbeiten" wird bearbeitet, keine Vorlage gebaut
+       (Ricardo, 05.09.2026). */
+    var imAliasmodus = S.baumModus === 'aliase';
+    var bTpl = $('#btn-tpl');
+    if (bTpl) { bTpl.hidden = imAliasmodus; }
     tplKnopf(true);
-    delKnopf(!!S.objects[zielId2] && zielId2.indexOf('alias.') === 0);
+    delKnopf(imAliasmodus && !!S.objects[zielId2] && zielId2.indexOf('alias.') === 0);
     if (bd) {
       bd.disabled = false;
       /* Bei mehreren Ausgaengen den Ausgang beim Namen nennen — „für den

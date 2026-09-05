@@ -431,7 +431,10 @@ export function setzeModus(m) {
   if (m !== 'vorlagen') {
     ['#btn-dry', '#btn-tpl', '#btn-checks'].forEach(function (w) {
       var b = $(w);
-      if (b) { b.hidden = false; }
+      if (!b) { return; }
+      /* „Als Vorlage speichern" gehoert zum Anlegen, nicht zum
+         Bearbeiten — im Aliasmodus bleibt er weg (Ricardo, 05.09.2026). */
+      b.hidden = (w === '#btn-tpl' && m === 'aliase');
     });
   }
   $('#m-quellen').className = (m === 'quellen') ? 'an' : '';
