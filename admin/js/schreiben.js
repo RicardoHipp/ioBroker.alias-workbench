@@ -987,7 +987,12 @@ export function sucheInSkripten(kennung, fertig) {
 }
 
 export function zeigeVerlegen() {
-  var alt = S.current;
+  /* Der Knopf steht auch an der Quelle, sobald es den Alias gibt (T1).
+     Dort ist S.current die Quelle, nicht der Alias - gemeint ist immer
+     das Ziel des Entwurfs. Genauso haelt es zeigeLoeschen; zeigeTausch
+     tat es bis 05.09.2026 nicht, und beide Knoepfe waren an der Quelle
+     sichtbar, aber wirkungslos: kein Dialog, keine Meldung. */
+  var alt = (S.entwurf && (S.entwurf.ziel || S.entwurf.kanal)) || S.current;
   if (!alt || alt.indexOf('alias.') !== 0 || !S.objects[alt]) { return; }
   S.verlegeZiel = alt;
 

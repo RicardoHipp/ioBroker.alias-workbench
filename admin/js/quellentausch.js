@@ -322,8 +322,11 @@ function zeichneAuswahlbaum(host, filter, beiWahl) {
 }
 
 export function zeigeTausch() {
-  if (!S.current || S.current.indexOf('alias.') !== 0) { return; }
-  S.tauschZiel = S.current;
+  /* Wie bei zeigeVerlegen und zeigeLoeschen: an der Quelle ist
+     S.current die Quelle, gemeint ist das Ziel des Entwurfs (T1). */
+  var ziel = (S.entwurf && (S.entwurf.ziel || S.entwurf.kanal)) || S.current;
+  if (!ziel || ziel.indexOf('alias.') !== 0 || !S.objects[ziel]) { return; }
+  S.tauschZiel = ziel;
   S.tauschNeu = '';
   S.tauschWeg = {};
   S.tauschPlan = null;
