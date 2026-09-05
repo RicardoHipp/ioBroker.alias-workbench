@@ -1,5 +1,9 @@
 # Alias Workbench — Kurzfassung auf Deutsch
 
+Erstellt komfortabel Aliase — Geräte, die vis, Alexa und der Geräte-Adapter
+verstehen. Vorlagen erledigen die Arbeit: mitgeliefert für Homematic und
+Tasmota, selbst gebaut für jedes weitere Gerät.
+
 Die vollständige Beschreibung steht auf Englisch im [README](README.md).
 
 Ein Alias ist schnell angelegt und sieht danach immer gut aus. Ob er etwas

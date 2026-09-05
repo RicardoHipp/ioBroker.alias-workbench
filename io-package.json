@@ -31,17 +31,17 @@
       "zh-cn": "别名工作台"
     },
     "desc": {
-      "en": "Shows what the type-detector makes of a channel, with live values. Build aliases from templates and see whether they work.",
-      "de": "Zeigt, was der type-detector aus einem Kanal macht, mit echten Werten. Aliase aus Vorlagen bauen und sehen, ob sie funktionieren.",
-      "ru": "Показывает, что type-detector делает из канала, с текущими значениями. Создавайте алиасы из шаблонов и проверяйте, работают ли они.",
-      "pt": "Mostra o que o type-detector faz de um canal, com valores ao vivo. Crie aliases a partir de modelos e veja se funcionam.",
-      "nl": "Laat zien wat de type-detector van een kanaal maakt, met live waarden. Bouw aliassen op basis van sjablonen en zie of ze werken.",
-      "fr": "Montre ce que le type-detector fait d'un canal, avec des valeurs en direct. Créez des alias à partir de modèles et vérifiez s'ils fonctionnent.",
-      "it": "Mostra cosa il type-detector fa di un canale, con valori in tempo reale. Crea alias da modelli e verifica se funzionano.",
-      "es": "Muestra lo que el type-detector hace de un canal, con valores en vivo. Cree alias a partir de plantillas y compruebe si funcionan.",
-      "pl": "Pokazuje, co type-detector robi z kanału, z wartościami na żywo. Twórz aliasy z szablonów i sprawdzaj, czy działają.",
-      "uk": "Показує, що type-detector робить з каналу, з поточними значеннями. Створюйте аліаси з шаблонів і перевіряйте, чи вони працюють.",
-      "zh-cn": "显示 type-detector 如何解析一个通道，并附带实时值。从模板构建别名并检查它们是否有效。"
+      "en": "Creates aliases the comfortable way — devices that vis, Alexa and the device adapter understand. Templates do the work: shipped ones for HomeMatic and Tasmota, your own for everything else. Live values while you build, dry run before anything is written.",
+      "de": "Erstellt komfortabel Aliase — Geräte, die vis, Alexa und der Geräte-Adapter verstehen. Vorlagen erledigen die Arbeit: mitgeliefert für Homematic und Tasmota, selbst gebaut für jedes weitere Gerät. Echte Werte beim Bauen, Trockenlauf vor jedem Schreibvorgang.",
+      "ru": "Удобно создаёт алиасы — устройства, которые понимают vis, Alexa и адаптер устройств. Работу выполняют шаблоны: готовые для HomeMatic и Tasmota, собственные для всего остального. Текущие значения во время сборки, пробный прогон перед любой записью.",
+      "pt": "Cria aliases de forma cómoda — dispositivos que o vis, a Alexa e o adaptador de dispositivos compreendem. Os modelos fazem o trabalho: os incluídos para HomeMatic e Tasmota, os seus próprios para tudo o resto. Valores ao vivo durante a construção, simulação antes de qualquer escrita.",
+      "nl": "Maakt aliassen op een comfortabele manier — apparaten die vis, Alexa en de apparaat-adapter begrijpen. Sjablonen doen het werk: meegeleverde voor HomeMatic en Tasmota, eigen voor al het andere. Live waarden tijdens het bouwen, proefrun voor elke schrijfactie.",
+      "fr": "Crée des alias de manière confortable — des appareils que vis, Alexa et l'adaptateur d'appareils comprennent. Les modèles font le travail : ceux fournis pour HomeMatic et Tasmota, les vôtres pour tout le reste. Valeurs en direct pendant la construction, simulation avant toute écriture.",
+      "it": "Crea alias in modo comodo — dispositivi che vis, Alexa e l'adattatore dispositivi comprendono. I modelli fanno il lavoro: quelli inclusi per HomeMatic e Tasmota, i propri per tutto il resto. Valori in tempo reale durante la creazione, simulazione prima di ogni scrittura.",
+      "es": "Crea alias de forma cómoda: dispositivos que vis, Alexa y el adaptador de dispositivos entienden. Las plantillas hacen el trabajo: las incluidas para HomeMatic y Tasmota, las propias para todo lo demás. Valores en vivo mientras construye, simulación antes de cualquier escritura.",
+      "pl": "Wygodnie tworzy aliasy — urządzenia, które rozumieją vis, Alexa i adapter urządzeń. Pracę wykonują szablony: dołączone dla HomeMatic i Tasmota, własne dla wszystkiego innego. Wartości na żywo podczas budowania, próbny przebieg przed każdym zapisem.",
+      "uk": "Зручно створює аліаси — пристрої, які розуміють vis, Alexa та адаптер пристроїв. Роботу виконують шаблони: вбудовані для HomeMatic і Tasmota, власні для всього іншого. Поточні значення під час створення, пробний запуск перед будь-яким записом.",
+      "zh-cn": "轻松创建别名——生成 vis、Alexa 和设备适配器都能识别的设备。模板承担主要工作：内置模板适用于 HomeMatic 和 Tasmota，自建模板适用于其他所有设备。构建时显示实时值，写入前先行试运行。"
     },
     "authors": [
       "Ricardo"

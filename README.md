@@ -2,7 +2,9 @@
 
 # ioBroker.alias-workbench
 
-Build ioBroker aliases from templates — and see whether they actually work.
+Creates aliases the comfortable way — devices that vis, Alexa and the device
+adapter understand. Templates do the work: shipped ones for HomeMatic and
+Tasmota, your own for everything else.
 
 *(Eine Kurzfassung auf Deutsch steht in [README_de.md](README_de.md).)*
 
