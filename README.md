@@ -440,15 +440,13 @@ The tab reads them **once on load**. After saving, reload the tab.
 
 ## Installation
 
-Not in the ioBroker repository yet, so install it from this repository:
+Open the ioBroker admin, go to **Adapters**, look for **Alias Workbench** and
+create an instance. Then reload the admin and pick **Alias Workbench** in the
+left menu.
 
-1. Open the ioBroker admin and switch on the **expert mode**.
-2. Go to **Adapters** and press the **install from own URL** button (the cat icon).
-3. Choose the **From URL** tab and enter
-   `https://github.com/RicardoHipp/ioBroker.alias-workbench/tarball/main`.
-4. Create an instance of the adapter.
-
-Then reload the admin and pick **Alias Workbench** in the left menu.
+The adapter has not been accepted into the ioBroker repository yet, so it does
+not show up there for the moment. Until it does, [README_de.md](README_de.md)
+describes the interim route.
 
 ## Development
 

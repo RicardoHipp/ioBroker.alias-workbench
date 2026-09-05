@@ -34,3 +34,16 @@ Raum und Funktion stehen nicht am Objekt, sondern in Aufzählungen. Neben beiden
 Feldern steht das Bild, das dort hinterlegt ist oder beim Schreiben dazukäme —
 letzteres blass und mit einem kleinen **neu**. Damit sieht man vorher, was
 passiert, statt es im Trockenlauf zu suchen.
+
+## Installation, solange der Adapter nicht im Repository ist
+
+Sobald er aufgenommen ist, steht er im normalen Adapterkatalog. Bis dahin:
+
+1. Im ioBroker-Admin den **Expertenmodus** einschalten.
+2. Unter **Adapter** den Knopf **aus eigener URL installieren** (Katzensymbol)
+   drücken.
+3. Reiter **Aus URL**, dort eintragen:
+   `https://github.com/RicardoHipp/ioBroker.alias-workbench/tarball/main`
+4. Eine Instanz anlegen.
+
+Danach den Admin neu laden; die Werkbank steht links im Menü.
