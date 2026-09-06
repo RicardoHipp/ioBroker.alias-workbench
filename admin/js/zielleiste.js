@@ -13,6 +13,7 @@ import { enumListe } from './aufzaehlungen.js';
 import { enumZeile, setzeZiel } from './zuordnung.js';
 import { aliasFuer, ordnerUnterAlias, kennungtauglich } from './entwurf.js';
 import { zeichneErgebnis, entwurfAngefasst, angebotFrisch } from './ergebnis.js';
+import { zeigeVerlegen } from './schreiben.js';
 
 export function baueZielleiste(host, e) {
   var istQuelle = S.current.indexOf('alias.') !== 0;
@@ -315,7 +316,13 @@ export function baueZielleiste(host, e) {
        Aenderung folgen, und der Blick ist beim angefassten Feld, nicht
        beim anderen. Der Text nennt deshalb die Wirkung woanders. */
     var angebot = null;
-    if (e.zuletzt === 'ordner' && !aliasFuer(e.kanal)) {
+    /* Frueher hing hier zusaetzlich `!aliasFuer(e.kanal)` - an einem
+       Geraet, das schon einen Alias hat, kam die Frage also nie. Gedacht
+       war das als „am fertigen Alias wird nicht mehr geraten"; in
+       Wahrheit ist gerade das der Fall, in dem sie gebraucht wird: wer
+       den Ordner eines vorhandenen Alias umschreibt, zieht um, und der
+       Raum soll mit (Ricardo, 06.09.2026). */
+    if (e.zuletzt === 'ordner') {
       var otx = String(e.zielOrdner || '').slice('alias.0.'.length);
       if (otx && otx.indexOf('.') === -1) {
         var vorhandenerRaum = enumListe('rooms', true).filter(function (r) {
@@ -346,6 +353,42 @@ export function baueZielleiste(host, e) {
       setTimeout(function () { iO.focus(); }, 0);
     }
 
+    /* Der Zwilling: es gibt schon einen Alias auf diese Quelle, und das
+       Ziel zeigt woandershin.
+
+       Die Werkbank weiss das in diesem Moment - `aliasFuer` liefert den
+       alten Pfad -, sagte es aber nirgends. Am Chip stand nur „wird neu
+       angelegt", was stimmt und die Haelfte verschweigt: der alte bleibt
+       stehen, und aus einem Umbenennen des Ordners wird lautlos ein
+       zweiter Alias auf dieselbe Quelle (Ricardo, 06.09.2026, am
+       Bastelzimmer_Decklenlicht_RGB).
+
+       Verboten wird nichts. Zwei Aliase auf eine Quelle sind ein
+       ordentlicher Fall - einer fuers Licht, einer fuer den Verbrauch;
+       „alle anlegen" tut bei mehreren Ausgaengen nichts anderes. Es
+       fehlte die Auskunft, nicht die Sperre. Wer wirklich einen zweiten
+       will, drueckt denselben Knopf wie bisher und weiss jetzt, was er
+       tut; wer umziehen wollte, hat den Weg dafuer daneben.
+
+       Ohne Rueckprobe ueber `quelleVon`: an einem Homematic-Kanal
+       (…B8AF.0) zeigt die Quelle des Alias auf das Geraet (…B8AF), die
+       Probe schluege fehl und der Hinweis bliebe genau dort aus, wo er
+       gebraucht wird. `aliasFuer` ist dieselbe Funktion, mit der die
+       Werkbank auch „zum Alias →" und ihre Zielvorschlaege bestimmt -
+       irrt sie hier, irrt sie dort ebenso. Und der Hinweis haelt
+       niemanden auf. */
+    var zwilling = null;
+    var vorhAlias = aliasFuer(e.kanal);
+    if (vorhAlias && S.objects[vorhAlias] && vorhAlias !== e.ziel) {
+      var zw = el('div', 'uebernahme zwilling');
+      zw.appendChild(el('span', 'zq', tr('target.twinExists', vorhAlias)));
+      var vb = el('button', 'btn mini', tr('target.moveInstead'));
+      vb.title = tr('target.moveInsteadHint');
+      vb.addEventListener('click', function () { zeigeVerlegen(vorhAlias, e.ziel); });
+      zw.appendChild(vb);
+      zwilling = zw;
+    }
+
     /* Das Angebot ganz ans Ende der Leiste.
 
        Zuerst hing es direkt hinter dem Ordnerfeld - und weil es eine
@@ -353,6 +396,7 @@ export function baueZielleiste(host, e) {
        Namensfeld stand ploetzlich darunter statt daneben. Eine Zeile,
        die umbricht, gehoert hinter das, was in der Zeile bleiben soll. */
     if (angebot) { zb.appendChild(angebot); }
+    if (zwilling) { zb.appendChild(zwilling); }
 
     zb.appendChild(ergebnis);
 

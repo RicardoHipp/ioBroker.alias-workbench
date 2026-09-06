@@ -834,6 +834,16 @@
       background:color-mix(in srgb, var(--accent) 14%, transparent);
     }
   }
+  /* Der Zwilling-Hinweis: es gibt schon einen Alias auf diese Quelle.
+
+     Das ist keine Frage wie das Raum-Angebot daneben, sondern eine
+     Auskunft - deshalb kein Pochen, sondern die ruhige Warnfarbe. Sie
+     haelt niemanden auf: der Knopf zum Anlegen bleibt, wo er war. */
+  .uebernahme.zwilling .zq {
+    color:var(--warn); font-weight:600;
+    background:color-mix(in srgb, var(--warn) 12%, transparent);
+  }
+
   .enumbar .enumfeld { padding-right:22px; }
 
   /* Trockenlauf: eine Zeile je Objekt, das JSON aufklappbar darunter. */

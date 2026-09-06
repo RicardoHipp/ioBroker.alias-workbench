@@ -18,7 +18,8 @@ import {
   ordnerUnterAlias,
   gemeinsameKanaele,
   kennungtauglich,
-  entwurfFuer
+  entwurfFuer,
+  aliasFuer
 } from './entwurf.js';
 import { zeichneErgebnis } from './ergebnis.js';
 
@@ -487,6 +488,20 @@ export function zeigeTrockenlauf(alleAusgaenge) {
     kopf.appendChild(um);
   }
   body.appendChild(kopf);
+
+  /* Dieselbe Auskunft wie in der Zielleiste, noch einmal hier - der
+     Trockenlauf ist die letzte Stelle vor dem Schreiben, und wer den
+     Balken oben ueberliest, soll es spaetestens jetzt sehen: es gibt
+     schon einen Alias auf diese Quelle, und der bleibt stehen. */
+  var zwQuelle = S.entwurf && S.entwurf.kanal;
+  var zwZiel = S.entwurf && (S.entwurf.ziel || S.entwurf.kanal);
+  var zwAlt = zwQuelle ? aliasFuer(zwQuelle) : null;
+  if (zwAlt && S.objects[zwAlt] && zwAlt !== zwZiel) {
+    var zwK = el('div', 'aside w');
+    zwK.style.marginBottom = '11px';
+    zwK.appendChild(el('b', null, tr('target.twinExists', zwAlt)));
+    body.appendChild(zwK);
+  }
 
   if (weg.length) {
     var wk = el('div', 'card');
@@ -986,17 +1001,27 @@ export function sucheInSkripten(kennung, fertig) {
   } catch { fertigMit(); }
 }
 
-export function zeigeVerlegen() {
+export function zeigeVerlegen(altVorgabe, zielVorgabe) {
   /* Der Knopf steht auch an der Quelle, sobald es den Alias gibt (T1).
      Dort ist S.current die Quelle, nicht der Alias - gemeint ist immer
      das Ziel des Entwurfs. Genauso haelt es zeigeLoeschen; zeigeTausch
      tat es bis 05.09.2026 nicht, und beide Knoepfe waren an der Quelle
-     sichtbar, aber wirkungslos: kein Dialog, keine Meldung. */
-  var alt = (S.entwurf && (S.entwurf.ziel || S.entwurf.kanal)) || S.current;
+     sichtbar, aber wirkungslos: kein Dialog, keine Meldung.
+
+     Die zwei Vorgaben kommen vom Knopf „stattdessen verlegen" in der
+     Zielleiste: dort ist das Ziel des Entwurfs der NEUE Pfad, den es
+     noch gar nicht gibt - ohne Vorgabe stiege der Dialog gleich in der
+     ersten Zeile wieder aus. Verlegt wird der vorhandene Alias
+     (`altVorgabe`), und die Felder stehen schon auf dem, was in der
+     Zielleiste getippt wurde (`zielVorgabe`). */
+  var alt = (typeof altVorgabe === 'string' && altVorgabe) ||
+            (S.entwurf && (S.entwurf.ziel || S.entwurf.kanal)) || S.current;
   if (!alt || alt.indexOf('alias.') !== 0 || !S.objects[alt]) { return; }
   S.verlegeZiel = alt;
 
-  var teile = alt.split('.');
+  var vorbelegt = (typeof zielVorgabe === 'string' && zielVorgabe &&
+                   zielVorgabe.indexOf('alias.') === 0) ? zielVorgabe : alt;
+  var teile = vorbelegt.split('.');
   var name0 = teile.pop();
   var ordner0 = teile.join('.');
 

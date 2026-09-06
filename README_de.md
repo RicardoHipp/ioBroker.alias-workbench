@@ -527,6 +527,9 @@ beide Sprachdateien dieselben Schlüssel tragen.
 ## Änderungen
 
 ### **WORK IN PROGRESS**
+* Hat eine Quelle schon einen Alias und zeigt das Ziel woandershin, sagt die Werkbank es jetzt: „Für diese Quelle gibt es schon alias.0.… — der bleibt stehen", daneben ein Knopf „stattdessen verlegen …", der den Verlege-Dialog vorbelegt öffnet. Verboten wird nichts — zwei Aliase auf eine Quelle bleiben möglich, nur nicht mehr lautlos
+* Dieselbe Zeile steht im Trockenlauf, direkt über dem, was nicht geschrieben werden kann
+* Das Angebot, den getippten Ordner als Raum zu übernehmen, erscheint jetzt auch an einem Gerät, das schon einen Alias hat — gerade dort, wo der Raum mitsoll
 * Escape verwirft im Zielbalken jetzt auch im Ordner- und im Namensfeld das Getippte und stellt den alten Wert wieder her; vorher schloss das Ordnerfeld nur seine Liste, und beide behielten den getippten Text, der beim Verlassen übernommen wurde
 * Werkzeug: Das Bezeichner-Prüfskript löst einen relativen acorn-Pfad jetzt gegen das Arbeitsverzeichnis auf
 * Eine Zeile, deren Rolle die Werkbank beim Muster- oder Vorlagenwechsel angepasst hat, sagt es jetzt: „weicht vom gespeicherten Alias ab", darunter steht der gespeicherte Wert und ein Knopf holt ihn zurück

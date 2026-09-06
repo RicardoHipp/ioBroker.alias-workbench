@@ -149,7 +149,10 @@ var warumAuf = false;
 
   (function () {
     var b = $('#btn-move');
-    if (b) { b.addEventListener('click', zeigeVerlegen); }
+    /* Nicht direkt anhaengen: `zeigeVerlegen` nimmt seit dem Knopf
+       „stattdessen verlegen" zwei Vorgaben entgegen, und der Zuhoerer
+       wuerde ihm das Klickereignis als erste durchreichen. */
+    if (b) { b.addEventListener('click', function () { zeigeVerlegen(); }); }
     var bt = $('#btn-swap');
     if (bt) { bt.addEventListener('click', zeigeTausch); }
     var btg = $('#btn-swap-go');

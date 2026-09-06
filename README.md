@@ -511,6 +511,9 @@ imported, and that both language files carry the same keys.
 ## Changelog
 
 ### **WORK IN PROGRESS**
+* A source that already has an alias now says so when the target points elsewhere: "This source already has alias.0.… — that one stays where it is", with a button "move it instead …" that opens the move dialog prefilled. Nothing is forbidden — two aliases on one source remain possible, they are no longer silent
+* The same line appears in the dry run, right above what cannot be written
+* The offer to take the typed folder as the room now also appears on a device that already has an alias — the very case where the room is meant to come along
 * Escape in the target bar's folder and name fields now discards what was typed and puts the old value back; before, the folder field only closed its list and both kept the typed text, which was then taken over on leaving the field
 * Tooling: the identifier check script now resolves a relative acorn path against the working directory
 * A line whose role the workbench adapted on a pattern or template switch now says so: "differs from the stored alias", with the stored value spelled out below the field and a button to take it back
