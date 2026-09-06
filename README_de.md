@@ -532,6 +532,7 @@ beide Sprachdateien dieselben Schlüssel tragen.
 * Wer die Auswahl wechselt, während Änderungen offen sind — im Baum, über „zur Quelle →" oder in der Ordnerübersicht —, wird jetzt gefragt; vorher waren sie kommentarlos weg
 * Wo die Vorlage etwas anderes will, ist das betroffene Feld in der aufgeklappten Zeile getönt, der Wert der Vorlage steht darunter, und ein Knopf übernimmt genau diesen einen Wert
 * Die Rollenliste bietet jetzt auch die weiteren Schreibweisen eines Platzes an (indicator.lowbat neben indicator.maintenance.lowbat) — ohne die veralteten
+* Neues Adaptersymbol: zwei versetzte Karten — hinten die rohen Datenpunkte, vorn der fertige Alias, sortiert und benannt
 
 
 ### 0.8.1

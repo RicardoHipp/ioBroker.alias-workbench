@@ -516,6 +516,7 @@ imported, and that both language files carry the same keys.
 * Switching the selection while changes are pending — in the tree, through "to the source →", or in the folder overview — now asks first instead of discarding them silently
 * Where the template wants something else, the affected field is tinted in the opened row, the template value is spelled out below it, and a button takes over that one value
 * The role list now also offers the other spellings a slot accepts (indicator.lowbat next to indicator.maintenance.lowbat), minus the deprecated ones
+* New adapter icon: two offset cards — behind the raw datapoints, in front the finished alias, sorted and named
 
 
 ### 0.8.1
