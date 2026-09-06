@@ -163,3 +163,39 @@ describe('Die Vorlagen', () => {
         expect(doppelt, doppelt.join(', ')).to.be.empty;
     });
 });
+
+/* Die Ausdrucks-Zerlegung laeuft ohne Browser und ohne den Detector —
+   sie bekommt einen regulaeren Ausdruck und gibt Rollennamen zurueck.
+   Genau deshalb laesst sie sich hier pruefen, waehrend der Rest von
+   erkennung.js eine Detector-Instanz braucht.
+
+   Geprueft wird beides: dass die vier Formen des LOWBAT-Platzes
+   herauskommen — und dass nichts herauskommt, wo der Ausdruck mehr kann,
+   als diese Zerlegung versteht. Eine erfundene Rolle in der Auswahlliste
+   waere schlimmer als eine fehlende. */
+describe('Die Rollen-Schreibweisen', () => {
+    const quelle = fs.readFileSync(path.join(jsDir, 'erkennung.js'), 'utf8');
+    const anfang = quelle.indexOf('export function schreibweisenAus');
+    const ende = quelle.indexOf('export var ROLLEN');
+    const code = quelle.slice(anfang, ende).replace('export function', 'function');
+    const schreibweisenAus = new Function(code + '; return schreibweisenAus;')();
+
+    it('multiplizieren Alternativen und optionale Gruppen aus', () => {
+        const r = schreibweisenAus(/^indicator(\.maintenance)?\.(lowbat|battery)$/);
+        expect(r).to.have.members([
+            'indicator.maintenance.lowbat', 'indicator.maintenance.battery',
+            'indicator.lowbat', 'indicator.battery',
+        ]);
+    });
+
+    it('geben einen schlichten Ausdruck unveraendert zurueck', () => {
+        expect(schreibweisenAus(/^value\.power$/)).to.deep.equal(['value.power']);
+    });
+
+    it('schweigen, wo der Ausdruck mehr kann als diese Zerlegung', () => {
+        expect(schreibweisenAus(/^value\..*$/)).to.be.empty;
+        expect(schreibweisenAus(/^level\.[a-z]+$/)).to.be.empty;
+        expect(schreibweisenAus(/value\.power/)).to.be.empty;   // ohne Anker
+        expect(schreibweisenAus(null)).to.be.empty;
+    });
+});

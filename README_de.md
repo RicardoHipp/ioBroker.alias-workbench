@@ -528,7 +528,8 @@ beide Sprachdateien dieselben Schlüssel tragen.
 
 ### **WORK IN PROGRESS**
 * Quelle tauschen: neben der Kennung der heutigen Quelle steht jetzt ihr Name
-* Datenpunkte ohne Platz im Muster tragen einen Streifen; die Erklärung steht einmal über der Liste statt in jeder Zeile
+* Datenpunkte ohne Platz im Muster stehen in einer getönten Zeile; die Erklärung steht einmal über der Liste statt in jeder Zeile
+* Die Rollenliste bietet jetzt auch die weiteren Schreibweisen eines Platzes an (indicator.lowbat neben indicator.maintenance.lowbat) — ohne die veralteten
 
 
 ### 0.8.1

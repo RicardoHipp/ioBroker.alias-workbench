@@ -22,6 +22,89 @@ export function rolleAusAusdruck(r) {
 
 export function rolleVonPlatz(st) { return st.defaultRole || rolleAusAusdruck(st.role); }
 
+/* Alle Schreibweisen, die ein Platz annimmt — nicht nur seine Vorgabe.
+
+   Der LOWBAT-Platz nennt als Vorgabe `indicator.maintenance.lowbat`,
+   sein Ausdruck erlaubt aber vier Formen:
+
+       /^indicator(\.maintenance)?\.(lowbat|battery)$/
+
+   Nur die Vorgabe in die Auswahlliste zu stellen hiess: Wer die Rolle
+   sucht, die sein eigenes Geraet traegt, findet sie nicht. hm-rpc
+   schreibt `indicator.lowbat`, alle elf Homematic-Vorlagen benutzen sie,
+   und die ioBroker-Rollenliste fuehrt beide nebeneinander — nur die
+   Werkbank kannte eine davon nicht (Ricardo, 06.09.2026).
+
+   Ausmultipliziert werden genau zwei Formen, weil nur die im Detector
+   vorkommen: Alternativen `(a|b)` und optionale Gruppen `(…)?`. Alles
+   andere — Zeichenklassen, `.*`, Verschachtelung — gibt leer zurueck;
+   dann bleibt es bei der Vorgaberolle. Lieber eine Schreibweise zu wenig
+   als eine erfundene in der Liste. */
+export function schreibweisenAus(r) {
+  if (!r) { return []; }
+  var q = (r.source !== undefined) ? r.source : String(r);
+  if (q.charAt(0) !== '^' || q.slice(-1) !== '$') { return []; }
+  q = q.slice(1, -1);
+
+  var teile = [''];
+  var rest = q;
+  var sicher = 0;
+  while (rest && sicher++ < 40) {
+    var g = /^\(([^()]*)\)(\?)?/.exec(rest);
+    if (g) {
+      var wahl = g[1].split('|');
+      if (g[2]) { wahl = wahl.concat(['']); }        /* optional: auch weglassen */
+      var neu = [];
+      teile.forEach(function (v) {
+        wahl.forEach(function (w) { neu.push(v + w.split('\\').join('')); });
+      });
+      teile = neu;
+      rest = rest.slice(g[0].length);
+      continue;
+    }
+    var lit = /^(\\.|[A-Za-z0-9_.])+/.exec(rest);
+    if (!lit) { return []; }                          /* etwas Unbekanntes */
+    var text = lit[0].split('\\').join('');
+    teile = teile.map(function (v) { return v + text; });
+    rest = rest.slice(lit[0].length);
+  }
+  if (rest) { return []; }
+
+  var gut = [];
+  teile.forEach(function (t) {
+    if (/^[A-Za-z0-9_]+([.][A-Za-z0-9_]+)*$/.test(t) && gut.indexOf(t) === -1) { gut.push(t); }
+  });
+  return gut;
+}
+
+/* Rollen, die der Detector aus Ruecksicht auf alte Adapter noch annimmt,
+   die aber nicht mehr benutzt werden sollen. Aus der Tabelle „Deprecated
+   role aliases" in ioBroker.docs (docs/en/dev/stateroles.md, gelesen am
+   06.09.2026) — dort steht zu jeder auch, was stattdessen gilt.
+
+   Sie stehen hier, weil die Zerlegung oben sonst gerade sie in die
+   Auswahlliste holt: `indicator(\.maintenance)?\.(lowbat|battery)`
+   erlaubt eben auch `indicator.battery`. Eine laengere Liste ist kein
+   Gewinn, wenn die Haelfte davon veraltet ist.
+
+   Vorgaberollen des Detectors werden NICHT gefiltert: was er selbst als
+   Vorgabe fuehrt, gilt, auch wenn die Doku es anders saehe. Gefiltert
+   wird nur, was diese Zerlegung zusaetzlich vorschlaegt. */
+var VERALTET = {};
+('action.close action.close.blind action.close.tilt action.home action.next ' +
+ 'action.open action.open.blind action.open.tilt action.pause action.play ' +
+ 'action.prev action.stop action.stop.blind action.stop.tilt ' +
+ 'indicator.battery indicator.fire indicator.flood ' +
+ 'indicator.maintenance.battery indicator.unreach ' +
+ 'level.thermostat sensor.co sensor.fire sensor.flood ' +
+ 'state.active state.alarm.co state.alarm.fire state.alarm.flood state.co ' +
+ 'state.door state.fire state.flood state.light state.motion state.window ' +
+ 'switch.active switch.autofocus switch.autowhitebalance switch.boost ' +
+ 'switch.brightness switch.nightmode switch.party ' +
+ 'value.accuracy value.brush value.brush.side value.elevation ' +
+ 'value.latitude value.longitude value.radius value.sensors'
+).split(' ').forEach(function (r) { VERALTET[r] = 1; });
+
 export var ROLLEN = (function () {
   if (!D) { return []; }
   var m = {};
@@ -29,6 +112,10 @@ export var ROLLEN = (function () {
     D.patterns[t].states.forEach(function (st) {
       var r = rolleVonPlatz(st);
       if (r) { m[r] = 1; }
+      /* Dazu, was der Platz sonst noch annimmt — ohne das Veraltete. */
+      schreibweisenAus(st.role).forEach(function (x) {
+        if (!VERALTET[x]) { m[x] = 1; }
+      });
     });
   });
   ['state', 'text', 'json', 'value'].forEach(function (r) { m[r] = 1; });

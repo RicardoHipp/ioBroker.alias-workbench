@@ -512,7 +512,8 @@ imported, and that both language files carry the same keys.
 
 ### **WORK IN PROGRESS**
 * Swap source: the name of the current source is shown next to its id
-* Datapoints without a slot in the pattern are marked with a stripe; the explanation stands once above the list instead of in every row
+* Datapoints without a slot in the pattern get a tinted row; the explanation stands once above the list instead of in every row
+* The role list now also offers the other spellings a slot accepts (indicator.lowbat next to indicator.maintenance.lowbat), minus the deprecated ones
 
 
 ### 0.8.1
