@@ -555,5 +555,9 @@
   "write.willKeep": "bleiben stehen: {0}",
   "write.willRemove": "entfernt: {0}",
   "write.writeSourceMissing": "{0}: den Sendepunkt {1} gibt es noch nicht",
-  "write.writing": "schreibe …"
+  "write.writing": "schreibe …",
+  "list.aliasDiffers": "weicht vom gespeicherten Alias ab",
+  "detail.aliasHas": "Im Alias steht: ",
+  "detail.aliasEmpty": "Im Alias ist dieses Feld leer.",
+  "detail.takeFromAlias": "Diesen einen Wert aus dem gespeicherten Alias zurückholen"
 }

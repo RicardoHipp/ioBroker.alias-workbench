@@ -910,6 +910,52 @@ export function bestandVorrang(e, aliasId) {
   return e;
 }
 
+/* Wo weicht der Entwurf vom gespeicherten Alias ab?
+
+   Das ist die Gegenrichtung zu `vorlagenAbweichung`: Dort wird gegen das
+   verglichen, was die Vorlage will, hier gegen das, was schon in der
+   Datenbank steht.
+
+   Der Fall, fuer den es gebaut ist: Wer das Muster oder die Vorlage
+   wechselt, bekommt die Rollen automatisch angepasst — `switch.light`
+   passt auf kein socket-SET, also baut die Werkbank sie um. Das ist
+   richtig so, nur sah man an der Zeile nicht, dass damit etwas anderes
+   geschrieben wuerde als bisher dasteht. Sichtbar war es allein an den
+   Sammelchips oben und im Trockenlauf (Ricardo, 06.09.2026).
+
+   Verglichen wird gegen das Objekt, nicht gegen eine Kopie: Nach einem
+   Vorlagenwechsel traegt die Zeile den Vorlagenstand, und `vorlagenWert`
+   haelt genau denselben — eine Kopie brachte hier also nichts. */
+export function bestandsAbweichung(s, aliasId) {
+  if (!s || !s.n || !s.on || !aliasId) { return []; }
+  var o = S.objects[aliasId + '.' + s.n];
+  if (!o || !o.common) { return []; }
+  var c = o.common, a = c.alias || {}, q = aliasQuellen(o);
+  var ist = {
+    role: c.role || '', typ: c.type || '', unit: c.unit || '',
+    f: (typeof a.read === 'string') ? a.read : '',
+    fw: (typeof a.write === 'string') ? a.write : '',
+    srcR: q.read || '',
+    srcW: q.einfach
+      ? ((c.write === true || typeof a.write === 'string') ? (q.write || '') : '')
+      : (q.write || '')
+  };
+  var raus = [];
+  ['role', 'typ', 'unit', 'f', 'fw', 'srcR', 'srcW'].forEach(function (k) {
+    var jetzt = s[k] || '';
+    if (jetzt !== ist[k]) { raus.push({ feld: k, jetzt: jetzt, bestand: ist[k] }); }
+  });
+  return raus;
+}
+
+/* Einen einzelnen Wert aus dem gespeicherten Alias zurueckholen. */
+export function bestandsWert(s, aliasId, feld) {
+  var abw = bestandsAbweichung(s, aliasId);
+  var tr0 = null;
+  abw.forEach(function (x) { if (x.feld === feld) { tr0 = x; } });
+  return tr0 ? tr0.bestand : null;
+}
+
 /* Wo weicht die Vorlage vom Bestand ab? Liefert je Zeile die Felder, die
    „Vorlage anwenden" aendern wuerde - die Beschriftung ausgenommen. */
 export function vorlagenAbweichung(s) {

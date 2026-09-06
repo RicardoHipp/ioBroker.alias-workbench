@@ -555,5 +555,9 @@
   "write.willKeep": "kept: {0}",
   "write.willRemove": "removed: {0}",
   "write.writeSourceMissing": "{0}: the send datapoint {1} does not exist yet",
-  "write.writing": "writing …"
+  "write.writing": "writing …",
+  "list.aliasDiffers": "differs from the stored alias",
+  "detail.aliasHas": "The alias has: ",
+  "detail.aliasEmpty": "The alias leaves this field empty.",
+  "detail.takeFromAlias": "Take this one value back from the stored alias"
 }

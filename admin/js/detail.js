@@ -8,7 +8,7 @@ import { wertVon, jsonFelder, feldAusFormel, feldFormel, feldWert, jsonVon } fro
 import { musterVon, erkenneEntwurf } from './erkennung.js';
 import { musterName } from './musternamen.js';
 import { rollenFeld } from './rollenwahl.js';
-import { opt , quellenAuswahl, vorlagenAbweichung } from './entwurf.js';
+import { opt , quellenAuswahl, vorlagenAbweichung, bestandsAbweichung } from './entwurf.js';
 import { zeichneErgebnis, entwurfAngefasst } from './ergebnis.js';
 
 import { rateBehalten } from './vorschlagen.js';
@@ -90,6 +90,56 @@ export function detailZeile(e, s, idx) {
     r.appendChild(hin);
   }
 
+  /* Dasselbe gegen den gespeicherten Alias.
+
+     Getrennt von der Vorlagenabweichung, weil es eine andere Aussage ist:
+     dort steht, was die Vorlage wollte, hier, was in der Datenbank steht.
+     Eine Zeile kann beides tragen — etwa nach einem Musterwechsel, der
+     die Rolle anpasst: Die neue Rolle weicht dann vom Alias ab, und je
+     nachdem auch von der Vorlage (Ricardo, 06.09.2026). */
+  var bstListe = bestandsAbweichung(s, e.ziel);
+  var bstNach = {};
+  bstListe.forEach(function (x) { bstNach[x.feld] = x; });
+
+  function zeigeBestand(r, felder) {
+    if (!r) { return; }
+    var treffer = felder.filter(function (f) { return bstNach[f]; });
+    if (!treffer.length) { return; }
+    r.classList.add('bstabw');
+
+    var b2 = el('button', 'btn winzig bstnimm', '⟲');
+    b2.title = tr('detail.takeFromAlias');
+    b2.addEventListener('click', function (ev) {
+      ev.stopPropagation();
+      treffer.forEach(function (f) { s[f] = bstNach[f].bestand; });
+      /* Zurueckholen ist eine Entscheidung wie das Uebernehmen aus der
+         Vorlage — die Zeile traegt danach „geaendert". Die Marke bleibt,
+         solange noch etwas abweicht; sie haengt nicht an `geaendert`. */
+      s.geaendert = true;
+      rateBehalten(s);
+      entwurfAngefasst();
+      zeichneErgebnis();
+    });
+    r.appendChild(b2);
+
+    var hin2 = el('div', 'bstwert');
+    treffer.forEach(function (f, i) {
+      if (i) { hin2.appendChild(document.createTextNode('   ')); }
+      var v = bstNach[f].bestand;
+      hin2.appendChild(document.createTextNode(
+        v ? tr('detail.aliasHas', '') : tr('detail.aliasEmpty')));
+      if (v) { hin2.appendChild(el('b', null, String(v))); }
+    });
+    r.appendChild(hin2);
+  }
+
+  /* Beide Auskuenfte an derselben Zeile: erst was die Vorlage will,
+     dann was im Alias steht. */
+  function zeigeBeide(r, felder) {
+    zeigeAbweichung(r, felder);
+    zeigeBestand(r, felder);
+  }
+
   /* --- Name, nur bei selbst angelegten --- */
   if (s.manuell) {
     var iN = el('input', 'tx w');
@@ -165,7 +215,7 @@ export function detailZeile(e, s, idx) {
     lF.appendChild(selF);
     qf.appendChild(lF);
   }
-  zeigeAbweichung(zeile(tr('detail.readsFrom'), qf), ['srcR']);
+  zeigeBeide(zeile(tr('detail.readsFrom'), qf), ['srcR']);
 
   if (s.frei) {
     var iFrei = el('input', 'tx w');
@@ -205,7 +255,7 @@ export function detailZeile(e, s, idx) {
   if (s.srcW && s.srcW !== s.srcR) {
     wf.appendChild(el('div', 'sugg', tr('detail.separateHint')));
   }
-  zeigeAbweichung(zeile(tr('detail.writesTo'), wf), ['srcW']);
+  zeigeBeide(zeile(tr('detail.writesTo'), wf), ['srcW']);
 
   /* --- Leseformel --- */
   var fb = el('div');
@@ -221,7 +271,7 @@ export function detailZeile(e, s, idx) {
   if ((s.typ || '') === 'boolean') {
     fb.appendChild(el('div', 'sugg', tr('detail.formulaHint')));
   }
-  zeigeAbweichung(zeile(tr('detail.formula'), fb), ['f']);
+  zeigeBeide(zeile(tr('detail.formula'), fb), ['f']);
 
   if (s.srcW) {
     var wb = el('div');
@@ -233,7 +283,7 @@ export function detailZeile(e, s, idx) {
     iW.addEventListener('change', function () { s.fw = iW.value.trim(); neu(); });
     wb.appendChild(iW);
     wb.appendChild(el('div', 'sugg', tr('detail.writeFormulaHint')));
-    zeigeAbweichung(zeile(tr('detail.writeFormula'), wb), ['fw']);
+    zeigeBeide(zeile(tr('detail.writeFormula'), wb), ['fw']);
   }
 
   /* --- Rolle, mit Begründung --- */
@@ -273,7 +323,7 @@ export function detailZeile(e, s, idx) {
     }
     rb.appendChild(hin);
   }
-  zeigeAbweichung(zeile(tr('detail.role'), rb), ['role']);
+  zeigeBeide(zeile(tr('detail.role'), rb), ['role']);
 
   /* --- Typ und Anzeige --- */
   var af = el('div', 'fields');
@@ -330,7 +380,7 @@ export function detailZeile(e, s, idx) {
   lC.appendChild(el('span', 'sugg', tr('detail.captionHint')));
   af.appendChild(lC);
 
-  zeigeAbweichung(zeile(tr('detail.display'), af), ['typ', 'unit']);
+  zeigeBeide(zeile(tr('detail.display'), af), ['typ', 'unit']);
 
   /* --- Rohwert und Ergebnis --- */
   var a = wertVon(s);

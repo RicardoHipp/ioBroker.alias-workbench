@@ -11,7 +11,7 @@ import { el } from './basis.js';
 import { tr } from './sprache.js';
 import { erkenneEntwurf, musterVon, rolleVonPlatz } from './erkennung.js';
 import { kindZustaende, wertVon, fmt } from './werte.js';
-import { steuerKanaele, vorlagenAbweichung, waehle } from './entwurf.js';
+import { steuerKanaele, vorlagenAbweichung, bestandsAbweichung, waehle } from './entwurf.js';
 import { musterName } from './musternamen.js';
 import { detailZeile } from './detail.js';
 import { rateAnzahl, rateZurueck, rateZurueckEine, rateBehalten } from './vorschlagen.js';
@@ -398,6 +398,24 @@ export function baueListe(host, e, pl, rateKnopf, musterBlock) {
           return x.feld + ': ' + (x.jetzt || '—') + '  →  ' + (x.vorlage || '—');
         }).join(String.fromCharCode(10));
         n3.appendChild(av);
+      }
+      /* Und dieselbe Auskunft gegen den gespeicherten Alias.
+
+         Wer das Muster oder die Vorlage wechselt, bekommt die Rollen
+         angepasst — das ist gewollt (`switch.light` passt auf kein
+         socket-SET). Nur sah man an der Zeile nicht, dass damit etwas
+         anderes geschrieben wuerde als bisher dasteht; sichtbar war es
+         allein an den Chips oben und im Trockenlauf. Drei Aussagen, drei
+         Marken, jede mit eigener Bedeutung: „geaendert" heisst, der
+         Nutzer war es; „weicht von der Vorlage ab" vergleicht mit der
+         Vorlage; diese hier mit der Datenbank (Ricardo, 06.09.2026). */
+      var bAbw = bestandsAbweichung(s, e.ziel);
+      if (bAbw.length) {
+        var bv = el('span', 'geae bstabw', tr('list.aliasDiffers'));
+        bv.title = bAbw.map(function (x) {
+          return x.feld + ': ' + (x.bestand || '—') + '  →  ' + (x.jetzt || '—');
+        }).join(String.fromCharCode(10));
+        n3.appendChild(bv);
       }
     }
     /* Die Marke ist zugleich der Griff: solange sie steht, ist die Zeile

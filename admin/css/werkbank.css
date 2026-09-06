@@ -298,6 +298,25 @@
   .detail .tplwert { grid-column:2 / -1; font-size:10.5px; color:var(--warn);
                      font-family:var(--sans); padding-top:1px; }
   .detail .tplwert b { font-family:var(--mono); font-weight:600; }
+  /* Die Abweichung vom gespeicherten Alias — dieselbe Bauart wie die
+     Vorlagenabweichung, aber in der Akzentfarbe statt in der Warnfarbe:
+     Was in der Datenbank steht, ist kein Missstand, sondern der Stand,
+     mit dem man vergleicht. Eine Zeile kann beides tragen. */
+  .detail .dr.bstabw { grid-template-columns:88px 1fr 26px;
+                       background:color-mix(in srgb, var(--accent) 8%, transparent);
+                       border-radius:var(--r-sm); padding:3px 4px; margin:0 -4px; }
+  .detail .dr.abw.bstabw { background:linear-gradient(
+      to right,
+      color-mix(in srgb, var(--warn-soft) 70%, transparent) 0 50%,
+      color-mix(in srgb, var(--accent) 8%, transparent) 50% 100%); }
+  .detail .bstwert { grid-column:2 / -1; font-size:10.5px; color:var(--accent);
+                     font-family:var(--sans); padding-top:1px; }
+  .detail .bstwert b { font-family:var(--mono); font-weight:600; }
+  .detail .bstnimm { align-self:center; border-color:var(--accent); color:var(--accent);
+                     background:transparent; cursor:pointer; }
+  .detail .bstnimm:hover { background:var(--accent); color:var(--surface); }
+  .erow .geae.bstabw { border-color:var(--accent); color:var(--accent);
+                       background:color-mix(in srgb, var(--accent) 10%, transparent); }
   .btn.winzig { font-size:11px; line-height:1; padding:3px 6px; min-width:0;
                 border-radius:var(--r-sm); }
   .detail .abwnimm { align-self:center; border-color:var(--warn); color:var(--warn);
