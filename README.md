@@ -511,6 +511,7 @@ imported, and that both language files carry the same keys.
 ## Changelog
 
 ### **WORK IN PROGRESS**
+* Tooling: the identifier check script now resolves a relative acorn path against the working directory
 * A line whose role the workbench adapted on a pattern or template switch now says so: "differs from the stored alias", with the stored value spelled out below the field and a button to take it back
 * A line that takes its name from an existing alias no longer shows a false "no place in the … pattern" mark for one draw
 * Switching to a template that finds no source at all now works instead of failing silently — the field no longer shows a template that is not in use
