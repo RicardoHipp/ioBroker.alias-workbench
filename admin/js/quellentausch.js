@@ -355,6 +355,22 @@ function zeichneTausch() {
   var z1 = el('div');
   z1.appendChild(el('b', null, tr('swap.from') + ' '));
   z1.appendChild(el('span', 'sn', alt || tr('swap.unknown')));
+  /* Den Namen dahinter, wo er mehr sagt als die Kennung.
+
+     `hm-rpc.0.0000DBE9A2B8AF` sagt einem nichts; woran man das Geraet
+     erkennt, steht allein im Namen (Ricardo, 06.09.2026). Dieselbe Regel
+     wie im Baum: gleicht der Name dem letzten Stueck der Kennung, bringt
+     er nichts und bleibt weg.
+
+     Ist das Geraet weg — der Normalfall bei „Geraet kaputt" —, gibt es
+     kein Objekt und damit keinen Namen mehr. Dann steht dort wie bisher
+     nur die Kennung, und die Zeile darunter sagt, dass es sie nicht mehr
+     gibt. */
+  var altObj = alt && S.objects[alt];
+  var altName = altObj ? txt(altObj.common && altObj.common.name).trim() : '';
+  if (altName && altName !== String(alt).split('.').pop()) {
+    z1.appendChild(el('span', 'leise', ' ' + altName));
+  }
   kopf.appendChild(z1);
   if (alt && !S.objects[alt] && !kindZustaende(alt).length) {
     kopf.appendChild(el('div', 'hint', tr('swap.gone')));

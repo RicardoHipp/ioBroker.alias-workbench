@@ -444,6 +444,28 @@
   /* Abgewaehlt heisst ausgegraut, nicht durchgestrichen - der Haken
      fehlt ja sichtbar, und durchgestrichen liest sich der Name schlecht. */
   .erow.skip { opacity:.42; }
+  /* Angehakt, aber ohne Platz im Muster: die Zeile bekommt einen Ton,
+     statt in jeder einzelnen denselben Satz zu wiederholen.
+
+     Gedaempft, nicht laut: der Punkt wird ja angelegt und ist voll
+     benutzbar — nur Alexa & Co. zaehlen ihn separat. Das ist eine
+     Auskunft, keine Warnung. Ueber `transparent` gemischt, damit
+     derselbe Anteil in hell wie in dunkel traegt.
+
+     Der Hover braucht eine eigene Zeile: sonst gewaenne bei gleicher
+     Spezifitaet die spaeter stehende Regel, und die Zeile reagierte
+     nicht mehr auf den Zeiger. */
+  .erow.ohneplatz { background:color-mix(in srgb, var(--warn-soft) 80%, transparent); }
+  .erow.ohneplatz:hover, .erow.ohneplatz.open {
+    background:color-mix(in srgb, var(--warn-soft) 100%, transparent); }
+  .listbar .legende { display:inline-flex; align-items:center; gap:5px;
+                      font-size:11px; color:var(--ink-3); white-space:nowrap; }
+  /* Dasselbe Feld wie die Zeile, nur klein — die Legende zeigt die Farbe,
+     nach der man in der Liste sucht. */
+  .listbar .legende .lgmarke { width:14px; height:11px; border-radius:3px;
+                               border:1px solid var(--line);
+                               background:color-mix(in srgb, var(--warn-soft) 80%, transparent);
+                               display:inline-block; }
   .erow input[type="checkbox"] { accent-color:var(--accent); cursor:pointer; margin:0; }
   .erow .mk2 { text-align:center; font-size:11px; }
   .erow .mk2.ok { color:var(--ok); } .erow .mk2.bad { color:var(--bad); } .erow .mk2.out { color:var(--ink-3); }

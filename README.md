@@ -4,9 +4,11 @@
 
 Creates aliases the comfortable way — devices that vis, Alexa and the device
 adapter understand. Templates do the work: shipped ones for HomeMatic and
-Tasmota, your own for everything else.
+Tasmota, your own for everything else. For Tasmota it also checks the
+path to the device: missing command points, publishing switched off, delayed
+feedback.
 
-*(Eine Kurzfassung auf Deutsch steht in [README_de.md](README_de.md).)*
+*(Diese Anleitung auf Deutsch: [README_de.md](README_de.md).)*
 
 ---
 
@@ -25,6 +27,10 @@ all four while you are building, not hours later in the log.
 
 ## What it does
 
+![The workbench with a device picked](https://raw.githubusercontent.com/RicardoHipp/ioBroker.alias-workbench/main/docs/01-device.png)
+
+*A Tasmota socket picked in the tree: what the detector makes of it, which template won, and every datapoint with the value it returns right now.*
+
 **Live detector report.** The real `@iobroker/type-detector` runs against a
 draft of your alias while you edit it. Change a role and the report changes with
 it — you see immediately whether you built a device or a pile of loose values,
@@ -33,6 +39,10 @@ which pattern slots are filled and which are still free.
 **Live value preview.** Every datapoint shows what its read function returns
 *right now*, next to the raw value of the source. A formula that yields
 `undefined` or throws is visible before anything is written.
+
+![A datapoint row opened](https://raw.githubusercontent.com/RicardoHipp/ioBroker.alias-workbench/main/docs/03-datapoint.png)
+
+*One row opened: where it reads from, which JSON field, the read function, the role — and the pattern slot that role fills.*
 
 **Templates.** A template describes how a device source becomes a finished alias
 device. Templates are plain JSON files, one per template — see
@@ -46,6 +56,26 @@ derived; what cannot be derived is asked. Before anything is stored, a try-out
 runs the new template against every device in the system and shows which ones it
 matches, which template wins there, and which devices would change hands. See
 [Saving your own templates](#saving-your-own-templates).
+
+**Tasmota and MQTT.** A Tasmota device arrives through the MQTT adapter as a set
+of raw topics: `cmnd/`, `stat/`, `tele/` — no device, just datapoints. The
+workbench does not only build the alias from them, it also checks the path to the
+device:
+
+- **Missing command points.** A `cmnd.POWER` that does not exist is created at
+  the press of a button — with the right topic and a fitting role.
+- **Mute points.** They exist, but they are not allowed to send: `publish` is
+  off. An alias switching through them does nothing, and nothing about it shows.
+  The workbench points that out and enables it on request.
+- **Delayed feedback.** Without `SetOption59`, Tasmota reports a change only
+  with the next telemetry — the alias shows the old value for minutes. The
+  workbench asks the device and turns the setting on.
+- **Asking for commands.** When the command list of a device is unknown, it asks
+  the device (Status 11). A plain query that switches nothing and changes
+  nothing.
+
+Bind your Tasmota devices this way and you need no separate adapter for the
+device structure: MQTT delivers the data, the workbench turns it into devices.
 
 **Devices with several outputs.** A power strip or valve manifold has
 `POWER1`, `POWER2`, … Since a `socket` pattern has exactly one `SET`, each
@@ -64,6 +94,10 @@ draft and lets the detector decide again. It only ever runs on that button, neve
 during normal detection, every guessed row is marked, and while any guess is
 undecided the write buttons stay locked. Not deciding is no longer a silent yes.
 
+![The dry run](https://raw.githubusercontent.com/RicardoHipp/ioBroker.alias-workbench/main/docs/02-dry-run.png)
+
+*The dry run before anything is written: eleven objects, ten new, one would be overwritten — each with its target and its source.*
+
 **Nothing is written without a dry run.** The dry run lists every object that
 would be created, changed or removed, as full JSON. For anything that changes it
 puts **before and after side by side**, line against line, so you can see *what*
@@ -75,17 +109,33 @@ object fixes it.
 
 ## Status
 
+![The checks](https://raw.githubusercontent.com/RicardoHipp/ioBroker.alias-workbench/main/docs/06-checks.png)
+
+*The checks run alongside and touch nothing. Here one of them fails: the alias would look finished, but its switch could not send — publishing is off on the MQTT command point.*
+
+
 Early. Usable, but not finished.
 
 - Works as an admin tab; the adapter itself runs no process (`mode: none`).
   The instance exists only to carry the settings.
-- German and English, 550 keys each
-- Not published on npm yet — install from GitHub
+- Interface in German and English, 550 keys each; the settings page in
+  eleven languages
 - 16 bundled templates: eleven Homematic, four Tasmota, one plain measuring point
 - **Missing:** "who uses this alias" — vis views, Alexa and Google names cannot
   be searched from here, so a rename warns you instead of pretending to be
   complete. Exporting a template to a file and reading it back works but is
   the least tested path.
+
+## Installation
+
+Open the ioBroker admin, go to **Adapters**, look for **Alias Workbench** and
+create an instance. Then reload the admin and pick **Alias Workbench** in the
+left menu.
+
+The adapter has not been accepted into the ioBroker repository yet, so it does
+not show up in that list for the moment. Until it does, install it from npm:
+under **Adapters** press **install from custom URL** (the octocat button), tab
+**From npm**, and enter `iobroker.alias-workbench`.
 
 ## Why the tree shows devices that do not exist
 
@@ -101,151 +151,122 @@ That gap is what the alias fills: `alias.0.…Gartenpumpe` is a real channel wit
 proper roles beneath it. The workbench therefore lets you pick such a
 non-existent node in the tree and build a device out of it.
 
-## How it works
+## What an existing alias contributes
 
-```
-source (e.g. mqtt-client.0.…)
-   ↓  a template is matched and applied
-draft in memory  →  object image  →  type-detector  →  report
-   ↓  dry run
-alias.0.<folder>.<device>          channel + states with common.alias
-```
+![An existing alias in edit mode](https://raw.githubusercontent.com/RicardoHipp/ioBroker.alias-workbench/main/docs/05-alias.png)
 
-The draft never touches the object database. The detector runs against an image
-of the draft, which is why the report reacts instantly and why nothing can break
-while you experiment.
+*An alias that already exists. Its own roles and formulas win over the template, the free slots of the light pattern are listed below, and the three management buttons appear only in this mode.*
 
-The type-detector is a real npm dependency, bundled for the browser with
-esbuild. It is never copied into the source tree — a frozen copy that drifts
-from the library was the main weakness of the existing alias manager.
 
-### How the tab itself is built
+Pick a source that already has an alias, and the alias wins. Role, type, unit,
+value list, caption, formulas, both sources and the ticks come from what is
+stored — in **both** views, "create alias" and "edit alias".
 
-The tab is **29 ES modules** under `admin/js/`, loaded by the browser as
-modules. There is no build step for them: what stands in the file is what runs.
-Styling lives in one file, `admin/css/werkbank.css`.
+Before that, the same row carried a different role depending on which tab you
+were in, and refreshing did something different in each. Now refreshing changes
+nothing by itself.
 
-That has a price. A module boundary can be crossed wrongly in ways the browser
-only notices while running, so three checks run before any clicking — they need
-no browser and take two minutes:
+Where the template wants something else, the row says so — *"Template:
+sensor.window"* — and a button above the list offers to apply it. That is a
+click, never a side effect. The caption is exempt: the display name belongs to
+whoever typed it.
 
-```bash
-#1. does it still bundle? finds missing or misspelled exports
-npx esbuild --bundle admin/js/start.js --outfile=/dev/null --format=esm
+## Swapping a source
 
-#2. free names — identifiers that are neither declared nor imported
-npm install --no-save acorn@8
-node ../werkzeug/freie-namen.js admin/js node_modules/acorn/dist/acorn.js
+A device breaks and gets replaced. The alias should stay exactly as it is —
+same id, same recording, same room and function — and only point somewhere
+else. **Swap source…** does that, and it changes only `common.alias.id` per
+datapoint plus `native.quelle` on the channel.
 
-#3. translations: both files carry the same keys, every tr() has one
-```
+Each datapoint is matched in three steps, and the dialog says which one was
+used:
 
-The second one earns its keep. `socket` was used in `detail.js` without being
-imported — valid JavaScript, and it would only have thrown when someone picked
-a source whose value was not loaded yet.
+1. **same relative path** below the new device — `…ABC.1.STATE` → `…XYZ.1.STATE`
+2. **through the template row** — finds `LOWBAT` on a device that spells it
+   `LOWBAT` where the old one said `LOW_BAT`
+3. **guessed** from name or role — deliberately weak, and marked **guessed** so
+   you check it
 
-## Template format
+Rows with no match at all turn red and offer a checkbox: *remove this point
+when swapping*. Leave it unticked and the point stays, still pointing at the
+old source — allowed, but visible.
 
-One JSON file per template under `admin/vorlagen/`. Example:
+Two things the dialog is careful about. It names the old source even when the
+device is **gone** — that is the normal case for "device broken". And it warns
+where the new source measures differently: *"Watch out: ACTUAL: value range
+0..100 → 0..255"*. The alias keeps its formulas; if the new device counts
+differently, the numbers are wrong afterwards and nothing else would tell you.
 
-```jsonc
-{
-  "id": "tasmota-steckdose",
-  "version": 1,
-  "rang": 20,
-  "name": { "en": "Tasmota socket", "de": "Tasmota-Steckdose" },
-  "geraetetyp": "socket",
+## Room and function
 
-  "erkennung": {
-    "erforderlich": ["stat.POWER", "cmnd.POWER"],
-    "inhalt": { "tele.SENSOR": "ENERGY" },
-    "namenshinweis": "steckdose|dose|plug|socket"
-  },
+Both live in `enum.rooms.*` / `enum.functions.*`, not on the object — so this
+is the one place where the workbench writes outside `alias.`. Nothing else
+outside that namespace is ever touched.
 
-  "zustaende": [
-    { "name": "SET", "rolle": "switch", "typ": "boolean",
-      "lesen": "stat.POWER", "schreiben": "cmnd.POWER",
-      "schreibformel": "val ? \"ON\" : \"OFF\"" },
+The proposal comes from, in order: the room already on the source or one of its
+channels, the device name (`FK_Max_Spielzimmer` → `Max_Spielzimmer`), the
+target folder. The function comes from the template's `funktion` field, or from
+the detected type when the template has none.
 
-    { "name": "ELECTRIC_POWER", "rolle": "value.power", "einheit": "W",
-      "lesen": "tele.SENSOR", "feld": "ENERGY.Power", "optional": true },
+The admin ships 62 function and 58 room templates, each with a picture. The
+workbench does not copy them; it reads them out of the admin's own bundle at
+runtime, so there are never two lists ageing apart. If that fails, the field
+quietly shows only what exists — and says so in the last row, rather than
+looking empty for no reason.
 
-    { "name": "TODAY", "rolle": "value", "einheit": "kWh",
-      "lesen": "tele.SENSOR", "feld": "ENERGY.Today",
-      "optional": true, "vorgabeAus": true }
-  ]
-}
-```
+**The picture is shown before it is written.** Next to each of the two fields
+stands the picture of the chosen enum: solid when one is already stored, faded
+with a small **new** corner when the workbench would add one on writing, and
+nothing at all when the catalogue does not know the name or the switch is off.
+So the settings page is visible in the row itself, instead of having to be
+guessed from a dry run.
 
-| Key | Meaning |
+## Settings
+
+The instance has no process; its settings only decide how the workbench writes.
+Four switches, all on by default — and if `native` is missing entirely, the same
+defaults apply rather than everything counting as off:
+
+| Switch | What it does |
 |---|---|
-| `erkennung.erforderlich` | these datapoints must exist, otherwise the template does not match |
-| `erkennung.inhalt` | the named datapoint must contain this field in its JSON |
-| `erkennung.verboten` | these datapoints must **not** exist, otherwise the template does not match |
-| `erkennung.namenshinweis` | only breaks ties between templates that fit equally well |
-| `rang` | last tie-breaker, so the same device is always detected the same way |
-| `optional` | the state is skipped when its source or JSON field is missing |
-| `vorgabeAus` | proposed but unchecked — see **What a template ticks by default** below |
-| `feld` | builds the read function `JSON.parse(val).<field>` |
-| `mehrfach` + `%N%` | one device per output; the numbers are read from what exists |
-| `werteliste` | value list for the datapoint — slots like EFFECT are not detected without one |
-| `absolut` | `lesen` is a full object id, not relative to the device — the same object for every device |
-| `beschriftung` | the datapoint's display name, if it should differ from its slot name |
-| `nachkommastellen` | decimals for the value display |
+| `ikonRaeume` | add a missing picture to a **room** |
+| `ikonFunktionen` | the same for a **function** |
+| `ikonErsetzen` | also replace an entry that is not a picture. ioBroker's default rooms carry `icon: "Bedroom"` — a bare word that renders as a broken box |
+| `vorlagenVomAdmin` | offer the admin's room and function templates at all |
 
-`verboten` is what genuinely separates a single socket from a multi-output one:
-the single one has no `stat.POWER2`. An absent datapoint deliberately does **not**
-count as evidence — otherwise a list of invented exclusions could inflate a
-template's score.
+The tab reads them **once on load**. After saving, reload the tab.
 
-Datapoint names are matched case-insensitively as a fallback, because MQTT keeps
-whatever casing was published — the same device family sends `cmnd.POWER` on one
-unit and `cmnd.power` on the next.
+## What the shipped templates cover
 
-## What a template ticks by default
+Sixteen templates come with the adapter. Four Tasmota, one plain measuring
+point — and eleven for Homematic, where the interesting part is not that a
+template matches but that the **right** one does. The devices look alike in the
+data; what separates them is one datapoint each:
 
-Whether a datapoint has a slot in the type-detector pattern is **not** the
-criterion. That only decides *where* the point ends up — inside the device or
-in a separate info device. It says nothing about whether anyone needs it. The
-`thermostat` pattern has 24 slots, `socket` has 14; everything that could ever
-sit in such a device is listed there, down to frequency and apparent power.
+| Told apart by | Which is which |
+|---|---|
+| `1.WORKING` | switch actuator, not a window contact — both have `1.STATE` |
+| `2.STATE` | multi-channel actuator; the single-channel template refuses when it is present |
+| `1.LEVEL_REAL` vs `1.STOP` | dimmer vs shutter — both have `1.LEVEL` |
+| `1.ERROR` | classic window contact vs HmIP, which computes a boolean from a number |
+| `0.SABOTAGE` | required for the HmIP contact. Without it, `1.STATE` + `0.LOW_BAT` matched twelve devices, eight of them actuators |
+| `1.LEVEL` / `1.HUMIDITY` / `4.SECTION` | radiator valve vs wall thermostat vs heating group |
+| `1.TEMPERATURE` vs `1.ACTUAL_TEMPERATURE` | a plain sensor vs something that also sets a value |
 
-The criterion is purpose: **tick what you need to operate the device and to
-notice when something is wrong.** Setpoint, actual value, and the signals that
-announce a failure — `LOWBAT`, `UNREACH`.
+The CCU's own receivers — `HM-RCV-50`, `HmIP-RCV-50`, `RPI-RF-MOD` — match
+nothing on purpose. Fifty bare `LEVEL` channels are not a device.
 
-Left unticked: diagnostics. Signal strength, uptime, ramp times, inhibit
-flags. You tick those when you are chasing a problem.
+When a template is rejected, the picker says why: *"1.LEVEL missing"*, not
+*"does not fit"*. A reason you cannot act on is not a reason.
 
-Battery **voltage** looks like it belongs in the first group — it falls
-visibly over weeks while `LOW_BAT` only flips once the change is already due.
-It stays unticked anyway, because the detector has nowhere to put it. Patterns
-are assembled from two shared groups:
+### Role knowledge beside the rows
 
-```
-maintenance  WORKING UNREACH LOWBAT MAINTAIN ERROR DIRECTION
-             CONNECTED RSSI ON_TIME BATTERY   value.battery   unit %
-metering     ELECTRIC_POWER CURRENT VOLTAGE CONSUMPTION
-             FREQUENCY SPEED POWER            value.voltage   unit V
-```
-
-`VOLTAGE` sits between current and consumption: it is the **mains voltage of a
-metering device**, not a sensor's cell voltage. A window contact has no
-metering group at all, which is why it has no voltage slot — and `BATTERY`,
-the slot it does have, means a percentage. Writing volts into either is
-wrong, so the point is offered and left off.
-
-Two things override that:
-
-- A point that reads the **same source** as an already-ticked one is never
-  ticked. Otherwise the same value sits in the alias twice and the seventh
-  check reports it, rightly. Homematic switch actuators have no separate
-  feedback value — `1.STATE` is both — so their `ON_ACTUAL` stays off.
-- Where the purpose says tick but the pattern has **no slot**, weigh it: the
-  point lands in an info device next to the real one. For a single value that
-  is rarely worth it, and the template's `hinweis` has to say so. And check
-  what a slot **means** before using it — a matching name is not a matching
-  purpose, as the voltage case above shows.
+A template can carry `weiterePunkte`: roles for datapoints that get no row of
+their own. Without it, "all datapoints of the device" showed *no role* on most
+lines, because hm-rpc simply leaves the field empty. A `*.NAME` wildcard applies
+per channel, so `2.LEVEL` and `3.RAMP_TIME` are covered without listing every
+channel. It changes nothing about which template wins — only raw rows are
+enriched.
 
 ## Saving your own templates
 
@@ -328,127 +349,131 @@ datapoints. That is deliberate — more evidence should win — and it only affe
 devices you have not built yet: a finished alias records the template it came
 from and keeps it.
 
-## What the shipped templates cover
+## What a template ticks by default
 
-Sixteen templates come with the adapter. Four Tasmota, one plain measuring
-point — and eleven for Homematic, where the interesting part is not that a
-template matches but that the **right** one does. The devices look alike in the
-data; what separates them is one datapoint each:
+Whether a datapoint has a slot in the type-detector pattern is **not** the
+criterion. That only decides *where* the point ends up — inside the device or
+in a separate info device. It says nothing about whether anyone needs it. The
+`thermostat` pattern has 24 slots, `socket` has 14; everything that could ever
+sit in such a device is listed there, down to frequency and apparent power.
 
-| Told apart by | Which is which |
+The criterion is purpose: **tick what you need to operate the device and to
+notice when something is wrong.** Setpoint, actual value, and the signals that
+announce a failure — `LOWBAT`, `UNREACH`.
+
+Left unticked: diagnostics. Signal strength, uptime, ramp times, inhibit
+flags. You tick those when you are chasing a problem.
+
+Battery **voltage** looks like it belongs in the first group — it falls
+visibly over weeks while `LOW_BAT` only flips once the change is already due.
+It stays unticked anyway, because the detector has nowhere to put it. Patterns
+are assembled from two shared groups:
+
+```
+maintenance  WORKING UNREACH LOWBAT MAINTAIN ERROR DIRECTION
+             CONNECTED RSSI ON_TIME BATTERY   value.battery   unit %
+metering     ELECTRIC_POWER CURRENT VOLTAGE CONSUMPTION
+             FREQUENCY SPEED POWER            value.voltage   unit V
+```
+
+`VOLTAGE` sits between current and consumption: it is the **mains voltage of a
+metering device**, not a sensor's cell voltage. A window contact has no
+metering group at all, which is why it has no voltage slot — and `BATTERY`,
+the slot it does have, means a percentage. Writing volts into either is
+wrong, so the point is offered and left off.
+
+Two things override that:
+
+- A point that reads the **same source** as an already-ticked one is never
+  ticked. Otherwise the same value sits in the alias twice and the seventh
+  check reports it, rightly. Homematic switch actuators have no separate
+  feedback value — `1.STATE` is both — so their `ON_ACTUAL` stays off.
+- Where the purpose says tick but the pattern has **no slot**, weigh it: the
+  point lands in an info device next to the real one. For a single value that
+  is rarely worth it, and the template's `hinweis` has to say so. And check
+  what a slot **means** before using it — a matching name is not a matching
+  purpose, as the voltage case above shows.
+
+## Template format
+
+![A template sheet](https://raw.githubusercontent.com/RicardoHipp/ioBroker.alias-workbench/main/docs/04-template.png)
+
+*A shipped template, read-only: header, what must and must not exist for it to match, and its datapoints. "Own copy" makes it editable.*
+
+
+One JSON file per template under `admin/vorlagen/`. Example:
+
+```jsonc
+{
+  "id": "tasmota-steckdose",
+  "version": 1,
+  "rang": 20,
+  "name": { "en": "Tasmota socket", "de": "Tasmota-Steckdose" },
+  "geraetetyp": "socket",
+
+  "erkennung": {
+    "erforderlich": ["stat.POWER", "cmnd.POWER"],
+    "inhalt": { "tele.SENSOR": "ENERGY" },
+    "namenshinweis": "steckdose|dose|plug|socket"
+  },
+
+  "zustaende": [
+    { "name": "SET", "rolle": "switch", "typ": "boolean",
+      "lesen": "stat.POWER", "schreiben": "cmnd.POWER",
+      "schreibformel": "val ? \"ON\" : \"OFF\"" },
+
+    { "name": "ELECTRIC_POWER", "rolle": "value.power", "einheit": "W",
+      "lesen": "tele.SENSOR", "feld": "ENERGY.Power", "optional": true },
+
+    { "name": "TODAY", "rolle": "value", "einheit": "kWh",
+      "lesen": "tele.SENSOR", "feld": "ENERGY.Today",
+      "optional": true, "vorgabeAus": true }
+  ]
+}
+```
+
+| Key | Meaning |
 |---|---|
-| `1.WORKING` | switch actuator, not a window contact — both have `1.STATE` |
-| `2.STATE` | multi-channel actuator; the single-channel template refuses when it is present |
-| `1.LEVEL_REAL` vs `1.STOP` | dimmer vs shutter — both have `1.LEVEL` |
-| `1.ERROR` | classic window contact vs HmIP, which computes a boolean from a number |
-| `0.SABOTAGE` | required for the HmIP contact. Without it, `1.STATE` + `0.LOW_BAT` matched twelve devices, eight of them actuators |
-| `1.LEVEL` / `1.HUMIDITY` / `4.SECTION` | radiator valve vs wall thermostat vs heating group |
-| `1.TEMPERATURE` vs `1.ACTUAL_TEMPERATURE` | a plain sensor vs something that also sets a value |
+| `erkennung.erforderlich` | these datapoints must exist, otherwise the template does not match |
+| `erkennung.inhalt` | the named datapoint must contain this field in its JSON |
+| `erkennung.verboten` | these datapoints must **not** exist, otherwise the template does not match |
+| `erkennung.namenshinweis` | only breaks ties between templates that fit equally well |
+| `rang` | last tie-breaker, so the same device is always detected the same way |
+| `optional` | the state is skipped when its source or JSON field is missing |
+| `vorgabeAus` | proposed but unchecked — see **What a template ticks by default** below |
+| `feld` | builds the read function `JSON.parse(val).<field>` |
+| `mehrfach` + `%N%` | one device per output; the numbers are read from what exists |
+| `werteliste` | value list for the datapoint — slots like EFFECT are not detected without one |
+| `absolut` | `lesen` is a full object id, not relative to the device — the same object for every device |
+| `beschriftung` | the datapoint's display name, if it should differ from its slot name |
+| `nachkommastellen` | decimals for the value display |
 
-The CCU's own receivers — `HM-RCV-50`, `HmIP-RCV-50`, `RPI-RF-MOD` — match
-nothing on purpose. Fifty bare `LEVEL` channels are not a device.
+`verboten` is what genuinely separates a single socket from a multi-output one:
+the single one has no `stat.POWER2`. An absent datapoint deliberately does **not**
+count as evidence — otherwise a list of invented exclusions could inflate a
+template's score.
 
-When a template is rejected, the picker says why: *"1.LEVEL missing"*, not
-*"does not fit"*. A reason you cannot act on is not a reason.
+Datapoint names are matched case-insensitively as a fallback, because MQTT keeps
+whatever casing was published — the same device family sends `cmnd.POWER` on one
+unit and `cmnd.power` on the next.
 
-### Role knowledge beside the rows
+## Under the hood
 
-A template can carry `weiterePunkte`: roles for datapoints that get no row of
-their own. Without it, "all datapoints of the device" showed *no role* on most
-lines, because hm-rpc simply leaves the field empty. A `*.NAME` wildcard applies
-per channel, so `2.LEVEL` and `3.RAMP_TIME` are covered without listing every
-channel. It changes nothing about which template wins — only raw rows are
-enriched.
+```
+source (e.g. mqtt-client.0.…)
+   ↓  a template is matched and applied
+draft in memory  →  object image  →  type-detector  →  report
+   ↓  dry run
+alias.0.<folder>.<device>          channel + states with common.alias
+```
 
-## What an existing alias contributes
+The draft never touches the object database. The detector runs against an image
+of the draft, which is why the report reacts instantly and why nothing can break
+while you experiment.
 
-Pick a source that already has an alias, and the alias wins. Role, type, unit,
-value list, caption, formulas, both sources and the ticks come from what is
-stored — in **both** views, "create alias" and "edit alias".
-
-Before that, the same row carried a different role depending on which tab you
-were in, and refreshing did something different in each. Now refreshing changes
-nothing by itself.
-
-Where the template wants something else, the row says so — *"Template:
-sensor.window"* — and a button above the list offers to apply it. That is a
-click, never a side effect. The caption is exempt: the display name belongs to
-whoever typed it.
-
-## Swapping a source
-
-A device breaks and gets replaced. The alias should stay exactly as it is —
-same id, same recording, same room and function — and only point somewhere
-else. **Swap source…** does that, and it changes only `common.alias.id` per
-datapoint plus `native.quelle` on the channel.
-
-Each datapoint is matched in three steps, and the dialog says which one was
-used:
-
-1. **same relative path** below the new device — `…ABC.1.STATE` → `…XYZ.1.STATE`
-2. **through the template row** — finds `LOWBAT` on a device that spells it
-   `LOWBAT` where the old one said `LOW_BAT`
-3. **guessed** from name or role — deliberately weak, and marked **guessed** so
-   you check it
-
-Rows with no match at all turn red and offer a checkbox: *remove this point
-when swapping*. Leave it unticked and the point stays, still pointing at the
-old source — allowed, but visible.
-
-Two things the dialog is careful about. It names the old source even when the
-device is **gone** — that is the normal case for "device broken". And it warns
-where the new source measures differently: *"Watch out: ACTUAL: value range
-0..100 → 0..255"*. The alias keeps its formulas; if the new device counts
-differently, the numbers are wrong afterwards and nothing else would tell you.
-
-## Room and function
-
-Both live in `enum.rooms.*` / `enum.functions.*`, not on the object — so this
-is the one place where the workbench writes outside `alias.`. Nothing else
-outside that namespace is ever touched.
-
-The proposal comes from, in order: the room already on the source or one of its
-channels, the device name (`FK_Max_Spielzimmer` → `Max_Spielzimmer`), the
-target folder. The function comes from the template's `funktion` field, or from
-the detected type when the template has none.
-
-The admin ships 62 function and 58 room templates, each with a picture. The
-workbench does not copy them; it reads them out of the admin's own bundle at
-runtime, so there are never two lists ageing apart. If that fails, the field
-quietly shows only what exists — and says so in the last row, rather than
-looking empty for no reason.
-
-**The picture is shown before it is written.** Next to each of the two fields
-stands the picture of the chosen enum: solid when one is already stored, faded
-with a small **new** corner when the workbench would add one on writing, and
-nothing at all when the catalogue does not know the name or the switch is off.
-So the settings page is visible in the row itself, instead of having to be
-guessed from a dry run.
-
-## Settings
-
-The instance has no process; its settings only decide how the workbench writes.
-Four switches, all on by default — and if `native` is missing entirely, the same
-defaults apply rather than everything counting as off:
-
-| Switch | What it does |
-|---|---|
-| `ikonRaeume` | add a missing picture to a **room** |
-| `ikonFunktionen` | the same for a **function** |
-| `ikonErsetzen` | also replace an entry that is not a picture. ioBroker's default rooms carry `icon: "Bedroom"` — a bare word that renders as a broken box |
-| `vorlagenVomAdmin` | offer the admin's room and function templates at all |
-
-The tab reads them **once on load**. After saving, reload the tab.
-
-## Installation
-
-Open the ioBroker admin, go to **Adapters**, look for **Alias Workbench** and
-create an instance. Then reload the admin and pick **Alias Workbench** in the
-left menu.
-
-The adapter has not been accepted into the ioBroker repository yet, so it does
-not show up there for the moment. Until it does, [README_de.md](README_de.md)
-describes the interim route.
+The type-detector is a real npm dependency, bundled for the browser with
+esbuild. It is never copied into the source tree — a frozen copy that drifts
+from the library was the main weakness of the existing alias manager.
 
 ## Development
 
@@ -467,6 +492,13 @@ entry in `SPRACHEN` in `admin/js/sprache.js` — nothing else. Watch for strings
 written straight into `admin/tab.html`: they are replaced at runtime, and one
 that nobody wired up stays German forever without anyone noticing.
 
+The tab is **29 ES modules** under `admin/js/`, loaded by the browser as
+modules — there is no build step for them, and styling lives in one file,
+`admin/css/werkbank.css`. Because a module boundary can be crossed wrongly in
+ways the browser only notices while running, `npm test` checks before every
+commit that everything still bundles, that every identifier is declared or
+imported, and that both language files carry the same keys.
+
 ## Background
 
 - [@iobroker/type-detector](https://github.com/ioBroker/ioBroker.type-detector) —
@@ -477,6 +509,11 @@ that nobody wired up stays German forever without anyone noticing.
   core feature of the js-controller, not of any adapter
 
 ## Changelog
+
+### **WORK IN PROGRESS**
+* Swap source: the name of the current source is shown next to its id
+* Datapoints without a slot in the pattern are marked with a stripe; the explanation stands once above the list instead of in every row
+
 
 ### 0.8.1
 * Published through npm trusted publishing (OIDC); releases are signed with provenance

@@ -206,6 +206,10 @@ export function baueListe(host, e, pl, rateKnopf, musterBlock) {
   }
 
   var bar = el('div', 'listbar');
+  /* Wird beim Zeichnen der Zeilen weiter unten hochgezaehlt; die Legende
+     dazu haengt sich erst danach in die Leiste, weil vorher niemand
+     weiss, ob es ueberhaupt eine braucht. */
+  var ohnePlatzZahl = 0;
   var an = e.states.filter(function (s) { return s.on; }).length;
   bar.appendChild(document.createTextNode(tr('list.willBeCreated')));
   bar.appendChild(el('span', 'cnt', tr('list.countOf', an, e.states.length)));
@@ -325,8 +329,19 @@ export function baueListe(host, e, pl, rateKnopf, musterBlock) {
   e.states.forEach(function (s, i) {
     var pl = platzVon[s.n];
     var unfertig = (!s.n || !s.srcR);
-    var row = el('div', 'erow' + (s.on ? '' : ' skip') + (S.openRow === i ? ' open' : ''));
+    /* Angehakt, vollstaendig, aber ohne Platz im Muster. Frueher stand
+       dazu in JEDER betroffenen Zeile derselbe Satz — bei einem
+       Thermostat mit 42 Punkten zwanzigmal dasselbe, und die Spalte
+       wurde so breit, dass Rolle und Wert wegrutschten (Ricardo,
+       06.09.2026). Jetzt traegt die Zeile eine Marke, der Satz steht
+       einmal als Legende ueber der Liste, und der lange Text haengt als
+       Hinweis an der Zeile. */
+    var ohnePlatz = (s.on && !unfertig && !pl);
+    if (ohnePlatz) { ohnePlatzZahl++; }
+    var row = el('div', 'erow' + (s.on ? '' : ' skip') + (S.openRow === i ? ' open' : '') +
+                 (ohnePlatz ? ' ohneplatz' : ''));
     row.tabIndex = 0;
+    if (ohnePlatz) { row.title = tr('pattern.noPlaceLong', musterName(e.want) || e.want || '?'); }
 
     var cbw = el('span');
     var cb = document.createElement('input');
@@ -418,14 +433,12 @@ export function baueListe(host, e, pl, rateKnopf, musterBlock) {
         var pe = el('em', null, pl);
         pe.title = tr('pattern.slotName', pl, musterName(e.want) || e.want || '?');
         n3.appendChild(pe);
-      } else if (!pl) {
-        /* Frueher stand der Vermerk nur an Zeilen, die das info-Muster
-           aufnaehme (imInfo). SABOTAGE mit indicator.alarm nimmt aber
-           nicht mal das - solche Zeilen blieben stumm, und oben stand
-           „3/7 belegt“ bei vier Haken ohne jede Erklaerung (Ricardo,
-           25.08.2026). Angehakt ohne Platz heisst immer: sagen. */
-        n3.appendChild(el('em', null, tr('pattern.noPlaceIn', musterName(e.want) || e.want || '?')));
       }
+      /* Kein Vermerk mehr je Zeile: die Marke an der Zeile und die
+         Legende ueber der Liste sagen dasselbe, einmal statt zwanzigmal.
+         Dass es ueberhaupt gesagt wird, bleibt wichtig — frueher blieben
+         solche Zeilen stumm, und oben stand „3/7 belegt“ bei vier Haken
+         ohne jede Erklaerung (Ricardo, 25.08.2026). */
     }
     row.appendChild(n3);
 
@@ -511,5 +524,18 @@ export function baueListe(host, e, pl, rateKnopf, musterBlock) {
     zeichneErgebnis();
   });
   card.appendChild(add);
+
+  /* Die Legende zum Streifen — einmal, und nur wenn es etwas zu erklaeren
+     gibt. Sie steht in der Leiste ueber der Liste, gleich neben der Zahl:
+     dort sucht man die Erklaerung fuer „11 von 42", nicht am Fuss. */
+  if (ohnePlatzZahl) {
+    var lg = el('span', 'legende');
+    lg.appendChild(el('span', 'lgmarke'));
+    lg.appendChild(document.createTextNode(
+      tr('pattern.noPlaceIn', musterName(e.want) || e.want || '?')));
+    lg.title = tr('pattern.noPlaceLong', musterName(e.want) || e.want || '?');
+    bar.insertBefore(lg, bar.querySelector('.sp2'));
+  }
+
   host.appendChild(card);
 }
