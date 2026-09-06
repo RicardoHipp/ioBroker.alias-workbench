@@ -99,6 +99,35 @@ export function anzeigeText(k) {
   return zusatzName(k.id) || k.name;
 }
 
+/* Vor dem Wechsel fragen, wenn am Entwurf etwas offen ist.
+
+   Nur der Klick im Baum geht hier durch. Die Wechsel, die die Werkbank
+   selbst ausloest — nach dem Schreiben, nach dem Verlegen, beim Sprung
+   „zur Quelle" — rufen `waehle` weiterhin direkt auf: Dort ist die Frage
+   sinnlos, weil der Entwurf ja gerade geschrieben wurde. */
+function mitNachfrage(id) {
+  var e = S.entwurf;
+  if (!e || !e.angefasst || id === S.current) { waehle(id); return; }
+
+  var dlg = $('#dlg-leave');
+  if (!dlg) { waehle(id); return; }          /* aeltere Fassung: nicht blockieren */
+
+  var was = (e.ziel || e.kanal || S.current || '').split('.').slice(-2).join('.');
+  $('#leave-titel').textContent = tr('leave.title');
+  $('#leave-body').textContent = tr('leave.body', was);
+
+  var bleib = $('#btn-leave-stay');
+  var weiter = $('#btn-leave-go');
+  bleib.textContent = tr('leave.stay');
+  weiter.textContent = tr('leave.discard');
+
+  /* Die Knoepfe werden bei jedem Aufruf neu verkabelt — sonst haengt der
+     Handler des vorigen Aufrufs mit dem alten Ziel daran. */
+  bleib.onclick = function () { dlg.close(); };
+  weiter.onclick = function () { dlg.close(); waehle(id); };
+  dlg.showModal();
+}
+
 function baueBaum() {
   var wurzel = { kinder: {}, id: '', name: '' };
   var alles = experte();
@@ -354,7 +383,17 @@ function renderKinder(knoten, filter, tiefe) {
     if (waehlbar) {
       d.tabIndex = 0;
       d.setAttribute('role', 'button');
-      var go = function () { waehle(k.id); };
+      /* Erst fragen, dann wechseln — solange am aktuellen Entwurf etwas
+         offen ist. Vorher fielen Aenderungen bei einem Klick ins Leere,
+         ohne ein Wort (Ricardo, 06.09.2026): Rolle geaendert, im Baum
+         weitergeklickt, alles weg.
+
+         Die Frage haengt an `angefasst`, nicht an `geaendert` einer
+         einzelnen Zeile: Auch Raum, Funktion, Ordner und Name gehoeren
+         dazu, und die stehen nicht in den Zeilen. Geschrieben wird
+         dadurch nichts — es geht nur darum, dass niemand etwas verliert,
+         ohne gefragt zu werden. */
+      var go = function () { mitNachfrage(k.id); };
       d.addEventListener('click', go);
       d.addEventListener('keydown', function (e) {
         if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); }
