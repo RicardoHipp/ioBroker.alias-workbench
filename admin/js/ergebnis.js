@@ -24,6 +24,7 @@ import {
   quelleVon,
   springeZu,
   waehle,
+  mitNachfrage,
   geraeteDarunter,
   aliasFuer,
   tipptGerade,
@@ -862,7 +863,7 @@ var warumAuf = false;
       row.appendChild(al);
       row.appendChild(el('span', 'ca2', '›'));
 
-      var geh = function () { waehle(g.id); };
+      var geh = function () { mitNachfrage(g.id); };
       row.addEventListener('click', geh);
       row.addEventListener('keydown', function (ev) {
         if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); geh(); }

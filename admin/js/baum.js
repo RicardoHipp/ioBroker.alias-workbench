@@ -8,7 +8,7 @@ import { S } from './zustand.js';
 import { $, el } from './basis.js';
 import { tr, txt, expertenVorgabe } from './sprache.js';
 import './enums.js';
-import { waehle } from './entwurf.js';
+import { mitNachfrage } from './entwurf.js';
 import { zeichneErgebnis } from './ergebnis.js';
 import { zeichneVorlagenListe } from './vorlagenblatt.js';
 
@@ -97,35 +97,6 @@ export function zusatzName(id) {
 /* Wonach die Zeile gelesen und sortiert wird. */
 export function anzeigeText(k) {
   return zusatzName(k.id) || k.name;
-}
-
-/* Vor dem Wechsel fragen, wenn am Entwurf etwas offen ist.
-
-   Nur der Klick im Baum geht hier durch. Die Wechsel, die die Werkbank
-   selbst ausloest — nach dem Schreiben, nach dem Verlegen, beim Sprung
-   „zur Quelle" — rufen `waehle` weiterhin direkt auf: Dort ist die Frage
-   sinnlos, weil der Entwurf ja gerade geschrieben wurde. */
-function mitNachfrage(id) {
-  var e = S.entwurf;
-  if (!e || !e.angefasst || id === S.current) { waehle(id); return; }
-
-  var dlg = $('#dlg-leave');
-  if (!dlg) { waehle(id); return; }          /* aeltere Fassung: nicht blockieren */
-
-  var was = (e.ziel || e.kanal || S.current || '').split('.').slice(-2).join('.');
-  $('#leave-titel').textContent = tr('leave.title');
-  $('#leave-body').textContent = tr('leave.body', was);
-
-  var bleib = $('#btn-leave-stay');
-  var weiter = $('#btn-leave-go');
-  bleib.textContent = tr('leave.stay');
-  weiter.textContent = tr('leave.discard');
-
-  /* Die Knoepfe werden bei jedem Aufruf neu verkabelt — sonst haengt der
-     Handler des vorigen Aufrufs mit dem alten Ziel daran. */
-  bleib.onclick = function () { dlg.close(); };
-  weiter.onclick = function () { dlg.close(); waehle(id); };
-  dlg.showModal();
 }
 
 function baueBaum() {

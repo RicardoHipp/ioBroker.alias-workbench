@@ -5,7 +5,7 @@
 import { S } from './zustand.js';
 import { socket } from './verbindung.js';
 import { $ } from './basis.js';
-import { txt } from './sprache.js';
+import { txt, tr } from './sprache.js';
 import './enums.js';
 import { zusatzName, setzeModus, zeichneBaum, merkeKlappstand } from './baum.js';
 import { kindZustaende, aliasQuellen, holeWerte } from './werte.js';
@@ -251,14 +251,56 @@ export function quelleVon(aliasId) {
   return knotenDa(beste) ? beste : null;
 }
 
+/* Vor dem Wechsel fragen, wenn am Entwurf etwas offen ist.
+
+   Drei Wege wechseln die Auswahl auf Wunsch des Nutzers, und alle drei
+   gehen hier durch: der Klick im Baum, „zur Quelle →" / „zum Alias →"
+   und die Zeilen der Ordneruebersicht. Vorher fielen Aenderungen dabei
+   ins Leere, ohne ein Wort (Ricardo, 06.09.2026).
+
+   Nicht hier durch gehen die Wechsel, die die Werkbank selbst ausloest:
+   nach dem Schreiben, nach dem Verlegen, nach dem Quellentausch. Dort
+   ist der Entwurf gerade geschrieben worden, es gibt nichts zu retten.
+   Ebenso wenig der Knopf „zuruecksetzen" — der WILL verwerfen, und wer
+   ihn drueckt, hat die Frage schon beantwortet.
+
+   Sie haengt an `angefasst`, nicht an `geaendert` einer einzelnen Zeile:
+   Raum, Funktion, Ordner und Name gehoeren genauso dazu und stehen in
+   keiner Zeile. */
+export function mitNachfrage(id, dann) {
+  var lauf = function () { if (dann) { dann(); } else { waehle(id); } };
+  var e = S.entwurf;
+  if (!e || !e.angefasst || id === S.current) { lauf(); return; }
+
+  var dlg = $('#dlg-leave');
+  if (!dlg) { lauf(); return; }              /* aeltere Fassung: nicht blockieren */
+
+  var was = (e.ziel || e.kanal || S.current || '').split('.').slice(-2).join('.');
+  $('#leave-titel').textContent = tr('leave.title');
+  $('#leave-body').textContent = tr('leave.body', was);
+
+  var bleib = $('#btn-leave-stay');
+  var weiter = $('#btn-leave-go');
+  bleib.textContent = tr('leave.stay');
+  weiter.textContent = tr('leave.discard');
+
+  /* Bei jedem Aufruf neu verkabeln — sonst haengt der Handler des
+     vorigen Aufrufs mit dem alten Ziel daran. */
+  bleib.onclick = function () { dlg.close(); };
+  weiter.onclick = function () { dlg.close(); lauf(); };
+  dlg.showModal();
+}
+
 /* Der Sprung selbst: Baummodus umstellen, Filter fallen lassen, waehlen.
    Ohne das Leeren des Filters landet man auf einem Knoten, den der
    Baum gerade ausblendet. */
 export function springeZu(id, modus) {
-  var q0 = $('#q');
-  if (q0) { q0.value = ''; }
-  if (S.baumModus !== modus) { setzeModus(modus); }
-  waehle(id);
+  mitNachfrage(id, function () {
+    var q0 = $('#q');
+    if (q0) { q0.value = ''; }
+    if (S.baumModus !== modus) { setzeModus(modus); }
+    waehle(id);
+  });
 }
 
 /* Was in `common` der Werkbank gehoert - und was nicht.
