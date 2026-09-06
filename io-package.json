@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "alias-workbench",
-    "version": "0.8.0",
+    "version": "0.8.1",
     "news": {
+      "0.8.1": {
+        "en": "Published through npm trusted publishing (OIDC) — releases are signed with provenance from now on. No functional changes.",
+        "de": "Veröffentlichung über npm Trusted Publishing (OIDC) — Ausgaben sind ab jetzt mit Herkunftsnachweis signiert. Keine funktionalen Änderungen.",
+        "ru": "Публикация через npm trusted publishing (OIDC) — выпуски теперь подписаны с подтверждением происхождения. Функциональных изменений нет.",
+        "pt": "Publicação através de npm trusted publishing (OIDC) — as versões passam a ser assinadas com proveniência. Sem alterações funcionais.",
+        "nl": "Publicatie via npm trusted publishing (OIDC) — releases worden voortaan ondertekend met herkomst. Geen functionele wijzigingen.",
+        "fr": "Publication via npm trusted publishing (OIDC) — les versions sont désormais signées avec provenance. Aucun changement fonctionnel.",
+        "it": "Pubblicazione tramite npm trusted publishing (OIDC) — le versioni sono ora firmate con provenienza. Nessuna modifica funzionale.",
+        "es": "Publicación mediante npm trusted publishing (OIDC): las versiones se firman con procedencia a partir de ahora. Sin cambios funcionales.",
+        "pl": "Publikacja przez npm trusted publishing (OIDC) — wydania są od teraz podpisywane z poświadczeniem pochodzenia. Bez zmian funkcjonalnych.",
+        "uk": "Публікація через npm trusted publishing (OIDC) — випуски тепер підписані з підтвердженням походження. Функціональних змін немає.",
+        "zh-cn": "通过 npm 可信发布（OIDC）发布——此后的版本均带有来源签名。无功能变更。"
+      },
       "0.8.0": {
         "en": "Ready for the repository: settings page in eleven languages, ESLint and a CI workshop, checks that run before every commit. The buttons at the bottom now follow the mode. New description.",
         "de": "Bereit fürs Repository: Einstellungsseite in elf Sprachen, ESLint und eine CI-Werkstatt, Prüfungen vor jedem Commit. Die Knöpfe unten richten sich jetzt nach dem Modus. Neue Beschreibung.",

@@ -478,6 +478,9 @@ that nobody wired up stays German forever without anyone noticing.
 
 ## Changelog
 
+### 0.8.1
+* Published through npm trusted publishing (OIDC); releases are signed with provenance
+
 ### 0.8.0
 * Settings page in eleven languages
 * ESLint and a CI workshop; checks run before every commit
