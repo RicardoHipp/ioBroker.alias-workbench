@@ -53,23 +53,41 @@ export function detailZeile(e, s, idx) {
     var treffer = felder.filter(function (f) { return abwNach[f]; });
     if (!treffer.length) { return; }
     r.classList.add('abw');
-    r.title = treffer.map(function (f) {
-      var v = abwNach[f].vorlage;
-      return v ? tr('detail.tplWants', v) : tr('detail.tplWantsEmpty');
-    }).join(String.fromCharCode(10));
 
     var b = el('button', 'btn winzig abwnimm', '←');
-    b.title = tr('detail.takeOne');
     b.addEventListener('click', function (ev) {
       ev.stopPropagation();
       var v = s.vorlagenWert;
       if (!v) { return; }
       treffer.forEach(function (f) { s[f] = v[f]; });
+      /* Uebernehmen ist eine Aenderung wie jede andere — die Zeile traegt
+         danach „geaendert". Dass die Marke „weicht von der Vorlage ab"
+         dabei nicht verschwindet, sorgt die Zeichenseite: sie haengt
+         seit dem 06.09.2026 daran, ob wirklich noch etwas abweicht, und
+         nicht mehr an `!geaendert`. Sonst waeren nach der ersten
+         Uebernahme die uebrigen Abweichungen unsichtbar. */
+      s.geaendert = true;
       rateBehalten(s);
       entwurfAngefasst();
       zeichneErgebnis();
     });
     r.appendChild(b);
+
+    /* Der Wert der Vorlage gehoert HINGESCHRIEBEN, nicht in einen
+       Tooltip: der hing an der Zeile, und sobald der Zeiger ueber dem
+       Auswahlfeld oder dem Knopf stand, zeigte der Browser deren
+       Tooltip. Man musste die getoente Flaeche danebentreffen, um zu
+       erfahren, was man da uebernimmt (Ricardo, 06.09.2026). */
+    var hin = el('div', 'tplwert');
+    treffer.forEach(function (f, i) {
+      if (i) { hin.appendChild(document.createTextNode('   ')); }
+      var v = abwNach[f].vorlage;
+      hin.appendChild(document.createTextNode(
+        v ? tr('detail.tplWants', '') : tr('detail.tplWantsEmpty')));
+      if (v) { hin.appendChild(el('b', null, String(v))); }
+    });
+    b.title = tr('detail.takeOne');
+    r.appendChild(hin);
   }
 
   /* --- Name, nur bei selbst angelegten --- */

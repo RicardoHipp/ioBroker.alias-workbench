@@ -81,7 +81,7 @@
   "detail.sourceGone": "Quelle existiert nicht",
   "detail.stateSays": "Zustand sagt {0}",
   "detail.takeOne": "Diesen einen Wert aus der Vorlage übernehmen",
-  "detail.tplWants": "Die Vorlage will hier: {0}",
+  "detail.tplWants": "Die Vorlage will hier: ",
   "detail.tplWantsEmpty": "Die Vorlage lässt dieses Feld leer.",
   "detail.type": "Typ",
   "detail.unit": "Einheit",

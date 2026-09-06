@@ -81,7 +81,7 @@
   "detail.sourceGone": "source does not exist",
   "detail.stateSays": "state says {0}",
   "detail.takeOne": "Take this one value from the template",
-  "detail.tplWants": "The template wants: {0}",
+  "detail.tplWants": "The template wants: ",
   "detail.tplWantsEmpty": "The template leaves this field empty.",
   "detail.type": "Type",
   "detail.unit": "Unit",

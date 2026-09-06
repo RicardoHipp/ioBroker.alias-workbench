@@ -293,6 +293,11 @@
                     background:color-mix(in srgb, var(--warn-soft) 70%, transparent);
                     border-radius:var(--r-sm); padding:3px 4px; margin:0 -4px; }
   .detail .dr.abw .k { color:var(--warn); }
+  /* Der Wert der Vorlage, sichtbar unter dem Feld — er stand vorher nur
+     im Tooltip der Zeile und war damit hinter jedem Feld versteckt. */
+  .detail .tplwert { grid-column:2 / -1; font-size:10.5px; color:var(--warn);
+                     font-family:var(--sans); padding-top:1px; }
+  .detail .tplwert b { font-family:var(--mono); font-weight:600; }
   .btn.winzig { font-size:11px; line-height:1; padding:3px 6px; min-width:0;
                 border-radius:var(--r-sm); }
   .detail .abwnimm { align-self:center; border-color:var(--warn); color:var(--warn);

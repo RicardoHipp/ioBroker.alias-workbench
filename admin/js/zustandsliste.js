@@ -374,8 +374,15 @@ export function baueListe(host, e, pl, rateKnopf, musterBlock) {
     if (s.manuell) { n3.appendChild(el('span', 'hand', tr('list.byHand'))); }
     if (s.geaendert) { n3.appendChild(el('span', 'geae', tr('list.changed'))); }
     /* Was die Vorlage anders will, steht an der Zeile - sonst sieht man
-       es erst im Trockenlauf (Ricardo, 25.08.2026). */
-    if (s.on && !s.geaendert) {
+       es erst im Trockenlauf (Ricardo, 25.08.2026).
+
+       Nicht mehr an `!s.geaendert` gebunden: Seit man ein einzelnes Feld
+       aus der Vorlage uebernehmen kann, ist die Zeile danach „geaendert"
+       — und haette die Marke daran gehangen, waeren die uebrigen
+       Abweichungen in dem Moment unsichtbar geworden. Massgeblich ist,
+       ob wirklich noch etwas abweicht. Eine Zeile kann beides tragen:
+       „geaendert" und „weicht von der Vorlage ab" (06.09.2026). */
+    if (s.on) {
       var abw = vorlagenAbweichung(s);
       if (abw.length) {
         /* Nur, DASS etwas abweicht — nicht was.
