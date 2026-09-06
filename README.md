@@ -511,6 +511,7 @@ imported, and that both language files carry the same keys.
 ## Changelog
 
 ### **WORK IN PROGRESS**
+* A line that takes its name from an existing alias no longer shows a false "no place in the … pattern" mark for one draw
 * Switching to a template that finds no source at all now works instead of failing silently — the field no longer shows a template that is not in use
 * Swap source: the name of the current source is shown next to its id
 * Datapoints without a slot in the pattern get a tinted row; the explanation stands once above the list instead of in every row

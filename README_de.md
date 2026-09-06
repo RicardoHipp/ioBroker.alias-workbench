@@ -527,6 +527,7 @@ beide Sprachdateien dieselben Schlüssel tragen.
 ## Änderungen
 
 ### **WORK IN PROGRESS**
+* Eine Zeile, die ihren Namen aus einem vorhandenen Alias übernimmt, trägt nicht mehr einen Zeichenlauf lang die falsche Marke „kein Platz im …-Muster"
 * Der Wechsel auf eine Vorlage, die am Gerät gar keine Quelle findet, greift jetzt, statt still zu scheitern — und das Auswahlfeld zeigt keine Vorlage mehr an, die nicht benutzt wird
 * Quelle tauschen: neben der Kennung der heutigen Quelle steht jetzt ihr Name
 * Datenpunkte ohne Platz im Muster stehen in einer getönten Zeile; die Erklärung steht einmal über der Liste statt in jeder Zeile

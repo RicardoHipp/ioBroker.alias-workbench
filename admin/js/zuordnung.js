@@ -577,6 +577,21 @@ export function uebernehmeBestand(e) {
        stehen; neue Punkte bekommen den neuen Namen. */
     if (q.read && kenntQuelle[q.read] && !S.objects[e.ziel + '.' + kenntQuelle[q.read].n]) {
       var vorhanden = kenntQuelle[q.read];
+      /* Die Zeile bekommt den Namen aus dem Alias — und damit einen
+         anderen, als die Erkennung eben gesehen hat. `platzVon` kennt
+         noch den Vorlagennamen, die Zeile heisst jetzt anders, und die
+         Platzpruefung findet nichts: Am `Bastelzimmer_Licht` stand nach
+         einem Wechsel auf die Steckdosen-Vorlage „kein Platz im
+         Steckdose-Muster" an ON_ACTUAL, obwohl der Platz ACTUAL frei
+         besetzt war. Nach jedem beliebigen Neuzeichnen war es weg
+         (Ricardo, 06.09.2026).
+
+         `bestandZog` loest genau dafuer das einmalige Nachzeichnen aus.
+         Gesetzt wurde es bisher nur in `vomAliasUebernehmen` — und das
+         steigt bei gesetzter Vorlage sofort aus, damit der Vorlagenstand
+         gilt. Die Umbenennung findet aber trotzdem statt, also gehoert
+         die Fahne hierher. */
+      if (vorhanden.n !== n) { e.bestandZog = true; }
       vorhanden.n = n;
       vorhanden.on = true;
       vorhanden.ausBestand = true;
