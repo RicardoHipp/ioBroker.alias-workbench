@@ -513,8 +513,8 @@ imported, and that both language files carry the same keys.
 ### **WORK IN PROGRESS**
 * Swap source: the name of the current source is shown next to its id
 * Datapoints without a slot in the pattern get a tinted row; the explanation stands once above the list instead of in every row
-* Clicking another node in the tree while changes are pending now asks first instead of discarding them silently
-* Where the template wants something else, the affected field is tinted in the opened row, its tooltip names the template value, and a button takes over that one value
+* Switching the selection while changes are pending — in the tree, through "to the source →", or in the folder overview — now asks first instead of discarding them silently
+* Where the template wants something else, the affected field is tinted in the opened row, the template value is spelled out below it, and a button takes over that one value
 * The role list now also offers the other spellings a slot accepts (indicator.lowbat next to indicator.maintenance.lowbat), minus the deprecated ones
 
 
