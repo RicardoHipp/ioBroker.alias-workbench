@@ -514,7 +514,16 @@ var warumAuf = false;
           S.entwurf = v;
           S.openRow = null;
           zeichneErgebnis();
+          return;
         }
+        /* Kommt kein Entwurf zurueck, bleibt die alte Vorlage in Kraft — das
+           Feld darf dann nicht die neue anzeigen. Bis 06.09.2026 fehlte
+           dieser Zweig: Der Wechsel scheiterte still, und wer das Feld las,
+           glaubte, die Vorlage sei gewechselt (Ricardo). Seit derselben
+           Aenderung entsteht ein Entwurf auch ohne jeden Treffer, der Fall
+           ist also selten geworden — aber nicht unmoeglich. */
+        selV.value = e.vorlage || '';
+        zeichneErgebnis();
       });
       lv.appendChild(selV);
       acts.appendChild(lv);

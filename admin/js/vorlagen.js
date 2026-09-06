@@ -370,8 +370,17 @@ export function schreibZiel(z, kanal, auf) {
   return befehlMoeglich(kanal, pfad) ? (kanal + '.' + pfad) : '';
 }
 
-/* Vorlage auf einen Kanal anwenden → Entwurf. */
-export function wendeAn(v, kanal, gruende, instanz) {
+/* Vorlage auf einen Kanal anwenden → Entwurf.
+
+   `auchOhneTreffer` laesst einen Entwurf auch dann entstehen, wenn keine
+   einzige Zeile der Vorlage eine Quelle am Geraet findet. Das gilt nur fuer
+   die Wahl von Hand: Genau dafuer ist das Auswahlfeld gedacht — „sonst steht
+   man bei einem Geraet, das noch nichts gesendet hat, ohne jede Moeglichkeit
+   da". Bis 06.09.2026 fiel gerade dieser Fall durch das Sieb unten, und der
+   Wechsel scheiterte still (Ricardo). Die automatische Erkennung ruft ohne
+   die Fahne auf und bleibt unveraendert — dort waere ein Entwurf ohne eine
+   einzige Zeile ein Fehlgriff. */
+export function wendeAn(v, kanal, gruende, instanz, auchOhneTreffer) {
   var auf = function (t) { return setzeInstanz(t, v, instanz); };
   var e = { kanal: kanal, states: [], want: v.geraetetyp, wantAuto: v.geraetetyp,
             alleMuster: false, vorschlag: true, roh: false,
@@ -499,7 +508,7 @@ export function wendeAn(v, kanal, gruende, instanz) {
     });
   });
 
-  return e.states.length ? e : null;
+  return (e.states.length || auchOhneTreffer) ? e : null;
 }
 
 /* Beste Vorlage suchen und anwenden. */
@@ -521,7 +530,7 @@ export function vorschlag(kanal, vorlagenId, instanz) {
     gewaehlt = treffer[0];
   }
 
-  var e = wendeAn(gewaehlt.vorlage, kanal, gewaehlt.gruende, gewaehlt.instanz);
+  var e = wendeAn(gewaehlt.vorlage, kanal, gewaehlt.gruende, gewaehlt.instanz, !!vorlagenId);
   if (!e) { return null; }
   if (!vorlagenId && gewaehlt.passt) {
     var gleichAuf = treffer.filter(function (t) { return t.punkte === gewaehlt.punkte; });

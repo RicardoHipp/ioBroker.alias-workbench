@@ -527,6 +527,7 @@ beide Sprachdateien dieselben Schlüssel tragen.
 ## Änderungen
 
 ### **WORK IN PROGRESS**
+* Der Wechsel auf eine Vorlage, die am Gerät gar keine Quelle findet, greift jetzt, statt still zu scheitern — und das Auswahlfeld zeigt keine Vorlage mehr an, die nicht benutzt wird
 * Quelle tauschen: neben der Kennung der heutigen Quelle steht jetzt ihr Name
 * Datenpunkte ohne Platz im Muster stehen in einer getönten Zeile; die Erklärung steht einmal über der Liste statt in jeder Zeile
 * Wer die Auswahl wechselt, während Änderungen offen sind — im Baum, über „zur Quelle →" oder in der Ordnerübersicht —, wird jetzt gefragt; vorher waren sie kommentarlos weg
