@@ -8,7 +8,7 @@ import { wertVon, jsonFelder, feldAusFormel, feldFormel, feldWert, jsonVon } fro
 import { musterVon, erkenneEntwurf } from './erkennung.js';
 import { musterName } from './musternamen.js';
 import { rollenFeld } from './rollenwahl.js';
-import { opt , quellenAuswahl } from './entwurf.js';
+import { opt , quellenAuswahl, vorlagenAbweichung } from './entwurf.js';
 import { zeichneErgebnis, entwurfAngefasst } from './ergebnis.js';
 
 import { rateBehalten } from './vorschlagen.js';
@@ -27,6 +27,50 @@ export function detailZeile(e, s, idx) {
   /* Wer die Zeile anfasst, hat entschieden - die Vermutung ist damit
      keine mehr und faellt beim Zuruecknehmen nicht mehr weg. */
   function neu() { s.geaendert = true; rateBehalten(s); entwurfAngefasst(); zeichneErgebnis(); }
+
+  /* ---- Wo die Vorlage etwas anderes will --------------------------
+
+     Die zugeklappte Zeile sagt nur, DASS etwas abweicht. Welches Feld,
+     steht hier: die betroffene Zeile wird getoent, ihr Tooltip nennt den
+     Wert der Vorlage, und ein Knopf daneben uebernimmt genau diesen
+     einen Wert (Ricardo, 06.09.2026).
+
+     Vorher gab es die Uebernahme nur als Sammelaktion ueber der Liste —
+     alles oder nichts. Wer eine Rolle angleichen wollte, ohne die
+     Formeln mitzunehmen, musste tippen.
+
+     `geaendert` wird dabei ABSICHTLICH nicht gesetzt: Sonst faellt die
+     Marke an der Zeile weg (sie haengt an `!s.geaendert`), und die
+     restlichen Abweichungen waeren unsichtbar. Wer alle uebernimmt,
+     dessen Marke verschwindet von selbst — dann weicht ja nichts mehr
+     ab. */
+  var abwListe = vorlagenAbweichung(s);
+  var abwNach = {};
+  abwListe.forEach(function (x) { abwNach[x.feld] = x; });
+
+  function zeigeAbweichung(r, felder) {
+    if (!r) { return; }
+    var treffer = felder.filter(function (f) { return abwNach[f]; });
+    if (!treffer.length) { return; }
+    r.classList.add('abw');
+    r.title = treffer.map(function (f) {
+      var v = abwNach[f].vorlage;
+      return v ? tr('detail.tplWants', v) : tr('detail.tplWantsEmpty');
+    }).join(String.fromCharCode(10));
+
+    var b = el('button', 'btn winzig abwnimm', '←');
+    b.title = tr('detail.takeOne');
+    b.addEventListener('click', function (ev) {
+      ev.stopPropagation();
+      var v = s.vorlagenWert;
+      if (!v) { return; }
+      treffer.forEach(function (f) { s[f] = v[f]; });
+      rateBehalten(s);
+      entwurfAngefasst();
+      zeichneErgebnis();
+    });
+    r.appendChild(b);
+  }
 
   /* --- Name, nur bei selbst angelegten --- */
   if (s.manuell) {
@@ -103,7 +147,7 @@ export function detailZeile(e, s, idx) {
     lF.appendChild(selF);
     qf.appendChild(lF);
   }
-  zeile(tr('detail.readsFrom'), qf);
+  zeigeAbweichung(zeile(tr('detail.readsFrom'), qf), ['srcR']);
 
   if (s.frei) {
     var iFrei = el('input', 'tx w');
@@ -143,7 +187,7 @@ export function detailZeile(e, s, idx) {
   if (s.srcW && s.srcW !== s.srcR) {
     wf.appendChild(el('div', 'sugg', tr('detail.separateHint')));
   }
-  zeile(tr('detail.writesTo'), wf);
+  zeigeAbweichung(zeile(tr('detail.writesTo'), wf), ['srcW']);
 
   /* --- Leseformel --- */
   var fb = el('div');
@@ -159,7 +203,7 @@ export function detailZeile(e, s, idx) {
   if ((s.typ || '') === 'boolean') {
     fb.appendChild(el('div', 'sugg', tr('detail.formulaHint')));
   }
-  zeile(tr('detail.formula'), fb);
+  zeigeAbweichung(zeile(tr('detail.formula'), fb), ['f']);
 
   if (s.srcW) {
     var wb = el('div');
@@ -171,7 +215,7 @@ export function detailZeile(e, s, idx) {
     iW.addEventListener('change', function () { s.fw = iW.value.trim(); neu(); });
     wb.appendChild(iW);
     wb.appendChild(el('div', 'sugg', tr('detail.writeFormulaHint')));
-    zeile(tr('detail.writeFormula'), wb);
+    zeigeAbweichung(zeile(tr('detail.writeFormula'), wb), ['fw']);
   }
 
   /* --- Rolle, mit Begründung --- */
@@ -211,7 +255,7 @@ export function detailZeile(e, s, idx) {
     }
     rb.appendChild(hin);
   }
-  zeile(tr('detail.role'), rb);
+  zeigeAbweichung(zeile(tr('detail.role'), rb), ['role']);
 
   /* --- Typ und Anzeige --- */
   var af = el('div', 'fields');
@@ -268,7 +312,7 @@ export function detailZeile(e, s, idx) {
   lC.appendChild(el('span', 'sugg', tr('detail.captionHint')));
   af.appendChild(lC);
 
-  zeile(tr('detail.display'), af);
+  zeigeAbweichung(zeile(tr('detail.display'), af), ['typ', 'unit']);
 
   /* --- Rohwert und Ergebnis --- */
   var a = wertVon(s);

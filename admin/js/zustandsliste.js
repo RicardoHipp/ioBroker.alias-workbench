@@ -378,11 +378,15 @@ export function baueListe(host, e, pl, rateKnopf, musterBlock) {
     if (s.on && !s.geaendert) {
       var abw = vorlagenAbweichung(s);
       if (abw.length) {
-        /* Formeln koennen lang sein - die Marke soll die Zeile nicht
-           sprengen; der Tooltip zeigt alles. */
-        var wert = String(abw[0].vorlage || '—');
-        if (wert.length > 28) { wert = wert.slice(0, 27) + '…'; }
-        var av = el('span', 'geae tplabw', tr('list.tplDiffers', wert));
+        /* Nur, DASS etwas abweicht — nicht was.
+
+           Die Marke nannte frueher den Wert der ersten Abweichung
+           („Vorlage: indicator.lowbat"). Bei mehreren Feldern log sie
+           damit: sie zeigte eines und verschwieg die anderen, und lang
+           war sie obendrein. Welches Feld es betrifft, sieht man
+           aufgeklappt an der Markierung; der Tooltip hier zaehlt alle
+           auf (Ricardo, 06.09.2026). */
+        var av = el('span', 'geae tplabw', tr('list.tplDiffers'));
         av.title = abw.map(function (x) {
           return x.feld + ': ' + (x.jetzt || '—') + '  →  ' + (x.vorlage || '—');
         }).join(String.fromCharCode(10));

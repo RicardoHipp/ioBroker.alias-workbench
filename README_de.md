@@ -529,6 +529,7 @@ beide Sprachdateien dieselben Schlüssel tragen.
 ### **WORK IN PROGRESS**
 * Quelle tauschen: neben der Kennung der heutigen Quelle steht jetzt ihr Name
 * Datenpunkte ohne Platz im Muster stehen in einer getönten Zeile; die Erklärung steht einmal über der Liste statt in jeder Zeile
+* Wo die Vorlage etwas anderes will, ist das betroffene Feld in der aufgeklappten Zeile getönt, der Tooltip nennt den Wert der Vorlage, und ein Knopf übernimmt genau diesen einen Wert
 * Die Rollenliste bietet jetzt auch die weiteren Schreibweisen eines Platzes an (indicator.lowbat neben indicator.maintenance.lowbat) — ohne die veralteten
 
 
