@@ -526,7 +526,7 @@ beide Sprachdateien dieselben Schlüssel tragen.
 
 ## Änderungen
 
-### **WORK IN PROGRESS**
+### 0.8.2
 * Hat eine Quelle schon einen Alias und zeigt das Ziel woandershin, sagt die Werkbank es jetzt: „Für diese Quelle gibt es schon alias.0.… — der bleibt stehen", daneben ein Knopf „stattdessen verlegen …", der den Verlege-Dialog vorbelegt öffnet. Verboten wird nichts — zwei Aliase auf eine Quelle bleiben möglich, nur nicht mehr lautlos
 * Dieselbe Zeile steht im Trockenlauf, direkt über dem, was nicht geschrieben werden kann
 * Das Angebot, den getippten Ordner als Raum zu übernehmen, erscheint jetzt auch an einem Gerät, das schon einen Alias hat — gerade dort, wo der Raum mitsoll

@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "alias-workbench",
-    "version": "0.8.1",
+    "version": "0.8.2",
     "news": {
+      "0.8.2": {
+        "en": "A second alias on the same source is now announced instead of created silently — with a button to move the existing one instead. Switching to a template that finds nothing now works. Roles the workbench adapted are marked and can be taken back. Escape discards in every field of the target bar. New adapter icon.",
+        "de": "Ein zweiter Alias auf dieselbe Quelle wird jetzt angesagt statt stillschweigend angelegt — daneben ein Knopf, der stattdessen den vorhandenen verlegt. Der Wechsel auf eine Vorlage, die nichts findet, greift jetzt. Angepasste Rollen sind markiert und lassen sich zurückholen. Escape verwirft in jedem Feld des Zielbalkens. Neues Adaptersymbol.",
+        "ru": "Второй алиас на тот же источник теперь объявляется, а не создаётся молча — рядом кнопка, чтобы вместо этого перенести существующий. Переключение на шаблон, который ничего не находит, теперь работает. Изменённые роли помечаются и могут быть возвращены. Escape отменяет ввод в каждом поле целевой строки. Новый значок адаптера.",
+        "pt": "Um segundo alias sobre a mesma fonte passa a ser anunciado em vez de criado em silêncio — com um botão para mover o existente. A mudança para um modelo que não encontra nada passa a funcionar. Os papéis adaptados são assinalados e podem ser revertidos. Escape descarta em todos os campos da barra de destino. Novo ícone do adaptador.",
+        "nl": "Een tweede alias op dezelfde bron wordt nu gemeld in plaats van stil aangemaakt — met een knop om de bestaande te verplaatsen. Overschakelen naar een sjabloon dat niets vindt werkt nu. Aangepaste rollen worden gemarkeerd en kunnen worden teruggehaald. Escape verwerpt in elk veld van de doelbalk. Nieuw adapterpictogram.",
+        "fr": "Un deuxième alias sur la même source est désormais signalé au lieu d’être créé en silence — avec un bouton pour déplacer celui qui existe. Le passage à un modèle qui ne trouve rien fonctionne maintenant. Les rôles adaptés sont marqués et peuvent être repris. Échap annule dans chaque champ de la barre de destination. Nouvelle icône d’adaptateur.",
+        "it": "Un secondo alias sulla stessa sorgente viene ora annunciato invece che creato in silenzio — con un pulsante per spostare quello esistente. Il passaggio a un modello che non trova nulla ora funziona. I ruoli adattati sono contrassegnati e si possono ripristinare. Esc annulla in ogni campo della barra di destinazione. Nuova icona dell’adattatore.",
+        "es": "Un segundo alias sobre la misma fuente ahora se anuncia en lugar de crearse en silencio — con un botón para mover el existente. Cambiar a una plantilla que no encuentra nada ya funciona. Los roles adaptados se marcan y se pueden recuperar. Escape descarta en cada campo de la barra de destino. Nuevo icono del adaptador.",
+        "pl": "Drugi alias na to samo źródło jest teraz zapowiadany, a nie tworzony po cichu — obok przycisk, który zamiast tego przenosi istniejący. Przełączenie na szablon, który nic nie znajduje, teraz działa. Zmienione role są oznaczone i można je cofnąć. Escape odrzuca w każdym polu paska celu. Nowa ikona adaptera.",
+        "uk": "Другий аліас на те саме джерело тепер оголошується, а не створюється мовчки — поруч кнопка, щоб натомість перенести наявний. Перемикання на шаблон, який нічого не знаходить, тепер працює. Змінені ролі позначені й їх можна повернути. Escape скасовує в кожному полі цільового рядка. Нова піктограма адаптера.",
+        "zh-cn": "同一数据源上的第二个别名现在会有提示，而不是被静默创建——旁边有按钮可改为移动已有的别名。切换到没有匹配项的模板现在也能生效。被调整过的角色会被标记，并可撤回。Escape 在目标栏的每个字段中都会放弃输入。新的适配器图标。"
+      },
       "0.8.1": {
         "en": "Published through npm trusted publishing (OIDC) — releases are signed with provenance from now on. No functional changes.",
         "de": "Veröffentlichung über npm Trusted Publishing (OIDC) — Ausgaben sind ab jetzt mit Herkunftsnachweis signiert. Keine funktionalen Änderungen.",

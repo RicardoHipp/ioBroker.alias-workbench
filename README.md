@@ -510,7 +510,7 @@ imported, and that both language files carry the same keys.
 
 ## Changelog
 
-### **WORK IN PROGRESS**
+### 0.8.2
 * A source that already has an alias now says so when the target points elsewhere: "This source already has alias.0.… — that one stays where it is", with a button "move it instead …" that opens the move dialog prefilled. Nothing is forbidden — two aliases on one source remain possible, they are no longer silent
 * The same line appears in the dry run, right above what cannot be written
 * The offer to take the typed folder as the room now also appears on a device that already has an alias — the very case where the room is meant to come along
