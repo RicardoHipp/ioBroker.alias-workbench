@@ -224,7 +224,23 @@ export function baueZielleiste(host, e) {
     });
     iO.addEventListener('change', uebernehmen);
     iO.addEventListener('keydown', function (ev) {
-      if (ev.key === 'Escape') { schliessen(); return; }
+      /* Escape heisst „doch nicht" — die Liste zu machen reicht dafuer
+         nicht, der getippte Text muss auch weg. Sonst steht er weiter im
+         Feld und wird beim Verlassen uebernommen: Wer Escape drueckt und
+         danebenklickt, legt den Alias unter einem Ordner an, den er
+         gerade verworfen zu haben glaubte.
+
+         Musterfeld (`musterwahl.js`, ruft mBeschriften) und
+         Aufzaehlungsfeld (`zuordnung.js`, setzt ei.value zurueck) machen
+         das laengst; hier und im Namensfeld daneben fehlte es
+         (Ricardo, 06.09.2026). */
+      if (ev.key === 'Escape') {
+        iO.value = (e.zielOrdner === 'alias.0') ? '' : e.zielOrdner.slice('alias.0.'.length);
+        xBtn.hidden = !iO.value;
+        schliessen();
+        iO.blur();
+        return;
+      }
       if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') {
         if (vlist.hidden) { malen(true); return; }
         ev.preventDefault();
@@ -263,6 +279,14 @@ export function baueZielleiste(host, e) {
     var iN2 = el('input', 'tx');
     iN2.type = 'text';
     iN2.value = e.zielName;
+    /* Dasselbe fuer den Namen. Hier gab es bisher gar keinen
+       Tastenhandler — Escape tat nichts, der getippte Name blieb stehen
+       und wurde beim Verlassen uebernommen (Ricardo, 06.09.2026). */
+    iN2.addEventListener('keydown', function (ev) {
+      if (ev.key !== 'Escape') { return; }
+      iN2.value = e.zielName;
+      iN2.blur();
+    });
     iN2.addEventListener('change', function () {
       /* Dieselbe Regel wie im Vorschlag und im Verlege-Dialog. Die eigene
          Fassung hier liess Punkte und doppelte Unterstriche stehen - ein

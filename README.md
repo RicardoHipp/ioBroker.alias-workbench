@@ -511,6 +511,7 @@ imported, and that both language files carry the same keys.
 ## Changelog
 
 ### **WORK IN PROGRESS**
+* Escape in the target bar's folder and name fields now discards what was typed and puts the old value back; before, the folder field only closed its list and both kept the typed text, which was then taken over on leaving the field
 * Tooling: the identifier check script now resolves a relative acorn path against the working directory
 * A line whose role the workbench adapted on a pattern or template switch now says so: "differs from the stored alias", with the stored value spelled out below the field and a button to take it back
 * A line that takes its name from an existing alias no longer shows a false "no place in the … pattern" mark for one draw

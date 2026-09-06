@@ -527,6 +527,7 @@ beide Sprachdateien dieselben Schlüssel tragen.
 ## Änderungen
 
 ### **WORK IN PROGRESS**
+* Escape verwirft im Zielbalken jetzt auch im Ordner- und im Namensfeld das Getippte und stellt den alten Wert wieder her; vorher schloss das Ordnerfeld nur seine Liste, und beide behielten den getippten Text, der beim Verlassen übernommen wurde
 * Werkzeug: Das Bezeichner-Prüfskript löst einen relativen acorn-Pfad jetzt gegen das Arbeitsverzeichnis auf
 * Eine Zeile, deren Rolle die Werkbank beim Muster- oder Vorlagenwechsel angepasst hat, sagt es jetzt: „weicht vom gespeicherten Alias ab", darunter steht der gespeicherte Wert und ein Knopf holt ihn zurück
 * Eine Zeile, die ihren Namen aus einem vorhandenen Alias übernimmt, trägt nicht mehr einen Zeichenlauf lang die falsche Marke „kein Platz im …-Muster"
