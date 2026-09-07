@@ -631,7 +631,22 @@ export function uebernehmeBestand(e) {
       role: c.role || '', typ: c.type || '', unit: c.unit || '',
       states: c.states || undefined,
       wr: !!c.write,
-      srcR: q.read || '', srcW: q.einfach ? '' : (q.write || ''),
+      srcR: q.read || '',
+      /* Dieselbe Schreibregel wie oben und im Bestandsvorrang.
+
+         Hier stand `q.einfach ? '' : (q.write || '')` - bei schlichtem
+         `alias.id` also immer leer, ohne `common.write` ueberhaupt
+         anzusehen. Es trifft jeden Alias, bei dem MEHRERE Punkte auf
+         denselben Quellpunkt zeigen: die eine Vorschlagszeile bekommt
+         der erste von ihnen, alle weiteren landen hier. Am
+         `alias.0.Badezimmer.Rollladen` zeigen OPEN, CLOSE, SET und pct
+         alle auf `…Bad.level`; CLOSE lief oben durch und behielt seine
+         Schreibquelle, OPEN, SET und pct verloren sie - ein
+         Aktualisieren haette den Rollladen ueber den Alias unfahrbar
+         gemacht (Ricardo, 08.09.2026). */
+      srcW: q.einfach
+        ? ((c.write === true || typeof a.write === 'string') ? (q.write || '') : '')
+        : (q.write || ''),
       f: (typeof a.read === 'string') ? a.read : '',
       fw: (typeof a.write === 'string') ? a.write : '',
       caption: (nm && nm !== n) ? nm : '',
