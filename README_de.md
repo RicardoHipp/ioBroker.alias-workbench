@@ -527,6 +527,7 @@ beide Sprachdateien dieselben Schlüssel tragen.
 ## Änderungen
 
 ### **WORK IN PROGRESS**
+* Ein Alias, dessen Kanal nur als Kennung besteht und nicht als Objekt — der Normalfall, wenn man Punkte von Hand im Admin anlegt —, wird jetzt überhaupt gegen den Bestand gehalten. Vorher stieg der ganze Abgleich dort aus, und ein Aktualisieren hätte Beschriftungen durch die blossen Punktnamen ersetzt und Rollen, Formeln und Schreibrichtung gleich mit
 * Dieselbe Regel fehlte ein drittes Mal, bei Aliasen, deren Punkte mehrfach auf **denselben** Quellpunkt zeigen — ein Rollladen, bei dem OPEN, CLOSE, SET und pct alle auf `level` gehen. Nur der erste behielt seine Schreibquelle, die übrigen verloren sie, und ein Aktualisieren hätte den Rollladen über seinen Alias unfahrbar gemacht
 * Ein vorhandener Alias verliert beim Aktualisieren nicht mehr seine Beschriftung an den blossen Zeilennamen, und aus einem Nur-Lese-Alias wird kein schreibbarer mehr: der Übernahme aus dem Bestand fehlten beide Regeln, die ihr Gegenstück längst hatte. Die falsche Marke „weicht vom gespeicherten Alias ab", die daher rührte, ist damit ebenfalls weg
 * Eine Zeile, die aus dem gespeicherten Alias stammt und aus einer Quelle außerhalb des angeklickten Knotens liest, bekommt jetzt ihren Wert: die Werte wurden geholt, bevor es die Zeile überhaupt gab, und so behauptete sie „Quelle liefert nichts", während der Alias einwandfrei arbeitete. Betraf nur Aliase aus mehreren Adaptern, und nur bis zum zweiten Klick auf den Knoten

@@ -15,7 +15,7 @@ import {
 import { enumVorlagen, katalogFehlt, ikonCache, ikonErlaubt, ikonNachtrag,
          ikonTaugt, vorlageZu, holeIkon } from './katalog.js';
 import { kindZustaende, aliasQuellen, holeEinzelne } from './werte.js';
-import { aliasFuer, zielId } from './entwurf.js';
+import { aliasFuer, zielId, knotenDa } from './entwurf.js';
 import { zeichneErgebnis, entwurfAngefasst, angebotFrisch } from './ergebnis.js';
 
 
@@ -499,7 +499,21 @@ export function setzeZiel(e) {
 export function uebernehmeBestand(e) {
   if (!e.ziel || e.bestandGeprueft === e.ziel) { return; }
   e.bestandGeprueft = e.ziel;
-  if (!S.objects[e.ziel]) { return; }
+  /* Gefragt ist, ob es unter dem Ziel schon einen Alias gibt - nicht, ob
+     das Ziel selbst ein Objekt ist. Das ist nicht dasselbe: wer seine
+     Punkte von Hand im Admin anlegt, bekommt `alias.0.X.Y.PUNKT`, ohne
+     dass `alias.0.X.Y` als Kanal entsteht. Der Baum zeigt so einen
+     Knoten trotzdem, weil er sich aus den Kennungen aufbaut - `knotenDa`
+     ist genau dafuer da.
+
+     Mit der alten Frage stieg der ganze Bestandsabgleich dort aus:
+     `alias.0.Bastelzimmer.Klima` und `alias.0.Solar.Einstellungen.Bilanz`
+     haben kein Kanalobjekt, und ein Aktualisieren haette ihre Namen
+     durch die blossen Punktnamen ersetzt - „Strompreis fuer die
+     Ersparnisrechnung" waere zu „Strompreis_ct_kWh" geworden. Rollen,
+     Formeln und Schreibrichtung waeren ebenso durchgefallen
+     (Ricardo, 08.09.2026). */
+  if (!knotenDa(e.ziel)) { return; }
   /* Im Aliasmodus ist der Entwurf schon der Bestand. */
   if (e.kanal === e.ziel) { return; }
 
