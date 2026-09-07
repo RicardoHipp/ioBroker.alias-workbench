@@ -526,7 +526,7 @@ beide Sprachdateien dieselben Schlüssel tragen.
 
 ## Änderungen
 
-### **WORK IN PROGRESS**
+### 0.8.3
 * Der Trockenlauf zeigt jetzt auch Aufzählungen im Vergleich: die Spalte „bisher" blieb bei ihnen leer, weil Aufzählungen in einem eigenen Vorrat liegen und der Trockenlauf nur im Objektspeicher nachsah. Alles stand als neu da, und man konnte nicht sehen, dass elf von zwölf Mitgliedern längst drin waren
 * …und die Oberfläche kündigt dort kein Anlegen mehr an, wo sie ändert: an so einem Alias sagte der Chip „wird neu angelegt", der Knopf bot „Alias erzeugen", der Trockenlauf hieß „das würde entstehen", Raum und Funktion wurden geraten statt gelesen, übrig gebliebene Punkte fielen nicht auf, und Verlegen, Quelle tauschen und Entfernen taten nichts. Alle fragten, ob der Kanal ein Objekt ist, statt ob es den Alias gibt
 * Ein Alias, dessen Kanal nur als Kennung besteht und nicht als Objekt — der Normalfall, wenn man Punkte von Hand im Admin anlegt —, wird jetzt überhaupt gegen den Bestand gehalten. Vorher stieg der ganze Abgleich dort aus, und ein Aktualisieren hätte Beschriftungen durch die blossen Punktnamen ersetzt und Rollen, Formeln und Schreibrichtung gleich mit
