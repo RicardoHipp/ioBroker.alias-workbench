@@ -533,9 +533,35 @@ export function uebernehmeBestand(e) {
     z.states = c.states || undefined;
     z.f = (typeof a.read === 'string') ? a.read : '';
     z.fw = (typeof a.write === 'string') ? a.write : '';
+    /* Die Beschriftung steht im Alias und gehoert dem Nutzer.
+
+       Sie fehlte hier als einzige - `bestandVorrang` holt sie laengst
+       (`s.caption = txt(c.name)`), diese Zwillingsfunktion nicht. Also
+       blieb `caption` leer, im aufgeklappten Feld stand nichts, und ein
+       „Alias aktualisieren" haette den Namen durch den blossen
+       Zeilennamen ersetzt: aus „Netzbezug (+) / Einspeisung (-)" waere
+       „Bezug" geworden (Ricardo, 07.09.2026, an alias.0.Solar.Netz).
+       Gleicht die Beschriftung dem Zeilennamen, bleibt sie leer - so
+       haelt es der Zweig darunter, der neue Zeilen anlegt, auch. */
+    var nm2 = txt(c.name);
+    z.caption = (nm2 && nm2 !== z.n) ? nm2 : '';
     if (q2.read) { z.srcR = q2.read; }
+    /* Und dieselbe Schreibregel wie im Bestandsvorrang.
+
+       Hier stand die Schreibquelle nur fuer das getrennte Paar; sonst
+       blieb stehen, was der Vorschlag aus der Quelle abgeleitet hatte.
+       Bei einem Nur-Lese-Alias auf einen beschreibbaren Punkt hiess das:
+       die Quelle sagt `write: true`, der Alias sagt `write: false` - und
+       die Werkbank meldete eine Abweichung, die sie selbst erzeugt hatte,
+       und haette den Alias beim Aktualisieren schreibbar gemacht.
+
+       Belegt ist das Schreiben durch `common.write` oder durch eine
+       hinterlegte Schreibformel; bei getrennten Quellen zaehlt, was in
+       `alias.id.write` steht. */
+    z.srcW = q2.einfach
+      ? ((c.write === true || typeof a.write === 'string') ? (q2.write || '') : '')
+      : (q2.write || '');
     if (q2.write && !q2.einfach && q2.write !== q2.read) {
-      z.srcW = q2.write;
       /* Die Gegenzeile eines Paars ist keine eigene mehr - ihre Quelle
          steckt jetzt als Schreibquelle in dieser Zeile. */
       e.states.forEach(function (x) {
