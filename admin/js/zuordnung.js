@@ -14,7 +14,7 @@ import {
 } from './aufzaehlungen.js';
 import { enumVorlagen, katalogFehlt, ikonCache, ikonErlaubt, ikonNachtrag,
          ikonTaugt, vorlageZu, holeIkon } from './katalog.js';
-import { kindZustaende, aliasQuellen } from './werte.js';
+import { kindZustaende, aliasQuellen, holeEinzelne } from './werte.js';
 import { aliasFuer, zielId } from './entwurf.js';
 import { zeichneErgebnis, entwurfAngefasst, angebotFrisch } from './ergebnis.js';
 
@@ -626,6 +626,38 @@ export function uebernehmeBestand(e) {
   if (e.bestandZog && !e.bestandNachgezeichnet) {
     e.bestandNachgezeichnet = true;
     setTimeout(function () { if (S.entwurf === e) { zeichneErgebnis(); } }, 0);
+  }
+
+  /* Und die Werte zu den eben ergaenzten Zeilen nachholen.
+
+     `waehle` holt die Werte, bevor es diese Zeilen ueberhaupt gibt: es
+     fragt den angeklickten Kanal ab und die Quellen, die der Entwurf zu
+     dem Zeitpunkt kennt. Was hier dazukommt, steht nur im Alias - und
+     seine Quelle kann irgendwo liegen. Solange sie unter demselben
+     Knoten liegt, faellt nichts auf, weil `getForeignStates` sie
+     mitgenommen hat. Liegt sie woanders, blieb die Zeile ohne Wert und
+     behauptete „Quelle liefert nichts", obwohl der Alias einwandfrei
+     arbeitet.
+
+     Gefunden am 07.09.2026 (Ricardo) an `alias.0.Solar.Netz`: drei
+     Punkte aus `0_userdata`, zwei aus `mqtt-client`. Nach einem
+     Reiterwechsel und dem ersten Klick auf den Knoten standen genau die
+     beiden mqtt-Zeilen leer; ein zweiter Klick heilte es, weil der Wert
+     dann schon im Vorrat lag. Der Mitschnitt zeigte, dass nach der
+     mqtt-Kennung nie gefragt wurde.
+
+     Einmal je Entwurf, und nur, wenn wirklich etwas fehlt. */
+  if (!e.bestandWerte) {
+    var fehlen = [];
+    e.states.forEach(function (s) {
+      if (s.srcR && !S.werte[s.srcR] && fehlen.indexOf(s.srcR) === -1) { fehlen.push(s.srcR); }
+    });
+    if (fehlen.length) {
+      e.bestandWerte = true;
+      holeEinzelne(fehlen, function (etwas) {
+        if (etwas && S.entwurf === e) { zeichneErgebnis(); }
+      });
+    }
   }
 }
 

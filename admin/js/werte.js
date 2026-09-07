@@ -93,6 +93,26 @@ export function holeWerte(kanal, extraIds, fertig) {
   });
 }
 
+/* Nur diese Kennungen, ohne den Rundumschlag ueber einen Kanal.
+
+   Gebraucht dort, wo Zeilen erst spaeter dazukommen und ihre Quelle
+   ausserhalb des angeklickten Knotens liegt - dann ist der Kanal
+   laengst abgefragt, und ein zweites `getForeignStates` darauf braechte
+   nichts als Last. */
+export function holeEinzelne(ids, fertig) {
+  var eindeutig = {};
+  (ids || []).forEach(function (i) { if (i) { eindeutig[i] = 1; } });
+  var liste = Object.keys(eindeutig);
+  if (!liste.length) { if (typeof fertig === 'function') { fertig(false); } return; }
+  var offen = liste.length, etwas = false;
+  liste.forEach(function (id) {
+    socket.emit('getState', id, function (err, st) {
+      if (!err && st) { S.werte[id] = st; etwas = true; }
+      if (--offen <= 0 && typeof fertig === 'function') { fertig(etwas); }
+    });
+  });
+}
+
 /* ================== Formel und Wert ================== */
 export function auswerten(formel, roh) {
   if (roh === undefined || roh === null) { return { ok: false, txt: tr('detail.noValue') }; }
