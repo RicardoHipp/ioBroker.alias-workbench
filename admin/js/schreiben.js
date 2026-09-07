@@ -164,8 +164,22 @@ export function objektText(o, geordnet) {
   return JSON.stringify(geordnet ? ordne(k, '') : k, null, 2);
 }
 
+/* Der gespeicherte Stand zu einer Kennung.
+
+   Aufzaehlungen liegen nicht in `S.objects` - die Werkbank haelt sie in
+   einem eigenen Vorrat, weil der Admin sie getrennt ausliefert. Der
+   Trockenlauf las trotzdem nur `S.objects`, und so blieb die Spalte
+   „bisher" bei jeder Aufzaehlung leer: verglichen wurde gegen nichts,
+   also stand rechts jede Zeile als neu da - auch die zehn Mitglieder,
+   die laengst drin waren (Ricardo, 08.09.2026). */
+export function bestandsObjekt(id) {
+  if (S.objects[id]) { return S.objects[id]; }
+  if (String(id).indexOf('enum.') === 0 && enums[id]) { return enums[id]; }
+  return null;
+}
+
 export function unveraendert(id, obj) {
-  var alt = S.objects[id];
+  var alt = bestandsObjekt(id);
   if (!alt) { return false; }
   var putz = function (x) {
     var k = JSON.parse(JSON.stringify(x || {}));
@@ -476,7 +490,8 @@ export function zeigeTrockenlauf(alleAusgaenge) {
      verspraeche er eine Wirkung, die er nicht hat. */
   var vergleichbar = liste.filter(function (x) { return !x.neu && !x.gleich; });
   var rohAnders = vergleichbar.some(function (x) {
-    return objektText(S.objects[x.id], false) !== objektText(S.objects[x.id], true)
+    var b0 = bestandsObjekt(x.id);
+    return objektText(b0, false) !== objektText(b0, true)
         || objektText(x.obj, false) !== objektText(x.obj, true);
   });
   if (vergleichbar.length && rohAnders) {
@@ -675,7 +690,7 @@ export function zeigeTrockenlauf(alleAusgaenge) {
       var vgl = el('div', 'dvgl');
       vgl.appendChild(el('span', 'dkopf', tr('write.diffOld')));
       vgl.appendChild(el('span', 'dkopf', tr('write.diffNew')));
-      zeilenVergleich(objektText(S.objects[x.id], !S.trockenRoh),
+      zeilenVergleich(objektText(bestandsObjekt(x.id), !S.trockenRoh),
                       objektText(x.obj, !S.trockenRoh))
         .forEach(function (z) {
           vgl.appendChild(el('span', 'dz l ' + z.art, z.l === undefined ? '' : z.l));
