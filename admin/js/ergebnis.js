@@ -683,16 +683,18 @@ var warumAuf = false;
     var bTpl = $('#btn-tpl');
     if (bTpl) { bTpl.hidden = imAliasmodus; }
     tplKnopf(true);
-    delKnopf(imAliasmodus && !!S.objects[zielId2] && zielId2.indexOf('alias.') === 0);
+    /* Siehe zielleiste: der Alias kann ohne eigenes Kanalobjekt bestehen. */
+    var zielDa = knotenDa(zielId2);
+    delKnopf(imAliasmodus && zielDa && zielId2.indexOf('alias.') === 0);
     if (bd) {
       bd.disabled = false;
       /* Bei mehreren Ausgaengen den Ausgang beim Namen nennen — „für den
          ausgewählten Ausgang" waere lang und sagt weniger. */
       bd.textContent = mehr
-        ? (S.objects[zielId2] ? tr('write.updateNamed', e.zielName) : tr('write.createNamed', e.zielName))
+        ? (zielDa ? tr('write.updateNamed', e.zielName) : tr('write.createNamed', e.zielName))
         : mehrK
-          ? (S.objects[zielId2] ? tr('write.updateAsOne') : tr('write.createAsOne'))
-          : (S.objects[zielId2] ? tr('write.updateAlias') : tr('write.createAlias'));
+          ? (zielDa ? tr('write.updateAsOne') : tr('write.createAsOne'))
+          : (zielDa ? tr('write.updateAlias') : tr('write.createAlias'));
       bd.title = zielId2;
     }
     if (ba) {

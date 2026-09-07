@@ -97,7 +97,7 @@ export function berechnePlaetze(e, haupt) {
      - und die Vorbelegung machte es sofort wieder zunichte: die neun
      uebernommenen Zeilen hatten im thermostat-Muster keinen Platz und
      wurden abgewaehlt, uebrig blieben zwei. */
-  var bestandDa = e.ziel && S.objects[e.ziel] && kindZustaende(e.ziel).length > 0;
+  var bestandDa = !!(e.ziel && kindZustaende(e.ziel).length > 0);
   if (!e.vorbelegt && !e.vorlage && S.current.indexOf('alias.') !== 0) {
     e.vorbelegt = true;
     if (bestandDa) {

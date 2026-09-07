@@ -394,7 +394,11 @@ export function enumZeile(host, e) {
 export function setzeEnums(e) {
   if (e.raum !== undefined && e.funktion !== undefined) { return; }
   var ziel = e.ziel || e.kanal;
-  var da = !!S.objects[ziel];
+  /* Gibt es den Alias, gelten SEINE Aufzaehlungen - auch wenn sein Kanal
+     kein eigenes Objekt hat. Sonst wurden Raum und Funktion geraten und
+     als „vorgeschlagen" angezeigt, obwohl beide laengst zugeordnet
+     waren (Ricardo, 08.09.2026). */
+  var da = knotenDa(ziel);
 
   if (e.raum === undefined) {
     var r = da ? (enumsVon(ziel, 'rooms')[0] || '') : '';
@@ -754,7 +758,7 @@ export function unterschiede(e) {
      Grundlinie — dann zaehlt, was sich gegenueber dem Gespeicherten
      aendert. Gibt es ihn noch nicht, ist es der Vorschlag der
      Vorlage. */
-  var aliasDa = !!S.objects[zielBasis];
+  var aliasDa = knotenDa(zielBasis);
 
   e.states.forEach(function (s) {
     if (s.manuell) { raus.push({ n: s.n || '(ohne Namen)', was: tr('diff.newByHand') }); return; }

@@ -527,6 +527,7 @@ beide Sprachdateien dieselben Schlüssel tragen.
 ## Änderungen
 
 ### **WORK IN PROGRESS**
+* …und die Oberfläche kündigt dort kein Anlegen mehr an, wo sie ändert: an so einem Alias sagte der Chip „wird neu angelegt", der Knopf bot „Alias erzeugen", der Trockenlauf hieß „das würde entstehen", Raum und Funktion wurden geraten statt gelesen, übrig gebliebene Punkte fielen nicht auf, und Verlegen, Quelle tauschen und Entfernen taten nichts. Alle fragten, ob der Kanal ein Objekt ist, statt ob es den Alias gibt
 * Ein Alias, dessen Kanal nur als Kennung besteht und nicht als Objekt — der Normalfall, wenn man Punkte von Hand im Admin anlegt —, wird jetzt überhaupt gegen den Bestand gehalten. Vorher stieg der ganze Abgleich dort aus, und ein Aktualisieren hätte Beschriftungen durch die blossen Punktnamen ersetzt und Rollen, Formeln und Schreibrichtung gleich mit
 * Dieselbe Regel fehlte ein drittes Mal, bei Aliasen, deren Punkte mehrfach auf **denselben** Quellpunkt zeigen — ein Rollladen, bei dem OPEN, CLOSE, SET und pct alle auf `level` gehen. Nur der erste behielt seine Schreibquelle, die übrigen verloren sie, und ein Aktualisieren hätte den Rollladen über seinen Alias unfahrbar gemacht
 * Ein vorhandener Alias verliert beim Aktualisieren nicht mehr seine Beschriftung an den blossen Zeilennamen, und aus einem Nur-Lese-Alias wird kein schreibbarer mehr: der Übernahme aus dem Bestand fehlten beide Regeln, die ihr Gegenstück längst hatte. Die falsche Marke „weicht vom gespeicherten Alias ab", die daher rührte, ist damit ebenfalls weg

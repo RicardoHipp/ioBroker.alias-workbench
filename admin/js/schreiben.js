@@ -19,7 +19,8 @@ import {
   gemeinsameKanaele,
   kennungtauglich,
   entwurfFuer,
-  aliasFuer
+  aliasFuer,
+  knotenDa
 } from './entwurf.js';
 import { zeichneErgebnis } from './ergebnis.js';
 
@@ -301,7 +302,9 @@ export function baueObjekte(e) {
    das wird nicht ungefragt geloescht. */
 export function verwaiste(e) {
   var ziel = e.ziel || e.kanal;
-  if (!S.objects[ziel]) { return []; }
+  /* Auch ohne Kanalobjekt kann darunter ein Alias liegen - dann gibt es
+     dort auch verwaiste Punkte zu finden. */
+  if (!knotenDa(ziel)) { return []; }
   var behalten = {};
   e.states.forEach(function (st) {
     if (st.on && st.n) { behalten[ziel + '.' + st.n] = 1; }
@@ -693,7 +696,7 @@ export function zeigeTrockenlauf(alleAusgaenge) {
   var zt = $('#dry-titel');
   if (zt) {
     var zielName = S.entwurf.ziel || S.entwurf.kanal;
-    zt.textContent = (S.objects[zielName] ? tr('write.dryTitleUpdate') : tr('write.dryTitleCreate')) +
+    zt.textContent = (knotenDa(zielName) ? tr('write.dryTitleUpdate') : tr('write.dryTitleCreate')) +
       (entwuerfe.length > 1 ? tr('write.dryOutputs', entwuerfe.length) : '');
   }
   /* Beim Oeffnen wieder herstellen: der Dialog wird wiederverwendet, und
@@ -729,7 +732,7 @@ function geschwisterVon(ziel) {
 
 export function zeigeLoeschen() {
   var ziel = (S.entwurf && (S.entwurf.ziel || S.entwurf.kanal)) || S.current;
-  if (!ziel || ziel.indexOf('alias.') !== 0 || !S.objects[ziel]) { return; }
+  if (!ziel || ziel.indexOf('alias.') !== 0 || !knotenDa(ziel)) { return; }
   S.loeschZiel = ziel;
   S.loeschAlleAusgaenge = false;
   zeichneLoeschen();

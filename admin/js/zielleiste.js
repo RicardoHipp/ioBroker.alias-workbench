@@ -11,7 +11,7 @@ import { el } from './basis.js';
 import { tr } from './sprache.js';
 import { enumListe } from './aufzaehlungen.js';
 import { enumZeile, setzeZiel } from './zuordnung.js';
-import { aliasFuer, ordnerUnterAlias, kennungtauglich } from './entwurf.js';
+import { aliasFuer, ordnerUnterAlias, kennungtauglich, knotenDa } from './entwurf.js';
 import { zeichneErgebnis, entwurfAngefasst, angebotFrisch } from './ergebnis.js';
 import { zeigeVerlegen } from './schreiben.js';
 
@@ -303,7 +303,10 @@ export function baueZielleiste(host, e) {
     /* Beide Faelle, an einer Stelle. Vorher stand „wird neu angelegt"
        oben im Kopf und „gibt es schon" hier — zwei Formulierungen fuer
        dieselbe Auskunft, an zwei Orten. */
-    var gibtsZiel = !!S.objects[e.ziel];
+    /* `knotenDa`, nicht `S.objects`: ein Alias, dessen Punkte von Hand
+       angelegt wurden, hat oft kein Kanalobjekt - der Chip meldete dort
+       „wird neu angelegt", obwohl geaendert wird (Ricardo, 08.09.2026). */
+    var gibtsZiel = knotenDa(e.ziel);
     var ch2 = el('span', 'chip ' + (gibtsZiel ? 'warn' : 'ok'),
       gibtsZiel ? tr('target.exists') : tr('result.newlyCreated'));
     ch2.style.marginLeft = '7px';

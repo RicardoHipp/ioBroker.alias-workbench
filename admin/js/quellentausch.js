@@ -23,7 +23,7 @@ import { tr, txt } from './sprache.js';
 import { socket } from './verbindung.js';
 import { aliasQuellen, kindZustaende } from './werte.js';
 import { holeZweig, indexNeu } from './objekte.js';
-import { waehle } from './entwurf.js';
+import { waehle, knotenDa } from './entwurf.js';
 import { zeichneErgebnis } from './ergebnis.js';
 
 /* Die Punkte des Alias, die ueberhaupt eine Quelle haben. */
@@ -325,7 +325,7 @@ export function zeigeTausch() {
   /* Wie bei zeigeVerlegen und zeigeLoeschen: an der Quelle ist
      S.current die Quelle, gemeint ist das Ziel des Entwurfs (T1). */
   var ziel = (S.entwurf && (S.entwurf.ziel || S.entwurf.kanal)) || S.current;
-  if (!ziel || ziel.indexOf('alias.') !== 0 || !S.objects[ziel]) { return; }
+  if (!ziel || ziel.indexOf('alias.') !== 0 || !knotenDa(ziel)) { return; }
   S.tauschZiel = ziel;
   S.tauschNeu = '';
   S.tauschWeg = {};
