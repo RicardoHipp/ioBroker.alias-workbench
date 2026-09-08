@@ -530,6 +530,10 @@
   .erow .mk2 { text-align:center; font-size:11px; }
   .erow .mk2.ok { color:var(--ok); } .erow .mk2.bad { color:var(--bad); } .erow .mk2.out { color:var(--ink-3); }
   .erow .nm3 { font-family:var(--mono); font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  /* Traegt die Kennung eine Beschriftung, sagt der Mauszeiger es an:
+     ein zarter Unterstrich, wie bei einer Abkuerzung. Sonst raet
+     niemand, dass dort ein Hinweis haengt. */
+  .erow .nm3[title] { text-decoration:underline dotted var(--line-strong); text-underline-offset:3px; }
   .erow .nm3 em { font-style:normal; font-weight:400; color:var(--ink-3); font-size:10.5px; margin-left:6px; }
   .erow .nm3 .hand { font-family:var(--sans); font-size:8px; font-weight:700; letter-spacing:.05em;
                      text-transform:uppercase; background:var(--surface-3); color:var(--ink-3);

@@ -391,10 +391,16 @@ export function baueListe(host, e, pl, rateKnopf, musterBlock) {
     row.appendChild(mk);
 
     var n3 = el('span', 'nm3', s.n || tr('list.newPoint'));
-    /* Die Beschriftung (kuenftiger Anzeigename) steht gedaempft hinter
-       der Kennung - wie die Namen im Baum. Vorher tippte man sie im
-       Detail und sah nirgends eine Wirkung. */
-    if (s.caption && s.caption !== s.n) { n3.appendChild(el('span', 'nam', s.caption)); }
+    /* Die Beschriftung (kuenftiger Anzeigename) steht im Hinweis an der
+       Kennung, nicht in der Zeile.
+
+       Sie stand einmal gedaempft dahinter - wie die Namen im Baum, und
+       aus demselben Grund: wer sie im Detail tippt, soll eine Wirkung
+       sehen. Seit die Zeile auch Marken traegt („aus mqtt-client.0",
+       „geaendert", „weicht ab") wurde sie damit zu voll, und Rolle und
+       Wert rutschten nach rechts weg (Ricardo, 08.09.2026). Die Kennung
+       traegt jetzt den Hinweis; sichtbar bleibt sie im Detail. */
+    if (s.caption && s.caption !== s.n) { n3.title = s.caption; }
     if (s.manuell) { n3.appendChild(el('span', 'hand', tr('list.byHand'))); }
     if (s.geaendert) { n3.appendChild(el('span', 'geae', tr('list.changed'))); }
     /* Was die Vorlage anders will, steht an der Zeile - sonst sieht man
