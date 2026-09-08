@@ -27,6 +27,7 @@ import {
   mitNachfrage,
   geraeteDarunter,
   aliasFuer,
+  quellenVerteilung,
   tipptGerade,
   opt,
   vorlagenAbweichung,
@@ -334,15 +335,85 @@ var warumAuf = false;
       if (sprungZiel && quelleVon(sprungZiel) !== S.current) { sprungZiel = null; }
       sprungModus = 'aliase';
     }
+    /* Liest der Alias aus mehr als einem Knoten, gehoert das in den Kopf.
+
+       `quelleVon` entscheidet nach Mehrheit und wirft den Rest weg. Das
+       ist als Sprungziel richtig, als Auskunft aber die halbe Wahrheit:
+       an `alias.0.Solar.Netz` - drei Punkte aus `0_userdata`, zwei aus
+       `mqtt-client` - stand nirgends, dass es zwei Quellen sind. Man
+       musste jede Zeile aufklappen, um es zu sehen (Ricardo,
+       08.09.2026). */
+    var verteilung = (S.current.indexOf('alias.') === 0) ? quellenVerteilung(S.current) : [];
+    var mehrQuellen = verteilung.length > 1;
     if (knotenDa(sprungZiel)) {
       var zumAlias = (sprungModus === 'aliase');
       sprung = el('button', 'btn schmal sprungknopf',
         (zumAlias ? tr('result.toAlias') : tr('result.toSource')) + '  \u2192');
       sprung.title = (zumAlias ? tr('result.toAliasHint') : tr('result.toSourceHint'))
-        + '\n' + sprungZiel;
+        + String.fromCharCode(10) + sprungZiel;
       var ziel0 = sprungZiel, modus0 = sprungModus;
-      sprung.addEventListener('click', function () { springeZu(ziel0, modus0); });
-      namensZeile.appendChild(sprung);
+      if (mehrQuellen) {
+        /* Die Auswahl haengt am Body, nicht am Kopf.
+
+           Erst stand sie neben dem Knopf - und war sofort wieder weg:
+           bei `alias.0.Solar.Netz` laeuft im Sekundentakt ein neuer
+           Messwert ein, jeder zeichnet die rechte Seite neu, und mit ihr
+           verschwand die eben geoeffnete Liste. Am Body ueberlebt sie
+           das; ihre Stelle bekommt sie aus der Lage des Knopfes.
+
+           `mousedown` statt `click`, wie bei den Vorschlagslisten der
+           Zielleiste: der Mausdruck kommt vor dem Neuzeichnen. */
+        var listeQ = null;
+        var zuQ = function () {
+          if (listeQ && listeQ.parentNode) { listeQ.parentNode.removeChild(listeQ); }
+          listeQ = null;
+        };
+        sprung.addEventListener('mousedown', function (ev) {
+          ev.preventDefault();
+          ev.stopPropagation();
+          if (listeQ) { zuQ(); return; }
+          listeQ = el('div', 'vorschlaege sprungliste');
+          listeQ.appendChild(el('div', 'vzkopf', tr('result.pickSource')));
+          verteilung.forEach(function (q) {
+            var z = el('div', 'vz' + (q.id === ziel0 ? ' gewaehlt' : ''));
+            z.appendChild(el('span', null, q.id));
+            z.appendChild(el('span', 'zq', '  \u00b7  ' + q.n));
+            z.addEventListener('mousedown', function (ev2) {
+              ev2.preventDefault();
+              ev2.stopPropagation();
+              zuQ();
+              springeZu(q.id, modus0);
+            });
+            listeQ.appendChild(z);
+          });
+          var r = sprung.getBoundingClientRect();
+          listeQ.style.position = 'fixed';
+          listeQ.style.left = Math.round(r.left) + 'px';
+          listeQ.style.top = Math.round(r.bottom + 2) + 'px';
+          listeQ.hidden = false;
+          document.body.appendChild(listeQ);
+        });
+        /* Woanders hin gedrueckt heisst: doch nicht. Einmal registriert,
+           nicht bei jedem Neuzeichnen - sonst haeuft sich der Zuhoerer. */
+        if (!S.sprungZuhoerer) {
+          S.sprungZuhoerer = true;
+          document.addEventListener('mousedown', function () {
+            var offen = document.querySelector('.sprungliste');
+            if (offen && offen.parentNode) { offen.parentNode.removeChild(offen); }
+          });
+        }
+        namensZeile.appendChild(sprung);
+      } else {
+        sprung.addEventListener('click', function () { springeZu(ziel0, modus0); });
+        namensZeile.appendChild(sprung);
+      }
+    }
+    if (mehrQuellen) {
+      var chQ = el('span', 'chip mut quellenzahl', tr('result.sourceCount', verteilung.length));
+      chQ.title = tr('result.sourceCountHint') + String.fromCharCode(10, 10) +
+        verteilung.map(function (q) { return q.id + '  \u00b7  ' + q.n; })
+          .join(String.fromCharCode(10));
+      namensZeile.appendChild(chQ);
     }
     links.appendChild(sub);
     head.appendChild(links);

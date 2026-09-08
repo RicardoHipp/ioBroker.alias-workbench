@@ -395,6 +395,24 @@
 
   /* „Vorlage: x" an einer Zeile, deren Bestand von der Vorlage abweicht -
      gedaempfter als die Marke „geaendert", es ist ja nur ein Angebot. */
+  /* Die Quelle dieses Punktes liegt woanders als die der uebrigen.
+
+     Keine Warnung, eine Auskunft: gedeckte Farbe, gestrichelter Rahmen -
+     unterscheidbar von „geaendert" (Akzent) und „weicht ab" (Warnung),
+     und vertraeglich mit der Toenung „kein Platz im Muster", die
+     unabhaengig davon an derselben Zeile stehen kann. */
+  .erow .geae.fremdquelle {
+    color:var(--ink-2); background:transparent;
+    border-style:dashed; border-color:var(--line-strong);
+  }
+  /* Der Kopfchip „n Quellen" und die Auswahlliste am Sprungknopf. */
+  .chip.quellenzahl { cursor:help; }
+  .sprungwahl { position:relative; display:inline-flex; }
+  .vorschlaege.sprungliste { min-width:300px; max-width:520px; z-index:60; }
+  .vorschlaege .vzkopf {
+    padding:4px 9px; font-size:11px; color:var(--ink-3);
+    border-bottom:1px solid var(--line);
+  }
   .erow .geae.tplabw { color:var(--ink-3); background:var(--surface-2); }
   .leerhilfe .lh2 { margin-top:11px; font-size:12px; color:var(--ink-3); }
 

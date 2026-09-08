@@ -215,6 +215,39 @@ export function knotenDa(id) {
   return kindZustaende(id).length > 0;
 }
 
+/* Aus welchen Knoten liest dieser Alias, und wie oft aus jedem?
+
+   Dieselbe Zaehlung wie in `quelleVon` - nur dass die dort das Ergebnis
+   auf einen Sieger eindampft. Fuer die Anzeige zaehlt aber gerade das,
+   was dabei verlorengeht: dass es mehr als einen gibt. Ricardos
+   `alias.0.Solar.Netz` liest drei Punkte aus `0_userdata` und zwei aus
+   `mqtt-client`; der Sprungknopf fuehrte zur Mehrheit und sagte kein
+   Wort ueber den Rest (Ricardo, 08.09.2026).
+
+   Absteigend nach Anzahl, bei Gleichstand alphabetisch - sonst
+   wechselte die Reihenfolge bei jedem Neuzeichnen. */
+export function quellenVerteilung(aliasId) {
+  var zaehler = {};
+  kindZustaende(aliasId).forEach(function (id) {
+    var q = aliasQuellen(S.objects[id]);
+    /* Einmal je DATENPUNKT, nicht je Quellangabe. `quelleVon` zaehlt
+       Lese- und Schreibquelle getrennt - fuer den Mehrheitsentscheid
+       gleichgueltig, fuer eine Anzeige nicht: an einem Alias mit fuenf
+       Punkten stand „6 und 4" statt „3 und 2". Wo Lesen und Schreiben
+       auseinandergehen, zaehlt die Lesequelle: aus ihr kommt der Wert,
+       den man sieht. */
+    var x = q.read || q.write;
+    if (!x) { return; }
+    var t = String(x).split('.');
+    t.pop();
+    var eltern = t.join('.');
+    if (eltern) { zaehler[eltern] = (zaehler[eltern] || 0) + 1; }
+  });
+  return Object.keys(zaehler)
+    .map(function (k) { return { id: k, n: zaehler[k] }; })
+    .sort(function (a, b) { return (b.n - a.n) || (a.id < b.id ? -1 : 1); });
+}
+
 export function quelleVon(aliasId) {
   var o = S.objects[aliasId];
   var q = o && o.native && o.native.quelle;

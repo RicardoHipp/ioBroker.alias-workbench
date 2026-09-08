@@ -11,7 +11,7 @@ import { el } from './basis.js';
 import { tr } from './sprache.js';
 import { erkenneEntwurf, musterVon, rolleVonPlatz } from './erkennung.js';
 import { kindZustaende, wertVon, fmt } from './werte.js';
-import { steuerKanaele, vorlagenAbweichung, bestandsAbweichung, waehle } from './entwurf.js';
+import { steuerKanaele, vorlagenAbweichung, bestandsAbweichung, waehle, quelleVon } from './entwurf.js';
 import { musterName } from './musternamen.js';
 import { detailZeile } from './detail.js';
 import { rateAnzahl, rateZurueck, rateZurueckEine, rateBehalten } from './vorschlagen.js';
@@ -98,6 +98,8 @@ export function berechnePlaetze(e, haupt) {
      uebernommenen Zeilen hatten im thermostat-Muster keinen Platz und
      wurden abgewaehlt, uebrig blieben zwei. */
   var bestandDa = !!(e.ziel && kindZustaende(e.ziel).length > 0);
+
+
   if (!e.vorbelegt && !e.vorlage && S.current.indexOf('alias.') !== 0) {
     e.vorbelegt = true;
     if (bestandDa) {
@@ -133,6 +135,21 @@ export function berechnePlaetze(e, haupt) {
 }
 
 export function baueListe(host, e, pl, rateKnopf, musterBlock) {
+  /* Woher liest dieser Alias ueberwiegend?
+
+     Nur dazu, um die Ausreisser zu erkennen: Punkte, die aus einem
+     anderen Knoten lesen als der Rest. An `alias.0.Solar.Netz` sind das
+     die zwei mqtt-Zeilen unter drei aus `0_userdata` - bisher sah man
+     das erst beim Aufklappen (Ricardo, 08.09.2026).
+
+     Im Aliasmodus zaehlt die Mehrheit (dieselbe Rechnung wie beim
+     Sprungknopf), an einer Quelle ist es schlicht der angeklickte
+     Knoten. Verglichen wird ueber den Praefix, nicht auf Gleichheit:
+     bei Homematic liegen die Punkte in Kanaelen unter dem Geraet. */
+  var hauptQuelle = (S.current.indexOf('alias.') === 0)
+    ? (quelleVon(S.current) || '')
+    : (e.kanal || '');
+
   var platzVon = pl.platzVon, platzAnzahl = pl.platzAnzahl;
 
   /* --- Gerätekarte ---
@@ -421,6 +438,21 @@ export function baueListe(host, e, pl, rateKnopf, musterBlock) {
     /* Die Marke ist zugleich der Griff: solange sie steht, ist die Zeile
        unbestaetigt und faellt beim Zuruecknehmen. Ein Haken laesst sie
        verschwinden, ein Kreuz nimmt genau diese eine zurueck. */
+    /* Der Punkt liest woanders her als der Rest.
+
+       Bewusst eine Marke und keine Flaechentoenung: die Flaeche ist
+       schon vergeben („kein Platz im Muster"), und beides gilt
+       unabhaengig voneinander - eine Zeile kann getoent und fremd sein.
+       Die Marke traegt nur den Adapter, nicht die ganze Kennung; die
+       volle steht im Hinweis. Und sie ist ruhig gehalten: sie meldet
+       keinen Fehler, sie sagt, woher der Wert kommt. */
+    if (hauptQuelle && s.on && s.srcR &&
+        s.srcR.indexOf(hauptQuelle + '.') !== 0 && s.srcR !== hauptQuelle) {
+      var kurzQ = s.srcR.split('.').slice(0, 2).join('.');
+      var fq = el('span', 'geae fremdquelle', tr('list.otherSource', kurzQ));
+      fq.title = tr('list.otherSourceHint', hauptQuelle, s.srcR);
+      n3.appendChild(fq);
+    }
     if (s.geraten) {
       n3.appendChild(el('span', 'rat', tr('guess.mark')));
       var jaK = el('span', 'ratknopf', '\u2713');

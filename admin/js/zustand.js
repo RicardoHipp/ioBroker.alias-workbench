@@ -39,6 +39,9 @@ export var S = {
   loeschZiel: null,
   loeschAlleAusgaenge: false,
   verlegeZiel: null,
+  /* Einmal registrierter Schliesser fuer die Quellenauswahl am
+     Sprungknopf - siehe ergebnis.js. */
+  sprungZuhoerer: false,
   VORLAGEN: [],
   vorlagenUnvollstaendig: false,
   fokusOrdnerfeld: false,
