@@ -243,9 +243,27 @@ export function quellenVerteilung(aliasId) {
     var eltern = t.join('.');
     if (eltern) { zaehler[eltern] = (zaehler[eltern] || 0) + 1; }
   });
-  return Object.keys(zaehler)
-    .map(function (k) { return { id: k, n: zaehler[k] }; })
-    .sort(function (a, b) { return (b.n - a.n) || (a.id < b.id ? -1 : 1); });
+  var sortiere = function (liste) {
+    return liste.sort(function (a, b) { return (b.n - a.n) || (a.id < b.id ? -1 : 1); });
+  };
+  var liste = sortiere(Object.keys(zaehler).map(function (k) { return { id: k, n: zaehler[k] }; }));
+
+  /* Sparten desselben Geraets sind keine zweite Quelle.
+
+     Ein Tasmota-Alias liest aus `…Licht.stat` und `…Licht.tele` - das
+     sind zwei Knoten, aber ein Geraet, und „2 Quellen" waere dort
+     schlicht falsch. Alles, was unterhalb der Hauptquelle liegt, zaehlt
+     deshalb zu ihr. Uebrig bleiben nur eigene Zweige - bei Ricardos
+     `alias.0.Solar.Netz` `0_userdata` und `mqtt-client` (08.09.2026). */
+  var haupt = quelleVon(aliasId);
+  if (!haupt) { return liste; }
+  var raus = [], hauptN = 0;
+  liste.forEach(function (q) {
+    if (q.id === haupt || q.id.indexOf(haupt + '.') === 0) { hauptN += q.n; return; }
+    raus.push(q);
+  });
+  if (hauptN) { raus.push({ id: haupt, n: hauptN }); }
+  return sortiere(raus);
 }
 
 export function quelleVon(aliasId) {

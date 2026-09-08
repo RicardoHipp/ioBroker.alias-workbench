@@ -332,7 +332,28 @@ var warumAuf = false;
          erschien dadurch an jeder Sparte und jedem Unterkanal, also an
          `…RGB.stat` und `…RGB.tele` ebenso wie am Geraet. Der Knopf
          gehoert nur dorthin, wo der Alias auch wirklich herkommt. */
-      if (sprungZiel && quelleVon(sprungZiel) !== S.current) { sprungZiel = null; }
+      /* Rueckprobe, aber nicht zu streng.
+
+         Frueher galt nur: `quelleVon(alias) === S.current`. Bei einem
+         Alias aus zwei Zweigen fiel der Rueckweg damit weg - wer ueber
+         die neue Quellenauswahl auf `…Stromzaehler.stat` sprang, stand
+         dort ohne Knopf zurueck (Ricardo, 08.09.2026).
+
+         Jetzt gilt der Knopf auch an einer Nebenquelle - aber nur, wenn
+         sie GENAU in der Verteilung steht und einen eigenen Zweig
+         bildet. Sparten unterhalb der Hauptquelle bleiben damit weiter
+         aussen vor: `…Licht.stat` und `…Licht.tele` liegen beide unter
+         `…Bastelzimmer_Licht`, und der Knopf gehoert ans Geraet, nicht
+         an jede Sparte. Knoten weiter oben (`…Strom`) stehen gar nicht
+         erst in der Verteilung. */
+      if (sprungZiel) {
+        var haupt = quelleVon(sprungZiel);
+        if (haupt !== S.current) {
+          var drin = quellenVerteilung(sprungZiel).some(function (q) { return q.id === S.current; });
+          var unterHaupt = !!haupt && S.current.indexOf(haupt + '.') === 0;
+          if (!drin || unterHaupt) { sprungZiel = null; }
+        }
+      }
       sprungModus = 'aliase';
     }
     /* Liest der Alias aus mehr als einem Knoten, gehoert das in den Kopf.
@@ -343,7 +364,13 @@ var warumAuf = false;
        `mqtt-client` - stand nirgends, dass es zwei Quellen sind. Man
        musste jede Zeile aufklappen, um es zu sehen (Ricardo,
        08.09.2026). */
-    var verteilung = (S.current.indexOf('alias.') === 0) ? quellenVerteilung(S.current) : [];
+    /* Der Chip gilt fuer den Alias, gleich von welcher Seite man ihn
+       ansieht: am Alias selbst und an jeder seiner Quellen. Wer an einer
+       Nebenquelle steht, soll sehen, dass er nur einen Teil vor sich
+       hat. */
+    var quellAlias = (S.current.indexOf('alias.') === 0) ? S.current
+      : (sprungZiel && sprungModus === 'aliase' ? sprungZiel : null);
+    var verteilung = quellAlias ? quellenVerteilung(quellAlias) : [];
     var mehrQuellen = verteilung.length > 1;
     if (knotenDa(sprungZiel)) {
       var zumAlias = (sprungModus === 'aliase');

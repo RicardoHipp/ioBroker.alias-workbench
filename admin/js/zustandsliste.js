@@ -137,18 +137,25 @@ export function berechnePlaetze(e, haupt) {
 export function baueListe(host, e, pl, rateKnopf, musterBlock) {
   /* Woher liest dieser Alias ueberwiegend?
 
-     Nur dazu, um die Ausreisser zu erkennen: Punkte, die aus einem
-     anderen Knoten lesen als der Rest. An `alias.0.Solar.Netz` sind das
+     Nur dazu, um die Ausreisser zu erkennen: Zeilen, die aus einem
+     anderen Zweig lesen als der Rest. An `alias.0.Solar.Netz` sind das
      die zwei mqtt-Zeilen unter drei aus `0_userdata` - bisher sah man
      das erst beim Aufklappen (Ricardo, 08.09.2026).
 
-     Im Aliasmodus zaehlt die Mehrheit (dieselbe Rechnung wie beim
-     Sprungknopf), an einer Quelle ist es schlicht der angeklickte
-     Knoten. Verglichen wird ueber den Praefix, nicht auf Gleichheit:
-     bei Homematic liegen die Punkte in Kanaelen unter dem Geraet. */
-  var hauptQuelle = (S.current.indexOf('alias.') === 0)
-    ? (quelleVon(S.current) || '')
-    : (e.kanal || '');
+     Bezugspunkt ist immer die HAUPTQUELLE DES ALIAS, nicht der Knoten,
+     an dem man gerade steht. Sonst saehe dieselbe Zeile je nach
+     Blickwinkel anders aus: an `…Stromzaehler.stat` waeren die drei
+     userdata-Zeilen markiert, am Alias die zwei mqtt-Zeilen. Und an
+     einer Sparte (`…Licht.stat`) haetten alle Zeilen aus `…Licht.tele`
+     eine Marke bekommen, obwohl es dasselbe Geraet ist.
+
+     Verglichen wird ueber den Praefix, nicht auf Gleichheit: bei
+     Homematic liegen die Punkte in Kanaelen unter dem Geraet, bei
+     Tasmota in Sparten. */
+  var aliasFuerMarke = (S.current.indexOf('alias.') === 0)
+    ? S.current
+    : (e.ziel && kindZustaende(e.ziel).length ? e.ziel : '');
+  var hauptQuelle = aliasFuerMarke ? (quelleVon(aliasFuerMarke) || '') : (e.kanal || '');
 
   var platzVon = pl.platzVon, platzAnzahl = pl.platzAnzahl;
 
