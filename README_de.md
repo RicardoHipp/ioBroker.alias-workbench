@@ -587,7 +587,7 @@ beide Sprachdateien dieselben Schlüssel tragen.
 
 ## Änderungen
 
-### **WORK IN PROGRESS**
+### 0.9.0
 * Die Rollenliste ist wieder vollständig: der Detektor liefert die Ausdrücke seiner Plätze als Text MIT Schrägstrichen (`/^indicator…$/`), nicht als regulären Ausdruck. Wer sie für Teil des Ausdrucks hält, findet danach weder Anfang noch Ende — 210 statt 232 Rollen, und ausgerechnet `indicator.lowbat` fehlte, die Rolle, die jedes Homematic-Gerät schreibt. In der Rollenwahl stand ohne Suchtext deshalb kein einziger Musterplatz mehr, sondern nur die Zeile „alle Rollen anzeigen"
 * Aus derselben Ursache bekam BRIGHTNESS in sechs Farblicht-Mustern gar keine Rolle mehr — der Platz ließ sich beliebig oft zufügen und war auf keinem Weg zu befüllen. Es waren sieben Stellen im Code, die einen Platzausdruck lasen; sie gehen jetzt alle durch dieselbe Funktion, und ein Test prüft die Rollenliste gegen das, was der Detektor wirklich liefert, statt gegen selbstgeschriebene Ausdrücke
 * Die Abweichungskarte sagt wieder die Wahrheit, wenn man einen Punkt abwählt: sie behauptete „hätte ohnehin nicht gezählt" auch über Punkte, die im Muster sehr wohl einen Platz haben (gleiche Ursache)
