@@ -192,6 +192,7 @@
   "list.reset": "zurücksetzen",
   "list.resetHint": "Verwirft alle Änderungen dieser Sitzung — Haken, Rollen, Formeln, Quellen — und zeigt wieder den Stand, wie er im System steht.",
   "list.sendPointMissing": "Sendepunkt fehlt noch",
+  "list.sourceHint": "Dieser Punkt liest aus {0}.",
   "list.sourceMissing": "Quelle fehlt",
   "list.tpl": "Vorlage",
   "list.tplDiffers": "weicht von der Vorlage ab",

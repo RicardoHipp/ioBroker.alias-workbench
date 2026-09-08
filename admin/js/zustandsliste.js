@@ -11,7 +11,7 @@ import { el } from './basis.js';
 import { tr } from './sprache.js';
 import { erkenneEntwurf, musterVon, rolleVonPlatz } from './erkennung.js';
 import { kindZustaende, wertVon, fmt } from './werte.js';
-import { steuerKanaele, vorlagenAbweichung, bestandsAbweichung, waehle, quelleVon, quelleHier } from './entwurf.js';
+import { steuerKanaele, vorlagenAbweichung, bestandsAbweichung, waehle, quelleHier, quellenVerteilung } from './entwurf.js';
 import { musterName } from './musternamen.js';
 import { detailZeile } from './detail.js';
 import { rateAnzahl, rateZurueck, rateZurueckEine, rateBehalten } from './vorschlagen.js';
@@ -149,17 +149,23 @@ export function baueListe(host, e, pl, rateKnopf, musterBlock) {
      Alias selbst steht man nirgends; dort gilt die Hauptquelle. Findet
      sich gar kein Bezug (ein Sammelknoten weit ueber den Quellen), wird
      nichts markiert - eine Marke ohne Standpunkt sagt nichts. */
-  var aliasFuerMarke = (S.current.indexOf('alias.') === 0)
+  var istAliasSicht = S.current.indexOf('alias.') === 0;
+  var aliasFuerMarke = istAliasSicht
     ? S.current
     : (e.ziel && kindZustaende(e.ziel).length ? e.ziel : '');
-  var hauptQuelle = '';
-  if (aliasFuerMarke) {
-    hauptQuelle = (S.current.indexOf('alias.') === 0)
-      ? (quelleVon(aliasFuerMarke) || '')
-      : (quelleHier(aliasFuerMarke, S.current) || '');
-  } else {
-    hauptQuelle = e.kanal || '';
-  }
+  /* Am Alias steht man nirgends - dort tragen ALLE Zeilen ihren Tag,
+     sobald es mehrere Quellen gibt.
+
+     Vorher galt auch dort die Mehrheit, und nur die Minderheit war
+     markiert. Das ist willkuerlich: bei drei zu drei entscheidet, wessen
+     Punkt alphabetisch zuerst kommt, und ein Umbenennen kippt die
+     Markierung auf die andere Haelfte (Ricardo, 08.09.2026). Traegt
+     jede Zeile ihren Tag, gibt es keine Mehrheit mehr zu bestimmen. */
+  var vert = aliasFuerMarke ? quellenVerteilung(aliasFuerMarke) : [];
+  var alleTaggen = istAliasSicht && vert.length > 1;
+  var hauptQuelle = aliasFuerMarke
+    ? (istAliasSicht ? '' : (quelleHier(aliasFuerMarke, S.current) || ''))
+    : (e.kanal || '');
 
   var platzVon = pl.platzVon, platzAnzahl = pl.platzAnzahl;
 
@@ -463,11 +469,31 @@ export function baueListe(host, e, pl, rateKnopf, musterBlock) {
        Die Marke traegt nur den Adapter, nicht die ganze Kennung; die
        volle steht im Hinweis. Und sie ist ruhig gehalten: sie meldet
        keinen Fehler, sie sagt, woher der Wert kommt. */
-    if (hauptQuelle && s.on && s.srcR &&
-        s.srcR.indexOf(hauptQuelle + '.') !== 0 && s.srcR !== hauptQuelle) {
-      var kurzQ = s.srcR.split('.').slice(0, 2).join('.');
+    var vonHier = !!hauptQuelle && s.srcR &&
+      (s.srcR === hauptQuelle || s.srcR.indexOf(hauptQuelle + '.') === 0);
+    if (s.on && s.srcR && (alleTaggen || (hauptQuelle && !vonHier))) {
+      /* Der Tag nennt die QUELLE, nicht den Adapter.
+
+         Er trug erst nur `mqtt-client.0` - was reichte, solange nur die
+         Ausreisser markiert waren. Seit am Alias jede Zeile einen Tag
+         traegt, muss er unterscheiden: `alias.0.Solar.Balkon.Einspeisung`
+         liest aus zwei mqtt-Quellen, und beide hiessen „aus
+         mqtt-client.0" (08.09.2026).
+
+         Gezeigt werden die letzten zwei Glieder des Quellknotens -
+         `Solar_Balkon`, `HM600.ch0`, `Balkon.Einspeisung`. Kurz genug
+         fuer die Zeile, lang genug zum Unterscheiden; die volle Kennung
+         steht im Hinweis. */
+      var qHier = aliasFuerMarke ? (quelleHier(aliasFuerMarke, s.srcR) || '') : '';
+      var basis = qHier || s.srcR.slice(0, s.srcR.lastIndexOf('.'));
+      var teileQ = basis.split('.');
+      var kurzQ = teileQ.slice(Math.max(2, teileQ.length - 2)).join('.') || basis;
       var fq = el('span', 'geae fremdquelle', tr('list.otherSource', kurzQ));
-      fq.title = tr('list.otherSourceHint', hauptQuelle, s.srcR);
+      /* Am Alias ist es eine blosse Herkunftsangabe, an einer Quelle
+         ein Unterschied - der Hinweis sagt beides jeweils richtig. */
+      fq.title = alleTaggen
+        ? tr('list.sourceHint', s.srcR)
+        : tr('list.otherSourceHint', hauptQuelle, s.srcR);
       n3.appendChild(fq);
     }
     if (s.geraten) {

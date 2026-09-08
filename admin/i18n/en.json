@@ -192,6 +192,7 @@
   "list.reset": "reset",
   "list.resetHint": "Discards every change made here — checkboxes, roles, formulas, sources — and shows the state as stored again.",
   "list.sendPointMissing": "send datapoint not created yet",
+  "list.sourceHint": "This point reads from {0}.",
   "list.sourceMissing": "source missing",
   "list.tpl": "template",
   "list.tplDiffers": "differs from the template",

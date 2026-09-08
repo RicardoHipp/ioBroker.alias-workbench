@@ -406,7 +406,12 @@ var warumAuf = false;
           listeQ = el('div', 'vorschlaege sprungliste');
           listeQ.appendChild(el('div', 'vzkopf', tr('result.pickSource')));
           verteilung.forEach(function (q) {
-            var z = el('div', 'vz' + (q.id === ziel0 ? ' gewaehlt' : ''));
+            /* Keine Zeile hervorheben. Die Hervorhebung meinte „das ist
+               die wichtigste" - eine Aussage, die bei drei zu drei
+               niemand treffen kann und die auch sonst niemand braucht:
+               alle Quellen des Alias sind gleichberechtigt (Ricardo,
+               08.09.2026). */
+            var z = el('div', 'vz');
             z.appendChild(el('span', null, q.id));
             z.appendChild(el('span', 'zq', '  \u00b7  ' + q.n));
             z.addEventListener('mousedown', function (ev2) {
