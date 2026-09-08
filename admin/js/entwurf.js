@@ -263,7 +263,43 @@ export function quellenVerteilung(aliasId) {
     raus.push(q);
   });
   if (hauptN) { raus.push({ id: haupt, n: hauptN }); }
-  return sortiere(raus);
+
+  /* Dasselbe noch einmal unter den Nebenquellen.
+
+     Der Schritt darueber fasst nur gegen die HAUPTquelle zusammen. Bei
+     `alias.0.Solar.Balkon.Einspeisung` liegen aber zwei der Nebenquellen
+     ebenfalls beieinander - `…Solar_Balkon.stat` und `…Solar_Balkon.tele`
+     sind ein Tasmota, und es standen „4 Quellen" statt drei (Ricardo,
+     08.09.2026).
+
+     Zusammengefasst wird nur, was wirklich zusammengehoert: mehrere
+     Knoten unter demselben Elternknoten, und das auch nur, wenn sie
+     blosse Kennungsebenen ohne eigenes Objekt sind (so legt MQTT seine
+     Sparten an) oder ihr Elternknoten ein `device` ist (so liegen die
+     Kanaele bei Homematic). Zwei `channel` in einem Ordner - etwa
+     `0_userdata.0.Solar.Netz` und `…Solar.Balkon` - bleiben getrennt:
+     das sind zwei Geraete, keine zwei Sparten. */
+  var nachEltern = {};
+  raus.forEach(function (q) {
+    var t = q.id.split('.');
+    t.pop();
+    var eltern = t.join('.');
+    (nachEltern[eltern] = nachEltern[eltern] || []).push(q);
+  });
+  var zusammen = [];
+  Object.keys(nachEltern).forEach(function (eltern) {
+    var gruppe = nachEltern[eltern];
+    var ohneObjekt = gruppe.every(function (q) { return !S.objects[q.id]; });
+    var elternGeraet = !!(S.objects[eltern] && S.objects[eltern].type === 'device');
+    if (gruppe.length < 2 || !eltern || (!ohneObjekt && !elternGeraet)) {
+      zusammen = zusammen.concat(gruppe);
+      return;
+    }
+    var summe = 0;
+    gruppe.forEach(function (q) { summe += q.n; });
+    zusammen.push({ id: eltern, n: summe });
+  });
+  return sortiere(zusammen);
 }
 
 export function quelleVon(aliasId) {
