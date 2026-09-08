@@ -379,7 +379,12 @@ var warumAuf = false;
       sprung.title = (zumAlias ? tr('result.toAliasHint') : tr('result.toSourceHint'))
         + String.fromCharCode(10) + sprungZiel;
       var ziel0 = sprungZiel, modus0 = sprungModus;
-      if (mehrQuellen) {
+      /* Die Auswahl gehoert nur an „zur Quelle" - dort gibt es mehrere
+         Ziele. „zum Alias" hat genau eines; eine Liste von QUELLEN unter
+         diesem Knopf ist sinnlos (Ricardo, 08.09.2026). Der Chip bleibt
+         an beiden Stellen: er sagt etwas ueber den Alias, nicht ueber
+         den Sprung. */
+      if (mehrQuellen && sprungModus === 'quellen') {
         /* Die Auswahl haengt am Body, nicht am Kopf.
 
            Erst stand sie neben dem Knopf - und war sofort wieder weg:
