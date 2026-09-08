@@ -4,6 +4,55 @@
 import { S } from './zustand.js';
 import { D } from './basis.js';
 
+/* Der Ausdruck eines Platzes als blosser Text — ohne Schraegstriche.
+
+   Der Detector liefert seine Muster ueber `ChannelDetector.getPatterns()`
+   (so haengt `src/detector-bundle.js` sie an `window`), und diese Funktion
+   gibt `role` nicht als RegExp weiter, sondern als `role.toString()` —
+   also MIT den Schraegstrichen:
+
+       /^indicator(\.maintenance)?\.(lowbat|battery)$/
+
+   Das ist bei uns der Normalfall, nicht die Ausnahme: ein RegExp bekommen
+   wir nur, wenn jemand die Muster direkt aus `typePatterns` liest, etwa
+   ein Test. Wer bloss `.source` abfragt und sonst `String(r)` nimmt, haelt
+   die Schraegstriche fuer Teil des Ausdrucks und findet danach weder den
+   Anker `^` noch das Ende `$`.
+
+   Gefunden am 08.09.2026 am Produktivsystem, und der eine Fehler zog weit:
+   `ROLLEN` hatte 210 statt 232 Eintraege (E27) — `indicator.lowbat` fehlte,
+   die Rolle, die hm-rpc schreibt —, `BRIGHTNESS` bekam in sechs Mustern gar
+   keine Rolle (E6), `plaetzeFuerRollen` fand zu keiner einzigen Rolle einen
+   Platz, und die Abweichungskarte behauptete „haette ohnehin nicht
+   gezaehlt" ueber Punkte mit Platz. Die Node-Tests sahen nichts davon: sie
+   fuettern die Zerlegung mit echten RegExp-Literalen.
+
+   Deshalb geht seither jede Stelle, die einen Platzausdruck liest, hier
+   durch — es sind sieben. */
+export function ausdruckText(r) {
+  if (!r) { return ''; }
+  if (r.source !== undefined) { return r.source; }
+  var q = String(r);
+  var m = /^\/(.*)\/[a-z]*$/.exec(q);
+  return m ? m[1] : q;
+}
+
+/* Der Ausdruck als RegExp — fuer alle, die damit pruefen wollen. Wirft
+   nicht: ein unbrauchbarer Ausdruck gibt `null`, und der Aufrufer
+   entscheidet, was das heisst. */
+export function ausdruckRegExp(r) {
+  var q = ausdruckText(r);
+  if (!q) { return null; }
+  try { return new RegExp(q); } catch { return null; }
+}
+
+/* Passt eine Rolle auf den Ausdruck eines Platzes? */
+export function rolleTrifft(r, rolle) {
+  if (!rolle) { return false; }
+  var re = ausdruckRegExp(r);
+  return re ? re.test(rolle) : false;
+}
+
 /* Die Rollen kommen aus dem Paket, nicht aus einer eigenen Liste —
    sonst pflegt man eine zweite Wahrheit, die auseinanderlaeuft. */
 /* Manche Plaetze nennen keine Standardrolle, sondern nur einen
@@ -13,8 +62,8 @@ import { D } from './basis.js';
    liess sich beliebig oft hinzufuegen, und die Rolle fehlte auch in der
    Auswahlliste — der Platz war auf keinem Weg zu befuellen. */
 export function rolleAusAusdruck(r) {
-  if (!r) { return ''; }
-  var q = (r.source !== undefined) ? r.source : String(r);
+  var q = ausdruckText(r);
+  if (!q) { return ''; }
   if (q.charAt(0) !== '^' || q.slice(-1) !== '$') { return ''; }
   var t = q.slice(1, -1).split(String.fromCharCode(92)).join('');
   return /^[A-Za-z0-9_]+([.][A-Za-z0-9_]+)*$/.test(t) ? t : '';
@@ -41,8 +90,8 @@ export function rolleVonPlatz(st) { return st.defaultRole || rolleAusAusdruck(st
    dann bleibt es bei der Vorgaberolle. Lieber eine Schreibweise zu wenig
    als eine erfundene in der Liste. */
 export function schreibweisenAus(r) {
-  if (!r) { return []; }
-  var q = (r.source !== undefined) ? r.source : String(r);
+  var q = ausdruckText(r);
+  if (!q) { return []; }
   if (q.charAt(0) !== '^' || q.slice(-1) !== '$') { return []; }
   q = q.slice(1, -1);
 
@@ -160,7 +209,7 @@ export function plaetzeFuerRollen(musterName) {
   ROLLEN.forEach(function (r) {
     mu.states.forEach(function (st) {
       if (raus[r] || !st.role) { return; }
-      try { if (new RegExp(st.role.source || st.role).test(r)) { raus[r] = st.name; } } catch { /* unbrauchbarer Ausdruck in der Vorlage: zaehlt nicht */ }
+      if (rolleTrifft(st.role, r)) { raus[r] = st.name; }
     });
   });
   return raus;

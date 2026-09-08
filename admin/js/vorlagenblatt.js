@@ -9,7 +9,7 @@ import { D, $, el, kurz } from './basis.js';
 import { tr, sprachtext, sprache } from './sprache.js';
 import { katalogFehlt } from './katalog.js';
 import { funktionsAuswahl, kennungZuFunktion } from './aufzaehlungen.js';
-import { musterVon } from './erkennung.js';
+import { musterVon, rolleTrifft } from './erkennung.js';
 import { musterZeile, musterName } from './musternamen.js';
 import { ladeVorlagen, aendereVorlagen, setzeMeta, pruefeVorlage, INSTANZ_ID } from './vorlagen.js';
 import { kindZustaende, hatPunkt, feldAusFormel } from './werte.js';
@@ -551,8 +551,7 @@ function rollenBlock(rolle, geraetetyp, setzen) {
   if (must) {
     var treffer = null;
     must.states.forEach(function (pp) {
-      if (!treffer && pp.role && rolle &&
-          new RegExp(pp.role.source ? pp.role.source : pp.role).test(rolle)) { treffer = pp; }
+      if (!treffer && pp.role && rolleTrifft(pp.role, rolle)) { treffer = pp; }
     });
     var hin = el('div', 'sugg');
     if (treffer) {

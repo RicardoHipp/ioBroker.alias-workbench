@@ -716,31 +716,13 @@ var warumAuf = false;
     return musterBlock;
   }
 
-  /* Punkte, die im gewaehlten Muster keinen Platz haben, aber als
-     Messwerte durchgehen. */
-  function baueInfoKarte(host, e, infoNamen) {
-    if (infoNamen.length) {
-      var ic = el('div', 'card infod');
-      var ich = el('div', 'ch');
-      /* Hier stand „info" und „zaehlt der Detektor separat". Beides sind
-         unsere Woerter: „info" ist der interne Name des Sammeltyps, und
-         wer den Detektor nicht kennt, weiss nach dem Satz weniger als
-         vorher. Jetzt steht da, worum es geht - und der Zusatz sagt
-         gleich, ob man handeln muss. */
-      ich.appendChild(el('span', 'typ', tr('info.notPartOf', e.want || '')));
-      ich.appendChild(el('span', 'chip mut', tr('info.countedSeparately')));
-      ic.appendChild(ich);
-      var ie = el('div', 'infoerkl');
-      ie.style.padding = '10px 15px 12px';
-      ie.style.fontSize = '11.5px';
-      ie.style.color = 'var(--ink-3)';
-      ie.style.lineHeight = '1.6';
-      ie.appendChild(el('b', null, tr('info.sameDatapoints', infoNamen.join(', '))));
-      ie.appendChild(document.createTextNode(tr('info.explain', e.want || '')));
-      ic.appendChild(ie);
-      host.appendChild(ic);
-    }
-  }
+  /* Die Karte „Gehoert nicht zum <Muster>" stand hier bis zum
+     08.09.2026 — weit unten, mit den Namen der betroffenen Punkte und
+     der langen Erklaerung. Sie ist weg: dieselbe Auskunft haengt jetzt
+     am Hinweis der Legende, und die steht dort, wo die getoenten Zeilen
+     stehen. Zweimal dasselbe, einmal oben und einmal ganz unten, war
+     eine zu viel (Ricardo, 08.09.2026). Die Texte `info.explain` und
+     `info.notPartOf` bleiben in Gebrauch — die Legende nutzt sie. */
 
   /* Was sich gegenueber dem gespeicherten Stand aendern wuerde. */
   function baueDiffKarte(host, e) {
@@ -909,9 +891,7 @@ var warumAuf = false;
     rateKnopf = null;
     musterBlock = null;
 
-    /* --- info-Karte --- */
     var infoNamen = Object.keys(imInfo);
-    baueInfoKarte(host, e, infoNamen);
 
     /* --- Änderungen gegenüber dem, was gespeichert ist --- */
     baueDiffKarte(host, e);

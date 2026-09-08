@@ -7,7 +7,7 @@
    werden oben bei der Musterwahl gebaut und hier nur eingehaengt. */
 
 import { S } from './zustand.js';
-import { el } from './basis.js';
+import { el, $ } from './basis.js';
 import { tr } from './sprache.js';
 import { erkenneEntwurf, musterVon, rolleVonPlatz } from './erkennung.js';
 import { kindZustaende, wertVon, fmt } from './werte.js';
@@ -244,6 +244,7 @@ export function baueListe(host, e, pl, rateKnopf, musterBlock) {
      dazu haengt sich erst danach in die Leiste, weil vorher niemand
      weiss, ob es ueberhaupt eine braucht. */
   var ohnePlatzZahl = 0;
+  var ohnePlatzNamen = [];
   var an = e.states.filter(function (s) { return s.on; }).length;
   bar.appendChild(document.createTextNode(tr('list.willBeCreated')));
   bar.appendChild(el('span', 'cnt', tr('list.countOf', an, e.states.length)));
@@ -359,6 +360,16 @@ export function baueListe(host, e, pl, rateKnopf, musterBlock) {
   });
   card.appendChild(cap);
 
+  /* Platz fuer die Legende. Sie steht zwischen Kopfzeile und erster
+     Zeile — nicht mehr oben in der Leiste, wo sie wie eine Marke zum
+     Geraet aussah und niemand sie mit der Toenung der Zeilen darunter
+     verband (Ricardo, 08.09.2026). Hier ist sie selbst ein Beispiel:
+     dieselbe Toenung, dieselbe Breite, unmittelbar ueber dem, was sie
+     erklaert. Gefuellt wird sie erst nach dem Zeichnen der Zeilen —
+     vorher weiss niemand, ob es etwas zu erklaeren gibt. */
+  var legendenPlatz = el('div');
+  card.appendChild(legendenPlatz);
+
   /* --- Zustandsliste --- */
   e.states.forEach(function (s, i) {
     var pl = platzVon[s.n];
@@ -371,7 +382,7 @@ export function baueListe(host, e, pl, rateKnopf, musterBlock) {
        einmal als Legende ueber der Liste, und der lange Text haengt als
        Hinweis an der Zeile. */
     var ohnePlatz = (s.on && !unfertig && !pl);
-    if (ohnePlatz) { ohnePlatzZahl++; }
+    if (ohnePlatz) { ohnePlatzZahl++; ohnePlatzNamen.push(s.n); }
     var row = el('div', 'erow' + (s.on ? '' : ' skip') + (S.openRow === i ? ' open' : '') +
                  (ohnePlatz ? ' ohneplatz' : ''));
     row.tabIndex = 0;
@@ -629,16 +640,57 @@ export function baueListe(host, e, pl, rateKnopf, musterBlock) {
   });
   card.appendChild(add);
 
-  /* Die Legende zum Streifen — einmal, und nur wenn es etwas zu erklaeren
-     gibt. Sie steht in der Leiste ueber der Liste, gleich neben der Zahl:
-     dort sucht man die Erklaerung fuer „11 von 42", nicht am Fuss. */
+  /* Die Legende — einmal, und nur wenn es etwas zu erklaeren gibt.
+
+     Zwei Anlaeufe hat sie gebraucht. Zuerst stand sie in der Leiste mit
+     einem 14 px grossen Farbkaestchen daneben: die Toenung ist
+     absichtlich blass, das Kaestchen war winzig, der Text in --ink-3 —
+     zusammen sah man nichts. Dann als hinterlegte Marke in der Leiste:
+     sichtbar, aber sie las sich wie eine Aussage ueber das GERAET, und
+     dass die getoenten Zeilen darunter gemeint sind, sagte sie nicht
+     (Ricardo, 08.09.2026, beide Male).
+
+     Jetzt steht sie in der Liste selbst, direkt ueber der ersten Zeile,
+     in derselben Toenung und ueber dieselbe Breite. Sie erklaert die
+     Toenung nicht, sie zeigt sie.
+
+     Die lange Erklaerung steht hinter einem „i" daneben — sie ersetzt
+     die Karte, die frueher unten stand („Gehoert nicht zum <Muster>").
+     Zweimal dieselbe Auskunft, einmal oben und einmal weit unten, war
+     eine zu viel.
+
+     Als Tooltip taugte sie nicht: der Kasten wurde ueber zehn Zeilen
+     hoch und legte sich ueber die Liste, die man gerade lesen wollte
+     (Ricardo, 08.09.2026). Ein Klick auf das „i" oeffnet sie stattdessen
+     als Dialog — dort darf sie so lang sein, wie sie ist. */
   if (ohnePlatzZahl) {
-    var lg = el('span', 'legende');
-    lg.appendChild(el('span', 'lgmarke'));
-    lg.appendChild(document.createTextNode(
-      tr('pattern.noPlaceIn', musterName(e.want) || e.want || '?')));
-    lg.title = tr('pattern.noPlaceLong', musterName(e.want) || e.want || '?');
-    bar.insertBefore(lg, bar.querySelector('.sp2'));
+    var mn = musterName(e.want) || e.want || '?';
+    var lg = el('div', 'legendenzeile');
+    lg.appendChild(document.createTextNode(tr('pattern.noPlaceLegend', mn)));
+
+    var ib = el('button', 'infoknopf', 'i');
+    ib.type = 'button';
+    ib.title = tr('info.more');
+    ib.setAttribute('aria-label', tr('info.more'));
+    ib.addEventListener('click', function (ev) {
+      ev.stopPropagation();
+      var t = $('#info-titel');
+      /* „Gehoert nicht zum Steckdose" waere falsches Deutsch — mit
+           „-Muster" dahinter stimmt es fuer jeden Musternamen. */
+        if (t) { t.textContent = tr('info.dlgTitle', mn); }
+      var b = $('#info-body');
+      if (b) {
+        b.textContent = '';
+        var k = el('div', 'aside w');
+        k.appendChild(el('b', null, ohnePlatzNamen.join(', ')));
+        k.appendChild(document.createTextNode(' — ' + tr('info.explain', mn)));
+        b.appendChild(k);
+      }
+      var d = $('#dlg-info');
+      if (d && !d.open) { d.showModal(); }
+    });
+    lg.appendChild(ib);
+    legendenPlatz.appendChild(lg);
   }
 
   host.appendChild(card);

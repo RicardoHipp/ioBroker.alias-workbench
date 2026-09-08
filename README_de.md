@@ -46,6 +46,67 @@ frei.
 
 *Eine Zeile aufgeklappt: woraus sie liest, welches Feld im JSON, die Leseformel, die Rolle — und der Musterplatz, den diese Rolle füllt.*
 
+**JSON wird ausgepackt, ohne dass du eine Formel schreibst.** Viele Geräte
+liefern ihre Messwerte nicht als einzelne Datenpunkte, sondern als ein
+einziges JSON — bei Tasmota etwa alles in `tele/SENSOR`. Erkennt die Werkbank
+in einer Quelle gültiges JSON, zerlegt sie es und bietet seine Felder in einer
+Auswahlliste an: `ENERGY.Power`, `ENERGY.Total`, `Wifi.Signal`. Ein Klick
+darauf genügt, die passende Formel entsteht von selbst — und zwar in der
+abgesicherten Form:
+
+```js
+JSON.parse(val)?.ENERGY?.Power ?? null
+```
+
+Das `?.` ist kein Schmuck. `tele/SENSOR` ist ein Sammeltopf, in dem je nach
+Gerät und Nachricht mal dieses und mal jenes Feld steht; der blanke Zugriff
+`JSON.parse(val).ENERGY.Power` scheitert, sobald `ENERGY` einmal fehlt — der
+Alias liefert dann gar nichts mehr und der Controller schreibt eine Warnung
+ins Protokoll. Mit `?.` kommt in diesem Fall schlicht `null` heraus. Ist das
+Feld `0`, steht auch `0` da und nicht „kein Wert": `??` greift nur bei
+`null` und `undefined`.
+
+Der Weg geht in beide Richtungen. Steht in einer Zeile bereits eine Formel,
+liest die Werkbank sie zurück und zeigt in der Auswahl das gemeinte Feld statt
+„eigene Formel" — auch bei der blanken Schreibweise ohne `?.`. Nur was
+wirklich mehr tut als ein Feldzugriff (`JSON.parse(val)?.POWER === "ON"`),
+bleibt eine eigene Formel und wird nicht angetastet. Und was du selbst
+geschrieben hast, bleibt stehen: Weicht deine Formel von der ab, die die
+Vorlage vorschlägt, sagt die Zeile das — geändert wird sie erst, wenn du es
+verlangst.
+
+**Rolle, Raum und Funktion werden gleich mit gepflegt.** Ein Alias ist mehr
+als ein Bündel Datenpunkte, und die Werkbank hält die drei Dinge in Ordnung,
+an denen ein Gerät im ioBroker als Gerät erkennbar wird:
+
+- **Die Rollen der Punkte** kommen aus der Vorlage oder aus dem Muster und
+  passen sich mit, wenn du das Muster wechselst — `switch.light` passt auf
+  kein `socket`-SET. Die Rollenwahl ist nach Musterplätzen gruppiert und
+  zeigt, welcher Platz dadurch belegt würde und ob er noch frei ist. Kennt ein
+  Platz mehrere zulässige Schreibweisen, stehen alle zur Wahl: `LOWBAT` nimmt
+  `indicator.lowbat` genauso wie `indicator.maintenance.lowbat` — was die
+  eigene Hardware schreibt, ist also dabei. Veraltete Schreibweisen bleiben
+  draußen.
+- **Die Rolle des Kanals** ist der Gerätetyp selbst (`light`, `blind`,
+  `thermostat`), so wie der Geräte-Adapter des Admin es hält — daran erkennen
+  ihn andere Adapter wieder.
+- **Raum und Funktion** stehen nicht am Objekt, sondern in `enum.rooms.*` und
+  `enum.functions.*`. Die Werkbank schlägt beide vor — den Raum aus der
+  Quelle, ihrem Namen oder dem Zielordner, die Funktion aus der Vorlage oder
+  dem erkannten Gerätetyp —, trägt den Alias beim Schreiben dort ein und
+  wieder aus, wenn du die Zuordnung änderst. Verlegst du den Alias, wandert
+  die Zuordnung mit; fremde Mitglieder derselben Aufzählung bleiben dabei
+  unberührt.
+- **Und ihre Bilder.** Der Admin bringt für Räume und Funktionen fertige
+  Vorlagen mit Symbol mit. Fehlt einer vorhandenen Aufzählung das Bild — aus
+  einer Homematic-Zentrale gespiegelte tragen nie eines —, trägt die Werkbank
+  es nach. Neben dem Feld siehst du vorher, was passieren wird. Siehe
+  [Raum und Funktion](#raum-und-funktion).
+
+Nichts davon geschieht im Verborgenen: Jede dieser Änderungen steht im
+Trockenlauf, bevor irgendetwas geschrieben wird — auch die an den
+Aufzählungen, die ja fremde Objekte sind.
+
 **Vorlagen.** Eine Vorlage beschreibt, wie aus einer Gerätequelle ein fertiges
 Aliasgerät wird. Vorlagen sind schlichte JSON-Dateien, eine je Vorlage — siehe
 [Vorlagenformat](#vorlagenformat). Sechzehn liegen bei: vier für Tasmota, ein
@@ -527,6 +588,12 @@ beide Sprachdateien dieselben Schlüssel tragen.
 ## Änderungen
 
 ### **WORK IN PROGRESS**
+* Die Rollenliste ist wieder vollständig: der Detektor liefert die Ausdrücke seiner Plätze als Text MIT Schrägstrichen (`/^indicator…$/`), nicht als regulären Ausdruck. Wer sie für Teil des Ausdrucks hält, findet danach weder Anfang noch Ende — 210 statt 232 Rollen, und ausgerechnet `indicator.lowbat` fehlte, die Rolle, die jedes Homematic-Gerät schreibt. In der Rollenwahl stand ohne Suchtext deshalb kein einziger Musterplatz mehr, sondern nur die Zeile „alle Rollen anzeigen"
+* Aus derselben Ursache bekam BRIGHTNESS in sechs Farblicht-Mustern gar keine Rolle mehr — der Platz ließ sich beliebig oft zufügen und war auf keinem Weg zu befüllen. Es waren sieben Stellen im Code, die einen Platzausdruck lasen; sie gehen jetzt alle durch dieselbe Funktion, und ein Test prüft die Rollenliste gegen das, was der Detektor wirklich liefert, statt gegen selbstgeschriebene Ausdrücke
+* Die Abweichungskarte sagt wieder die Wahrheit, wenn man einen Punkt abwählt: sie behauptete „hätte ohnehin nicht gezählt" auch über Punkte, die im Muster sehr wohl einen Platz haben (gleiche Ursache)
+* Ein Punkt, den die Vorlage unter anderem Namen führt, behält an der Quelle seine Rolle und seine Beschriftung: die Werkbank hat zwei Funktionen für dieselbe Aufgabe, und die zweite stieg bei gesetzter Vorlage aus. Am Alias stand `state` und „Lavalampe ACTUAL", an der Quelle `sensor.light` und gar nichts — ein Aktualisieren hätte beides überschrieben. Was die Vorlage stattdessen wollte, steht jetzt wie überall sonst als Marke an der Zeile und lässt sich Feld für Feld übernehmen
+* Beim Laden holt die Werkbank keine zwei Dateien mehr, die es nicht gibt: sie suchte im Verzeichnis des Admin nach Dateinamen und setzte `assets/` davor, obwohl dort ganze Pfade stehen — und zwei Einträge liegen ausdrücklich nicht in diesem Ordner (`"path": ""`). Das gab zwei 404 in der Browserkonsole. Gesucht werden jetzt Pfade statt Namen, und ein führendes `./` wird abgeschnitten: das Verzeichnis schreibt `assets/…`, die `index.html` `./assets/…`, und ohne diesen Schritt stünde dieselbe Datei zweimal in einer Liste, die nach 25 Einträgen endet
+* Die Liesmich nennt zwei Dinge, die sie bisher verschwieg: dass die Werkbank aus einem erkannten JSON die Leseformel selbst vorschlägt — abgesichert gegen fehlende Felder, und in beide Richtungen lesbar —, und dass sie Rollen, Kanalrolle, Raum und Funktion samt deren Bildern gleich mitpflegt
 * Im Alias laufen die Werte jetzt mit: die Werkbank abonnierte die Alias-Punkte, zeigt aber die Werte ihrer Quellen — die Zahlen wurden einmal geholt und standen dann still. Jetzt werden die Quellen mit abonniert. In der Kopfleiste steht, wie viele Abos laufen; ein Abo umfasst einen ganzen Zweig, und der Hinweis nennt sie einzeln, damit sofort auffällt, wenn eines hängen bleibt
 * Die Beschriftung einer Zeile steht jetzt im Hinweis an ihrer Kennung statt daneben — mit den Marken, die eine Zeile tragen kann, wurde sie so voll, dass Rolle und Wert nach rechts wegrutschten. Ein gepunkteter Unterstrich zeigt, wo ein Hinweis wartet
 * Ein Alias, dessen Punkte aus mehr als einem Knoten lesen, sagt es jetzt: neben „zur Quelle →" steht der Chip „n Quellen" und nennt im Hinweis jeden Knoten mit der Zahl seiner Punkte, der Sprungknopf fragt, wohin, statt stillschweigend zur Mehrheit zu gehen, und die einzelnen Zeilen, die woandershin zeigen, tragen eine Marke mit ihrem Adapter. Vorher fiel es nur auf, wenn man jede Zeile aufklappte. Der Rückweg gilt jetzt auch von einer Nebenquelle — „zum Alias →" stand dort vorher nicht. Sparten desselben Geräts (`stat` und `tele` eines Tasmota) zählen nicht als zweite Quelle. Die Auswahl erscheint nur unter „zur Quelle" — der Sprung zum Alias hat genau ein Ziel. Auch Sparten, die nebeneinander liegen, fallen jetzt zusammen und nicht nur die gegen die Hauptquelle — ein Tasmota über `stat` und `tele` zählte doppelt. Und Rückweg wie Zeilenmarken richten sich jetzt nach der Quelle, an der man steht: „zum Alias" gibt es an jeder Quelle eines Alias, auch am Gerät über einer Sparte, und markiert ist eine Zeile dann, wenn sie nicht von hier kommt. Am Alias selbst trägt jede Zeile ihren Tag — dort steht man nirgends, also ist keine Quelle die normale, und ein Gleichstand entscheidet nichts mehr. Der Tag nennt die Quelle statt des Adapters, und in der Auswahlliste ist keine Zeile hervorgehoben

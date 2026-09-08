@@ -12,7 +12,7 @@ import { tasmotaBefehle } from './mqtt.js';
 import { socket } from './verbindung.js';
 
 import { tr, sprachtext } from './sprache.js';
-import { musterVon } from './erkennung.js';
+import { musterVon, rolleTrifft } from './erkennung.js';
 
 /* Welche Instanz — der Reiter wird mit ?<instanz>&noFooter geladen. */
 var INSTANZ = (function () {
@@ -579,7 +579,7 @@ export function anMusterAnpassen(e, neuTyp) {
     var s = null;
     muster.states.forEach(function (st) {
       if (s || !st.role) { return; }
-      try { if (new RegExp(st.role.source || st.role).test(rolle)) { s = st; } } catch { /* dito: eine kaputte Rolle macht die Vorlage nicht passend */ }
+      if (rolleTrifft(st.role, rolle)) { s = st; }   /* eine kaputte Rolle macht die Vorlage nicht passend */
     });
     return s;
   }

@@ -518,14 +518,26 @@
   .erow.ohneplatz { background:color-mix(in srgb, var(--warn-soft) 80%, transparent); }
   .erow.ohneplatz:hover, .erow.ohneplatz.open {
     background:color-mix(in srgb, var(--warn-soft) 100%, transparent); }
-  .listbar .legende { display:inline-flex; align-items:center; gap:5px;
-                      font-size:11px; color:var(--ink-3); white-space:nowrap; }
-  /* Dasselbe Feld wie die Zeile, nur klein — die Legende zeigt die Farbe,
-     nach der man in der Liste sucht. */
-  .listbar .legende .lgmarke { width:14px; height:11px; border-radius:3px;
-                               border:1px solid var(--line);
-                               background:color-mix(in srgb, var(--warn-soft) 80%, transparent);
-                               display:inline-block; }
+  /* Die Legende steht in der Liste, nicht in der Leiste: dieselbe
+     Toenung wie die Zeilen, dieselbe Breite, unmittelbar ueber der
+     ersten. Sie beschreibt die Toenung nicht — sie ist ein Stueck
+     davon. Zwei blassere Anlaeufe davor scheiterten daran, dass
+     niemand sie mit den Zeilen darunter verband (Ricardo, 08.09.2026).
+     Der Zeiger zeigt einen Hinweis: der lange Text haengt daran. */
+  .legendenzeile { display:flex; align-items:center; gap:8px;
+                   padding:5px 15px; border-bottom:1px solid var(--line);
+                   font-size:11.5px; color:var(--warn);
+                   background:color-mix(in srgb, var(--warn-soft) 80%, transparent); }
+  /* Das „i" oeffnet die lange Erklaerung als Dialog. Als Tooltip wurde
+     sie ueber zehn Zeilen hoch und legte sich ueber die Liste, die man
+     gerade lesen wollte (Ricardo, 08.09.2026). */
+  .legendenzeile .infoknopf {
+    width:15px; height:15px; flex:0 0 15px; padding:0; border-radius:50%;
+    border:1px solid color-mix(in srgb, var(--warn) 55%, transparent);
+    background:transparent; color:var(--warn); cursor:pointer;
+    font-family:var(--sans); font-size:10px; font-weight:700; font-style:italic;
+    line-height:1; display:inline-flex; align-items:center; justify-content:center; }
+  .legendenzeile .infoknopf:hover { background:var(--warn); color:var(--surface); }
   .erow input[type="checkbox"] { accent-color:var(--accent); cursor:pointer; margin:0; }
   .erow .mk2 { text-align:center; font-size:11px; }
   .erow .mk2.ok { color:var(--ok); } .erow .mk2.bad { color:var(--bad); } .erow .mk2.out { color:var(--ink-3); }
@@ -581,6 +593,16 @@
 
   /* ---- Bearbeitungsfelder im Detail ---- */
   .detail .fields { display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end; }
+  /* Feld plus die volle Kennung darunter. Ein `select` zeigt zugeklappt
+     nur den Text seiner Option, und der traegt die Instanz nicht — die
+     steht sonst allein in der Gruppenueberschrift, die man erst beim
+     Aufklappen sieht (Ricardo, 08.09.2026). Hier darf sie umbrechen,
+     also gibt es keine Breitengrenze. */
+  .detail .feldstapel { display:flex; flex-direction:column; gap:3px; }
+  .detail .vollid { font-family:var(--mono); font-size:10.5px; color:var(--ink-3);
+                    overflow-wrap:anywhere; line-height:1.35; }
+  .detail .vollid:empty { display:none; }
+
   .detail .fld { display:flex; flex-direction:column; gap:2px; }
   .detail .fld > span { font-family:var(--sans); font-size:8.5px; letter-spacing:.06em;
                         text-transform:uppercase; color:var(--ink-3); font-weight:700; }

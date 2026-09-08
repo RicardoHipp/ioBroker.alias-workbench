@@ -20,7 +20,7 @@ import { zeichneErgebnis, entwurfAngefasst, angebotFrisch } from './ergebnis.js'
 
 
 import { ausgangName } from './vorlagen.js';
-import { musterVon } from './erkennung.js';
+import { musterVon, rolleTrifft } from './erkennung.js';
 
 /* Welche Aufzaehlungen aendern sich, wenn dieser Entwurf geschrieben wird?
 
@@ -539,14 +539,47 @@ export function uebernehmeBestand(e) {
      Quelle zeigte `thermostat` statt `airCondition`, die Schreibquelle
      war weg, und von neun Punkten blieben zwei angehakt.
 
-     Nur ohne Vorlage. Hat eine gegriffen, ist ihr Vorschlag gemeint -
-     sonst uebertoente der Bestand sie stillschweigend, und „aendert
-     sich" haette nichts mehr zu melden. */
+     Auch mit Vorlage. Hier stand `if (e.vorlage) return;`, mit der
+     Begruendung, sonst uebertoene der Bestand die Vorlage stillschweigend
+     und „aendert sich" haette nichts mehr zu melden. Das war zweimal
+     falsch.
+
+     Erstens ist es nicht mehr stillschweigend: `vorlagenWert` haelt fest,
+     was die Vorlage wollte, die Zeile traegt dann „weicht von der Vorlage
+     ab", und der ←-Knopf holt jedes Feld einzeln zurueck. Genau so haelt
+     es die Zwillingsfunktion `bestandVorrang` seit jeher - sie uebernimmt
+     den Bestand auch bei gesetzter Vorlage.
+
+     Zweitens widersprachen sich damit die beiden Ansichten, und das ist
+     der Punkt, den U21 verlangt: derselbe Alias, derselbe Stand. Gemessen
+     am 08.09.2026 produktiv an `alias.0.Wohnkueche.Lavalampe`: sieben der
+     acht Punkte stimmten (sie liefen ueber `bestandVorrang`), ACTUAL
+     nicht. Der laeuft ueber den Umbenennungs-Zweig unten - die Vorlage
+     `tasmota-lampe` nennt den Punkt ON_ACTUAL, im Alias heisst er ACTUAL
+     - und blieb deshalb auf dem Vorlagenstand stehen: `sensor.light`
+     statt `state`, Beschriftung leer statt „Lavalampe ACTUAL". Ein
+     Aktualisieren aus der Quellenansicht haette beides ueberschrieben,
+     und die Marke nannte im Tooltip nur die Rolle, nicht den Namen.
+
+     `vorlagenWert` wird nur gesetzt, wo noch keiner steht: fuer die
+     Zeilen, deren Name schon passt, hat `bestandVorrang` ihn vorher
+     gefuellt - mit dem echten Vorlagenstand. Ihn hier zu ueberschreiben
+     hiesse, dem Vorlagenknopf den Wert zu nehmen, den er zurueckholen
+     soll. */
   function vomAliasUebernehmen(z, o) {
-    if (e.vorlage) { return; }
     var c = o.common || {}, a = c.alias || {}, q2 = aliasQuellen(o);
-    if (c.role) { z.role = c.role; }
-    if (c.type) { z.typ = c.type; }
+    if (!z.vorlagenWert) {
+      z.vorlagenWert = {
+        on: z.on, role: z.role, typ: z.typ, unit: z.unit, caption: z.caption,
+        f: z.f, fw: z.fw, srcR: z.srcR, srcW: z.srcW, states: z.states
+      };
+    }
+    /* `!== undefined`, nicht bloss wahr: ein Punkt mit leerer Rolle im
+       Alias hat sie bewusst leer, und die Zwillingsfunktion
+       `bestandVorrang` fragt genauso. Solange die beiden dieselbe Frage
+       stellen, kann der Stand nicht wieder auseinanderlaufen. */
+    if (c.role !== undefined) { z.role = c.role; }
+    if (c.type !== undefined) { z.typ = c.type; }
     z.unit = c.unit || '';
     z.states = c.states || undefined;
     z.f = (typeof a.read === 'string') ? a.read : '';
@@ -727,7 +760,7 @@ export function unterschiede(e) {
     if (!mu || !rolle) { return false; }
     return mu.states.some(function (st) {
       if (!st.role) { return false; }
-      try { return new RegExp(st.role.source || st.role).test(rolle); } catch { return false; }
+      return rolleTrifft(st.role, rolle);
     });
   }
   /* Was die Vorlage von sich aus vorgeschlagen hat. Ein Punkt, der

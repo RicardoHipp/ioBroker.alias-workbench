@@ -44,6 +44,63 @@ which pattern slots are filled and which are still free.
 
 *One row opened: where it reads from, which JSON field, the read function, the role — and the pattern slot that role fills.*
 
+**JSON is unpacked without you writing a formula.** Many devices do not deliver
+their readings as separate datapoints but as a single JSON — a Tasmota puts
+everything into `tele/SENSOR`. Where the workbench finds valid JSON in a
+source, it takes it apart and offers its fields in a drop-down:
+`ENERGY.Power`, `ENERGY.Total`, `Wifi.Signal`. One click is enough, the
+matching formula appears by itself — and in the guarded form:
+
+```js
+JSON.parse(val)?.ENERGY?.Power ?? null
+```
+
+The `?.` is not decoration. `tele/SENSOR` is a catch-all whose contents differ
+from device to device and from message to message; the bare
+`JSON.parse(val).ENERGY.Power` fails the moment `ENERGY` is absent — the alias
+then delivers nothing at all and the controller writes a warning to the log.
+With `?.` the result is simply `null`. And if the field is `0`, `0` is what
+you get, not "no value": `??` only steps in for `null` and `undefined`.
+
+It works in both directions. Where a row already carries a formula, the
+workbench reads it back and shows the field it means instead of "custom
+formula" — including the bare spelling without `?.`. Only something that
+really does more than access a field (`JSON.parse(val)?.POWER === "ON"`) stays
+a custom formula and is left alone. And what you wrote yourself stays: if your
+formula differs from the one the template proposes, the row says so — it is
+changed only when you ask for it.
+
+**Role, room and function are kept in order too.** An alias is more than a
+bundle of datapoints, and the workbench maintains the three things that make a
+device recognisable as a device in ioBroker:
+
+- **The roles of the points** come from the template or the pattern, and they
+  follow along when you switch the pattern — `switch.light` does not fit a
+  `socket` SET. The role picker is grouped by pattern slot and shows which
+  slot a role would fill and whether it is still free. Where a slot accepts
+  several spellings, all of them are offered: `LOWBAT` takes
+  `indicator.lowbat` just as well as `indicator.maintenance.lowbat` — so
+  whatever your own hardware writes is among them. Deprecated spellings stay
+  out.
+- **The role of the channel** is the device type itself (`light`, `blind`,
+  `thermostat`), the way the admin's device adapter keeps it — that is what
+  other adapters recognise it by.
+- **Room and function** do not live on the object but in `enum.rooms.*` and
+  `enum.functions.*`. The workbench proposes both — the room from the source,
+  its name or the target folder, the function from the template or the
+  detected device type — enters the alias there when writing, and takes it out
+  again when you change the assignment. Move the alias and the assignment
+  moves with it; other members of the same enumeration are left untouched.
+- **And their pictures.** The admin ships ready-made room and function
+  templates with icons. Where an existing enumeration has none — ones mirrored
+  from a Homematic CCU never do — the workbench fills it in. Next to the field
+  you see beforehand what is going to happen. See
+  [Room and function](#room-and-function).
+
+None of this happens out of sight: every one of these changes appears in the
+dry run before anything is written — including the ones to enumerations, which
+are, after all, other people's objects.
+
 **Templates.** A template describes how a device source becomes a finished alias
 device. Templates are plain JSON files, one per template — see
 [Template format](#template-format). Sixteen ship with the adapter: four for
@@ -511,6 +568,12 @@ imported, and that both language files carry the same keys.
 ## Changelog
 
 ### **WORK IN PROGRESS**
+* The role list is complete again: the detector hands out the expressions of its slots as text WITH slashes (`/^indicator…$/`), not as a regular expression. Take the slashes for part of the expression and you find neither start nor end afterwards — 210 roles instead of 232, and `indicator.lowbat` of all things was missing, the role every Homematic device writes. In the role picker, no slot of the pattern was offered at all any more, only the line "show all roles"
+* From the same cause, BRIGHTNESS lost its role in six colour-light patterns — the slot could be added over and over and could not be filled by any route. Seven places in the code read a slot expression; they all go through one function now, and a test checks the role list against what the detector actually delivers instead of against hand-written expressions
+* The deviation card tells the truth again when a point is deselected: it claimed "would not have counted anyway" even for points that do have a slot in the pattern (same cause)
+* A point the template lists under a different name now keeps its role and its caption at the source: the workbench has two functions for the same job, and the second one bailed out when a template had matched. At the alias it said `state` and "Lavalampe ACTUAL", at the source `sensor.light` and nothing at all — updating would have overwritten both. What the template wanted instead now shows as a mark on the row, as everywhere else, and can be taken over field by field
+* On load, the workbench no longer fetches two files that do not exist: it searched the admin's directory for file names and put `assets/` in front, although whole paths are listed there — and two entries expressly do not live in that folder (`"path": ""`). That produced two 404s in the browser console. It now looks for paths instead of names and strips a leading `./`: the manifest writes `assets/…`, the `index.html` `./assets/…`, and without that step the same file would sit twice in a list that ends after 25 entries
+* The readme now mentions two things it used to keep quiet about: that the workbench proposes the read formula itself from recognised JSON — guarded against missing fields, and readable in both directions — and that it maintains roles, the channel role, room and function along with their pictures
 * Values now keep running in the alias view: the workbench subscribed to the alias points but displays the values of their sources, so the numbers were fetched once and then stood still. It now subscribes to the sources as well. The header shows how many subscriptions are running — a subscription covers a whole branch, and its tooltip lists them, so it is visible right away if one is ever left behind
 * The caption of a row now lives in a tooltip on its id instead of standing next to it — with the marks a row can carry, it had become so crowded that role and value were pushed off to the right. A dotted underline shows where a tooltip waits
 * An alias whose points read from more than one node now says so: a chip "n sources" next to "to the source", listing every node with its number of points; the jump button asks where to go instead of silently taking the majority; and the individual rows that read from elsewhere carry a mark naming their adapter. Before, the only way to notice was to open every row. The way back holds too: from a secondary source, "to the alias" is there again — it used to require being at the majority source. Spartas of one and the same device (a Tasmota `stat` and `tele`) do not count as a second source. The choice appears only under "to the source" — jumping to the alias has exactly one destination. Spartas next to each other are merged as well now, not just against the main source — a Tasmota read through `stat` and `tele` counted as two. And both the way back and the row marks now go by the source you are standing at: "to the alias" is there at every source of an alias, including the device above a sparte, and a row is marked when it does not come from here. At the alias itself every row carries its tag — there is no place you are standing, so no source is the normal one; a tie no longer decides anything. The tag names the source, not the adapter, and no entry in the list is highlighted
@@ -522,9 +585,6 @@ imported, and that both language files carry the same keys.
 * An alias whose channel exists only as an id, not as an object — the usual result of adding points by hand in the admin — is now compared against the stored state at all. Before, the whole comparison bailed out there, and updating would have replaced captions with the bare point names and dropped roles, formulas and write direction along with them
 * The same rule was missing a third time, for aliases where several points read from one and the same source datapoint — a blind, where OPEN, CLOSE, SET and pct all go to `level`. Only the first of them kept its write source; the others lost it, and updating would have made the blind unreachable through its alias
 * Updating an existing alias no longer overwrites its caption with the bare row name, and no longer turns a read-only alias into a writable one: the function that takes the stored alias over into the draft was missing both rules its twin already had. The false "differs from the stored alias" mark that came with it is gone too
-* A line that comes from the stored alias and reads from a source outside the selected node now gets its value: the values were fetched before that line even existed, so it claimed "source delivers nothing" while the alias was working fine. Only showed on aliases assembled from several adapters, and only until the node was clicked a second time
-
-### **WORK IN PROGRESS**
 * A line that comes from the stored alias and reads from a source outside the selected node now gets its value: the values were fetched before that line even existed, so it claimed "source delivers nothing" while the alias was working fine. Only showed on aliases assembled from several adapters, and only until the node was clicked a second time
 
 ### 0.8.2

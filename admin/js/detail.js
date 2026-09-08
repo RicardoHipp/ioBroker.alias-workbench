@@ -5,7 +5,7 @@ import { socket } from './verbindung.js';
 import { el } from './basis.js';
 import { tr } from './sprache.js';
 import { wertVon, jsonFelder, feldAusFormel, feldFormel, feldWert, jsonVon } from './werte.js';
-import { musterVon, erkenneEntwurf } from './erkennung.js';
+import { musterVon, erkenneEntwurf, rolleTrifft } from './erkennung.js';
 import { musterName } from './musternamen.js';
 import { rollenFeld } from './rollenwahl.js';
 import { opt , quellenAuswahl, vorlagenAbweichung, bestandsAbweichung } from './entwurf.js';
@@ -27,6 +27,58 @@ export function detailZeile(e, s, idx) {
   /* Wer die Zeile anfasst, hat entschieden - die Vermutung ist damit
      keine mehr und faellt beim Zuruecknehmen nicht mehr weg. */
   function neu() { s.geaendert = true; rateBehalten(s); entwurfAngefasst(); zeichneErgebnis(); }
+
+  /* ---- Die Auswahl der Datenpunkte ---------------------------------
+
+     Im Eintrag stehen die ersten beiden Glieder nicht: eine volle
+     Kennung wird hier bis zu 78 Zeichen lang (gemessen am Testsystem,
+     Median 36) und passte in kein Feld dieser Spalte. Ein `select`
+     kuerzt hinten ab — weg waere also gerade das, was den Punkt
+     unterscheidet.
+
+     Nur: ohne den Instanzteil sehen `Solar.Balkon.Einspeisung.Deckel`
+     (ein Alias-Punkt) und `SmartHome.Solar_Balkon.tele.SENSOR` (die
+     echte Quelle) gleich aus, und wer den ersten waehlt, baut aus
+     Versehen einen Alias, der aus einem Alias liest (Ricardo,
+     08.09.2026). Deshalb traegt jede Gruppe ihre Instanz als
+     Ueberschrift, und `alias.0` steht ganz unten: daraus zu lesen ist
+     der Sonderfall, nicht der Regelfall. */
+  function quellenIn(sel, ids) {
+    var gruppen = {}, folge = [];
+    ids.forEach(function (id) {
+      var inst = id.split('.').slice(0, 2).join('.');
+      if (!gruppen[inst]) { gruppen[inst] = []; folge.push(inst); }
+      gruppen[inst].push(id);
+    });
+    folge.sort(function (a, b) {
+      var aa = a.indexOf('alias.') === 0, bb = b.indexOf('alias.') === 0;
+      return aa === bb ? 0 : (aa ? 1 : -1);
+    });
+    folge.forEach(function (inst) {
+      var g = document.createElement('optgroup');
+      g.label = inst;
+      gruppen[inst].forEach(function (id) {
+        var o = opt(id, id.split('.').slice(2).join('.'));
+        o.title = id;
+        g.appendChild(o);
+      });
+      sel.appendChild(g);
+    });
+  }
+
+  /* Und weil die Ueberschrift nur im aufgeklappten Zustand zu sehen ist
+     — ein `select` zeigt zugeklappt allein den Text seiner Option —,
+     steht die volle Kennung als eigene Zeile unter dem Feld. Dieselbe
+     Bauart wie „Die Vorlage will hier: …": sie darf umbrechen und hat
+     damit keine Breitengrenze. */
+  function mitVollId(felder, id) {
+    var w = el('div', 'feldstapel');
+    w.appendChild(felder);
+    var v = el('div', 'vollid');
+    if (id) { v.textContent = id; v.title = id; }
+    w.appendChild(v);
+    return w;
+  }
 
   /* ---- Wo die Vorlage etwas anderes will --------------------------
 
@@ -165,7 +217,7 @@ export function detailZeile(e, s, idx) {
   var selR = el('select', 'tx');
   selR.style.width = '260px';
   selR.appendChild(opt('', quellen.length ? tr('detail.pickOne') : tr('detail.noSource')));
-  quellen.forEach(function (id) { selR.appendChild(opt(id, id.split('.').slice(2).join('.'))); });
+  quellenIn(selR, quellen);
   if (s.srcR && quellen.indexOf(s.srcR) === -1) { selR.appendChild(opt(s.srcR, s.srcR + '   ' + tr('detail.elsewhere'))); }
   selR.appendChild(opt('__frei__', tr('detail.otherObject')));
   selR.value = s.srcR || '';
@@ -215,7 +267,7 @@ export function detailZeile(e, s, idx) {
     lF.appendChild(selF);
     qf.appendChild(lF);
   }
-  zeigeBeide(zeile(tr('detail.readsFrom'), qf), ['srcR']);
+  zeigeBeide(zeile(tr('detail.readsFrom'), mitVollId(qf, s.srcR)), ['srcR']);
 
   if (s.frei) {
     var iFrei = el('input', 'tx w');
@@ -238,7 +290,7 @@ export function detailZeile(e, s, idx) {
      ein, damit im Feld steht, worauf es hinausgeht. */
   selW.appendChild(opt('', tr('detail.noWrite')));
   if (s.srcR && s.srcW !== s.srcR) { selW.appendChild(opt('=lesen', tr('detail.sameAsRead'))); }
-  quellen.forEach(function (id) { selW.appendChild(opt(id, id.split('.').slice(2).join('.'))); });
+  quellenIn(selW, quellen);
   if (s.srcW && quellen.indexOf(s.srcW) === -1) { selW.appendChild(opt(s.srcW, s.srcW)); }
   selW.value = s.srcW || '';
   selW.addEventListener('click', function (ev) { ev.stopPropagation(); });
@@ -255,7 +307,7 @@ export function detailZeile(e, s, idx) {
   if (s.srcW && s.srcW !== s.srcR) {
     wf.appendChild(el('div', 'sugg', tr('detail.separateHint')));
   }
-  zeigeBeide(zeile(tr('detail.writesTo'), wf), ['srcW']);
+  zeigeBeide(zeile(tr('detail.writesTo'), mitVollId(wf, s.srcW)), ['srcW']);
 
   /* --- Leseformel --- */
   var fb = el('div');
@@ -311,7 +363,7 @@ export function detailZeile(e, s, idx) {
   if (must) {
     var treffer = null;
     must.states.forEach(function (p) {
-      if (!treffer && p.role && new RegExp(p.role.source ? p.role.source : p.role).test(s.role)) { treffer = p; }
+      if (!treffer && p.role && rolleTrifft(p.role, s.role)) { treffer = p; }
     });
     var hin = el('div', 'sugg');
     if (treffer) {

@@ -110,6 +110,9 @@ export function beschrifteHtml() {
   setz('#tpl-titel', tr('tpls.title', ''));
   setz('#btn-tpl-save', tr('tpls.saveNew'));
   setz('#mqtt-titel', tr('mq.dialogTitle'));
+  /* Der Titel des Info-Dialogs traegt den Musternamen und wird beim
+     Oeffnen gesetzt; hier steht nur der Rueckfall ohne Muster. */
+  setz('#info-titel', tr('info.dlgTitle', ''));
   setz('#guess-titel', tr('guess.tplTitle'));
   setz('#btn-guess-go', tr('guess.tplGo'));
   setz('#tree .empty', tr('tree.loading'));

@@ -1,0 +1,44 @@
+# Wer sagt Bescheid, wenn draussen etwas Neues erscheint.
+#
+# Der type-detector ist der Grund fuer diese Datei. Er ist eine
+# Bibliothek von npmjs.com, keine Beigabe von ioBroker, und er wird beim
+# Bauen fest in admin/detector.js eingebacken. Ohne Nachricht von aussen
+# erfaehrt niemand, dass es eine neue Fassung gibt - und mit ihr
+# vielleicht neue Geraetemuster, die die Werkbank dann nicht kennt.
+#
+# Dependabot schaut woechentlich nach und macht einen Pull Request auf.
+# Der Test „Der eingebackene Detektor" faellt dann rot aus, solange
+# `npm run build` nicht gelaufen ist - so kann man das Einbacken nicht
+# vergessen (08.09.2026, nachdem genau das passiert war: installiert
+# 6.0.1, ausgeliefert weiter 6.0.0).
+
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: Europe/Berlin
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: 'npm'
+    groups:
+      # Werkzeug, das nur beim Entwickeln laeuft, sammelt sich in einem
+      # Vorgang - eslint und mocha einzeln durchzuwinken bringt nichts.
+      werkzeug:
+        patterns:
+          - '@iobroker/eslint-config'
+          - '@iobroker/testing'
+          - 'esbuild'
+    # Der Detektor bleibt bewusst ausserhalb der Gruppe: seine
+    # Aktualisierung ist die einzige, die ausgeliefert wird und die
+    # Erkennung veraendert. Sie gehoert einzeln angesehen.
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: 'ci'
