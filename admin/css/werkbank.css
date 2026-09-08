@@ -185,6 +185,11 @@
   .tree .node.pick:hover:not(.sel) .grp { color:inherit; opacity:.85; }
   .tree .node.pick:hover:not(.sel) .kind { background:rgba(255,255,255,.3); color:inherit; }
   .tree .node.pick:hover:not(.sel) .geraetepunkt { color:inherit; }
+  /* Ein Knoten ohne Datenpunkte: da, aber nichts drin. Gedaempft und
+     ohne Zahl - er soll die Luecke zeigen, nicht um Aufmerksamkeit
+     bitten. Kein Zeiger, kein Hover: waehlbar ist er ohnehin nicht. */
+  .tree .node.leer { opacity:.45; font-style:italic; }
+  .tree .node.leer .kind { background:transparent; border:1px solid var(--line); }
   .tree .node.sel { background:var(--accent); color:var(--accent-ink); font-weight:600; }
   .tree .node.sel .kind { background:rgba(255,255,255,.22); color:inherit; }
   /* Die Vorlagenliste benutzt dieselben Knotenzeilen, hat aber statt

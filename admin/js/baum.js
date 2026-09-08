@@ -281,7 +281,22 @@ function renderKinder(knoten, filter, tiefe) {
 
   reihen.forEach(function (reihe) {
     var k = reihe.k;
-    if (!k._zust) { return; }
+    /* Leere Knoten ausgrauen statt weglassen.
+
+       Ein Kanal ohne Datenpunkte gibt keinen Alias her - deshalb blieb
+       er bisher ganz weg. Nur sieht das nicht nach „leer" aus, sondern
+       nach „gibt es nicht": Ricardos Heizungsgruppen standen im Admin
+       mit sieben Kanaelen, in der Werkbank mit zweien, und es sah wie
+       ein Anzeigefehler aus, waehrend in Wahrheit hm-rpc die
+       Datenpunkte nicht angelegt hatte (08.09.2026). Wer den Bestand
+       sucht, soll die Luecke sehen.
+
+       Nur echte Objekte, keine blossen Kennungsknoten: `channel`,
+       `device`, `folder`. Waehlbar sind sie nicht (`istWaehlbar` steigt
+       bei `_zust === 0` aus), also fuehrt auch kein Klick ins Leere.
+       Produktiv sind das 194 Zeilen zu 3432 - gut sechs Prozent. */
+    var leer = !k._zust;
+    if (leer && k.art !== 'channel' && k.art !== 'device' && k.art !== 'folder') { return; }
     /* Zustaende zeigt die rechte Seite, nicht der Baum - es sei denn,
        unter dem Zustand liegt noch etwas. Dann ist er ein Behaelter und
        muss sichtbar sein, sonst hilft es nichts, dass `istWaehlbar` ihn
@@ -299,15 +314,20 @@ function renderKinder(knoten, filter, tiefe) {
 
     /* Der Filter sucht auch im Namen. Wer „Badezimmer" tippt, meint
        FK_Badezimmer — und nicht die Seriennummer, die er nicht kennt. */
-    var passt = !filter || k.id.toLowerCase().indexOf(filter) !== -1 ||
-                (reihe.zus && reihe.zus.toLowerCase().indexOf(filter) !== -1);
+    /* Beim Filtern zaehlen leere Knoten nicht als Treffer - sonst
+       findet die Suche Zeilen, mit denen sich nichts anfangen laesst. */
+    var passt = !filter
+      ? true
+      : (!leer && (k.id.toLowerCase().indexOf(filter) !== -1 ||
+                   (reihe.zus && reihe.zus.toLowerCase().indexOf(filter) !== -1)));
     var kinderUl = renderKinder(k, filter, tiefe + 1);
     var kinderPassen = kinderUl.childNodes.length > 0;
     if (!passt && !kinderPassen) { return; }
 
     var li = el('li');
     var waehlbar = istWaehlbar(k);
-    var d = el('div', 'node' + (waehlbar ? ' pick' : ' grp') + (k.id === S.current ? ' sel' : ''));
+    var d = el('div', 'node' + (waehlbar ? ' pick' : ' grp') + (leer ? ' leer' : '') +
+      (k.id === S.current ? ' sel' : ''));
 
     var hatKinder = kinderUl.childNodes.length > 0;
     var vorgabe = (S.alleKlapp === null) ? (tiefe <= 1) : S.alleKlapp;
@@ -342,6 +362,9 @@ function renderKinder(knoten, filter, tiefe) {
       d.appendChild(nm2);
       d.title = k.id + '  ·  ' + reihe.zus;
     }
+    /* Der Hinweis kommt hinter den Zusatznamen, nicht davor - sonst
+       ueberschreibt ihn die Zeile darueber wieder. */
+    if (leer) { d.title = (d.title ? d.title + '  ·  ' : '') + tr('tree.emptyNode'); }
     if (waehlbar) {
       if (wohlGeraet(k)) {
         var pk = el('span', 'geraetepunkt', '●');

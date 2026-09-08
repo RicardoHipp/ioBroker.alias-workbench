@@ -454,6 +454,7 @@
   "tpls.wissen": "+ {0} more states as role knowledge — used in the “All data points of the device” view",
   "tree.aliases": "Edit alias",
   "tree.collapseAll": "collapse all",
+  "tree.emptyNode": "no datapoints — the node exists in the database but is empty",
   "tree.expandAll": "expand all",
   "tree.filter": "filter …",
   "tree.filterAria": "Filter objects",

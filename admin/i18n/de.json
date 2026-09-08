@@ -454,6 +454,7 @@
   "tpls.wissen": "+ {0} weitere Punkte als Rollenwissen — greift in der Ansicht „Alle Datenpunkte des Geräts“",
   "tree.aliases": "Alias bearbeiten",
   "tree.collapseAll": "alles zuklappen",
+  "tree.emptyNode": "keine Datenpunkte — der Knoten steht in der Datenbank, ist aber leer",
   "tree.expandAll": "alles aufklappen",
   "tree.filter": "filtern …",
   "tree.filterAria": "Objekte filtern",

@@ -526,6 +526,9 @@ beide Sprachdateien dieselben Schlüssel tragen.
 
 ## Änderungen
 
+### **WORK IN PROGRESS**
+* Knoten ohne Datenpunkte fallen nicht mehr aus dem Baum: ein Kanal, Gerät oder Ordner, den es gibt, der aber leer ist, steht jetzt ausgegraut da — ohne Zahl, nicht anklickbar, mit einem Hinweis im Tooltip. Weggelassen sah es aus, als gäbe es den Knoten gar nicht, während in Wahrheit der Adapter seine Datenpunkte nicht angelegt hatte. Beim Filtern zählen sie nicht als Treffer
+
 ### 0.8.3
 * Der Trockenlauf zeigt jetzt auch Aufzählungen im Vergleich: die Spalte „bisher" blieb bei ihnen leer, weil Aufzählungen in einem eigenen Vorrat liegen und der Trockenlauf nur im Objektspeicher nachsah. Alles stand als neu da, und man konnte nicht sehen, dass elf von zwölf Mitgliedern längst drin waren
 * …und die Oberfläche kündigt dort kein Anlegen mehr an, wo sie ändert: an so einem Alias sagte der Chip „wird neu angelegt", der Knopf bot „Alias erzeugen", der Trockenlauf hieß „das würde entstehen", Raum und Funktion wurden geraten statt gelesen, übrig gebliebene Punkte fielen nicht auf, und Verlegen, Quelle tauschen und Entfernen taten nichts. Alle fragten, ob der Kanal ein Objekt ist, statt ob es den Alias gibt
