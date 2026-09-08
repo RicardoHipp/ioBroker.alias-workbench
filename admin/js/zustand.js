@@ -23,7 +23,10 @@ export var S = {
   baumModusVorher: 'quellen',
   aufgeklappt: {},
   alleKlapp: null,
-  abo: null,
+  /* Die laufenden Wertabos, als Liste von Mustern. War einmal ein
+     einzelnes Muster - seit im Aliasmodus auch die Quellen abonniert
+     werden, sind es mehrere (08.09.2026). */
+  abo: [],
   trockenAlle: null,
   /* Vergleich im Trockenlauf: Felder geordnet (Vorgabe) oder in der
      Reihenfolge, in der sie wirklich im Speicher stehen. */

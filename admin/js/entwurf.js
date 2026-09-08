@@ -10,7 +10,7 @@ import './enums.js';
 import { zusatzName, setzeModus, zeichneBaum, merkeKlappstand } from './baum.js';
 import { kindZustaende, aliasQuellen, holeWerte } from './werte.js';
 import { erkenneEntwurf } from './erkennung.js';
-import { vorschlag , pruefeVorlage } from './vorlagen.js';
+import { vorschlag , pruefeVorlage, zeigeAbozahl } from './vorlagen.js';
 
 import { zeichneErgebnis } from './ergebnis.js';
 
@@ -687,9 +687,31 @@ export function waehle(id, fertig) {
     sel.scrollIntoView({ block: 'nearest' });
   }
 
-  if (S.abo) { socket.emit('unsubscribe', S.abo); }
-  S.abo = id + '.*';
-  socket.emit('subscribe', S.abo);
+  /* Abonniert wird, was auch angezeigt wird.
+
+     Bisher nur `<knoten>.*`. An einer Quelle stimmt das - die Werte in
+     der Liste kommen von dort. Am Alias nicht: dort stehen die Werte der
+     QUELLEN, und die bekamen kein Ereignis. Die Zahlen wurden einmal
+     beim Auswaehlen geholt und standen dann still; an
+     `alias.0.Solar.Balkon.Energie`, wo sich im Sekundentakt etwas
+     aendert, fiel es auf (Ricardo, 08.09.2026).
+
+     Deshalb am Alias zusaetzlich seine Quellen - `quellenVerteilung`
+     weiss ja, welche das sind. Und deshalb eine Liste: sonst bliebe
+     beim naechsten Wechsel die Haelfte abonniert und die Werkbank
+     bekaeme mit der Zeit Ereignisse fuer das halbe System. Die Zahl der
+     laufenden Abos steht in der Kopfleiste - dort sieht man sofort, ob
+     sich etwas ansammelt. */
+  (S.abo || []).forEach(function (m) { socket.emit('unsubscribe', m); });
+  var muster = [id + '.*'];
+  if (id.indexOf('alias.') === 0) {
+    quellenVerteilung(id).forEach(function (q) {
+      if (muster.indexOf(q.id + '.*') === -1) { muster.push(q.id + '.*'); }
+    });
+  }
+  S.abo = muster;
+  muster.forEach(function (m) { socket.emit('subscribe', m); });
+  zeigeAbozahl();
 
   /* Erst die Werte, dann der Vorschlag. Die Erkennung schaut in den
      Rohwert von tele.SENSOR hinein — ohne Werte haelt sie ein Geraet

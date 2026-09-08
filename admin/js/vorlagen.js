@@ -29,6 +29,24 @@ export function zeigeObjektzahl() {
   if (z) { z.textContent = tr('app.objectsCount', S.keysSorted.length); }
 }
 
+/* Wie viele Wertabos laufen gerade? Steht neben der Objektzahl.
+
+   Nicht aus Neugier: die Abos werden beim Wechsel des Knotens abgemeldet
+   und neu gesetzt, und ob dabei wirklich alle wieder verschwinden, sieht
+   man sonst nirgends. Bleibt die Zahl beim Durchklicken stabil, stimmt
+   es; waechst sie, sammelt sich etwas an (Ricardo, 08.09.2026). */
+export function zeigeAbozahl() {
+  var z = $('#meta-abos');
+  if (!z) { return; }
+  var n = (S.abo || []).length;
+  z.textContent = '  \u00b7  ' + (n === 1 ? tr('app.subsCount1') : tr('app.subsCount', n));
+  /* Die Muster gehoeren dazu, sonst ist die Zahl ein Raetsel: „2 Abos"
+     bei zwanzig sichtbaren Werten liest sich falsch, bis man sieht, dass
+     ein Muster einen ganzen Zweig deckt (Ricardo, 08.09.2026). */
+  z.title = tr('app.subsHint') + String.fromCharCode(10) +
+    (S.abo || []).map(function (mu) { return '  ' + mu; }).join(String.fromCharCode(10));
+}
+
 export function setzeMeta() {
   var m = $('#meta');
   if (!m) { return; }
@@ -41,6 +59,8 @@ export function setzeMeta() {
      steht sie neben ihresgleichen; ein eigener Span, damit das Abo sie
      nachfuehren kann, ohne die ganze Zeile neu zu bauen. */
   m.appendChild(el('span', null, tr('app.objectsCount', S.keysSorted.length))).id = 'meta-objekte';
+  m.appendChild(el('span', null, '')).id = 'meta-abos';
+  zeigeAbozahl();
   if (S.vorlagenUnvollstaendig) {
     var w = el('span', 'chip bad', tr('tpls.loadFailed'));
     w.style.marginLeft = '8px';
