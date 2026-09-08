@@ -226,6 +226,33 @@ export function knotenDa(id) {
 
    Absteigend nach Anzahl, bei Gleichstand alphabetisch - sonst
    wechselte die Reihenfolge bei jedem Neuzeichnen. */
+/* Zu welcher Quelle des Alias gehoert der Knoten, an dem ich stehe?
+
+   Die Antwort ist nicht „die Mehrheit", sondern „die hier". Sie traegt
+   zwei Dinge: den Rueckweg zum Alias (er gehoert an jede Quelle, nicht
+   nur an die groesste) und den Bezugspunkt der Zeilenmarken - markiert
+   wird, was NICHT von hier kommt (Ricardo, 08.09.2026).
+
+   Getroffen wird ein Eintrag der Verteilung auf drei Weisen: genau er,
+   ein Knoten unter ihm (`…Stromzaehler.stat` unter der zusammengefassten
+   Sparte) oder sein unmittelbarer Elternknoten - dort steht man am
+   Geraet, waehrend die Quelle eine Ebene tiefer liegt. Nur eine Ebene:
+   sonst bekaeme `mqtt-client.0.SmartHome` den Knopf und jede Ebene
+   darueber gleich mit. */
+export function quelleHier(aliasId, knoten) {
+  if (!aliasId || !knoten) { return null; }
+  var treffer = null;
+  quellenVerteilung(aliasId).forEach(function (q) {
+    if (treffer) { return; }
+    if (q.id === knoten) { treffer = q.id; return; }
+    if (knoten.indexOf(q.id + '.') === 0) { treffer = q.id; return; }
+    var t = q.id.split('.');
+    t.pop();
+    if (t.join('.') === knoten) { treffer = q.id; }
+  });
+  return treffer;
+}
+
 export function quellenVerteilung(aliasId) {
   var zaehler = {};
   kindZustaende(aliasId).forEach(function (id) {

@@ -11,7 +11,7 @@ import { el } from './basis.js';
 import { tr } from './sprache.js';
 import { erkenneEntwurf, musterVon, rolleVonPlatz } from './erkennung.js';
 import { kindZustaende, wertVon, fmt } from './werte.js';
-import { steuerKanaele, vorlagenAbweichung, bestandsAbweichung, waehle, quelleVon } from './entwurf.js';
+import { steuerKanaele, vorlagenAbweichung, bestandsAbweichung, waehle, quelleVon, quelleHier } from './entwurf.js';
 import { musterName } from './musternamen.js';
 import { detailZeile } from './detail.js';
 import { rateAnzahl, rateZurueck, rateZurueckEine, rateBehalten } from './vorschlagen.js';
@@ -135,27 +135,31 @@ export function berechnePlaetze(e, haupt) {
 }
 
 export function baueListe(host, e, pl, rateKnopf, musterBlock) {
-  /* Woher liest dieser Alias ueberwiegend?
+  /* Bezugspunkt der Marken: die Quelle, an der ich gerade STEHE.
 
-     Nur dazu, um die Ausreisser zu erkennen: Zeilen, die aus einem
-     anderen Zweig lesen als der Rest. An `alias.0.Solar.Netz` sind das
-     die zwei mqtt-Zeilen unter drei aus `0_userdata` - bisher sah man
-     das erst beim Aufklappen (Ricardo, 08.09.2026).
+     Markiert wird, was nicht von hier kommt. Erst lag der Bezug beim
+     angeklickten Knoten - dann bekamen an einer Sparte (`…Licht.stat`)
+     alle Zeilen aus `…Licht.tele` eine Marke, obwohl es dasselbe Geraet
+     ist. Danach lag er bei der Hauptquelle - dann waren an
+     `…Stromzaehler.stat` genau die Zeilen markiert, die von DORT kamen,
+     also die falschen (Ricardo, 08.09.2026).
 
-     Bezugspunkt ist immer die HAUPTQUELLE DES ALIAS, nicht der Knoten,
-     an dem man gerade steht. Sonst saehe dieselbe Zeile je nach
-     Blickwinkel anders aus: an `…Stromzaehler.stat` waeren die drei
-     userdata-Zeilen markiert, am Alias die zwei mqtt-Zeilen. Und an
-     einer Sparte (`…Licht.stat`) haetten alle Zeilen aus `…Licht.tele`
-     eine Marke bekommen, obwohl es dasselbe Geraet ist.
-
-     Verglichen wird ueber den Praefix, nicht auf Gleichheit: bei
-     Homematic liegen die Punkte in Kanaelen unter dem Geraet, bei
-     Tasmota in Sparten. */
+     `quelleHier` loest beides: es sucht den Eintrag der Verteilung, zu
+     dem dieser Knoten gehoert - Sparten fallen darin schon zusammen. Am
+     Alias selbst steht man nirgends; dort gilt die Hauptquelle. Findet
+     sich gar kein Bezug (ein Sammelknoten weit ueber den Quellen), wird
+     nichts markiert - eine Marke ohne Standpunkt sagt nichts. */
   var aliasFuerMarke = (S.current.indexOf('alias.') === 0)
     ? S.current
     : (e.ziel && kindZustaende(e.ziel).length ? e.ziel : '');
-  var hauptQuelle = aliasFuerMarke ? (quelleVon(aliasFuerMarke) || '') : (e.kanal || '');
+  var hauptQuelle = '';
+  if (aliasFuerMarke) {
+    hauptQuelle = (S.current.indexOf('alias.') === 0)
+      ? (quelleVon(aliasFuerMarke) || '')
+      : (quelleHier(aliasFuerMarke, S.current) || '');
+  } else {
+    hauptQuelle = e.kanal || '';
+  }
 
   var platzVon = pl.platzVon, platzAnzahl = pl.platzAnzahl;
 

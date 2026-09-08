@@ -28,6 +28,7 @@ import {
   geraeteDarunter,
   aliasFuer,
   quellenVerteilung,
+  quelleHier,
   tipptGerade,
   opt,
   vorlagenAbweichung,
@@ -346,14 +347,12 @@ var warumAuf = false;
          `…Bastelzimmer_Licht`, und der Knopf gehoert ans Geraet, nicht
          an jede Sparte. Knoten weiter oben (`…Strom`) stehen gar nicht
          erst in der Verteilung. */
-      if (sprungZiel) {
-        var haupt = quelleVon(sprungZiel);
-        if (haupt !== S.current) {
-          var drin = quellenVerteilung(sprungZiel).some(function (q) { return q.id === S.current; });
-          var unterHaupt = !!haupt && S.current.indexOf(haupt + '.') === 0;
-          if (!drin || unterHaupt) { sprungZiel = null; }
-        }
-      }
+      /* Der Rueckweg gehoert an jede Quelle des Alias - an die groesste
+         wie an jede andere, und auch an das Geraet ueber einer Sparte.
+         `quelleHier` sagt, ob dieser Knoten zu einer von ihnen gehoert;
+         steht er zu weit oben oder gar nicht dabei, bleibt der Knopf
+         weg (Ricardo, 08.09.2026). */
+      if (sprungZiel && !quelleHier(sprungZiel, S.current)) { sprungZiel = null; }
       sprungModus = 'aliase';
     }
     /* Liest der Alias aus mehr als einem Knoten, gehoert das in den Kopf.
