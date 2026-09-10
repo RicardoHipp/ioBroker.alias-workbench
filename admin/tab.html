@@ -11,10 +11,24 @@
        Vorgabepalette auf. Ohne Parameter (Reiter direkt geoeffnet)
        entscheidet die Systemeinstellung hell/dunkel. */
     (function () {
+      /* Der Admin hat mehr Themen als vier.
+
+         `io-package.json` laesst Admin ab 7.6.20 zu, und dort gibt es
+         auch `blue` (dunkel) und `colored` (hell). Beide fielen durch
+         diese Pruefung, das Attribut blieb ungesetzt — und dann
+         entscheidet die SYSTEMeinstellung: ein dunkler Admin auf einem
+         hell eingestellten Rechner bekam die helle Palette mitten in
+         seine dunkle Umgebung. Entschieden wird deshalb nach der
+         Helligkeit, nicht nach dem Namen; unbekannte Namen fallen
+         weiterhin auf die Systemeinstellung zurueck, das ist die
+         ehrlichste Vermutung. */
+      var HELLIGKEIT = {
+        modernLight: 'modernLight', light: 'light', colored: 'modernLight',
+        modernDark: 'modernDark', dark: 'dark', blue: 'modernDark'
+      };
       var setze = function (name) {
-        if (/^(modernLight|modernDark|light|dark)$/.test(name)) {
-          document.documentElement.setAttribute('data-adminthema', name);
-        }
+        var w = HELLIGKEIT[name];
+        if (w) { document.documentElement.setAttribute('data-adminthema', w); }
       };
       var m = /[?&]react=([A-Za-z]+)(?:&|$)/.exec(location.search);
       if (m) { setze(m[1]); }

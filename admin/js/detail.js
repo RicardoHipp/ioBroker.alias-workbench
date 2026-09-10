@@ -149,7 +149,14 @@ export function detailZeile(e, s, idx) {
      Eine Zeile kann beides tragen — etwa nach einem Musterwechsel, der
      die Rolle anpasst: Die neue Rolle weicht dann vom Alias ab, und je
      nachdem auch von der Vorlage (Ricardo, 06.09.2026). */
-  var bstListe = bestandsAbweichung(s, e.ziel);
+  /* `e.ziel || e.kanal` — wie bei den beiden Nachbarn.
+
+     Im Aliasmodus ist `e.ziel` nie gesetzt: Man steht ja schon auf dem
+     Alias, das Ziel waehlt man erst im Quellenmodus. Die Marke „weicht vom
+     Alias ab" erschien dort also NIE — ausgerechnet dort, wo sie am
+     meisten sagt (gemessen 09.09.2026: mit `e.ziel` null Abweichungen, mit
+     `e.ziel || e.kanal` eine). */
+  var bstListe = bestandsAbweichung(s, e.ziel || e.kanal);
   var bstNach = {};
   bstListe.forEach(function (x) { bstNach[x.feld] = x; });
 
@@ -227,8 +234,16 @@ export function detailZeile(e, s, idx) {
     if (selR.value === '__frei__') { s.frei = true; s.srcR = ''; }
     else { s.frei = false; s.srcR = selR.value; }
     if (s.srcR && !S.werte[s.srcR]) {
-      socket.emit('getState', s.srcR, function (err, st) {
-        if (!err && st) { S.werte[s.srcR] = st; zeichneErgebnis(); }
+      /* Die Kennung festhalten, bevor gefragt wird.
+
+         Der Rueckruf legte den Wert unter der Quelle ab, die BEIM
+         EINTREFFEN eingestellt war. Schaltet man in der Zwischenzeit
+         weiter, landet der Wert der alten Quelle unter der neuen — und
+         da nur geholt wird, was noch fehlt, bleibt es dabei: die neue
+         gilt als bekannt (gemessen 09.09.2026). */
+      var geholt = s.srcR;
+      socket.emit('getState', geholt, function (err, st) {
+        if (!err && st) { S.werte[geholt] = st; zeichneErgebnis(); }
       });
     }
     neu();

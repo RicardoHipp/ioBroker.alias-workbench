@@ -93,6 +93,39 @@ describe('Die Uebersetzungen', () => {
         const ohne = [...gesucht].filter(k => dateien.en[k] === undefined);
         expect(ohne, `tr() ohne Eintrag in en.json: ${ohne.join(', ')}`).to.be.empty;
     });
+
+    // Die Gegenrichtung. Bis 09.09.2026 wurde nur Code -> JSON geprueft,
+    // und vier Schluessel standen ein Jahr lang in beiden Sprachdateien,
+    // ohne dass sie jemand rief - einer davon mit einem Kommentar im
+    // Code, der ausdruecklich das Gegenteil behauptete.
+    //
+    // Zusammengesetzte Schluessel (tr('help.' + modus)) kann dieser Test
+    // nicht sehen. Deshalb zaehlt ein Praefix als Verwendung, sobald der
+    // Code irgendwo mit ihm rechnet - lieber einen toten Schluessel
+    // durchlassen als einen lebenden zu Unrecht anklagen.
+    it('fuehren keinen Schluessel, den niemand ruft', () => {
+        let quelltext = '';
+        fs.readdirSync(jsDir)
+            .filter(f => f.endsWith('.js'))
+            .forEach(f => { quelltext += lies(path.join(jsDir, f)); });
+
+        const tot = Object.keys(dateien.en).filter(k => {
+            if (quelltext.indexOf(`'${k}'`) !== -1 || quelltext.indexOf(`"${k}"`) !== -1) {
+                return false;
+            }
+            // tr('help.' + x): steht der Praefix mit Punkt im Code, gilt
+            // die ganze Familie als in Gebrauch.
+            const teile = k.split('.');
+            for (let i = 1; i < teile.length; i++) {
+                const pre = teile.slice(0, i).join('.') + '.';
+                if (quelltext.indexOf(`'${pre}'`) !== -1 || quelltext.indexOf(`"${pre}"`) !== -1) {
+                    return false;
+                }
+            }
+            return true;
+        });
+        expect(tot, `in en.json, aber nirgends gerufen: ${tot.join(', ')}`).to.be.empty;
+    });
 });
 
 describe('Die Einstellungsseite', () => {

@@ -79,6 +79,14 @@ var warumAuf = false;
   var werteTimer = null;
   function werteGezeichnet() {
     werteTimer = null;
+    /* Im Vorlagenmodus steht rechts das Vorlagenblatt, nicht die
+       Zustandsliste — ein eintreffender Wert hat dort nichts zu melden.
+       `setzeModus('vorlagen')` laesst `S.current` ausdruecklich stehen,
+       damit man seine Auswahl beim Zurueckwechseln wiederfindet; ohne
+       diese Zeile baute jeder Takt eines Solarzaehlers das ganze Blatt
+       neu, samt `probelauf` ueber alle Kandidaten und alle Vorlagen
+       (gemessen 09.09.2026: vier Werte, vier Neuaufbauten). */
+    if (S.baumModus === 'vorlagen') { return; }
     if (document.querySelector('dialog[open]')) { return; }
     if (tipptGerade()) { werteTimer = setTimeout(werteGezeichnet, 700); return; }
     if (S.current) { zeichneErgebnis(); }
@@ -394,15 +402,29 @@ var warumAuf = false;
 
            `mousedown` statt `click`, wie bei den Vorschlagslisten der
            Zielleiste: der Mausdruck kommt vor dem Neuzeichnen. */
+        /* Gefragt wird das Dokument, nicht die Erinnerung.
+
+           Die Liste haengt am `body`, damit sie ein automatisches
+           Neuzeichnen ueberlebt. Der Knopf aber ist danach ein anderer,
+           und mit ihm diese Merkstelle: sie stand wieder auf „keine",
+           waehrend die alte Liste weiter am Body hing. Der zweite Klick
+           legte eine zweite Liste ueber die erste, und der Zuhoerer am
+           Body raeumte nicht auf, weil der Knopf das Ereignis abfaengt
+           (gemessen 09.09.2026). */
+        var offeneListe = function () { return document.querySelector('.sprungliste'); };
         var listeQ = null;
         var zuQ = function () {
-          if (listeQ && listeQ.parentNode) { listeQ.parentNode.removeChild(listeQ); }
+          var da = offeneListe();
+          while (da) {
+            if (da.parentNode) { da.parentNode.removeChild(da); }
+            da = offeneListe();
+          }
           listeQ = null;
         };
         sprung.addEventListener('mousedown', function (ev) {
           ev.preventDefault();
           ev.stopPropagation();
-          if (listeQ) { zuQ(); return; }
+          if (offeneListe()) { zuQ(); return; }
           listeQ = el('div', 'vorschlaege sprungliste');
           listeQ.appendChild(el('div', 'vzkopf', tr('result.pickSource')));
           verteilung.forEach(function (q) {
@@ -665,8 +687,20 @@ var warumAuf = false;
           var gid = S.objects[vorh].native.vorlage;
           if (S.VORLAGEN.some(function (x) { return x.id === gid; })) { fest = gid; }
         }
-        var neuE = rohJetzt ? alleUndVorlage(S.current, fest)
-                            : vorschlag(S.current, fest);
+        /* Ausgang und Handwahl gehoeren mit.
+
+           Ohne die Instanz kamen an einer Mehrfachvorlage die Zeilen von
+           Ausgang 1 zurueck, waehrend das Ziel weiter `…Ausgang_2` hiess.
+           Und `fest` allein reicht nicht: Es ist nur gesetzt, wenn schon
+           ein Alias mit Vorlage dasteht. Hatte die Automatik nichts
+           gefunden und man die Vorlage von Hand gewaehlt, suchte der
+           Neuaufbau wieder automatisch, fand nichts — und man landete im
+           Rohmodus, die Handwahl weg (gemessen 09.09.2026). Der
+           Ausgangswechsel eine Stelle weiter oben macht es laengst
+           richtig. */
+        var vid = fest || e.vorlage || null;
+        var neuE = rohJetzt ? alleUndVorlage(S.current, vid, e.instanz)
+                            : vorschlag(S.current, vid, e.instanz);
         if (!neuE) { return; }
         neuE.roh = rohJetzt;
         neuE.vorschlag = true;
@@ -721,8 +755,11 @@ var warumAuf = false;
      der langen Erklaerung. Sie ist weg: dieselbe Auskunft haengt jetzt
      am Hinweis der Legende, und die steht dort, wo die getoenten Zeilen
      stehen. Zweimal dasselbe, einmal oben und einmal ganz unten, war
-     eine zu viel (Ricardo, 08.09.2026). Die Texte `info.explain` und
-     `info.notPartOf` bleiben in Gebrauch — die Legende nutzt sie. */
+     eine zu viel (Ricardo, 08.09.2026). Der Text `info.explain` bleibt in
+     Gebrauch — die Legende nutzt ihn. `info.notPartOf` dagegen rief nach
+     dem Umbau niemand mehr; dieser Satz behauptete das Gegenteil, und
+     der Schluessel stand noch ein Jahr in beiden Sprachdateien, weil der
+     Test nur die Richtung Code → JSON prueft (09.09.2026 entfernt). */
 
   /* Was sich gegenueber dem gespeicherten Stand aendern wuerde. */
   function baueDiffKarte(host, e) {
@@ -754,7 +791,7 @@ var warumAuf = false;
 
   /* Pruefungen, Fusszeile und die Knopfleiste unten - beschriftet
      nach dem, was der Klick tatsaechlich tut. */
-  function setzeKnoepfe(e, haupt, pflichtFehlt, _infoNamen) {
+  function setzeKnoepfe(e, haupt, pflichtFehlt) {
     baueChecks(e, haupt, pflichtFehlt);
 
     /* Der Knopf soll sagen, was er tut — nicht, wie er es tut. */
@@ -885,19 +922,19 @@ var warumAuf = false;
     }
 
     var pl = berechnePlaetze(e, haupt);
-    var imInfo = pl.imInfo;
+
 
     baueListe(host, e, pl, rateKnopf, musterBlock);
     rateKnopf = null;
     musterBlock = null;
 
-    var infoNamen = Object.keys(imInfo);
+
 
     /* --- Änderungen gegenüber dem, was gespeichert ist --- */
     baueDiffKarte(host, e);
 
     /* --- Prüfungen, Fusszeile, Knopfleiste --- */
-    setzeKnoepfe(e, haupt, pflichtFehlt, infoNamen);
+    setzeKnoepfe(e, haupt, pflichtFehlt);
   }
 
   /* Uebersicht ueber alle Geraete unterhalb eines Ordners. */

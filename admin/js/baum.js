@@ -8,7 +8,7 @@ import { S } from './zustand.js';
 import { $, el } from './basis.js';
 import { tr, txt, expertenVorgabe } from './sprache.js';
 import './enums.js';
-import { mitNachfrage } from './entwurf.js';
+import { mitNachfrage, aboLoesen } from './entwurf.js';
 import { zeichneErgebnis } from './ergebnis.js';
 import { zeichneVorlagenListe } from './vorlagenblatt.js';
 
@@ -70,7 +70,7 @@ window.addEventListener('storage', function (e) {
   /* Steht die Auswahl in einem Zweig, den es gleich nicht mehr gibt, muss
      sie weg — sonst zeigt die rechte Seite ein Geraet, das links fehlt. */
   if (S.current && !experte() && nurFuerExperten(S.current, S.objects[S.current])) {
-    S.current = null;
+    S.current = null; aboLoesen();
     S.entwurf = null;
   }
   zeichneBaum();
@@ -94,10 +94,6 @@ export function zusatzName(id) {
   return (n === String(id).split('.').pop()) ? '' : n;
 }
 
-/* Wonach die Zeile gelesen und sortiert wird. */
-export function anzeigeText(k) {
-  return zusatzName(k.id) || k.name;
-}
 
 function baueBaum() {
   var wurzel = { kinder: {}, id: '', name: '' };
@@ -151,6 +147,33 @@ function zaehleZustaende(k, eltern) {
   return n;
 }
 
+
+/* Ist dieser Knoten aufgeklappt?
+
+   Stand frueher mitten im Zeichnen einer Zeile — und damit erst,
+   nachdem der ganze Teilbaum schon als DOM entstanden war. Fuer
+   „zugeklapptes gar nicht erst zeichnen" muss die Antwort vorher da
+   sein, also hier. */
+function klappStand(k, tiefe) {
+  if ((($('#q') || {}).value || '').trim()) { return true; }
+  var vorgabe = (S.alleKlapp === null) ? (tiefe <= 1) : S.alleKlapp;
+  /* Im Aliasbaum gibt es unterhalb der Wurzel nur eigene Ordner - ganz
+     zugeklappt bliebe eine einzige Zeile `alias` uebrig, und jeder Weg
+     begaenne mit zwei Pflichtklicks. Bis `alias.0` bleibt deshalb offen.
+     Das steht hier und nicht im Zuklapp-Knopf: sonst gilt es nur, wenn
+     man IM Aliasmodus zuklappt - wer in den Quellen zuklappt und dann
+     herueberwechselt, fand den Baum zu weit zu (Ricardo, 25.08.2026).
+     Einzeln zuklappen darf man sie weiterhin, `S.aufgeklappt` gewinnt. */
+  if (S.baumModus === 'aliase' && (k.id === 'alias' || k.id === 'alias.0')) {
+    vorgabe = true;
+  }
+  return S.aufgeklappt[k.id] !== undefined ? S.aufgeklappt[k.id] : vorgabe;
+}
+
+/* Ein Vergleicher fuer den ganzen Baum. `localeCompare` mit
+   Optionsobjekt baut bei jedem Aufruf einen neuen — bei 24.800 Elementen
+   sind das je Sortierlauf zehntausende. */
+var VERGLEICH = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
 
 export function zeichneBaum() {
   if (S.baumModus === 'vorlagen') { return zeichneVorlagenListe(); }
@@ -232,6 +255,23 @@ export function istWaehlbar(k) {
   /* Notbehelf nur dort, wo im ganzen Zweig keine Typen gepflegt sind.
      Wo es getypte Kanäle gibt, sollen die das Gerät sein. */
   if (k._hatTypen) { return false; }
+  /* Aber niemals die Wurzel selbst.
+
+     `mqtt-client` und `mqtt-client.0` sind kein Geraet, sondern der
+     Adapter und seine Instanz. Waehlbar waren sie trotzdem, sobald im
+     Zweig keine Typen gepflegt sind — und die Auswahl abonniert
+     `<id>.*` und holt die Werte des ganzen Namensraums (am Testsystem
+     322 Objekte, in einer gewachsenen Anlage ein Vielfaches). Aufklappen
+     ja, auswaehlen nein.
+
+     Gemeint ist die STELLE im Baum, nicht `_tiefe`: Das ist die Hoehe
+     des Teilbaums UNTER dem Knoten, nicht seine Position darin. In
+     0.9.6 stand hier `k._tiefe <= 1`, und das schloss am Testsystem 131
+     Knoten aus — genau einen davon zu Recht. Die anderen 130 waren
+     Sparten wie `…Decklenlicht_RGB.cmnd` und Ordner wie `iot.0.smart`,
+     also Knoten, deren Datenpunkte direkt darunter liegen (gefunden
+     10.09.2026 beim Nachmessen von B23). */
+  if (k.id.split('.').length <= 2) { return false; }
   /* Sonst: alles waehlbar. Was ein Geraet ist, weiss nur der Mensch —
      bei Duneweaver ist es der Knoten darueber, bei Tasmota der darunter.
      Statt zu sperren wird geraten (siehe wohlGeraet) und gewarnt. */
@@ -271,12 +311,17 @@ function renderKinder(knoten, filter, tiefe) {
       return c._zust && !(c.art === 'state' && !Object.keys(c.kinder).length);
     });
   }
+  /* Einmal je Reihe, nicht bei jedem Vergleich.
+
+     `klappbar` laeuft ueber alle Enkel, und ein Sortiervergleich ruft es
+     zweimal — bei n Reihen also 2·n·log(n) Enkel-Schleifen statt n.
+     Dasselbe gilt fuer `localeCompare` mit Optionsobjekt: Das baut je
+     Aufruf einen neuen Vergleicher. Ein `Intl.Collator` tut dasselbe
+     einmal. */
+  reihen.forEach(function (r) { r.kl = klappbar(r.k) ? 0 : 1; r.txt = String(r.zus || r.k.name); });
   reihen.sort(function (a, b) {
-    var ba = klappbar(a.k) ? 0 : 1;
-    var bb = klappbar(b.k) ? 0 : 1;
-    if (ba !== bb) { return ba - bb; }
-    return String(a.zus || a.k.name).localeCompare(String(b.zus || b.k.name),
-      undefined, { numeric: true, sensitivity: 'base' });
+    if (a.kl !== b.kl) { return a.kl - b.kl; }
+    return VERGLEICH.compare(a.txt, b.txt);
   });
 
   reihen.forEach(function (reihe) {
@@ -320,8 +365,21 @@ function renderKinder(knoten, filter, tiefe) {
       ? true
       : (!leer && (k.id.toLowerCase().indexOf(filter) !== -1 ||
                    (reihe.zus && reihe.zus.toLowerCase().indexOf(filter) !== -1)));
-    var kinderUl = renderKinder(k, filter, tiefe + 1);
-    var kinderPassen = kinderUl.childNodes.length > 0;
+    /* Zugeklappte Knoten gar nicht erst zeichnen.
+
+       Vorher entstand IMMER der ganze Teilbaum als DOM — auch der eines
+       zugeklappten Knotens, der gleich darauf weggeworfen wurde. Bei
+       einer gewachsenen Anlage ist das der ganz ueberwiegende Teil der
+       Arbeit.
+
+       Zwei Ausnahmen, in denen der Teilbaum gebraucht wird: beim Filtern
+       (ein Treffer weiter unten macht den Elternknoten sichtbar) und
+       wenn der Knoten aufgeklappt ist. Sonst genuegt die Frage, OB es
+       zeigbare Kinder gibt — und die beantwortet `klappbar` ohne DOM. */
+    var aufJetzt = klappStand(k, tiefe);
+    var brauchtKinder = !!filter || aufJetzt;
+    var kinderUl = brauchtKinder ? renderKinder(k, filter, tiefe + 1) : null;
+    var kinderPassen = kinderUl ? kinderUl.childNodes.length > 0 : klappbar(k);
     if (!passt && !kinderPassen) { return; }
 
     var li = el('li');
@@ -329,20 +387,8 @@ function renderKinder(knoten, filter, tiefe) {
     var d = el('div', 'node' + (waehlbar ? ' pick' : ' grp') + (leer ? ' leer' : '') +
       (k.id === S.current ? ' sel' : ''));
 
-    var hatKinder = kinderUl.childNodes.length > 0;
-    var vorgabe = (S.alleKlapp === null) ? (tiefe <= 1) : S.alleKlapp;
-    /* Im Aliasbaum gibt es unterhalb der Wurzel nur eigene Ordner - ganz
-       zugeklappt bliebe eine einzige Zeile `alias` uebrig, und jeder Weg
-       begaenne mit zwei Pflichtklicks. Bis `alias.0` bleibt deshalb offen.
-       Das steht hier und nicht im Zuklapp-Knopf: sonst gilt es nur, wenn
-       man IM Aliasmodus zuklappt - wer in den Quellen zuklappt und dann
-       herueberwechselt, fand den Baum zu weit zu (Ricardo, 25.08.2026).
-       Einzeln zuklappen darf man sie weiterhin, `S.aufgeklappt` gewinnt. */
-    if (S.baumModus === 'aliase' && (k.id === 'alias' || k.id === 'alias.0')) {
-      vorgabe = true;
-    }
-    var auf = filter ? true
-      : (S.aufgeklappt[k.id] !== undefined ? S.aufgeklappt[k.id] : vorgabe);
+    var hatKinder = kinderPassen;
+    var auf = aufJetzt;
     var tw = el('span', 'tw', hatKinder ? (auf ? '▾' : '▸') : '');
     if (hatKinder) {
       tw.addEventListener('click', function (e) {
@@ -394,13 +440,25 @@ function renderKinder(knoten, filter, tiefe) {
       });
     }
     li.appendChild(d);
-    if (hatKinder && auf) { li.appendChild(kinderUl); }
+    if (hatKinder && auf && kinderUl) { li.appendChild(kinderUl); }
     ul.appendChild(li);
   });
   return ul;
 }
 
-$('#q').addEventListener('input', zeichneBaum);
+/* Entprellt, nicht bei jedem Anschlag.
+
+   Der Baum wurde bei JEDEM Tastendruck komplett neu gebaut. Am
+   Produktivsystem mit 24.786 Objekten gemessen (10.09.2026): 236 ms je
+   Anschlag, acht Anschlaege 1,9 Sekunden — die Eingabe hinkte sichtbar
+   hinterher. 180 ms sind kurz genug, dass es nach dem Tippen sofort
+   dasteht, und lang genug, dass eine fluessig getippte Folge nur einmal
+   zeichnet. */
+var suchTimer = null;
+$('#q').addEventListener('input', function () {
+  if (suchTimer) { clearTimeout(suchTimer); }
+  suchTimer = setTimeout(function () { suchTimer = null; zeichneBaum(); }, 180);
+});
 
 /* Alles auf, alles zu. Die einzeln gemerkten Knoten fallen dabei weg -
    sonst bliebe ein Zweig zu, den man eben ausdruecklich zugeklappt hat,
@@ -416,7 +474,7 @@ function klappeAlle(auf) {
      Abschalten des Expertenmodus. Geprueft wird an der gezeichneten
      Liste, nicht an der Datenlage: sichtbar ist, was im Baum steht. */
   if (S.current && !auf && !imBaumSichtbar()) {
-    S.current = null;
+    S.current = null; aboLoesen();
     S.entwurf = null;
     S.openRow = null;
     zeichneErgebnis();
@@ -448,10 +506,10 @@ export function setzeModus(m) {
      Der Vorlagenbaum ist ausgenommen: er hat eine eigene Ansicht, und
      wer von dort zurueckwechselt, findet seine Auswahl wieder vor. */
   if (m === 'quellen' && S.current && S.current.indexOf('alias.') === 0) {
-    S.current = null; S.entwurf = null; S.openRow = null;
+    S.current = null; aboLoesen(); S.entwurf = null; S.openRow = null;
   }
   if (m === 'aliase' && S.current && S.current.indexOf('alias.') !== 0) {
-    S.current = null; S.entwurf = null; S.openRow = null;
+    S.current = null; aboLoesen(); S.entwurf = null; S.openRow = null;
   }
   /* Beim Moduswechsel den Filter fallen lassen und die Geraeteknoepfe
      zurueckholen. Sonst stand man im Vorlagenbaum vor „nichts gefunden"

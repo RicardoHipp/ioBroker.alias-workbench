@@ -55,17 +55,39 @@ export function ladeSprache(fertig) {
   var beantwortet = false;
   socket.emit('getObject', 'system.config', function (err, obj) {
     if (beantwortet) { return; }
-    beantwortet = true;
-    /* Der Expertenmodus steht an derselben Stelle — einmal fragen reicht
-       fuer beides. */
-    expertenVorgabe = !!(!err && obj && obj.common && obj.common.expertMode);
+    /* Auch eine spaete Antwort gilt noch.
+
+       Nach 2,5 Sekunden geht es ohne weiter — richtig, sonst haengt der
+       Reiter an einem stillen Controller. Die Antwort danach wurde aber
+       ganz verworfen, und damit blieb `expertenVorgabe` auf „aus":
+       Ohne gesetzten `sessionStorage` fehlten alle Expertenobjekte im
+       Baum, ohne dass irgendwo stand, warum. Die Sprache umzustellen,
+       nachdem schon beschriftet ist, waere ein Sprung vor den Augen —
+       die bleibt beim Naechstbesten; der Expertenmodus wird nachgezogen
+       und der Baum neu gezeichnet, wenn er sich unterscheidet. */
+    var expNeu = !!(!err && obj && obj.common && obj.common.expertMode);
     var l = (!err && obj && obj.common && obj.common.language) || vorgabe;
+    if (beantwortet) {
+      if (expNeu !== expertenVorgabe) {
+        expertenVorgabe = expNeu;
+        if (typeof spaeterExperte === 'function') { spaeterExperte(); }
+      }
+      return;
+    }
+    beantwortet = true;
+    expertenVorgabe = expNeu;
     weiter(l);
   });
   setTimeout(function () {
     if (!beantwortet) { beantwortet = true; weiter(vorgabe); }
   }, 2500);
 }
+
+/* Wer den Baum neu zeichnet, wenn der Expertenmodus spaet eintrifft.
+   Von aussen gesetzt, damit `sprache.js` nichts ueber den Baum wissen
+   muss. */
+var spaeterExperte = null;
+export function beiSpaetemExperten(fn) { spaeterExperte = fn; }
 
 /* Beschriftungen im festen HTML nachziehen. */
 export function beschrifteHtml() {
@@ -133,8 +155,30 @@ export function sprachtext(v) {
   return String(v);
 }
 
+/* Frueher stand hier `v.de || v.en` — die eingestellte Sprache kam
+   nicht vor. Auf einem englischen Admin standen mehrsprachig benannte
+   Objekte, Raeume und Funktionen deshalb deutsch da, waehrend
+   `sprachtext` eine Zeile darueber es richtig machte. Zwei Leser fuer
+   dieselbe Frage sind einer zu viel. */
 export function txt(v) {
-  if (v === undefined || v === null) { return ''; }
-  if (typeof v === 'object') { return v.de || v.en || ''; }
-  return String(v);
+  return sprachtext(v);
+}
+
+/* Alle Sprachfassungen eines Namens, klein geschrieben.
+
+   Fuer den Abgleich mit Bestandsnamen: In der Anlage steht „Light",
+   von Hand getippt; die Vorlage sagt „Licht". Wer nur eine Fassung
+   vergleicht — und die auch noch nach Gross- und Kleinschreibung —,
+   legt eine zweite Funktion `enum.functions.light` neben die
+   vorhandene. */
+export function alleTexte(v) {
+  if (v === undefined || v === null) { return []; }
+  var raus = [];
+  var dazu = function (x) {
+    var t = String(x || '').trim().toLowerCase();
+    if (t && raus.indexOf(t) === -1) { raus.push(t); }
+  };
+  if (typeof v === 'object') { Object.keys(v).forEach(function (k) { dazu(v[k]); }); }
+  else { dazu(v); }
+  return raus;
 }

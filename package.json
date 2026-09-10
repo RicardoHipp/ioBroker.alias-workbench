@@ -1,6 +1,6 @@
 {
   "name": "iobroker.alias-workbench",
-  "version": "0.9.0",
+  "version": "0.9.7",
   "description": "Creates aliases the comfortable way — devices that vis, Alexa and the device adapter understand. Templates do the work: shipped ones for HomeMatic and Tasmota, your own for everything else. Live values while you build, dry run before anything is written.",
   "author": {
     "name": "Ricardo Hipp",

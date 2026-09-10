@@ -35,16 +35,13 @@ export function berechnePlaetze(e, haupt) {
   Object.keys(platzVon).forEach(function (n) {
     platzAnzahl[platzVon[n]] = (platzAnzahl[platzVon[n]] || 0) + 1;
   });
-  var infoFund = erkenneEntwurf(e, 'info');
+  /* Hier stand ein voller Detektorlauf gegen das info-Muster. Sein
+     Ergebnis wanderte ueber `imInfo` und `infoNamen` in einen Parameter
+     von `setzeKnoepfe`, den dort niemand liest — bei JEDEM Zeichnen,
+     also bei laufenden Werten alle 700 ms (gefunden 09.09.2026).
+     `imInfo` bleibt als leeres Objekt stehen, damit die Aufrufer
+     unveraendert bleiben. */
   var imInfo = {};
-  if (infoFund.length && haupt && haupt.type !== 'info') {
-    infoFund[0].states.forEach(function (x) {
-      if (x.id) {
-        var kurz = x.id.slice(S.current.length + 1);
-        if (!platzVon[kurz]) { imInfo[kurz] = true; }
-      }
-    });
-  }
 
   /* Mehrere Kanaele, die fuer sich ein Geraet ergeben? Einmal rechnen,
      am Entwurf merken — der Hinweis in der Karte und die Knoepfe unten
@@ -460,7 +457,14 @@ export function baueListe(host, e, pl, rateKnopf, musterBlock) {
          Marken, jede mit eigener Bedeutung: „geaendert" heisst, der
          Nutzer war es; „weicht von der Vorlage ab" vergleicht mit der
          Vorlage; diese hier mit der Datenbank (Ricardo, 06.09.2026). */
-      var bAbw = bestandsAbweichung(s, e.ziel);
+      /* `e.ziel || e.kanal` — wie bei den beiden Nachbarn.
+
+         Im Aliasmodus ist `e.ziel` nie gesetzt: Man steht ja schon auf dem
+         Alias, das Ziel waehlt man erst im Quellenmodus. Die Marke „weicht vom
+         Alias ab" erschien dort also NIE — ausgerechnet dort, wo sie am
+         meisten sagt (gemessen 09.09.2026: mit `e.ziel` null Abweichungen, mit
+         `e.ziel || e.kanal` eine). */
+      var bAbw = bestandsAbweichung(s, e.ziel || e.kanal);
       if (bAbw.length) {
         var bv = el('span', 'geae bstabw', tr('list.aliasDiffers'));
         bv.title = bAbw.map(function (x) {

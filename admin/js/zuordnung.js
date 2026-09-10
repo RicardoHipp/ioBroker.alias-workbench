@@ -4,7 +4,7 @@
 import { S } from './zustand.js';
 import { el } from './basis.js';
 import { tr, txt } from './sprache.js';
-import { enums } from './enums.js';
+import { enums, enumsUnbekannt } from './enums.js';
 import {
   enumListe,
   enumsVon,
@@ -14,7 +14,7 @@ import {
 } from './aufzaehlungen.js';
 import { enumVorlagen, katalogFehlt, ikonCache, ikonErlaubt, ikonNachtrag,
          ikonTaugt, vorlageZu, holeIkon } from './katalog.js';
-import { kindZustaende, aliasQuellen, holeEinzelne } from './werte.js';
+import { kindZustaende, aliasQuellen, holeEinzelne, schreibQuelle } from './werte.js';
 import { aliasFuer, zielId, knotenDa } from './entwurf.js';
 import { zeichneErgebnis, entwurfAngefasst, angebotFrisch } from './ergebnis.js';
 
@@ -35,6 +35,14 @@ import { musterVon, rolleTrifft } from './erkennung.js';
 export function enumAenderungen(e) {
   var raus = [];
   if (!e || !e.kanal) { return raus; }
+  /* Ohne verlaesslichen Vorrat wird keine Aufzaehlung angefasst.
+
+     Was hier entstuende, waere aus der Vorlage gebaut und truege genau
+     ein Mitglied - `setObject` ersetzt das vorhandene Objekt damit
+     vollstaendig. Lieber gar kein Raum als ein Raum, der die anderen
+     Mitglieder verschluckt (09.09.2026). Die Oberflaeche sagt es am
+     Feld und im Trockenlauf. */
+  if (enumsUnbekannt()) { return raus; }
   /* Im Aliasmodus gibt es kein gewaehltes Ziel — der Alias *ist* das Ziel.
      Eine frueher hier stehende Abfrage brach in genau diesem Fall ab, und
      eine im Aliasmodus geaenderte Zuordnung wurde stillschweigend nicht
@@ -343,6 +351,11 @@ export function enumZeile(host, e) {
         });
         el2.appendChild(z);
       });
+      if (enumsUnbekannt()) {
+        var ef = el('div', 'vz zurueck');
+        ef.appendChild(el('span', null, tr('enums.unknown')));
+        el2.appendChild(ef);
+      }
       if (katalogFehlt) {
         var kf = el('div', 'vz zurueck');
         kf.appendChild(el('span', null, tr('catalog.missing')));
@@ -609,14 +622,24 @@ export function uebernehmeBestand(e) {
        Belegt ist das Schreiben durch `common.write` oder durch eine
        hinterlegte Schreibformel; bei getrennten Quellen zaehlt, was in
        `alias.id.write` steht. */
-    z.srcW = q2.einfach
-      ? ((c.write === true || typeof a.write === 'string') ? (q2.write || '') : '')
-      : (q2.write || '');
+    z.srcW = schreibQuelle(o);
     if (q2.write && !q2.einfach && q2.write !== q2.read) {
       /* Die Gegenzeile eines Paars ist keine eigene mehr - ihre Quelle
          steckt jetzt als Schreibquelle in dieser Zeile. */
       e.states.forEach(function (x) {
-        if (x !== z && x.srcR === q2.write) { x.on = false; }
+        if (x === z || x.srcR !== q2.write) { return; }
+        /* Aber nur, was nicht selbst im Alias steht.
+
+           Sonst haengt es an der Reihenfolge von `Object.keys`, ob ein
+           bestehender Punkt ueberlebt: wird er vor der Paarzeile
+           verarbeitet, bleibt er aus, die Aenderungs-Karte meldet „wird
+           entfernt", und das Schreiben loescht ihn — ohne dass ihn
+           jemand abgewaehlt haette. Heute rettet ihn die Schleife
+           darunter (`if (!s.on) s.on = true`), weil in allen 16
+           mitgelieferten Vorlagen die Stellzeile vor der Melderzeile
+           steht; das ist Glueck, keine Zusicherung (09.09.2026). */
+        if (x.n && S.objects[e.ziel + '.' + x.n]) { return; }
+        x.on = false;
       });
     }
     e.bestandZog = true;
@@ -695,9 +718,7 @@ export function uebernehmeBestand(e) {
          Schreibquelle, OPEN, SET und pct verloren sie - ein
          Aktualisieren haette den Rollladen ueber den Alias unfahrbar
          gemacht (Ricardo, 08.09.2026). */
-      srcW: q.einfach
-        ? ((c.write === true || typeof a.write === 'string') ? (q.write || '') : '')
-        : (q.write || ''),
+      srcW: schreibQuelle(o),
       f: (typeof a.read === 'string') ? a.read : '',
       fw: (typeof a.write === 'string') ? a.write : '',
       caption: (nm && nm !== n) ? nm : '',

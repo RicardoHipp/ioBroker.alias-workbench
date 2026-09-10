@@ -68,7 +68,7 @@ export function pruefungDopplung(e) {
 export function pruefungSenden(e) {
   var ziele = e.states.filter(function (x) { return x.on && x.srcW; });
   if (!ziele.length) { return { s: 'mut', t: tr('check.publish'), d: tr('check.noWritePath') }; }
-  var mqtt = [], stumm = [], fehlt = [];
+  var mqtt = [], stumm = [], fehlt = [], unklar = [];
   ziele.forEach(function (x) {
     /* Drei Faelle, nicht zwei: den Punkt gibt es gar nicht, es gibt ihn
        und er ist stumm, oder er sendet. Der erste kam dazu, seit die
@@ -77,11 +77,19 @@ export function pruefungSenden(e) {
     var m = mqttEinstellung(x.srcW);
     if (!m) { return; }
     mqtt.push(x);
-    if (!m.publish) { stumm.push(x.n); }
+    /* Nur ein ausdrueckliches Nein ist ein Nein. `null` heisst
+       unbekannt: Objekte von ioBroker.mqtt und sonoff tragen das Thema
+       nur in `native`, ohne `custom`-Block — ueber ihre Sendefaehigkeit
+       sagt das nichts. Vorher stand dort fest `false`, und die Pruefung
+       meldete rot „kann nicht senden", ohne dass sich etwas daran
+       aendern liess (gemessen 09.09.2026). */
+    if (m.publish === false) { stumm.push(x.n); }
+    else if (m.publish === null) { unklar.push(x.n); }
   });
   if (fehlt.length) { return { s: 'bad', t: tr('check.publish'), d: tr('check.sendPointMissing', fehlt.join(', ')) }; }
   if (!mqtt.length) { return { s: 'mut', t: tr('check.publish'), d: tr('check.notMqtt') }; }
   if (stumm.length) { return { s: 'bad', t: tr('check.publish'), d: tr('check.cannotSend', stumm.join(', ')) }; }
+  if (unklar.length) { return { s: 'mut', t: tr('check.publish'), d: tr('check.sendUnknown', unklar.join(', ')) }; }
   return { s: 'ok', t: tr('check.publish'), d: tr('check.canSend', mqtt.length) };
 }
 

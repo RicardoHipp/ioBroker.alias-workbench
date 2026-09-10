@@ -54,14 +54,14 @@
     },
     {
       "name": "ON_TIME",
-      "rolle": "level.timer",
+      "rolle": "level.timer.off",
       "typ": "number",
       "einheit": "s",
       "lesen": "%N%.ON_TIME",
       "schreiben": "%N%.ON_TIME",
       "optional": true,
       "vorgabeAus": true,
-      "hinweis": "Einschaltdauer in Sekunden. Vor dem Einschalten gesetzt, schaltet der Ausgang danach von allein wieder aus. Das light-Muster hat dafuer keinen Platz - angehakt landet der Punkt im info-Geraet."
+      "hinweis": "Einschaltdauer in Sekunden. Der Platz ON_TIME im Muster nimmt ihn auf."
     },
     {
       "name": "INHIBIT",

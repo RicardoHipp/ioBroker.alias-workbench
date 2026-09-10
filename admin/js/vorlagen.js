@@ -112,6 +112,15 @@ export function ladeVorlagen(fertig) {
        sie behauptet dann nicht, es gaebe keine eigenen Vorlagen. */
     setTimeout(function () { schluss([], true); }, 6000);
     socket.emit('getObject', INSTANZ_ID, function (err, o) {
+      /* Denselben Weg wie der Timeout eine Zeile darueber: ein Fehler
+         heisst nicht „keine eigenen Vorlagen".
+
+         `err` wurde vorher nicht einmal angesehen. Zwei Folgen: in der
+         Kopfzeile fehlte der Warnchip, und `freierSchluessel` hielt
+         vergebene Kennungen fuer frei — beim naechsten Speichern haette
+         `aendereVorlagen` eine vorhandene Vorlage mit Version 1
+         ersetzt. */
+      if (err) { return schluss([], true); }
       schluss((o && o.native && o.native.vorlagen) || []);
     });
   }
@@ -295,6 +304,47 @@ function punktErfuellt(kanal, pfad) {
 }
 
 /* Passt die Vorlage auf diesen Kanal? Liefert null oder eine Bewertung. */
+/* Der Namenshinweis als Ausdruck — und der wirft nicht.
+
+   Der Text kommt frei aus dem Vorlagenblatt und aus dem
+   Speichern-Dialog; keins der beiden Felder prueft ihn. Ein `Lampe (Bad`
+   liess `pruefeVorlage` bei JEDER Geraeteauswahl werfen, kein Aufrufer
+   fing das, und die rechte Seite blieb leer — zu reparieren nur ueber
+   die Instanzkonfiguration von Hand (gemessen 09.09.2026). `rolleTrifft`
+   in `erkennung.js` faengt denselben Fall laengst ab; hier fehlte es.
+
+   Ein unbrauchbarer Ausdruck heisst „trifft nicht": der Hinweis ist nur
+   ein Bonus in der Bewertung, keine Bedingung. Die Vorlage bleibt damit
+   brauchbar, statt das ganze Werkzeug mitzureissen. */
+export function hinweisTrifft(hinweis, name) {
+  if (!hinweisTaugt(hinweis)) { return false; }
+  try { return new RegExp(hinweis, 'i').test(name); }
+  catch { return false; }
+}
+
+/* Verschachtelte Wiederholungen — `(a+)+`, `(a*)*`, `(a+){2,}`.
+
+   Die klassische Form, an der eine RegExp-Maschine in die Knie geht:
+   `(a+)+$` gegen neunundzwanzig "a" brauchte hier gemessene 3196 ms,
+   und der ganze Reiter stand solange (09.09.2026). Ein try/catch faengt
+   das nicht — die Syntax ist ja in Ordnung, es dauert nur ewig.
+
+   Das ist eine Heuristik, kein Beweis: Sie deckt die Form ab, die man
+   sich versehentlich baut, nicht jeden denkbaren Fall. Fuer einen
+   Namenshinweis reicht das — er soll ein Wort im Geraetenamen finden,
+   nicht eine Sprache parsen. */
+function verschachtelt(hinweis) {
+  return /\([^()]*[+*][^()]*\)\s*([+*]|\{\s*[0-9]+\s*,)/.test(String(hinweis));
+}
+
+/* Taugt der Text als Ausdruck? Fuer die Felder, die ihn aufnehmen. */
+export function hinweisTaugt(hinweis) {
+  if (!hinweis) { return true; }
+  if (verschachtelt(hinweis)) { return false; }
+  try { new RegExp(hinweis, 'i'); return true; }
+  catch { return false; }
+}
+
 export function pruefeVorlage(v, kanal, instanz) {
   var erk = v.erkennung || {};
   var gruende = [];
@@ -367,7 +417,7 @@ export function pruefeVorlage(v, kanal, instanz) {
   var belege = (erk.erforderlich || []).length *
                (v.mehrfach ? Math.max(1, ausgaenge.length) : 1) +
                Object.keys(erk.inhalt || {}).length;
-  var namenstreffer = !!(erk.namenshinweis && new RegExp(erk.namenshinweis, 'i').test(name));
+  var namenstreffer = !!(erk.namenshinweis && hinweisTrifft(erk.namenshinweis, name));
   if (namenstreffer) { gruende.push(tr('tpl.nameHint', sprachtext(v.name))); }
   var eigen = v._quelle === 'benutzer';
   var punkte = belege * 1000000 +
@@ -469,6 +519,34 @@ export function wendeAn(v, kanal, gruende, instanz, auchOhneTreffer) {
       break;
     }
 
+    /* Ein Tastendruck hat keinen Zustand zum Lesen.
+
+       `STOP` am Rollladen traegt nur `schreiben` — genau so steht es in
+       der Vorlage, mit Begruendung. Diesen Fall kannte das Anwenden
+       nicht: Ohne `lesen` fiel der Punkt mit „STOP: undefined fehlt"
+       heraus, und KEIN EINZIGER Rollladen-Alias bekam je einen STOP
+       (gefunden 09.09.2026). Der Platz im Muster verlangt auch nichts
+       weiter als `write: true`. */
+    var nurSchreiben = !z.lesen && !!z.schreiben;
+    if (nurSchreiben && !quelle) {
+      var ziel0 = schreibZiel(z, kanal, auf);
+      if (!ziel0) {
+        e.uebersprungen.push(tr('tpl.skippedSource', z.name, auf(z.schreiben)));
+        return;
+      }
+      e.states.push({
+        n: z.name, on: !z.vorgabeAus, role: z.rolle || '', typ: z.typ || '',
+        unit: z.einheit || '', wr: true,
+        srcR: '', srcW: ziel0,
+        f: '', fw: z.schreibformel ? auf(z.schreibformel) : '',
+        caption: z.beschriftung || '',
+        dec: z.nachkommastellen === undefined ? undefined : String(z.nachkommastellen),
+        states: z.werteliste || undefined,
+        manuell: false, ausVorlage: z.name, hinweis: z.hinweis || '', wege: []
+      });
+      return;
+    }
+
     if (!quelle) {
       /* Beide Wege nennen, nicht nur den letzten — sonst sucht man an der
          einen Stelle und die Vorlage hatte an zwei geschaut. */
@@ -481,7 +559,15 @@ export function wendeAn(v, kanal, gruende, instanz, auchOhneTreffer) {
     /* Auch in der Formel steht der Platzhalter — ohne Ersetzung suchte
        der Alias nach einem Feld namens POWER%N%. */
     var formel = leseformel ? auf(leseformel) : '';
-    if (feld) {
+    /* Wer eine Formel hinschreibt, bekommt sie auch.
+
+       `tasmota-rgb` fuehrt an FADE beides: `feld` UND `leseformel`. Die
+       Formel wurde verworfen und aus dem Feld eine neue gebaut — bei
+       FADE faellt es nicht auf, weil der Zieltyp die Umwandlung
+       nachholt, an der naechsten Zeile mit eigener Rechnung aber schon
+       (gefunden 09.09.2026). Das Feld bleibt der bequeme Weg; die
+       ausdrueckliche Angabe schlaegt ihn. */
+    if (feld && !formel) {
       feld = auf(feld);
       /* Mit Fragezeichen-Zugriff: `tele.SENSOR` ist ein Sammeltopf, und
          nicht jede Nachricht darin fuehrt jedes Feld. Ohne Schutz wirft
@@ -563,8 +649,10 @@ export function vorschlag(kanal, vorlagenId, instanz) {
     e.erzwungen = true;
     e.grund = e.grund.concat(gewaehlt.fehler.map(function (f) { return tr('tpl.wouldNeed', f); }));
   }
-  e.andere = treffer.filter(function (t) { return t.vorlage.id !== gewaehlt.vorlage.id; })
-                    .map(function (t) { return t.vorlage; });
+  /* Hier stand `e.andere` — die Liste der unterlegenen Vorlagen. Sie
+     wurde bei jedem Vorschlag gebaut und von niemandem gelesen
+     (gefunden 09.09.2026). Was der Nutzer wirklich braucht, steht im
+     Musterwahl-Feld und im Vorlagenblatt. */
   if (vorlagenId) { e.vonHandGewaehlt = true; }
   return merkeHakenVorgabe(e);
 }

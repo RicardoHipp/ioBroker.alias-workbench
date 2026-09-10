@@ -1,5 +1,5 @@
 import { holeText } from './basis.js';
-import { txt } from './sprache.js';
+import { txt, alleTexte } from './sprache.js';
 import { einst } from './einstellungen.js';
 import './enums.js';
 
@@ -304,10 +304,19 @@ export function vorlageZu(id, art, name) {
   var v = null;
   liste.forEach(function (x) { if (!v && x._id === kurz) { v = x; } });
   if (v) { return v; }
-  var n = String(name || '').toLowerCase();
+  var n = String(name || '').trim().toLowerCase();
   if (!n) { return null; }
+  /* Alle Sprachfassungen, nicht nur die eingestellte.
+
+     Im Bestand steht, was jemand getippt hat — „Light" etwa, waehrend
+     die Vorlage auf einem deutschen Admin „Licht" heisst. Verglichen
+     wurde aber nur die eine Fassung, und ohne Treffer entsteht beim
+     naechsten Schreiben ein Doppelgaenger `enum.functions.light` neben
+     der vorhandenen Funktion (gefunden 09.09.2026). Der Vergleich war
+     schon immer unabhaengig von Gross- und Kleinschreibung; was fehlte,
+     waren die anderen Sprachen. */
   liste.forEach(function (x) {
-    if (!v && String(txt(x.name) || '').toLowerCase() === n) { v = x; }
+    if (!v && alleTexte(x.name).indexOf(n) !== -1) { v = x; }
   });
   return v;
 }

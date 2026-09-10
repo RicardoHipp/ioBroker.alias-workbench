@@ -11,7 +11,7 @@ import { katalogFehlt } from './katalog.js';
 import { funktionsAuswahl, kennungZuFunktion } from './aufzaehlungen.js';
 import { musterVon, rolleTrifft } from './erkennung.js';
 import { musterZeile, musterName } from './musternamen.js';
-import { ladeVorlagen, aendereVorlagen, setzeMeta, pruefeVorlage, INSTANZ_ID } from './vorlagen.js';
+import { ladeVorlagen, aendereVorlagen, setzeMeta, pruefeVorlage, hinweisTaugt, INSTANZ_ID } from './vorlagen.js';
 import { kindZustaende, hatPunkt, feldAusFormel } from './werte.js';
 import { opt } from './entwurf.js';
 import { zeichneErgebnis } from './ergebnis.js';
@@ -326,6 +326,15 @@ export function zeichneVorlagenBlatt(host) {
   nb.style.padding = '0 12px 11px';
   nb.appendChild(feld(tr('tpls.nameHint'), (v.erkennung || {}).namenshinweis || '',
     function (x, w) { x.erkennung = x.erkennung || {}; if (w) { x.erkennung.namenshinweis = w; } else { delete x.erkennung.namenshinweis; } }, '260px'));
+  /* Der Text ist ein Ausdruck, und ein unbrauchbarer Ausdruck faellt
+     sonst nirgends auf: Er wird still zu „trifft nicht", und die Vorlage
+     verliert leise ihren Namensbonus. Also hier sagen, wo er steht. */
+  if (!hinweisTaugt((v.erkennung || {}).namenshinweis || '')) {
+    var nbw = el('div', 'hint');
+    nbw.style.color = 'var(--bad)';
+    nbw.textContent = tr('tpls.nameHintBad');
+    nb.appendChild(nbw);
+  }
   nb.appendChild(el('div', 'hint', tr('tv.nameHintShort')));
   kk.appendChild(nb);
   host.appendChild(kk);
@@ -909,12 +918,61 @@ export function vEinlesenDatei(datei) {
   leser.readAsText(datei);
 }
 
+/* Was eingelesen wird, wird gespeichert — und danach an jedem Geraet
+   ausgewertet. Geprueft wurden bisher nur `id` und `zustaende`.
+
+   Zwei Wege in den Totalschaden: `erkennung.erforderlich` als Text
+   statt als Liste laesst `pruefeVorlage` an JEDEM Geraet werfen
+   („map is not a function", gemessen 09.09.2026), ein fehlendes `name`
+   wirft schon beim Oeffnen im Blatt. Die Knopfleiste „Einlesen und
+   speichern" steht zu diesem Zeitpunkt laengst im DOM — man konnte
+   also eine Vorlage speichern, die den Reiter danach unbrauchbar
+   machte.
+
+   Listenfelder werden nicht abgewiesen, wenn ein einzelner Text
+   gemeint sein kann: `erforderlich: "tele.STATE"` ist eindeutig und
+   wird zur Liste gemacht. Abgewiesen wird nur, was keinen Sinn ergibt. */
 function vPruefeEingelesen(o) {
   if (!o || typeof o !== 'object' || Array.isArray(o)) { return tr('tv.badNotObject'); }
   if (!o.id || typeof o.id !== 'string') { return tr('tv.badNoId'); }
   if (!Array.isArray(o.zustaende) || !o.zustaende.length) { return tr('tv.badNoStates'); }
   var schlecht = o.zustaende.filter(function (z) { return !z || !z.name || !z.lesen; });
   if (schlecht.length) { return tr('tv.badState', schlecht.length); }
+
+  if (o.name !== undefined &&
+      !(typeof o.name === 'string' ||
+        (o.name && typeof o.name === 'object' && !Array.isArray(o.name)))) {
+    return tr('tv.badName');
+  }
+  if (o.erkennung !== undefined &&
+      (!o.erkennung || typeof o.erkennung !== 'object' || Array.isArray(o.erkennung))) {
+    return tr('tv.badRecog');
+  }
+  var erk = o.erkennung || {};
+  var listen = ['erforderlich', 'verboten'];
+  for (var i = 0; i < listen.length; i++) {
+    var w = erk[listen[i]];
+    if (w === undefined) { continue; }
+    if (typeof w === 'string') { erk[listen[i]] = [w]; continue; }
+    if (!Array.isArray(w) || w.some(function (x) { return typeof x !== 'string'; })) {
+      return tr('tv.badList', listen[i]);
+    }
+  }
+  if (erk.inhalt !== undefined &&
+      (!erk.inhalt || typeof erk.inhalt !== 'object' || Array.isArray(erk.inhalt))) {
+    return tr('tv.badContent');
+  }
+  if (erk.namenshinweis !== undefined &&
+      (typeof erk.namenshinweis !== 'string' || !hinweisTaugt(erk.namenshinweis))) {
+    return tr('tv.badNameHint');
+  }
+  /* Ein Musternamen, den dieser Detector nicht kennt, wirft spaeter in
+     der Musterwahl — und der Entwurf wird dann gar nicht erst
+     gezeichnet. Lieber hier abweisen, wo noch jemand zusieht. */
+  if (o.geraetetyp !== undefined &&
+      (typeof o.geraetetyp !== 'string' || (o.geraetetyp && !musterVon(o.geraetetyp)))) {
+    return tr('tv.badType', String(o.geraetetyp));
+  }
   return null;
 }
 
@@ -998,35 +1056,96 @@ function relZu(id, kanal) {
 /* stat.POWER1 → stat.POWER%N%. Ersetzt wird nur am Ende eines
    Abschnitts und nur, wenn davor noch etwas steht — sonst wuerde aus
    ENERGY.Power beim Speichern Unsinn. */
-function zuPlatzhalter(pfad, inst) {
+function zuPlatzhalter(pfad, inst, vorspaenne) {
   var i = (inst === null || inst === undefined) ? '' : String(inst);
   if (!i) { return pfad; }
   return String(pfad).split('.').map(function (t) {
-    return (t.length > i.length && t.slice(-i.length) === i) ? t.slice(0, -i.length) + '%N%' : t;
+    if (!(t.length > i.length && t.slice(-i.length) === i)) { return t; }
+    /* Nicht jede Endziffer ist eine Ausgangsnummer.
+
+       Ersetzt wurde rein nach Endziffer: an einem Mehrfachgeraet mit
+       Ausgang 2 wurde damit auch die IP-Zeile aus `tele.INFO2` zu
+       `tele.INFO%N%` (gemessen 09.09.2026). Der Schaden zeigt sich erst
+       am naechsten Geraet — und an Ausgang 1 meldete `andereAusgaenge`
+       dieselbe Zeile als fremden Ausgang, „Andere weglassen" warf sie
+       hinaus. `INFO2` heisst bei Tasmota die zweite Info-Seite, an
+       jedem Ausgang gleich. */
+    return (vorspaenne.indexOf(t.slice(0, -i.length)) === -1)
+      ? t : t.slice(0, -i.length) + '%N%';
   }).join('.');
+}
+
+/* Welche Vorspaenne tragen wirklich die Ausgangsnummer?
+
+   Drei Quellen, in dieser Reihenfolge belastbar: was die Vorlage im
+   Original schon mit `%N%` fuehrte, der Vorspann aus `kanalname`
+   (`POWER%N%` → `POWER`), und was mit derselben Nummer mehrfach
+   vorkommt — `cmnd.POWER2` und `stat.POWER2` sagen gemeinsam mehr als
+   ein einzelnes `tele.INFO2`. */
+function ausgangsVorspaenne(zeilen, k) {
+  var i = (k.instanz === null || k.instanz === undefined) ? '' : String(k.instanz);
+  var raus = [];
+  var dazu = function (v) { if (v && raus.indexOf(v) === -1) { raus.push(v); } };
+
+  var kn = String(k.kanalname || 'POWER%N%');
+  if (kn.indexOf('%N%') !== -1) { dazu(kn.split('%N%')[0]); }
+
+  ((k.quelle && k.quelle.zustaende) || []).forEach(function (z) {
+    [z.lesen, z.schreiben].forEach(function (pf) {
+      String(pf || '').split('.').forEach(function (t) {
+        var n = t.indexOf('%N%');
+        if (n > 0) { dazu(t.slice(0, n)); }
+      });
+    });
+  });
+
+  if (i) {
+    var wie = {};
+    (zeilen || []).forEach(function (r) {
+      if (r.weg) { return; }
+      [r.lesenAbs ? '' : r.lesenRoh, r.schreibenAbs ? '' : r.schreibenRoh].forEach(function (pf) {
+        String(pf || '').split('.').forEach(function (t) {
+          if (t.length > i.length && t.slice(-i.length) === i) {
+            var v = t.slice(0, -i.length);
+            wie[v] = (wie[v] || 0) + 1;
+          }
+        });
+      });
+    });
+    Object.keys(wie).forEach(function (v) { if (wie[v] > 1) { dazu(v); } });
+  }
+  return raus;
 }
 
 /* Welcher Pfad steht am Ende in der Vorlage? Bei einem Mehrfachgeraet
    tritt der Platzhalter an die Stelle der Ausgangsnummer. */
-function zPfad(r, k, schreibend) {
+function zPfad(r, k, schreibend, zeilen) {
   var roh = schreibend ? r.schreibenRoh : r.lesenRoh;
   var abs = schreibend ? r.schreibenAbs : r.lesenAbs;
   if (!roh) { return ''; }
   if (!k.mehrfach || abs || !k.instanz) { return roh; }
-  return zuPlatzhalter(roh, k.instanz);
+  return zuPlatzhalter(roh, k.instanz,
+    ausgangsVorspaenne(zeilen || (S.tplZ && S.tplZ.zeilen) || [], k));
 }
 
 /* Endet die Nummer eines Ausgangs in den Pfaden? Haeufigste Zahl am
    Ende eines Abschnitts gewinnt — cmnd.POWER1, stat.POWER1 sagen 1. */
-function rateInstanz(zeilen, geraetName) {
-  var zaehler = {};
+function rateInstanz(zeilen, geraetName, vorspann) {
+  var zaehler = {}, nurVorspann = {};
   zeilen.forEach(function (r) {
     if (r.lesenAbs) { return; }
     String(r.lesenRoh).split('.').forEach(function (t) {
       var m = /^(.*[^0-9])([0-9]{1,2})$/.exec(t);
-      if (m) { zaehler[m[2]] = (zaehler[m[2]] || 0) + 1; }
+      if (!m) { return; }
+      zaehler[m[2]] = (zaehler[m[2]] || 0) + 1;
+      if (vorspann && m[1] === vorspann) { nurVorspann[m[2]] = (nurVorspann[m[2]] || 0) + 1; }
     });
   });
+  /* Zaehlt der Vorspann des Ausgangs mit (`POWER%N%` → `POWER`), gilt
+     allein er: sonst hob ein `tele.INFO2` die Nummer eines Geraets an,
+     das gar keinen zweiten Ausgang hat. Findet sich damit nichts,
+     bleibt es beim alten Weg — besser eine geratene Nummer als keine. */
+  if (Object.keys(nurVorspann).length) { zaehler = nurVorspann; }
   var mn = /^(.*[^0-9])([0-9]{1,2})$/.exec(geraetName || '');
   if (mn) { zaehler[mn[2]] = (zaehler[mn[2]] || 0) + 1; }
   var beste = '', wie = 0;
@@ -1042,15 +1161,19 @@ function rateInstanz(zeilen, geraetName) {
    entstehen daraus. Zeigt der Entwurf noch auf POWER2, POWER3 …, waere
    die Vorlage an dieses eine Geraet gefesselt. Also einsammeln und
    sagen, statt still etwas Falsches zu speichern. */
-function andereAusgaenge(zeilen, instanz) {
+function andereAusgaenge(zeilen, instanz, vorspaenne) {
   var raus = { punkte: [], nummern: [] };
   if (!instanz) { return raus; }
+  var vs = vorspaenne || [];
   zeilen.forEach(function (r) {
     if (r.weg || r.lesenAbs) { return; }
     var fremd = null;
     String(r.lesenRoh).split('.').forEach(function (t) {
       var m = /^(.*[^0-9])([0-9]{1,2})$/.exec(t);
-      if (m && m[2] !== String(instanz)) { fremd = m[2]; }
+      /* Dieselbe Regel wie beim Platzhalter: nur was den Ausgang traegt.
+         Sonst stand `tele.INFO2` an Ausgang 1 als fremder Ausgang da,
+         und „Andere weglassen" warf die IP-Zeile hinaus. */
+      if (m && m[2] !== String(instanz) && vs.indexOf(m[1]) !== -1) { fremd = m[2]; }
     });
     if (fremd) {
       raus.punkte.push(r.name);
@@ -1167,7 +1290,8 @@ export function vorlagenVorbereiten(e) {
       maxRang: maxRang,
       mehrfach: mehrfach,
       instanz: mehrfach ? String(inst === null || inst === undefined ? '' : inst)
-                        : rateInstanz(zeilen, geraetName),
+                        : rateInstanz(zeilen, geraetName,
+                            String((quelle && quelle.kanalname) || 'POWER%N%').split('%N%')[0]),
       kanalname: (quelle && quelle.kanalname) ? quelle.kanalname : 'POWER%N%',
       verboten: quelle ? (((quelle.erkennung || {}).verboten) || []).join(', ') : '',
       geraetName: geraetName
@@ -1191,8 +1315,8 @@ export function baueVorlage(z) {
   var erf = [];
   z.zeilen.forEach(function (r) {
     if (r.weg || !r.pflicht || r.lesenAbs) { return; }
-    var lp = zPfad(r, k, false);
-    var sp = zPfad(r, k, true);
+    var lp = zPfad(r, k, false, z.zeilen);
+    var sp = zPfad(r, k, true, z.zeilen);
     if (erf.indexOf(lp) === -1) { erf.push(lp); }
     if (sp && !r.schreibenAbs && erf.indexOf(sp) === -1) { erf.push(sp); }
   });
@@ -1225,10 +1349,10 @@ export function baueVorlage(z) {
       rolle: s.role || undefined,
       typ: s.typ || undefined,
       einheit: s.unit || undefined,
-      lesen: zPfad(r, k, false)
+      lesen: zPfad(r, k, false, z.zeilen)
     };
     if (r.lesenAbs) { zu.absolut = true; }
-    if (r.schreibenRoh) { zu.schreiben = zPfad(r, k, true); }
+    if (r.schreibenRoh) { zu.schreiben = zPfad(r, k, true, z.zeilen); }
     if (f) { zu.feld = f; } else if (s.f) { zu.leseformel = s.f; }
     if (s.fw && r.schreibenRoh) { zu.schreibformel = s.fw; }
     if (!r.pflicht) { zu.optional = true; }
@@ -1244,7 +1368,15 @@ export function baueVorlage(z) {
         .map(function (w) {
           var o = { punkt: w.punkt };
           if (w.feld) { o.feld = w.feld; }
-          if (w.formel) { o.formel = w.formel; }
+          /* `leseformel`, nicht `formel`. `wendeAn` legt die Wege mit
+             dem Schluessel `formel` ab, jeder Leser sucht in
+             `lesenSonst` aber `leseformel` (vorlagen.js:462,
+             vorlagenblatt.js:720). Die Formel jeder Ersatzquelle ging
+             beim Aktualisieren still verloren: bei tasmota-steckdose
+             landete der boolesche Alias an Geraeten ohne `stat.POWER`
+             danach auf dem rohen JSON-Text von `tele.STATE` statt auf
+             `POWER` (gemessen 09.09.2026). */
+          if (w.formel) { o.leseformel = w.formel; }
           return o;
         });
       if (rest.length) { zu.lesenSonst = (rest.length === 1) ? rest[0] : rest; }
@@ -1450,6 +1582,24 @@ export function zeigeVorlagenDialog() {
   $('#dlg-tpl').showModal();
 }
 
+/* Zeigt die Kennung auf eine fremde Vorlage?
+
+   `freierSchluessel` laeuft beim Radio-Wechsel und beim Vorbereiten,
+   nicht nach der Handeingabe im Kennungsfeld. `aendereVorlagen` ersetzt
+   bei gleicher Kennung ohne Rueckfrage (`liste[i] = vorlage`), im Modus
+   „neu" sogar mit Version 1: Wer die Kennung einer anderen eigenen
+   Vorlage eintippte, ueberschrieb sie still — gemessen 09.09.2026, aus
+   „I30 Opfer" v7 mit einem Zustand wurde „Tasmota-Lampe" v1 mit
+   vierzehn. Die eigene Quelle ist ausgenommen: sie zu ersetzen ist ja
+   gerade der Sinn von „aktualisieren". */
+function fremdeMitId(k) {
+  if (!k || !k.id) { return null; }
+  var t = vorlageMitId(k.id);
+  if (!t) { return null; }
+  if (k.modus === 'update' && k.quelle && k.quelle.id === k.id) { return null; }
+  return t;
+}
+
 function tplFeld(label, wert, aendern, breit) {
   var l = el('label', 'feld');
   l.appendChild(el('span', 'feldlabel', label));
@@ -1531,7 +1681,16 @@ export function zeichneVorlagenDialog() {
 
   kb.appendChild(tplFeld(tr('tpls.nameDe'), k.nameDe, function (x) { k.nameDe = x; }, '150px'));
   kb.appendChild(tplFeld(tr('tpls.nameEn'), k.nameEn, function (x) { k.nameEn = x; }, '150px'));
-  kb.appendChild(tplFeld(tr('tpls.id'), k.id, function (x) { k.id = schluesselAus(x); }, '150px'));
+  var kf = tplFeld(tr('tpls.id'), k.id, function (x) { k.id = schluesselAus(x); }, '150px');
+  var stoert = fremdeMitId(k);
+  if (stoert) {
+    var kw = el('span', 'hint');
+    kw.style.color = 'var(--bad)';
+    kw.style.flexBasis = '100%';
+    kw.textContent = tr('tpls.idTaken', textIn(stoert.name, sprache), stoert.version || 1);
+    kf.appendChild(kw);
+  }
+  kb.appendChild(kf);
 
   var lt = el('label', 'feld');
   lt.appendChild(el('span', 'feldlabel', tr('tpls.deviceType')));
@@ -1577,6 +1736,13 @@ export function zeichneVorlagenDialog() {
   var nh = el('div');
   nh.style.padding = '0 12px 11px';
   var nf = tplFeld(tr('tpls.nameHint'), k.namenshinweis, function (x) { k.namenshinweis = x; }, '260px');
+  if (!hinweisTaugt(k.namenshinweis)) {
+    var nw = el('span', 'hint');
+    nw.style.color = 'var(--bad)';
+    nw.style.flexBasis = '100%';
+    nw.textContent = tr('tpls.nameHintBad');
+    nf.appendChild(nw);
+  }
   nh.appendChild(nf);
   var nt = el('div', 'hint', tr('tpls.nameHintHelp', k.geraetName));
   nt.style.marginTop = '4px';
@@ -1594,7 +1760,10 @@ export function zeichneVorlagenDialog() {
   mcb.checked = !!k.mehrfach;
   mcb.addEventListener('change', function () {
     k.mehrfach = mcb.checked;
-    if (k.mehrfach && !k.instanz) { k.instanz = rateInstanz(z.zeilen, k.geraetName); }
+    if (k.mehrfach && !k.instanz) {
+      k.instanz = rateInstanz(z.zeilen, k.geraetName,
+        String(k.kanalname || 'POWER%N%').split('%N%')[0]);
+    }
     zeichneVorlagenDialog();
   });
   ml.appendChild(mcb);
@@ -1614,7 +1783,7 @@ export function zeichneVorlagenDialog() {
     mf.appendChild(mz);
     mf.appendChild(el('div', 'hint',
       k.instanz ? tr('tpls.multipleHelp', k.instanz) : tr('tpls.multipleNoNumber')));
-    var fremd = andereAusgaenge(z.zeilen, k.instanz);
+    var fremd = andereAusgaenge(z.zeilen, k.instanz, ausgangsVorspaenne(z.zeilen, k));
     if (fremd.punkte.length) {
       var fw2 = el('div', 'aside w');
       fw2.style.margin = '9px 0 0';
@@ -1740,9 +1909,9 @@ export function zeichneVorlagenDialog() {
 
     var pw = el('span', 'rx pf');
     pw.style.fontFamily = 'var(--mono)';
-    pw.title = zPfad(r, k, false) + (r.schreibenRoh ? '  → ' + zPfad(r, k, true) : '');
-    pw.appendChild(document.createTextNode(zPfad(r, k, false)));
-    if (r.schreibenRoh) { pw.appendChild(el('span', 'chip mut', '→ ' + zPfad(r, k, true))); }
+    pw.title = zPfad(r, k, false, z.zeilen) + (r.schreibenRoh ? '  → ' + zPfad(r, k, true, z.zeilen) : '');
+    pw.appendChild(document.createTextNode(zPfad(r, k, false, z.zeilen)));
+    if (r.schreibenRoh) { pw.appendChild(el('span', 'chip mut', '→ ' + zPfad(r, k, true, z.zeilen))); }
     if (r.lesenAbs) { pw.appendChild(el('span', 'chip warn', tr('tpls.absolute'))); }
     row.appendChild(pw);
 
@@ -1848,7 +2017,8 @@ export function zeichneVorlagenDialog() {
 
   var b = $('#btn-tpl-save');
   if (b) {
-    b.disabled = fehlerErk || !k.id ||
+    b.disabled = fehlerErk || !k.id || !!fremdeMitId(k) ||
+      !hinweisTaugt(k.namenshinweis) ||
       !z.zeilen.filter(function (r) { return !r.weg; }).length;
     b.textContent = k.modus === 'update' ? tr('tpls.saveUpdate') : tr('tpls.saveNew');
   }

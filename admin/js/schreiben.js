@@ -6,7 +6,7 @@ import { S } from './zustand.js';
 import { socket } from './verbindung.js';
 import { $, el } from './basis.js';
 import { tr, txt } from './sprache.js';
-import { enums, ladeEnums } from './enums.js';
+import { enums, ladeEnums, enumsUnbekannt } from './enums.js';
 import { enumsVon } from './aufzaehlungen.js';
 import './katalog.js';
 import { holeZweig, indexNeu , nachziehenErledigt } from './objekte.js';
@@ -20,7 +20,8 @@ import {
   kennungtauglich,
   entwurfFuer,
   aliasFuer,
-  knotenDa
+  knotenDa,
+  aboLoesen
 } from './entwurf.js';
 import { zeichneErgebnis } from './ergebnis.js';
 
@@ -221,7 +222,19 @@ export function baueObjekte(e) {
      der Versionen haette nichts mehr zu greifen. */
   var altN = (S.objects[ziel] && S.objects[ziel].native) || {};
   var ausAlias = (e.kanal.indexOf('alias.') === 0);
-  var kanalNative = ausAlias ? JSON.parse(JSON.stringify(altN)) : { quelle: e.kanal };
+  /* Wie bei der Rolle eine Zeile weiter unten: mit dem alten Stand
+     beginnen und nur ueberschreiben, was wirklich beisteuert wird.
+
+     Vorher wurde `native` aus der Quellenansicht vollstaendig durch
+     `{ quelle }` ersetzt; Vorlage, Version und Geraetetyp kamen nur
+     zurueck, wenn gerade eine Vorlage griff. Ist sie geloescht oder
+     umbenannt, liefert `vorschlag` `null` — „Alias aktualisieren" bleibt
+     aber freigeschaltet, und die Herkunft war danach weg: kein Abzeichen
+     „gemerkt", womoeglich eine andere Vorlage bei der naechsten
+     Erkennung, und nichts mehr, woran ein Nachziehen der Versionen
+     greifen koennte. Gemessen 09.09.2026: aus fuenf Feldern wurde eins. */
+  var kanalNative = JSON.parse(JSON.stringify(altN));
+  if (!ausAlias) { kanalNative.quelle = e.kanal; }
   if (e.vorlage) {
     kanalNative.vorlage = e.vorlage;
     kanalNative.vorlageVersion = e.vorlageVersion;
@@ -378,6 +391,36 @@ export function zuSchreiben(alleAusgaenge) {
      Entwurf, benannt nach dem Kanal — nicht nach seiner Nummer. Aus
      „Kanal 1" wird `Licht_Bar`, weil das der Name ist, den jemand ihm
      gegeben hat. */
+  /* Raum und Funktion gehoeren an jeden Kanal, nicht nur an den
+     gezeigten.
+
+     Die Teil-Entwuerfe entstehen frisch aus `entwurfFuer` bzw.
+     `vorschlag` und trugen keins von beidem. `enumAenderungen` baute
+     deshalb fuer keinen einzigen Kanal ein Enum-Objekt: Wer oben einen
+     Raum einstellte und „Alle erzeugen" drueckte, bekam Kanaele ohne
+     Raum — der Einzelweg setzte ihn, der Sammelweg nicht.
+
+     Schlimmer war der zweite Fall: Fuer einen fremden Ausgang galt
+     `gewaehlt === ''`. Stand dessen Alias schon in einem Raum, fand ihn
+     `enumsVon`, und das gebaute Objekt trug ihn dort **aus**. Aus „ich
+     lege die anderen Ausgaenge auch an" wurde „ich nehme ihnen ihren
+     Raum weg" (gemessen 09.09.2026 an der Steckdosenleiste: Ausgang 2
+     verlor `enum.rooms.WBG30`).
+
+     Was ein Kanal schon hat, behaelt er — dieselbe Regel wie ueberall
+     sonst: der Bestand schlaegt den Vorschlag. Nur wer keine Zuordnung
+     hat, bekommt die eingestellte. */
+  var enumsUebertragen = function (v) {
+    if (!v || !v.ziel) { return v; }
+    [['rooms', 'raum', 'raumHer'], ['functions', 'funktion', 'funktionHer']]
+      .forEach(function (a) {
+        var eigen = enumsVon(v.ziel, a[0])[0] || '';
+        v[a[1]] = eigen || S.entwurf[a[1]] || '';
+        v[a[2]] = eigen ? 'bestand' : (v[a[1]] ? 'hand' : '');
+      });
+    return v;
+  };
+
   if (alleAusgaenge && S.entwurf.kanalGeraete && S.entwurf.kanalGeraete.length > 1) {
     /* Ein Ordner fuer das Geraet, darunter je Kanal ein Kanal — dieselbe
        Form, die die Tasmota-Mehrfachvorlage seit jeher erzeugt. */
@@ -387,10 +430,18 @@ export function zuSchreiben(alleAusgaenge) {
       var v = entwurfFuer(k.id, gem, S.entwurf.gemeinsamMitPlatz);
       if (!v) { return null; }
       v.zielOrdner = ordner;
-      v.zielName = k.name;
-      v.ziel = ordner + '.' + k.name;
+      /* Die Kennung, nicht der Anzeigename. „Licht Bar, oben" ergab eine
+         Kennung mit Leerzeichen und Komma, „Kueche.Decke" sogar eine
+         zusaetzliche Ebene samt Zwischenordner. Und der js-controller
+         lehnt so etwas nicht ab, er saeubert still: aus
+         `alias.0.wb[pruef]` wurde `alias.0.wb_pruef_`, der Rueckruf
+         meldete `null`. Das Objekt entstuende also unter einer anderen
+         Kennung als angezeigt (gemessen 08.09.2026). Der Name bleibt
+         davon unberuehrt — er steht als Beschriftung im Objekt. */
+      v.zielName = k.kennung || k.name;
+      v.ziel = ordner + '.' + v.zielName;
       uebernehmeBestand(v);
-      return v;
+      return enumsUebertragen(v);
     }).filter(Boolean);
   }
   if (!alleAusgaenge || !S.entwurf.instanzen || S.entwurf.instanzen.length < 2) { return [S.entwurf]; }
@@ -401,9 +452,39 @@ export function zuSchreiben(alleAusgaenge) {
       v.zielOrdner = S.entwurf.zielOrdner;
       v.zielName = ausgangName(v, n);
       v.ziel = v.zielOrdner + '.' + v.zielName;
+      enumsUebertragen(v);
     }
     return v;
   }).filter(Boolean);
+}
+
+/* Ein Objekt in die Liste, ohne ein vorhandenes zu verlieren.
+
+   Bei „Alle erzeugen" bauen mehrere Teil-Entwuerfe dasselbe Enum-Objekt,
+   jeder mit seiner eigenen Kennung darin. Die frueher hier stehende
+   Zeile `if (!liste.some(x => x.id === o.id)) liste.push(o)` warf das
+   zweite weg - von vier Ausgaengen landete einer im Raum, die anderen
+   drei fielen still unter den Tisch.
+
+   Gewoehnliche Objekte bleiben beim ersten: dort ist die Kennung
+   eindeutig, ein zweites waere derselbe Kanal. Nur Aufzaehlungen werden
+   vereinigt, und dabei gilt: eingetragen schlaegt ausgetragen. Ein
+   Mitglied, das ein Entwurf haben will, nimmt ihm kein anderer weg. */
+function sammle(liste, o) {
+  var vorh = null;
+  liste.forEach(function (x) { if (!vorh && x.id === o.id) { vorh = x; } });
+  if (!vorh) { liste.push(o); return; }
+  if (!o.istEnum || !vorh.istEnum) { return; }
+  var m = ((vorh.obj.common || {}).members || []).slice();
+  ((o.obj.common || {}).members || []).forEach(function (x) {
+    if (m.indexOf(x) === -1) { m.push(x); }
+  });
+  m.sort();
+  vorh.obj.common.members = m;
+  vorh.dazu = vorh.dazu || o.dazu;
+  vorh.weg = vorh.weg && o.weg;
+  vorh.ikonDazu = vorh.ikonDazu || o.ikonDazu;
+  vorh.neu = vorh.neu && o.neu;
 }
 
 export function zeigeTrockenlauf(alleAusgaenge) {
@@ -420,9 +501,7 @@ export function zeigeTrockenlauf(alleAusgaenge) {
   var liste = [];
   var probleme = [];
   entwuerfe.forEach(function (en) {
-    baueObjekte(en).forEach(function (o) {
-      if (!liste.some(function (x) { return x.id === o.id; })) { liste.push(o); }
-    });
+    baueObjekte(en).forEach(function (o) { sammle(liste, o); });
     pruefeSchreiben(en).forEach(function (pr) { probleme.push(pr); });
   });
 
@@ -521,6 +600,17 @@ export function zeigeTrockenlauf(alleAusgaenge) {
     body.appendChild(zwK);
   }
 
+  /* Die Aufzaehlungen sind gerade nicht bekannt — dann wird auch keine
+     geschrieben. Das gehoert hierher und nicht in eine Sperre: der Alias
+     selbst braucht sie nicht, und aus einem stillen Datenverlust eine
+     stille Blockade zu machen waere kein Fortschritt (P8). */
+  if (enumsUnbekannt() && S.entwurf && (S.entwurf.raum || S.entwurf.funktion)) {
+    var ek = el('div', 'aside w');
+    ek.style.marginBottom = '11px';
+    ek.appendChild(el('b', null, tr('write.enumsUnknown')));
+    body.appendChild(ek);
+  }
+
   if (weg.length) {
     var wk = el('div', 'card');
     wk.style.marginBottom = '11px';
@@ -582,10 +672,20 @@ export function zeigeTrockenlauf(alleAusgaenge) {
         kn2.disabled = true;
         kn2.textContent = tr('write.writing');
         var offen2 = fehlend.length;
+        var mqFehler = [];
         fehlend.forEach(function (fid) {
           var t2 = fid.split('.cmnd.');
-          mqttEinzelnStill(t2[0], t2[1], function () {
+          mqttEinzelnStill(t2[0], t2[1], function (err) {
+            if (err) { mqFehler.push(fid + ': ' + err); }
             if (--offen2 === 0) {
+              /* Was nicht entstanden ist, wird benannt — nicht gezaehlt.
+                 Der Trockenlauf sperrt danach ohnehin wieder, aber ohne
+                 diesen Satz suchte man den Grund am falschen Ende. */
+              if (mqFehler.length) {
+                kn2.disabled = false;
+                kn2.textContent = tr('write.retry');
+                kn2.title = mqFehler.join(' | ');
+              }
               /* Erst den Entwurf neu aufbauen lassen, dann den
                  Trockenlauf noch einmal rechnen. Sofort geoeffnet zeigte
                  er den Rohentwurf, weil die Vorlage noch nicht wieder
@@ -811,6 +911,30 @@ export function zeichneLoeschen() {
   hin.textContent = tr('del.hint');
   body.appendChild(hin);
 
+  /* Liegen eigene Kanaele darunter?
+
+     Der Umfang nimmt alles unterhalb des Praefixes. Bei einem
+     `device`-Container sind das auch fremde Alias-Kanaele — ganze
+     Geraete, die mit dem gemeinten nichts zu tun haben. Die Liste zeigt
+     sie zwar mit Typ, aber der Hinweistext sprach nur von „Datenpunkten
+     darunter", und die Zahl oben sagt nur, wie viele Zeilen es sind.
+     Wer sie zaehlt, weiss nicht, dass er drei Geraete mitnimmt. */
+  var kanaeleDrunter = alle.filter(function (id) {
+    if (id === ziel) { return false; }
+    var o = S.objects[id];
+    return o && (o.type === 'channel' || o.type === 'device');
+  });
+  if (kanaeleDrunter.length) {
+    var kw = el('div', 'aside w');
+    kw.style.marginBottom = '11px';
+    kw.appendChild(el('b', null, tr('del.channelsBelow', kanaeleDrunter.length)));
+    var kl = el('div', 'hint');
+    kl.style.marginTop = '4px';
+    kl.textContent = kanaeleDrunter.map(function (x) { return x.slice(ziel.length + 1); }).join(', ');
+    kw.appendChild(kl);
+    body.appendChild(kw);
+  }
+
   var gesch = geschwisterVon(ziel);
   if (gesch.length) {
     var gw = el('div', 'aside');
@@ -888,10 +1012,11 @@ export function loescheAlias() {
   b.disabled = true;
   b.textContent = tr('write.writing');
 
-  var offen = alle.length, fehler = [];
+  var offen = alle.length, fehler = [], wirklichWeg = [];
   alle.forEach(function (id) {
     socket.emit('delObject', id, function (err) {
       if (err) { fehler.push(id + ': ' + err); }
+      else { wirklichWeg.push(id); }
       if (--offen === 0) {
         var body = $('#del-body');
         body.textContent = '';
@@ -903,8 +1028,23 @@ export function loescheAlias() {
           m.appendChild(el('b', null, tr('del.done', alle.length)));
         }
         body.appendChild(m);
-        alle.forEach(function (x) { delete S.objects[x]; });
-        S.keysSorted = Object.keys(S.objects).sort();
+        /* Nur austragen, was wirklich weg ist.
+
+           Vorher fielen alle Kennungen aus dem eigenen Bestand, egal ob
+           das Loeschen geklappt hatte. Was in der Datenbank stehenblieb,
+           war danach ueber die Werkbank nicht mehr zu greifen - sie hielt
+           es fuer geloescht (gemessen 09.09.2026: `…Neu.WORKING` stand am
+           System, fehlte aber im Vorrat). */
+        wirklichWeg.forEach(function (x) { delete S.objects[x]; });
+        /* `indexNeu()` statt nur zu sortieren.
+
+           An vier Stellen stand hier `S.keysSorted = Object.keys(...)`,
+           obwohl `indexNeu` importiert ist. Das raeumt zusaetzlich
+           `S.kleinIndex` und zieht die Objektzahl in der Kopfzeile nach.
+           Ohne das behielt die Karte geloeschte Kennungen — `hatPunkt`
+           lieferte Treffer auf Punkte, die es nicht mehr gab —, und die
+           Zahl oben blieb stehen (gefunden 09.09.2026). */
+        indexNeu();
 
         /* Ordner, die dadurch leer geworden sind, mitnehmen — aber nur
            die eigenen Zwischenebenen unterhalb von alias.0, und nur
@@ -920,11 +1060,22 @@ export function loescheAlias() {
         } else {
           b.hidden = true;
         }
+        /* Nach einem Teilfehler wird nicht aufgeraeumt und das Ziel
+           bleibt stehen: „Noch einmal versuchen" ruft `loescheAlias`,
+           und das beginnt mit `if (!S.loeschZiel) return;` — ohne Ziel
+           war der Knopf eine Attrappe. Aufraeumen waere ohnehin falsch,
+           solange noch etwas darunter liegt. */
+        if (fehler.length) {
+          zeichneBaum();
+          zeichneErgebnis();
+          return;
+        }
         leereEnumsRaeumen(enumsMitzunehmen, alle, function () {
           leereOrdnerRaeumen(ziel, function () {
             S.loeschZiel = null;
             S.entwurf = null;
             S.current = null;
+            aboLoesen();
             zeichneBaum();
             zeichneErgebnis();
           });
@@ -1174,8 +1325,25 @@ export function zeigeVerlegen(altVorgabe, zielVorgabe) {
       b.disabled = true;
       return;
     }
-    if (S.objects[neu]) {
+    /* Ein Ziel, das es schon gibt — auch eines ohne eigenes
+       Kanalobjekt. `S.objects` allein reicht nicht: legt man Aliaspunkte
+       von Hand im Admin an, entsteht `alias.0.X.Y.PUNKT`, ohne dass
+       `alias.0.X.Y` als Objekt existiert. Der Baum zeigt den Knoten
+       trotzdem, und das Verlegen schrieb bisher mitten hinein und
+       ueberschrieb vorhandene Punkte gleichen Namens (E31, T23). */
+    if (knotenDa(neu)) {
       vorschau.appendChild(el('div', 'aside w', tr('move.exists', neu)));
+      b.disabled = true;
+      return;
+    }
+    /* Und kein Ziel, das mit der Quelle verschachtelt ist.
+
+       `alias.0.X` nach `alias.0.X.Sub`: `verlegeUmfang` enthaelt
+       `alias.0.X`, und das Loeschen am Ende nimmt genau den Elternknoten
+       des eben verlegten Alias mit. Umgekehrt genauso — dann laege das
+       Ziel im Umfang und wuerde gleich wieder geloescht. */
+    if (neu.indexOf(alt + '.') === 0 || alt.indexOf(neu + '.') === 0) {
+      vorschau.appendChild(el('div', 'aside w', tr('move.nested')));
       b.disabled = true;
       return;
     }
@@ -1360,7 +1528,7 @@ export function verlegeAlias(alt, neu) {
            blieb aus, und ein zweites Verlegen war nicht moeglich. */
         S.objects[zielId] = o;
       }
-      if (--offen === 0) { S.keysSorted = Object.keys(S.objects).sort(); weiter(); }
+      if (--offen === 0) { indexNeu(); weiter(); }
     });
   });
 
@@ -1386,7 +1554,16 @@ export function verlegeAlias(alt, neu) {
     enumArbeit.forEach(function (a) {
       socket.emit('setObject', a.id, a.obj, function (err) {
         if (err) { fehler.push(a.id + ': ' + err); }
-        if (--offen2 === 0) { loeschen(); }
+        if (--offen2 === 0) {
+          /* Derselbe Abbruch wie eine Stufe darueber: geht etwas schief,
+             wird nicht geloescht. Vorher lief `loeschen()` trotzdem —
+             der alte Alias war weg, der neue stand in keiner Aufzaehlung,
+             und die Zuordnung war damit verloren (gemessen 09.09.2026:
+             `enum.rooms.WBP3` blieb leer zurueck). Zwei Aliase sind
+             unschoen, aber reparierbar; eine verlorene Zuordnung nicht. */
+          if (fehler.length) { return melden(fehler); }
+          loeschen();
+        }
       });
     });
   }
@@ -1400,7 +1577,7 @@ export function verlegeAlias(alt, neu) {
         if (err) { fehler.push(id + ': ' + err); }
         if (--offen3 === 0) {
           weg.forEach(function (x) { delete S.objects[x]; });
-          S.keysSorted = Object.keys(S.objects).sort();
+          indexNeu();
           leereOrdnerRaeumen(alt, function () {
             S.current = neu;
             S.entwurf = null;
@@ -1428,9 +1605,15 @@ export function verlegeAlias(alt, neu) {
     body.appendChild(m);
     /* Nur in diesem Dialog verschwinden lassen - beim naechsten Oeffnen
        baut ihn `zeigeVerlegen` wieder auf. Vorher blieb er dauerhaft
-       versteckt, und ein zweites Verlegen ging nicht mehr. */
-    b.hidden = true;
+       versteckt, und ein zweites Verlegen ging nicht mehr.
+
+       Nach einem Fehlschlag bleibt er als „Noch einmal versuchen" stehen:
+       das Neue ist dann schon angelegt, das Alte steht noch, und ein
+       zweiter Anlauf schreibt beides gefahrlos nach - genau das, was ein
+       kurzer Aussetzer beim Schreiben der Aufzaehlung braucht. */
     b.disabled = false;
+    if (f.length) { b.hidden = false; b.textContent = tr('write.retry'); }
+    else { b.hidden = true; }
     ladeEnums(function () {
       zeichneBaum();
       /* Den Alias unter der neuen Kennung wieder aufschlagen.
@@ -1473,7 +1656,7 @@ export function leereOrdnerRaeumen(weg, fertig) {
     if (!o || o.type !== 'folder' || belegt) { return fertig(); }
     socket.emit('delObject', pfad, function () {
       delete S.objects[pfad];
-      S.keysSorted = Object.keys(S.objects).sort();
+      indexNeu();
       weiter();
     });
   })();
@@ -1487,9 +1670,7 @@ export function schreibeObjekte() {
   var liste = [];
   var schlecht = 0;
   entwuerfe2.forEach(function (en) {
-    baueObjekte(en).forEach(function (o) {
-      if (!liste.some(function (x) { return x.id === o.id; })) { liste.push(o); }
-    });
+    baueObjekte(en).forEach(function (o) { sammle(liste, o); });
     schlecht += pruefeSchreiben(en).length;
   });
   if (schlecht) { return; }
@@ -1560,7 +1741,11 @@ export function schreibeObjekte() {
       }
       $('#btn-dry-write').hidden = true;
     }
-    S.loeschListe = [];
+    /* Nur bei Erfolg. Der Wiederholen-Knopf ruft `schreibeObjekte`
+       direkt, und das filtert dann eine leere Liste: die verwaisten
+       Punkte blieben fuer immer stehen, und die Erfolgsmeldung zaehlte
+       sie nicht mehr mit (gemessen 09.09.2026). */
+    if (!fehler.length) { S.loeschListe = []; }
 
     /* Die Marke „geaendert“ hat ihre Aufgabe erfuellt.
 

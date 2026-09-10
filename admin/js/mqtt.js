@@ -38,10 +38,28 @@ export function mqttEinstellung(id) {
   if (!o || !o.common) { return null; }
   var cu = o.common.custom || {};
   var k = null;
-  Object.keys(cu).forEach(function (x) { if (!k && /^mqtt/.test(x)) { k = x; } });
+  /* Drei Bedingungen, nicht eine.
+
+     `cu[x]` kann `null` sein — ioBroker raeumt den Eintrag nicht weg,
+     wenn eine Instanz verschwindet. Der Zugriff auf `.topic` riss dann
+     die ganze Ergebnisansicht mit (gemessen 09.09.2026).
+
+     Und `enabled` kam hier gar nicht vor: `{ enabled: false,
+     publish: true }` galt als sendefaehig, obwohl die Instanz diesen
+     Punkt nicht bedient. Fehlt das Feld, gilt der Eintrag als an — so
+     legt der Admin es an, wenn man die Verknuepfung setzt. */
+  Object.keys(cu).forEach(function (x) {
+    if (!k && /^mqtt/.test(x) && cu[x] && cu[x].enabled !== false) { k = x; }
+  });
   if (!k) {
-    /* Manche Objekte tragen das Thema nur in native. */
-    if (o.native && o.native.topic) { return { instanz: null, topic: o.native.topic, publish: false }; }
+    /* Manche Objekte tragen das Thema nur in native — ioBroker.mqtt und
+       sonoff tun das. Fuer sie ist `publish` schlicht UNBEKANNT, nicht
+       nein: Frueher stand hier `false`, die Pruefung meldete „kann nicht
+       senden", der Chip stand rot, und der Knopf „senden erlauben"
+       schrieb das Objekt unveraendert zurueck — eine Meldung, die sich
+       nicht abstellen liess (gemessen 09.09.2026). `null` heisst: wir
+       wissen es nicht, also nicht behaupten. */
+    if (o.native && o.native.topic) { return { instanz: null, topic: o.native.topic, publish: null }; }
     return null;
   }
   return { instanz: k, topic: cu[k].topic || (o.native || {}).topic || '', publish: !!cu[k].publish,
@@ -110,6 +128,12 @@ export function tasmotaBefehle(kanal) {
   var liste = [];
   Object.keys(aus).forEach(function (f) {
     if (weg.indexOf(f) > -1) { return; }
+    /* Aus dem Schluessel wird eine Kennung UND ein MQTT-Thema. Ein `#`
+       oder `+` darin ergaebe ein Wildcard-Abo, ein Punkt eine
+       zusaetzliche Ebene im Objektbaum. Der Inhalt kommt vom Broker,
+       also von aussen — erreichbar ueber jeden fremden Publisher auf
+       demselben Broker. Tasmota-Befehle heissen ohnehin alle so. */
+    if (!/^[A-Za-z][A-Za-z0-9_]*$/.test(f)) { return; }
     if (aus[f] !== null && typeof aus[f] === 'object' && !Array.isArray(aus[f])) { return; }
     liste.push({ name: f, wert: aus[f] });
   });
@@ -143,13 +167,21 @@ export function befehlsWissen(name) {
    naechste Befehl die Antwort. Gemessen: nachfragen → „eingeschaltet",
    einmal schalten → wieder „unbekannt", obwohl sich am Geraet nichts
    geaendert hatte. Der Befund war praktisch nie stabil zu sehen. */
-export function sofortRueckmeldung(kanal) {
+export function sofortRueckmeldung(kanal, merken) {
   var id = hatPunkt(kanal, 'stat.RESULT');
   if (id) {
     var j = jsonVon(id);
     if (j && j.SetOption59 !== undefined) {
       var w = String(j.SetOption59).toUpperCase() === 'ON';
-      merkeSo59(kanal, w);
+      /* Gemerkt wird nur nach einer Abfrage, nicht beim Zeichnen.
+
+         Vorher schrieb diese Funktion aus dem Zeichenpfad heraus ein
+         Objekt — ein Waechter verhinderte nur das Mehrfachschreiben,
+         der Fehler wurde verschluckt, und der Wert stand lokal schon.
+         Das widerspricht der Zusage, dass die Pruefungen nichts
+         anfassen: Wer die rechte Seite ansieht, aendert nichts.
+         `so59()` ruft mit `merken = true`, alle anderen lesen nur. */
+      if (merken) { merkeSo59(kanal, w); }
       return w;
     }
   }
@@ -203,7 +235,10 @@ export function mqttLage(kanal) {
       var id = hatPunkt(kanal, 'cmnd.' + x.name);
       if (!id) { fehlen.push(x); return; }
       var m = mqttEinstellung(id);
-      if (m && !m.publish) { stumm.push({ name: x.name, id: id }); } else { da.push(x.name); }
+      /* `publish === null` heisst unbekannt (Thema nur in `native`) —
+         so ein Punkt kommt zu den vorhandenen, nicht zu den stummen.
+         „Senden erlauben" haette an ihm ohnehin nichts zu schreiben. */
+      if (m && m.publish === false) { stumm.push({ name: x.name, id: id }); } else { da.push(x.name); }
     });
   }
   /* Auch cmnd-Punkte, die es schon gibt, ohne dass sie im Zustand
@@ -215,7 +250,7 @@ export function mqttLage(kanal) {
     if (stumm.some(function (x) { return x.name === name; })) { return; }
     if (da.indexOf(name) > -1) { return; }
     var m = mqttEinstellung(id);
-    if (m && !m.publish) { stumm.push({ name: name, id: id }); }
+    if (m && m.publish === false) { stumm.push({ name: name, id: id }); }
   });
   return { geraet: g, befehle: b, fehlen: fehlen, stumm: stumm, da: da,
            sofort: sofortRueckmeldung(kanal) };
@@ -509,7 +544,7 @@ function so59(kanal, knopf, wert) {
             setTimeout(function () {
               holeZweig(kanal + '.', function () {
                 delete so59Laeuft[kanal];
-                so59Stumm[kanal] = (sofortRueckmeldung(kanal) === null);
+                so59Stumm[kanal] = (sofortRueckmeldung(kanal, true) === null);
                 zeichneErgebnis();
               });
             }, 4000);
@@ -556,6 +591,18 @@ function mqttFragen(kanal, _knopf) {
           /* Status 5 gleich mit: dort steht die IP, und die fehlt an
              jedem Geraet, das seit dem Einbinden nicht neu gestartet
              ist — tele/INFO2 kommt nur beim Start. */
+          /* Wie alt sind die Quellen JETZT?
+
+             Vorher wurde nur die Merkstelle geleert. Ein `stat.RESULT`,
+             das retained von vorgestern dasteht, reichte danach fuer
+             die gruene Rueckmeldung — auch wenn das Geraet aus ist und
+             gar nicht antwortet (gemessen 09.09.2026). Gewertet wird
+             jetzt nur, was nach dem Senden hereinkam. */
+          var vorTs = {};
+          ['stat.STATUS11', 'tele.STATE', 'stat.RESULT'].forEach(function (q) {
+            var qid = hatPunkt(kanal, q);
+            if (qid && S.werte[qid]) { vorTs[q] = S.werte[qid].ts || 0; }
+          });
           socket.emit('setState', id, { val: '5', ack: false }, function () {});
           socket.emit('setState', id, { val: '11', ack: false }, function () {
             setTimeout(function () {
@@ -569,7 +616,12 @@ function mqttFragen(kanal, _knopf) {
               holeZweig(kanal + '.', function () {
                 delete abfrageLaeuft[kanal];
                 var bb = tasmotaBefehle(kanal);
-                mqttAbfrage[kanal] = (bb && bb.befehle.length) ? bb.befehle.length : 0;
+                /* Nur wenn die Quelle, aus der die Liste stammt, seit
+                   dem Senden frisch geworden ist. */
+                var qid = bb && hatPunkt(kanal, bb.woher);
+                var jetzt = (qid && S.werte[qid]) ? (S.werte[qid].ts || 0) : 0;
+                var frisch = bb && jetzt > (vorTs[bb.woher] || 0);
+                mqttAbfrage[kanal] = (frisch && bb.befehle.length) ? bb.befehle.length : 0;
                 zeichneErgebnis();
               });
             }, 5000);
@@ -606,7 +658,18 @@ function mqttCustom(g, thema) {
 export function mqttEinzelnStill(kanal, name, fertig) {
   var bau = mqttPunktBauen(kanal, name, 'neu');
   if (!bau) { return fertig && fertig(); }
-  socket.emit('setObject', bau.id, bau.obj, function () {
+  socket.emit('setObject', bau.id, bau.obj, function (err) {
+    /* Ein abgelehntes Schreiben ist kein Erfolg.
+
+       Der Rueckruf nahm `err` frueher nicht einmal entgegen und trug das
+       Objekt trotzdem in den eigenen Bestand ein. Danach hielt
+       `pruefeSchreiben` den Sendepunkt fuer vorhanden, die Sperre griff
+       nicht mehr, und „Jetzt anlegen" schrieb `alias.id.write` auf eine
+       Kennung, die es in der Datenbank nie gab — genau der Fehler, den
+       der js-controller sich dauerhaft merkt und nur durch Loeschen und
+       Neuanlegen vergisst. Der Zwilling `mqttEinzeln` prueft ihn seit
+       jeher richtig (gemessen 09.09.2026). */
+    if (err) { return fertig && fertig(err); }
     uebernimmObjekt(bau.id, bau.obj);
     if (fertig) { fertig(); }
   });
@@ -622,7 +685,7 @@ function mqttPunktBauen(kanal, name, was) {
     if (!alt0) { return null; }
     obj = JSON.parse(JSON.stringify(alt0));
     var cu0 = obj.common.custom || {};
-    Object.keys(cu0).forEach(function (i) { if (/^mqtt/.test(i)) { cu0[i].publish = true; } });
+    Object.keys(cu0).forEach(function (i) { if (/^mqtt/.test(i) && cu0[i]) { cu0[i].publish = true; } });
     obj.common.custom = cu0;
   } else {
     var w0 = befehlsWissen(name) || {};
@@ -656,7 +719,7 @@ export function mqttEinzeln(kanal, name, was, knopf) {
     if (!alt) { return; }
     obj = JSON.parse(JSON.stringify(alt));
     var cu = obj.common.custom || {};
-    Object.keys(cu).forEach(function (i) { if (/^mqtt/.test(i)) { cu[i].publish = true; } });
+    Object.keys(cu).forEach(function (i) { if (/^mqtt/.test(i) && cu[i]) { cu[i].publish = true; } });
     obj.common.custom = cu;
   } else {
     var w = befehlsWissen(name) || {};
@@ -846,7 +909,7 @@ function mqttZuSchreiben() {
     if (!alt) { return; }
     var kopie = JSON.parse(JSON.stringify(alt));
     var cu = kopie.common.custom || {};
-    Object.keys(cu).forEach(function (i) { if (/^mqtt/.test(i)) { cu[i].publish = true; } });
+    Object.keys(cu).forEach(function (i) { if (/^mqtt/.test(i) && cu[i]) { cu[i].publish = true; } });
     kopie.common.custom = cu;
     raus.push({ id: x.id, obj: kopie, neu: false });
   });

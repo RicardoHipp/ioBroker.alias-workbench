@@ -8,7 +8,9 @@ import { $ } from './basis.js';
 import { txt, tr } from './sprache.js';
 import './enums.js';
 import { zusatzName, setzeModus, zeichneBaum, merkeKlappstand } from './baum.js';
-import { kindZustaende, aliasQuellen, holeWerte } from './werte.js';
+import { kindZustaende, aliasQuellen, holeWerte,
+  mitVorspann, schreibQuelle
+} from './werte.js';
 import { erkenneEntwurf } from './erkennung.js';
 import { vorschlag , pruefeVorlage, zeigeAbozahl } from './vorlagen.js';
 
@@ -101,11 +103,7 @@ export function baueEntwurf(kanal) {
          alias.0.Badezimmer.Rollladen.CLOSE). Belegt ist das Schreiben
          durch `common.write` oder durch eine vorhandene Schreibformel -
          wer eine hinterlegt hat, wollte schreiben. */
-      srcW: istAlias
-        ? (q.einfach
-            ? ((c.write === true || typeof a.write === 'string') ? (q.write || '') : '')
-            : (q.write || ''))
-        : (c.write ? id : ''),
+      srcW: istAlias ? schreibQuelle(o) : (c.write ? id : ''),
       f: (typeof a.read === 'string') ? a.read : '',
       fw: (typeof a.write === 'string') ? a.write : '',
       caption: istAlias ? txt(c.name) : kanalBeschriftung(kanal, kurzName),
@@ -132,8 +130,8 @@ export function baueEntwurf(kanal) {
    entstanden ist - dieselbe Regel wie in `waehle`. Ohne sie durfte eine
    spaeter angelegte Vorlage beim Umschalten auf die Alle-Ansicht das
    fertige Geraet still uebernehmen (26.08.2026). */
-export function alleUndVorlage(kanal, vorlagenId) {
-  var v = vorschlag(kanal, vorlagenId);
+export function alleUndVorlage(kanal, vorlagenId, instanz) {
+  var v = vorschlag(kanal, vorlagenId, instanz);
   var roh = baueEntwurf(kanal);
   if (!v) { return roh; }
 
@@ -550,7 +548,14 @@ export function steuerKanaele(dev) {
     var pflicht = f[0].states.filter(function (st) { return st.id; })
       .map(function (st) { return st.id; });
     if (!f[0].states.some(function (st) { return st.required && st.id; })) { return; }
-    raus.push({ id: id, typ: f[0].type, name: eigenerKanalName(id) || id.slice(pre.length),
+    /* `name` ist der Anzeigename und darf alles enthalten, was ein Mensch
+       hinschreibt. `kennung` ist, was als Objekt-ID taugt — dieselbe
+       Saeuberung wie ueberall sonst (T19). Getrennt, weil beides
+       gebraucht wird: die Liste zeigt den Namen, das Ziel nimmt die
+       Kennung. */
+    var kn = eigenerKanalName(id);
+    raus.push({ id: id, typ: f[0].type, name: kn || id.slice(pre.length),
+                kennung: kennungtauglich(kn || '') || id.slice(pre.length),
                 pflicht: pflicht });
   });
   kanalGeraeteCache[dev] = raus;
@@ -643,6 +648,20 @@ export function entwurfFuer(id, gemeinsam, gemAn) {
   return merkeHakenVorgabe(e2);
 }
 
+/* Alle laufenden Abos abmelden.
+
+   Stand nur in `waehle` — und damit meldete kein einziger der Wege ab,
+   die die Auswahl fallen lassen: der Moduswechsel, das Zuklappen eines
+   Zweigs, das Abschalten des Expertenmodus, das Loeschen eines Alias.
+   Danach lief ein Abo auf ein Geraet, das rechts gar nicht mehr steht,
+   der Zaehler in der Kopfleiste behauptete „ein Abo", und `S.werte`
+   fuellte sich weiter (gemessen 09.09.2026). */
+export function aboLoesen() {
+  (S.abo || []).forEach(function (m) { socket.emit('unsubscribe', m); });
+  S.abo = [];
+  zeigeAbozahl();
+}
+
 export function waehle(id, fertig) {
   /* Wer links etwas anderes anklickt, will es rechts sehen - auch wenn
      der Fokus noch in einem Feld der rechten Seite steht. `tipptGerade`
@@ -702,11 +721,98 @@ export function waehle(id, fertig) {
      bekaeme mit der Zeit Ereignisse fuer das halbe System. Die Zahl der
      laufenden Abos steht in der Kopfleiste - dort sieht man sofort, ob
      sich etwas ansammelt. */
-  (S.abo || []).forEach(function (m) { socket.emit('unsubscribe', m); });
+  aboLoesen();
   var muster = [id + '.*'];
   if (id.indexOf('alias.') === 0) {
-    quellenVerteilung(id).forEach(function (q) {
-      if (muster.indexOf(q.id + '.*') === -1) { muster.push(q.id + '.*'); }
+    /* Aus den Quellen, nicht aus der Anzeige-Verteilung.
+
+       `quellenVerteilung` fasst zusammen, was die rechte Seite als
+       „Quellen" zeigt — dafuer bildet sie den ELTERNknoten jeder
+       Quelle. Bei einem flachen MQTT-Geraet ist das der halbe Adapter:
+       gemessen 09.09.2026 wurde daraus `mqtt-client.0.*` mit 322
+       Objekten, an einem einzigen Alias. Und `S.werte` wird nie
+       geleert, das sammelt sich also.
+
+       Abonniert wird deshalb der Kanal jeder wirklich gelesenen Quelle.
+       Wo die Quellen ohnehin gebuendelt liegen, bleibt es bei einem
+       Muster; wo nicht, sind es ein paar mehr — aber jedes davon eng. */
+    var kanaele = [];
+    kindZustaende(id).forEach(function (kid) {
+      var q = aliasQuellen(S.objects[kid]);
+      [q.read, q.write].forEach(function (x) {
+        if (!x) { return; }
+        var t = String(x).split('.');
+        t.pop();
+        var kn = t.join('.');
+        if (kn && kanaele.indexOf(kn) === -1) { kanaele.push(kn); }
+      });
+    });
+    /* Ein schmaler Kanal wird als Muster abonniert, ein breiter nicht.
+
+       Bei einem flachen Geraet IST der Kanal der breite Knoten: Die
+       Quelle `mqtt-client.0.SmartHome.Lavalampe_POWER` liegt direkt
+       unter `SmartHome`, und `SmartHome.*` sind 320 Objekte. Ab dieser
+       Schwelle werden die Quellen einzeln abonniert — ein paar Abos
+       mehr, dafuer genau die, deren Werte auch angezeigt werden. */
+    var SCHWELLE = 30;
+    var wieBreit = function (knoten) {
+      var n = 0;
+      S.keysSorted.forEach(function (k0) { if (k0.indexOf(knoten + '.') === 0) { n++; } });
+      return n;
+    };
+    var drinSchon = function (was) {
+      return muster.some(function (m0) {
+        var p0 = m0.slice(-2) === '.*' ? m0.slice(0, -2) : m0;
+        return was === p0 || was.indexOf(p0 + '.') === 0;
+      });
+    };
+
+    /* Sparten desselben Geraets zu einem Muster zusammenfassen.
+
+       Ein Tasmota-Alias liest aus `…Licht.stat`, `…Licht.tele` und
+       `…Licht.cmnd` — drei Kanaele, ein Geraet, und in der Kopfleiste
+       gehoert dort „ein Abo" zu stehen, nicht drei. Zusammengefasst wird
+       aber nur, wo wirklich MEHRERE Kanaele unter demselben Knoten
+       haengen: Sonst waere aus `…Garten.Weihnachten_aussen` schlicht
+       `…Garten` geworden — breiter als noetig, ohne dass etwas
+       zusammenfaellt. */
+    for (var runde = 0; runde < 4; runde++) {
+      var unter = {};
+      kanaele.forEach(function (kn) {
+        var t = kn.split('.');
+        if (t.length <= 3) { return; }
+        var ob = t.slice(0, -1).join('.');
+        (unter[ob] = unter[ob] || []).push(kn);
+      });
+      var geaendert = false;
+      Object.keys(unter).forEach(function (ob) {
+        if (unter[ob].length < 2 || wieBreit(ob) > SCHWELLE) { return; }
+        kanaele = kanaele.filter(function (kn) { return unter[ob].indexOf(kn) === -1; });
+        if (kanaele.indexOf(ob) === -1) { kanaele.push(ob); }
+        geaendert = true;
+      });
+      if (!geaendert) { break; }
+    }
+
+    /* Ein schmaler Kanal wird als Muster abonniert, ein breiter nicht.
+
+       Bei einem flachen Geraet IST der Kanal der breite Knoten: Die
+       Quelle `mqtt-client.0.SmartHome.Lavalampe_POWER` liegt direkt
+       unter `SmartHome`, und `SmartHome.*` sind 320 Objekte (gemessen
+       09.09.2026; vorher wurde daraus sogar `mqtt-client.0.*` mit 322).
+       Ab dieser Schwelle werden die Quellen einzeln abonniert — ein paar
+       Abos mehr, dafuer genau die, deren Werte auch angezeigt werden. */
+    kanaele.forEach(function (kn) {
+      if (drinSchon(kn)) { return; }
+      if (wieBreit(kn) > SCHWELLE) { return; }
+      muster.push(kn + '.*');
+    });
+    /* Was jetzt noch von keinem Muster gedeckt ist, kommt einzeln. */
+    kindZustaende(id).forEach(function (kid) {
+      var q = aliasQuellen(S.objects[kid]);
+      [q.read, q.write].forEach(function (x) {
+        if (x && !drinSchon(x) && muster.indexOf(x) === -1) { muster.push(x); }
+      });
     });
   }
   S.abo = muster;
@@ -736,7 +842,17 @@ export function waehle(id, fertig) {
   var werteDa = false;
   holeWerte(id, quellen, function () {
     werteDa = true;
-    if (id !== S.current) { return; }
+    if (id !== S.current) {
+      /* Der Knoten hat gewechselt, waehrend die Werte unterwegs waren.
+         Am Entwurf ist hier nichts mehr zu tun — der Rueckruf muss aber
+         trotzdem kommen. Sonst bleibt `so59Laeuft` oder `abfrageLaeuft`
+         fuer immer gesetzt (der Knopf steht dauerhaft auf „laeuft"), und
+         der Trockenlauf nach dem Anlegen fehlender Sendepunkte geht nie
+         auf. Zwoelf Sekunden Wartezeit bei einer SetOption59-Abfrage
+         sind reichlich Gelegenheit dafuer (09.09.2026). */
+      if (typeof fertig === 'function') { fertig(); }
+      return;
+    }
 
     /* Wer schon Hand angelegt hat, behaelt seinen Entwurf.
 
@@ -948,13 +1064,40 @@ export function geraeteDarunter(wurzel) {
    angelegt" und erzeugt beim Klick ein zweites Geraet, waehrend das
    erste verwaist stehenbleibt. Beim Karbonator lag der Alias unter
    alias.0.Strom, vorgeschlagen wurde alias.0.SmartHome. */
-export function aliasFuer(quelle) {
-  var treffer = null;
-  S.keysSorted.forEach(function (id) {
-    if (treffer || id.indexOf('alias.') !== 0) { return; }
+/* Rueckwaertskarte Quelle -> Alias, einmal je Indexstand.
+
+   `aliasFuer` lief zweimal ueber alle Kennungen — und wird je
+   Neuzeichnen mehrfach gerufen. Die Karte entsteht bei der ersten Frage
+   nach einem Indexwechsel und beantwortet alle weiteren aus dem
+   Gedaechtnis. Erkannt wird der Wechsel an Laenge und erster Kennung;
+   `indexNeu()` sortiert ohnehin bei jeder Aenderung neu. */
+var alsQuelleKarte = null, alsQuelleStand = '';
+function alsQuelleKarten() {
+  var stand = S.keysSorted.length + '|' + (S.keysSorted[0] || '');
+  if (alsQuelleKarte && alsQuelleStand === stand) { return alsQuelleKarte; }
+  var fest = {}, zweig = {};
+  mitVorspann('alias.').forEach(function (id) {
     var o = S.objects[id];
-    if (o && o.native && o.native.quelle === quelle) { treffer = id; }
+    if (!o) { return; }
+    if (o.native && o.native.quelle && fest[o.native.quelle] === undefined) {
+      fest[o.native.quelle] = id;
+    }
+    if (o.type !== 'state') { return; }
+    var q = aliasQuellen(o);
+    [q.read, q.write].forEach(function (x) {
+      if (!x) { return; }
+      var kanal = id.split('.').slice(0, -1).join('.');
+      (zweig[x] = zweig[x] || []).push(kanal);
+    });
   });
+  alsQuelleKarte = { fest: fest, zweig: zweig };
+  alsQuelleStand = stand;
+  return alsQuelleKarte;
+}
+
+export function aliasFuer(quelle) {
+  var karte = alsQuelleKarten();
+  var treffer = karte.fest[quelle] || null;
   if (treffer) { return treffer; }
 
   /* Welcher Aliaskanal liest oder schreibt am haeufigsten in diesen
@@ -963,17 +1106,19 @@ export function aliasFuer(quelle) {
      erste Treffer. */
   var zaehler = {}, bester = null, wieviel = 0;
   var pre = quelle + '.';
-  S.keysSorted.forEach(function (id) {
-    if (id.indexOf('alias.') !== 0) { return; }
-    var o = S.objects[id];
-    if (!o || o.type !== 'state') { return; }
-    var q = aliasQuellen(o);
-    var passt = (q.read && q.read.indexOf(pre) === 0) ||
-                (q.write && q.write.indexOf(pre) === 0);
-    if (!passt) { return; }
-    var eltern = id.slice(0, id.lastIndexOf('.'));
-    zaehler[eltern] = (zaehler[eltern] || 0) + 1;
-    if (zaehler[eltern] > wieviel) { wieviel = zaehler[eltern]; bester = eltern; }
+  /* Aus der Karte: welche Aliaskanaele lesen oder schreiben in diesen
+     Zweig? Die Quellen stehen dort als volle Kennung, gesucht ist alles
+     darunter — also die Kennungen des Zweigs abklappern statt aller
+     Aliase. */
+  var karte2 = alsQuelleKarten();
+  var kanaele = [];
+  Object.keys(karte2.zweig).forEach(function (q0) {
+    if (q0.indexOf(pre) !== 0) { return; }
+    karte2.zweig[q0].forEach(function (kanal) { kanaele.push(kanal); });
+  });
+  kanaele.forEach(function (kanal) {
+    zaehler[kanal] = (zaehler[kanal] || 0) + 1;
+    if (zaehler[kanal] > wieviel) { wieviel = zaehler[kanal]; bester = kanal; }
   });
   return bester;
 }
@@ -1033,9 +1178,7 @@ export function bestandVorrang(e, aliasId) {
     s.f = (typeof a.read === 'string') ? a.read : '';
     s.fw = (typeof a.write === 'string') ? a.write : '';
     if (q.read) { s.srcR = q.read; }
-    s.srcW = q.einfach
-      ? ((c.write === true || typeof a.write === 'string') ? (q.write || '') : '')
-      : (q.write || '');
+    s.srcW = schreibQuelle(o);
     s.on = true;
     s.ausBestand = true;
   });
@@ -1072,9 +1215,7 @@ export function bestandsAbweichung(s, aliasId) {
     f: (typeof a.read === 'string') ? a.read : '',
     fw: (typeof a.write === 'string') ? a.write : '',
     srcR: q.read || '',
-    srcW: q.einfach
-      ? ((c.write === true || typeof a.write === 'string') ? (q.write || '') : '')
-      : (q.write || '')
+    srcW: schreibQuelle(o)
   };
   var raus = [];
   ['role', 'typ', 'unit', 'f', 'fw', 'srcR', 'srcW'].forEach(function (k) {
@@ -1084,13 +1225,6 @@ export function bestandsAbweichung(s, aliasId) {
   return raus;
 }
 
-/* Einen einzelnen Wert aus dem gespeicherten Alias zurueckholen. */
-export function bestandsWert(s, aliasId, feld) {
-  var abw = bestandsAbweichung(s, aliasId);
-  var tr0 = null;
-  abw.forEach(function (x) { if (x.feld === feld) { tr0 = x; } });
-  return tr0 ? tr0.bestand : null;
-}
 
 /* Wo weicht die Vorlage vom Bestand ab? Liefert je Zeile die Felder, die
    „Vorlage anwenden" aendern wuerde - die Beschriftung ausgenommen. */

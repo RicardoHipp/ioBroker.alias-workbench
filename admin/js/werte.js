@@ -52,16 +52,64 @@ export function feldWert(obj, pfad) {
 }
 
 
+/* Alle Kennungen mit diesem Vorspann — ohne die Gesamtliste zu lesen.
+
+   `S.keysSorted` ist sortiert, die gesuchten Eintraege liegen also am
+   Stueck. Vorher ging jeder dieser Aufrufe die ganze Liste durch:
+   24.786 Vergleiche fuer zehn Treffer, rund zwanzigmal je Neuzeichnen,
+   und bei laufenden Werten alle 700 ms (gemessen am Produktivsystem
+   10.09.2026: Alias 51,9 ms, Quelle 15,8 ms je Zeichnen).
+
+   Die Binaersuche findet den Anfang in ~15 Schritten, danach wird nur
+   noch der Bereich selbst gelesen. */
+export function mitVorspann(pre) {
+  var liste = S.keysSorted;
+  var lo = 0, hi = liste.length;
+  while (lo < hi) {
+    var m = (lo + hi) >> 1;
+    if (liste[m] < pre) { lo = m + 1; } else { hi = m; }
+  }
+  var raus = [];
+  for (var i = lo; i < liste.length && liste[i].indexOf(pre) === 0; i++) {
+    raus.push(liste[i]);
+  }
+  return raus;
+}
+
 export function kindZustaende(kanal) {
   var pre = kanal + '.';
-  return S.keysSorted.filter(function (k) {
-    return k.indexOf(pre) === 0 && S.objects[k] && S.objects[k].type === 'state';
+  return mitVorspann(pre).filter(function (k) {
+    return S.objects[k] && S.objects[k].type === 'state';
   });
 }
 
 export function direkteZustaende(kanal) {
   var pre = kanal + '.';
   return kindZustaende(kanal).filter(function (k) { return k.slice(pre.length).indexOf('.') === -1; });
+}
+
+/* Wohin schreibt dieser Aliaspunkt?
+
+   Fuenfmal woertlich gleich ausprogrammiert gewesen — dreimal in
+   `entwurf.js`, zweimal in `zuordnung.js` —, und die Kommentare an zwei
+   dieser Stellen dokumentieren je einen Fehler, der genau daraus
+   entstanden ist: einmal wurde aus einem schaltenden Punkt ein lesender
+   ohne Umrechnung, einmal verloren OPEN, SET und pct ihre Schreibquelle,
+   weil dort `q.einfach ? '' : …` stand und `common.write` gar nicht
+   angesehen wurde.
+
+   Die Regel selbst: Bei getrennten Quellen (`alias.id.read`/`.write`)
+   gilt, was unter `write` steht. Bei einer schlichten `alias.id` zeigen
+   Lesen und Schreiben auf denselben Punkt — geschrieben wird dorthin
+   aber nur, wenn der Alias das auch sagt: durch `common.write` oder
+   durch eine hinterlegte Schreibformel. Wer eine Schreibformel
+   hinterlegt hat, wollte schreiben. */
+export function schreibQuelle(o) {
+  var c = (o && o.common) || {};
+  var a = c.alias || {};
+  var q = aliasQuellen(o);
+  if (!q.einfach) { return q.write || ''; }
+  return (c.write === true || typeof a.write === 'string') ? (q.write || '') : '';
 }
 
 export function aliasQuellen(obj) {
@@ -114,17 +162,76 @@ export function holeEinzelne(ids, fertig) {
 }
 
 /* ================== Formel und Wert ================== */
+
+/* Leseformeln sind fremder Code, der hier laeuft.
+
+   Sie stehen in `common.alias.read` jedes Alias und in `leseformel`
+   jeder Vorlage, und sie werden je Zeile bei JEDEM Zeichnen ausgefuehrt
+   — ungefragt, nicht auf Knopfdruck. Das ist keine neue
+   Rechteausweitung: Wer `common.alias.read` schreiben darf, hat
+   dieselbe Formel schon im js-controller laufen. Es ist aber ein
+   zusaetzlicher Ausfuehrungsort, und einer ohne Grenzen: `try/catch`
+   faengt nur Ausnahmen, kein `while(true){}`.
+
+   Zwei Schranken, beide billig:
+
+   1. Gemerkt wird je (Formel, Rohwert). Dieselbe Formel auf demselben
+      Wert laeuft genau einmal — und genau das ist der Regelfall, wenn
+      alle 700 ms neu gezeichnet wird, ohne dass sich etwas geaendert
+      hat.
+   2. Wer einmal zu lange gebraucht hat, laeuft nicht wieder. Die Zeile
+      sagt dann, warum. Den Reiter kann man damit noch einmal
+      einfrieren, aber nicht dauerhaft — und nach dem Neuladen steht
+      die Sperre wieder. */
+var GEDULD_MS = 250;
+var formelCache = new Map();
+var formelGesperrt = {};
+
+function cacheSchluessel(formel, roh) {
+  var t = typeof roh;
+  if (t === 'string') { return roh.length > 300 ? null : ('s:' + formel + '\u0000' + roh); }
+  if (t === 'number' || t === 'boolean') { return t.charAt(0) + ':' + formel + '\u0000' + roh; }
+  return null;
+}
+
 export function auswerten(formel, roh) {
   if (roh === undefined || roh === null) { return { ok: false, txt: tr('detail.noValue') }; }
   if (!formel) { return { ok: true, val: roh }; }
+  if (formelGesperrt[formel]) {
+    return { ok: false, txt: tr('detail.formulaTooSlow', formelGesperrt[formel]), fehler: true };
+  }
+  var sch = cacheSchluessel(formel, roh);
+  if (sch !== null) {
+    var da = formelCache.get(sch);
+    if (da !== undefined) { return da; }
+  }
+  var raus;
+  var t0 = performance.now();
   try {
     var v = (new Function('val', 'return (' + formel + ');'))(roh);
-    if (v === undefined) { return { ok: false, txt: 'undefined', leer: true }; }
-    if (typeof v === 'number' && isNaN(v)) { return { ok: false, txt: 'NaN', leer: true }; }
-    return { ok: true, val: v };
+    if (v === undefined) { raus = { ok: false, txt: 'undefined', leer: true }; }
+    else if (typeof v === 'number' && isNaN(v)) { raus = { ok: false, txt: 'NaN', leer: true }; }
+    else { raus = { ok: true, val: v }; }
   } catch (e) {
-    return { ok: false, txt: tr('detail.formulaThrows', e.message), fehler: true };
+    raus = { ok: false, txt: tr('detail.formulaThrows', e.message), fehler: true };
   }
+  var gedauert = performance.now() - t0;
+  if (gedauert > GEDULD_MS) {
+    formelGesperrt[formel] = Math.round(gedauert);
+    console.warn('[alias-workbench] Formel gesperrt nach ' + Math.round(gedauert) + ' ms: ' + formel);
+    return { ok: false, txt: tr('detail.formulaTooSlow', Math.round(gedauert)), fehler: true };
+  }
+  if (sch !== null) {
+    /* Nicht unbegrenzt wachsen lassen: bei laufenden Werten entsteht je
+       neuem Rohwert ein Eintrag. Zweitausend reichen fuer ein Zeichnen
+       um ein Vielfaches; darueber wird der aelteste verworfen. */
+    if (formelCache.size >= 2000) {
+      var ersteR = formelCache.keys().next();
+      if (!ersteR.done) { formelCache.delete(ersteR.value); }
+    }
+    formelCache.set(sch, raus);
+  }
+  return raus;
 }
 
 var JA   = ['ON', 'TRUE', 'YES', 'JA', '1'];

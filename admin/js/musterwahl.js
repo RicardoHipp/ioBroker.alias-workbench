@@ -112,6 +112,16 @@ export function baueMusterwahl(e, haupt, pflichtFehlt) {
   var markeCache = {};
   function bewerte(m) {
     if (markeCache[m] !== undefined) { return markeCache[m]; }
+    /* Die angebotene Liste ist gefiltert — der gewaehlte Typ nicht:
+       `mBeschriften` ruft `markeFuer(e.want)` direkt, und `e.want` kommt
+       ungeprueft aus `v.geraetetyp`. Eine eingelesene Vorlage mit dem
+       Musternamen eines neueren type-detector liess `musterVon(m).states`
+       werfen, und der Entwurf wurde gar nicht erst gezeichnet — die
+       rechte Seite blieb leer (gemessen 09.09.2026). */
+    if (!musterVon(m)) {
+      markeCache[m] = { mark: tr('pattern.doesNotFit'), passt: false, belegt: 0 };
+      return markeCache[m];
+    }
     /* Die Vorschau muss vorhersagen, was das Auswaehlen wirklich tut.
        Beim Vorschlag werden Lampe und Steckdose samt Rollen neu gebaut -
        also auch hier gegen den umgebauten Entwurf pruefen. Sonst stuende

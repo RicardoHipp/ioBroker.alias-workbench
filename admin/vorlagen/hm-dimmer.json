@@ -68,7 +68,7 @@
     },
     {
       "name": "ON_TIME",
-      "rolle": "level.timer",
+      "rolle": "level.timer.off",
       "typ": "number",
       "einheit": "s",
       "lesen": "1.ON_TIME",

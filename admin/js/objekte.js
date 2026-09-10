@@ -81,6 +81,19 @@ export function nachziehenErledigt() {
   nachziehBaum = false;
 }
 
+/* Nach einem Abbruch sind beim Server alle Abos weg.
+
+   `subscribeObjects` und `subscribe` gelten nur fuer die Sitzung, die
+   sie gestellt hat — der WebSocket-Shim des Admin erneuert von sich aus
+   nichts (das Wort `subscribe` kommt in seinem Quelltext kein einziges
+   Mal vor). Der `objectChange`-Horcher wird hier ausdruecklich NICHT
+   noch einmal angemeldet: der haengt am Socket-Objekt und hat den
+   Abbruch ueberlebt. Nur die Anmeldung beim Server fehlt. */
+export function abosErneuern() {
+  if (horcht) { socket.emit('subscribeObjects', '*'); }
+  (S.abo || []).forEach(function (m) { socket.emit('subscribe', m); });
+}
+
 export function horcheAufObjekte() {
   if (horcht) { return; }
   horcht = true;
@@ -95,11 +108,20 @@ export function horcheAufObjekte() {
     var kern = function (o) {
       return o ? JSON.stringify([o.type, o.common, o.native]) : null;
     };
-    var vorher = kern(S.objects[id]);
     var nachher = kern(obj);
-    if (vorher === nachher) { return; }
 
-    /* Aufzaehlungen gehen einen eigenen Weg.
+    /* Aufzaehlungen zuerst — und zwar VOR dem Vergleich mit `S.objects`.
+
+       Der Vergleich unten fragt `S.objects[id]`, und dort liegen
+       Aufzaehlungen nie. Beim Loeschen einer Aufzaehlung sind alter und
+       neuer Wert deshalb beide `null`, der Frueheinstieg griff, und
+       `delete enums[id]` wurde nie erreicht. Die geloeschte Aufzaehlung
+       blieb im Vorrat stehen, und der naechste Alias mit diesem Raum
+       kopierte sie samt aller alten Mitglieder zurueck an ihren Platz.
+       Gemessen 09.09.2026 am Testsystem: `enum.rooms.WBP7` war am System
+       geloescht und waere mit zwei fremden Mitgliedern wieder entstanden.
+
+       Aufzaehlungen gehen einen eigenen Weg.
 
        Sie gehoeren nicht in `objects` - dort stuenden sie im Geraetebaum,
        wo sie nichts zu suchen haben. Nachziehen muss man sie aber, und
@@ -127,6 +149,10 @@ export function horcheAufObjekte() {
       enumTimer = setTimeout(enumNachziehen, 300);
       return;
     }
+
+    /* Alles Uebrige: nur was zaehlt, nicht jeder Schreibvorgang. */
+    var vorher = kern(S.objects[id]);
+    if (vorher === nachher) { return; }
 
     var gabEs = S.objects[id] !== undefined;
     if (obj) { S.objects[id] = obj; } else { delete S.objects[id]; }

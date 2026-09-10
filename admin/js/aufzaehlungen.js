@@ -221,8 +221,18 @@ export function raumVorschlag(e) {
 
   /* 3. Aus dem Pfad der Quelle */
   if (quelle) {
+    /* Von hinten, das LETZTE Segment eingeschlossen.
+
+       Frueher begann die Schleife eins davor — gedacht fuer
+       `…Wohnzimmer.Lampe`, wo hinten das Geraet steht. Bei einem flachen
+       Adapter wie `sonoff.0.Wohnzimmer` IST das letzte Segment aber der
+       Raum, und die Schleife lief kein einziges Mal: kein Vorschlag,
+       obwohl der Raum im Namen steht (gemessen 09.09.2026 —
+       `sonoff.0.Wohnzimmer.Lampe` ergab `enum.rooms.living_room`,
+       `sonoff.0.Wohnzimmer` nichts). Der Weg ueber den Geraetenamen
+       faengt es nicht auf: der geht bei Name gleich Segment leer aus. */
     var qt = quelle.split('.');
-    for (var j = qt.length - 2; j >= 2; j--) {
+    for (var j = qt.length - 1; j >= 2; j--) {
       var qr = suche(qt[j]);
       if (qr) { return qr; }
     }

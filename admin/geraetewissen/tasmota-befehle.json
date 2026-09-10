@@ -11,7 +11,9 @@
     "IPAddress",
     "StatusSTS",
     "Wifi",
-    "Berry"
+    "Berry",
+    "Vcc",
+    "Command"
   ],
   "befehle": {
     "POWER": {

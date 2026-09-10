@@ -162,7 +162,15 @@ export function tauschPlan(kanal, neuKanal) {
     }
     if (!zeile.neuW && zeile.altW) {
       var gw = geraten(zeile.altW, neuKanal);
-      if (gw) { zeile.neuW = gw; }
+      /* Was hier geraten wird, muss ein anderer Punkt sein als die
+         Lesequelle. Bei getrennten Quellen heissen Melder und Befehl oft
+         gleich - `stat.POWER` und `cmnd.POWER` -, und das Raten greift
+         nach dem Namen: aus der Schreibquelle `cmnd.POWER` wurde am
+         neuen Geraet `stat.POWER`, also genau der Melder. Der Alias
+         haette danach seinen Befehl ins Status-Thema geschickt; das
+         Geraet schaltet nicht und die Rueckmeldung ist verfaelscht
+         (gemessen 09.09.2026). Lieber kein Treffer als dieser. */
+      if (gw && gw !== zeile.neuR) { zeile.neuW = gw; }
     }
     /* Bei einfacher Quelle gilt die Lesequelle fuer beides. */
     if (zeile.einfach && zeile.neuR) { zeile.neuW = zeile.neuR; }
@@ -191,7 +199,19 @@ export function tauschObjekte(kanal, neuKanal, plan, weg) {
     delete neu.ts; delete neu.from; delete neu.user; delete neu.acl; delete neu._id;
     var a = neu.common.alias || {};
     if (z.neuW && z.neuW !== z.neuR) { a.id = { read: z.neuR, write: z.neuW }; }
-    else { a.id = z.neuR; }
+    else if (z.einfach) { a.id = z.neuR; }
+    else {
+      /* Getrennte Quellen ohne Schreibtreffer: die Objektform bleibt.
+
+         Eine blosse Zeichenkette heisst fuer den js-controller „lesen
+         und schreiben auf dieselbe Kennung". Aus einem Alias, der den
+         Zustand liest und den Befehl woanders hinschickt, wurde damit
+         einer, der auf den Melder schreibt - und aus einem bewusst nur
+         lesenden Punkt bei `common.write: true` sogar ein schreibender.
+         Ohne Treffer bleibt `write` einfach weg: dann schreibt der Alias
+         nirgendwohin, und das ist die ehrliche Auskunft. */
+      a.id = { read: z.neuR };
+    }
     neu.common.alias = a;
     raus.push({ id: z.id, neu: false, obj: neu });
   });
@@ -461,6 +481,15 @@ function zeichneTausch() {
       rechts.appendChild(paarZeile(tr('write.diffNew'),
         z.neuR + (z.neuW && z.neuW !== z.neuR ? '  →  ' + z.neuW : ''),
         'sn', gleich ? 'var(--ink-3)' : 'var(--ok)'));
+      /* Lesequelle gefunden, Schreibquelle nicht — das gehoert gesagt.
+         Sonst steht nur die neue Lesequelle in Gruen da, und dass der
+         Punkt danach nirgendwohin schreibt, merkt man erst am Geraet. */
+      if (z.altW && z.altW !== z.altR && !z.neuW) {
+        var kw = el('div');
+        kw.style.color = 'var(--bad)';
+        kw.textContent = tr('swap.noWriteMatch');
+        rechts.appendChild(kw);
+      }
     } else {
       var fehlt = el('div');
       fehlt.style.color = 'var(--bad)';
