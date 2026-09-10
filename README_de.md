@@ -586,7 +586,7 @@ beide Sprachdateien dieselben Schlüssel tragen.
 
 ### 0.9.8
 * Der Changelog nennt nur noch Fassungen, die es auf npm wirklich gibt. Die Einträge 0.9.1 bis 0.9.6 waren lokale Zwischenstände und wurden nie veröffentlicht; ihr Inhalt steht jetzt zusammengefasst bei 0.9.7. Gefunden vom Repochecker (E2004, E1032)
-* Die README erklärt die Installation nicht mehr über „aus eigener URL“ — im offiziellen Repository geht das über die Adapterliste (E6013)
+* Die README beschreibt nicht mehr, wie man den Adapter von Hand hinzufügt — im offiziellen Repository wählt man ihn aus der Adapterliste (E6013)
 * `dependabot.yml` bekommt eine Abkühlzeit von sieben Tagen für npm-Pakete: Was heute erscheint, wird erst in einer Woche vorgeschlagen. Wird eine kompromittierte Fassung in dieser Zeit zurückgezogen, kommt sie hier nie an (E8915). Und `@types/node` bleibt bei seiner Hauptversion — die Typen müssen zu der Node-Fassung passen, unter der der Adapter läuft (E8917)
 
 ### 0.9.7

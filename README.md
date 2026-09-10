@@ -566,7 +566,7 @@ imported, and that both language files carry the same keys.
 
 ### 0.9.8
 * The changelog only lists versions that actually exist on npm. The entries 0.9.1 to 0.9.6 were local intermediate steps and were never published; their content is now summarised under 0.9.7. Found by the repochecker (E2004, E1032)
-* The README no longer explains installation via “install from custom URL” — in the official repository that goes through the adapter list (E6013)
+* The README no longer describes how to add the adapter by hand — in the official repository it is picked from the adapter list (E6013)
 * `dependabot.yml` gets a seven-day cooldown for npm packages: what appears today is proposed a week later. If a compromised release is pulled within that time, it never arrives here (E8915). And `@types/node` stays on its major version — the types must match the Node release the adapter runs on (E8917)
 
 ### 0.9.7
