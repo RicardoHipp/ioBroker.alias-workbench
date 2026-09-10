@@ -189,11 +189,6 @@ Open the ioBroker admin, go to **Adapters**, look for **Alias Workbench** and
 create an instance. Then reload the admin and pick **Alias Workbench** in the
 left menu.
 
-The adapter has not been accepted into the ioBroker repository yet, so it does
-not show up in that list for the moment. Until it does, install it from npm:
-under **Adapters** press **install from custom URL** (the octocat button), tab
-**From npm**, and enter `iobroker.alias-workbench`.
-
 ## Why the tree shows devices that do not exist
 
 With MQTT, ioBroker only creates objects for the datapoints themselves. A topic
@@ -567,82 +562,49 @@ imported, and that both language files carry the same keys.
 
 ## Changelog
 
+### 0.9.8
+* The changelog only lists versions that actually exist on npm. The entries 0.9.1 to 0.9.6 were local intermediate steps and were never published; their content is now summarised under 0.9.7. Found by the repochecker (E2004, E1032)
+* The README no longer explains installation via “install from custom URL” — in the official repository that goes through the adapter list (E6013)
+* `dependabot.yml` gets a seven-day cooldown for npm packages: what appears today is proposed a week later. If a compromised release is pulled within that time, it never arrives here (E8915). And `@types/node` stays on its major version — the types must match the Node release the adapter runs on (E8917)
+
 ### 0.9.7
-This version was measured on the **production system** — 24,786 objects, 140 aliases. None of it shows on the test system with 2,731 objects.
+*Versions 0.9.1 to 0.9.6 were local intermediate steps and were never
+published — their changes are part of 0.9.7.*
 
-* The search box no longer blocks. The tree was rebuilt completely on **every** keystroke: a measured **236 ms per keystroke, 1.9 seconds for eight**. It now draws once, 180 ms after the last keystroke — typing stays responsive. Plus three savings in the tree itself: collapsed nodes are no longer built as DOM at all (previously every subtree was created and immediately thrown away), the question “can this be expanded?” is answered once per row instead of on every sort comparison, and an `Intl.Collator` replaces `localeCompare` with an options object. **The whole tree: 263 → 67 ms.**
-* A redraw no longer costs half a second. `kindZustaende`, `aliasFuer` and their neighbours walked the sorted index **linearly** — 24,786 comparisons for ten hits, some twenty times per redraw, and with live values that is every 700 ms. The list is sorted and the range sits together: a binary search finds it in fifteen steps. Plus a reverse map source → alias built once per index state. **Drawing a source 15.8 → 1.6 ms, an alias with 50 points 51.9 → 14.2 ms.** Proven equal: 3,025 devices and all 727 alias points checked against the old versions, zero differences
-* A read formula can no longer freeze the tab for good. Formulas from `common.alias.read` and from templates run as JavaScript in the admin — on every redraw, per row, unasked. That is no new privilege escalation (whoever may write the formula already has it running in the js-controller), but it is an execution site without limits: `try/catch` does not catch an endless loop. Results are now remembered per formula and raw value — 2000 evaluations in 0.6 ms — and whatever once took longer than 250 ms does not run again; the row says why
-* The object counter in the header no longer gets stuck. Four places set the index directly instead of calling `indexNeu()`, so the short-name map kept deleted ids and `hatPunkt` returned hits on points that no longer existed
-* A full detector run per redraw is gone. Its result travelled through two intermediate steps into a parameter nobody reads. Also removed: `e.andere` and the dead symbols `bestandsWert` and `anzeigeText`
-* The write-source rule lives in one place instead of five. It was spelled out identically three times in `entwurf.js` and twice in `zuordnung.js` — and the comments at two of those sites each document a bug that came from exactly that
-* **Correction to 0.9.6:** adapter and instance roots were meant to become unselectable there — but the check used `_tiefe`, which is the height of the subtree **below** a node, not its position in the tree. On the test system that excluded 131 nodes, exactly one of them rightly: the other 130 were branches such as `…Decklenlicht_RGB.cmnd` and folders such as `iot.0.smart`, whose data points sit directly below. Selectable nodes dropped from 449 to 320. The position is checked now; `mqtt-client` and `mqtt-client.0` stay locked, everything else is back
+Seven packages from a code review — 45 fixes between 0.9.0 and this release. The intermediate steps 0.9.1 to 0.9.6 stayed local and were never published; they are summarised here.
 
-### 0.9.6
-**Display and flow**
-* “All data points” keeps the output and the manual choice. On a multi-output template at output 2 the rows of output 1 came back while the target still read `…Ausgang_2`; and if automatic matching had found nothing and you picked the template by hand, the click dropped you into raw mode with the choice gone
-* “Differs from the alias” now also shows in alias mode. The marker was handed the target, which is never set there — you are already standing on the alias. So it never appeared exactly where it says the most
-* Switching sources quickly no longer fetches the wrong value. The callback stored the value under whatever source was selected when it arrived — and since only missing values are fetched, it stayed that way
-* The source jump list never appears twice. It hangs off the page body so it survives an automatic redraw; the button is a different one afterwards, and the second click laid a second list over the first
-* A room is suggested even when it is the last segment. With a flat adapter such as `sonoff.0.Wohnzimmer` the search over the source path never ran at all
-* Object names follow the admin language. There were two readers for the same question, one fixed on German before English — so on an English admin, objects, rooms and functions showed up in German. And the name match now looks at every language: “Light” in the system failed to find the function “Licht” and created a duplicate beside it
+**Data loss and failure paths**
+* An enumeration error now stops a move. Previously the old alias was deleted anyway — and afterwards it was gone while the new one sat in no enumeration at all
+* A partial failure while deleting no longer turns the retry button into a prop: only what really went is dropped
+* Orphaned points are deleted on the second attempt too
+* A load error on the enumerations leaves the previous state standing instead of emptying it — and while they are unknown, nothing is written. Before, one hiccup could drop an alias out of every room and function
+* A load error on your own templates is reported instead of swallowed; otherwise the next save would have replaced an existing template with version 1
+
+**Connection and display**
+* The tab works again after a dropped connection. The admin's WebSocket fires `connect` once per page lifetime and `reconnect` afterwards — nobody listened, and neither object nor state changes arrived
+* Template mode no longer rebuilds itself every second, and where the selection goes, its subscriptions go too
+* “Differs from the alias” now also shows in alias mode — where it says the most
+* Switching sources quickly no longer fetches the wrong value; the source jump list never appears twice
+* Object names follow the admin language; the function match looks at every language and no longer creates a duplicate
+
+**Templates**
+* A broken name hint no longer takes down the whole source view — including the nested form `(a+)+` where the expression engine stalls
+* The formula of a fallback source survives updating, an unknown device type no longer throws
+* Importing checks more than id and states; a hand-typed id no longer replaces someone else's template
+* The `%N%` placeholder only hits the output number now, not every trailing digit
+* The blind gets its STOP: a button press has no state to read, and that case was unknown to template application — **not a single** blind alias ever had one
+* ON_TIME finds its slot (four templates carried the wrong role)
 
 **MQTT and Tasmota**
-* An empty `custom` entry no longer takes anything down. `common.custom` can hold an entry whose value is `null` — ioBroker does not clean it up when an instance disappears. Reaching into it took the whole result view with it
-* `enabled: false` counts as switched off. The field did not appear in the reader at all: `{ enabled: false, publish: true }` counted as publishable although the instance does not serve that point
-* No more false “cannot publish” for ioBroker.mqtt and sonoff. Their objects carry the topic in `native` only; that was reported as a firm “no” instead of “unknown”, the chip was red, and “allow publishing” wrote the object back unchanged — a message that could not be cleared
-* “Answer received” only for a real answer. A `stat.RESULT` left retained from the day before yesterday was enough for the green feedback, even with the device switched off
-* `Vcc` and `Command` are not commands. `{"Command":"Unknown"}` — the reply to an unknown command — stood there as a missing command point, with a create button
-* Command names from foreign JSON no longer reach ids and topics unchecked. A key containing `#` would make a wildcard subscription, one containing `.` an extra level
+* An empty `custom` entry no longer takes anything down, `enabled: false` counts as switched off
+* No more false “cannot publish” for ioBroker.mqtt and sonoff — there, publishing capability is simply unknown, not denied
+* “Answer received” only for a real answer; `Vcc` and `Command` are not commands
 
-**Templates and devices**
-* The blind gets its STOP. A button press has no state to read, and that case was unknown to template application: without a read path the point dropped out — not a single blind alias ever had a STOP
-* ON_TIME finds its slot. Four templates carried the role `level.timer` while the slot requires `level.timer.off`, so the point ended up in the info device instead of the switching device
-* An explicit formula beats the field. Where a template gives both, the formula was discarded and a new one built from the field
-
-**Subscriptions and tree**
-* What is subscribed is what is read — not half the adapter. The patterns came from the display grouping: on a flat MQTT device that produced `mqtt-client.0.*` with over three hundred objects on a single alias. It is now the channels of the actual sources, branches of the same device folded into one pattern, and where even that is too wide, the sources one by one
-* Adapter and instance roots can no longer be selected. `mqtt-client.0` is not a device; selecting it would have subscribed the whole namespace
-* Dark admin themes are recognised. The detection knew four names; `blue` and `colored` fell through and landed on the system setting
-* A late answer to `system.config` still counts. After 2.5 seconds it carries on without one — the answer arriving later was discarded entirely, and without it every expert object was missing from the tree
-
-**Housekeeping**
-* The checks touch nothing again. One of them wrote an object from inside the drawing path
-* The delete dialog warns about channels of their own below the target. The hint spoke only of “data points below”
-* Four dead language keys removed — and the test now checks both directions, not just code → JSON
-
-### 0.9.5
-* A broken name hint no longer takes down the whole source view. The text was evaluated as a regular expression unchecked, although neither the template sheet nor the save dialog validates it: after saving `Lampe (Bad`, template matching threw on **every** device selection, no caller caught it, and the right-hand side stayed empty — repairable only through the instance configuration by hand. An unusable expression now counts as “no match” and is flagged in red at the field. The same goes for the nested form `(a+)+`, where the expression engine stalls: a measured 3196 ms for one device name, now none
-* The formula of a fallback source survives updating a template. It was stored under `formel` while every reader looks for `leseformel` — so updating from a device silently dropped it. With `tasmota-steckdose` the consequence was that on devices without `stat.POWER` the boolean alias ended up on the raw JSON text of `tele.STATE` instead of on `POWER`
-* A device type this detector does not know no longer throws. The offered pattern list was filtered, the **selected** type was not — it comes from the template unchecked. An imported template naming a pattern from a newer type-detector made the pattern picker throw, and the draft was never drawn at all
-* Importing now checks more than id and states. `erkennung.erforderlich` as a string instead of a list made template matching throw on **every** device afterwards; a missing `name` threw as soon as the sheet opened. And “import and save” was on screen long before that — you could save a template that then made the tab unusable. `erkennung`, `erforderlich`/`verboten`, `inhalt`, `name`, the name hint and the device type are checked now; a single string that unambiguously means a list is turned into one rather than rejected
-* A hand-typed id no longer replaces someone else's template. Ids were only checked for collisions when switching modes, not after typing — and saving replaces without asking on a matching id, in “new” mode even with version 1. An own template at v7 silently became a different one at v1. The reason is now shown in red at the field and saving is blocked
-* The `%N%` placeholder only hits the output number now. Replacement went purely by trailing digit: on a multi-output device at output 2 the IP row from `tele.INFO2` became `tele.INFO%N%` — and at output 1 that same row reported a foreign output, with “drop the others” throwing it out. Only what actually carries the output becomes a placeholder now: what the template already held as `%N%`, the prefix from `kanalname`, and what appears more than once with the same number
-
-### 0.9.4
-* The tab works again after a dropped connection. It does not load socket.io but the admin's WebSocket shim — and there `connect` fires exactly once per page lifetime, only `reconnect` afterwards. Nobody listened for that, and the shim renews no subscription on its own. After every outage — admin restart, network hiccup, standby — neither object nor state changes arrived, and the dot in the header stayed on “disconnected” although the connection had long been back. `reconnect` is now handled: the display goes back to “connected”, every subscription is renewed and the objects are re-read — anything could have changed while disconnected, and nobody was watching
-* The template mode no longer rebuilds itself every second. Selecting a device with live values and switching to the templates tab rebuilt the whole sheet every 700 ms, including a trial run across all candidates and all templates — the selection deliberately survives the mode switch, but there is no state list on the right any more
-* Where the selection goes, its subscriptions now go too. Unsubscribing only happened when selecting the next node; the four other paths — switching mode, collapsing a branch, leaving expert mode, deleting an alias — unsubscribed from nothing. A subscription then ran on a device no longer shown, and the header counter still claimed “one subscription”
-* Switching nodes while loading no longer leaves the caller hanging. The callback never arrived in that case: “running” stayed on the button forever, and the dry run meant to open after creating missing command points never opened. Twelve seconds of waiting on a SetOption59 query is ample opportunity for that
-
-### 0.9.3
-* An error on the enumerations now stops the move. The first step — creating the new one — always aborted on error, “two rather than none”; the second did not: enumeration errors were collected and the old one was deleted anyway. Afterwards the old alias was gone and the new one sat in no enumeration at all, because the js-controller removes members itself on delete. The assignment was therefore lost outright, not merely orphaned. The same abort now applies one level down, and the button offers “Try again”
-* A partial failure while deleting no longer turns the retry button into a prop. If one delete failed, **all** ids were dropped from the internal store anyway, empty folders and enumerations were cleaned up and the delete target was set to null — which is exactly what `loescheAlias` starts with, so it bailed out immediately. Whatever stayed in the database was out of reach: the workbench considered it deleted. Only what really went is dropped now, the cleanup is skipped, the target stays — and the second click actually finishes the job
-* Orphaned points are deleted on the second attempt too. Their list was cleared after writing **always**, even after a failure; the retry button then wrote the objects but removed nothing, and the message no longer counted them either
-* A load error on your own templates is reported instead of swallowed. If the instance configuration answered with an error, that counted as “no own templates” — the warning chip in the header stayed away, although the timeout path one line above sets it correctly. The consequence was the dangerous part: the workbench considered taken ids free, and the next save would have replaced an existing template with version 1. The chip's tooltip now says so
-
-### 0.9.2
-* Swapping the source no longer writes to the read source: if no new write target is found for a point with separate sources, a plain string was left in `alias.id` — and to the js-controller that means “read and write on the same id”. With Tasmota the command then went to the status topic instead of the command topic: the device does not switch and the feedback is falsified. Worse, the workbench guessed the write source by name and landed on `stat.POWER`, because that too contains “POWER”. A guessed write target now only counts if it is a different point from the read source, the object form is kept, and the row marks the missing match in red
-* Moving recognises two more targets as a collision: one that exists only as a tree node carrying data points — existing points of the same name were overwritten there — and one that sits below the alias itself: `alias.0.X` to `alias.0.X.Sub` took its own parent node along on the final delete
-* A rejected creation of a send point no longer counts as success. The silent path did not even accept the error and entered the object into its own store anyway; after that the guard no longer bit, and “Create now” wrote `alias.id.write` onto an id that never existed in the database — exactly the error the js-controller remembers for good
-* Channel names are cleaned into ids when “Create all” builds one channel per output. “Licht Bar, oben” produced an id with a space and a comma, “Küche.Decke” an extra level including an intermediate folder. And the js-controller does not reject that, it cleans silently — so the object would have appeared under a different id than the one shown. The display name is left untouched
-* A channel keeps its template link across an update, even when the template was deleted or renamed. `native` used to be replaced wholesale; template, version and device type only came back when a template happened to match. The role one line below had long been rescued, `native` had not
-* Hardened: the cleanup of separated sources no longer switches off a point that is itself part of the alias. Whether it happened depended on the order of `Object.keys` — it was not reachable through the interface, because none of the bundled templates puts a reporting row before the controlling one, but the consequence would have been a deleted data point
-
-### 0.9.1
-* A load error on the enumerations can no longer overwrite one: until now a failed `getObjectView` set the store to empty and kept quiet about it. After that the workbench considered every enumeration absent, the catalogue kept offering them because the duplicate filter had nothing to check against, and on writing `setObject` replaced the existing object with a fresh one holding a single member — measured, a room lost three of its four members that way and was given the origin mark that makes it deletable later on. The previous state is now kept, no enumeration is touched, and both the field and the dry run say why room and function are not being written. The alias itself is still created, and a hiccup heals itself after three attempts
-* An enumeration deleted from outside is no longer resurrected: the subscription compared against `objects`, where enumerations never live — on deletion old and new value were therefore both empty and the branch that removes it from the store was never reached. The next alias using that room recreated it with all its old members, including the foreign ones
-* “Create all” now gives every channel its room and its function. The partial drafts carried neither, so not a single channel got an entry — the single route set it, the bulk route did not. A second object for the same enumeration was also discarded, so even then only the first channel would have made it in. And for a channel other than the one shown the assignment counted as empty: if its alias already sat in a room, the bulk route took it **out**. Every channel now keeps what it has, all others get what is set, and members are merged instead of discarded
+**Speed, measured on a production system with 24,786 objects**
+* The search box no longer blocks: **236 ms per keystroke → 0**, the whole tree **263 → 67 ms**
+* A redraw no longer costs half a second — binary search instead of linear scans: drawing a source **15.8 → 1.6 ms**, an alias with 50 points **51.9 → 14.2 ms**
+* A read formula can no longer freeze the tab for good
+* What is subscribed is what is read — before, a single alias could subscribe to half an adapter
 
 ### 0.9.0
 * The role list is complete again: the detector hands out the expressions of its slots as text WITH slashes (`/^indicator…$/`), not as a regular expression. Take the slashes for part of the expression and you find neither start nor end afterwards — 210 roles instead of 232, and `indicator.lowbat` of all things was missing, the role every Homematic device writes. In the role picker, no slot of the pattern was offered at all any more, only the line "show all roles"

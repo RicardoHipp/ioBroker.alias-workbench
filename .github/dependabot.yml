@@ -21,9 +21,23 @@ updates:
       day: monday
       time: '06:00'
       timezone: Europe/Berlin
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 15
     commit-message:
       prefix: 'npm'
+    # Abkuehlzeit gegen Lieferketten-Angriffe: Ein Paket, das heute
+    # veroeffentlicht wird, wird erst in einer Woche vorgeschlagen. Wird
+    # eine kompromittierte Fassung in dieser Zeit zurueckgezogen, kommt
+    # sie hier nie an. Der Repochecker verlangt mindestens sieben Tage
+    # (E8915, 11.09.2026).
+    cooldown:
+      default-days: 7
+    ignore:
+      # @types/node muss zur Node-Fassung passen, unter der der Adapter
+      # laeuft (engines.node >= 20). Ein Sprung auf die naechste
+      # Hauptversion wuerde Typen von einer Laufzeit beschreiben, die
+      # hier gar nicht im Einsatz ist (E8917).
+      - dependency-name: '@types/node'
+        update-types: ['version-update:semver-major']
     groups:
       # Werkzeug, das nur beim Entwickeln laeuft, sammelt sich in einem
       # Vorgang - eslint und mocha einzeln durchzuwinken bringt nichts.
