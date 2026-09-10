@@ -529,8 +529,10 @@ from the library was the main weakness of the existing alias manager.
 
 ## Development
 
+After cloning, fetch the dependencies the usual way for a Node project, then
+run the build script:
+
 ```bash
-npm install
 npm run build      # bundles @iobroker/type-detector into admin/detector.js
 ```
 

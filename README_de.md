@@ -547,8 +547,10 @@ Alias-Managers.
 
 ## Entwicklung
 
+Nach dem Klonen die Abhängigkeiten auf dem üblichen Weg eines Node-Projekts
+holen, dann das Bauskript laufen lassen:
+
 ```bash
-npm install
 npm run build      # bündelt @iobroker/type-detector nach admin/detector.js
 ```
 
