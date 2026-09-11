@@ -283,9 +283,12 @@ export function zeichneVorlagenBlatt(host) {
   var st = el('select', 'tx');
   st.disabled = !eigen;
   st.appendChild(opt('', tr('tpls.noType')));
+  /* Wie im Speichern-Dialog: der Wert ist der Typ, nicht der
+     Musterschluessel. musterwahl.js loest es seit laengerem so. */
   (D ? Object.keys(D.patterns).sort() : []).forEach(function (m) {
-    var o = opt(m, musterZeile(m));
-    if (m === v.geraetetyp) { o.selected = true; }
+    var typ = D.patterns[m].type || m;
+    var o = opt(typ, musterZeile(m));
+    if (typ === v.geraetetyp) { o.selected = true; }
     st.appendChild(o);
   });
   st.addEventListener('change', function () {
@@ -1236,9 +1239,24 @@ export function vorlagenVorbereiten(e) {
 
   var zeilen = [];
   e.states.forEach(function (s) {
-    if (!s.n || !s.srcR) { return; }
-    var r = relZu(s.srcR, e.kanal);
-    var w = (s.srcW && s.srcW !== s.srcR) ? relZu(s.srcW, e.kanal) : null;
+    /* Eine Zeile braucht wenigstens ein Ziel - lesend oder schreibend.
+       `STOP` am Rollladen hat nur ein Schreibziel: ein Tastendruck hat
+       keinen Zustand zum Lesen. Bis 11.09.2026 stand hier `!s.srcR`,
+       und solche Zeilen fielen beim Speichern lautlos weg. Dass das
+       Anwenden diesen Fall kennt, steht seit dem 09.09.2026 in
+       vorlagen.js - die Gegenrichtung war vergessen worden. */
+    if (!s.n || (!s.srcR && !s.srcW)) { return; }
+    var r = s.srcR ? relZu(s.srcR, e.kanal) : { p: '', abs: false };
+    /* Das Schreibziel gehoert in die Vorlage, auch wenn es derselbe
+       Punkt ist wie der gelesene. Bis 11.09.2026 stand hier zusaetzlich
+       `s.srcW !== s.srcR`, und genau das trifft auf jeden Aktor zu, der
+       seinen eigenen Zustand fuehrt: Rollladen, Dimmer, Thermostat
+       schreiben auf denselben Punkt, den sie lesen (1.LEVEL). Beim
+       Speichern verschwand ihr Schreibweg - der Alias zeigte die
+       Position an und liess sich nicht mehr verstellen. Aufgefallen
+       bei Tasmota nie, weil dort tele.STATE gelesen und cmnd.POWER
+       geschrieben wird. */
+    var w = s.srcW ? relZu(s.srcW, e.kanal) : null;
     var zv = null;
     if (quelle && s.ausVorlage) {
       (quelle.zustaende || []).forEach(function (z) { if (z.name === s.ausVorlage) { zv = z; } });
@@ -1362,9 +1380,11 @@ export function baueVorlage(z) {
       name: r.name,
       rolle: s.role || undefined,
       typ: s.typ || undefined,
-      einheit: s.unit || undefined,
-      lesen: zPfad(r, k, false, z.zeilen)
+      einheit: s.unit || undefined
     };
+    /* Ohne Lesequelle kein `lesen` - sonst stuende dort ein leerer
+       Pfad, und `wendeAn` suchte einen Punkt namens "". */
+    if (r.lesenRoh) { zu.lesen = zPfad(r, k, false, z.zeilen); }
     if (r.lesenAbs) { zu.absolut = true; }
     if (r.schreibenRoh) { zu.schreiben = zPfad(r, k, true, z.zeilen); }
     if (f) { zu.feld = f; } else if (s.f) { zu.leseformel = s.f; }
@@ -1710,9 +1730,16 @@ export function zeichneVorlagenDialog() {
   lt.appendChild(el('span', 'feldlabel', tr('tpls.deviceType')));
   var st = el('select', 'tx');
   st.appendChild(opt('', tr('tpls.noType')));
+  /* Der Wert ist der Geraetetyp, nicht der Musterschluessel - drei
+     Muster tragen einen anderen Namen als ihr Typ: blinds meldet
+     "blind", mediaPlayer meldet "media", levelSlider meldet "slider".
+     Die Vorlagen fuehren den Typ. Bis 11.09.2026 stand hier der
+     Schluessel, und an jedem Rollladen zeigte der Dialog
+     "- keiner -", obwohl "blind" gesetzt war. */
   (D ? Object.keys(D.patterns).sort() : []).forEach(function (m) {
-    var o = opt(m, musterZeile(m));
-    if (m === k.geraetetyp) { o.selected = true; }
+    var typ = D.patterns[m].type || m;
+    var o = opt(typ, musterZeile(m));
+    if (typ === k.geraetetyp) { o.selected = true; }
     st.appendChild(o);
   });
   st.addEventListener('change', function () { k.geraetetyp = st.value; zeichneVorlagenDialog(); });
