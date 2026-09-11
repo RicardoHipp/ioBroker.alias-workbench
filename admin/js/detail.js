@@ -5,7 +5,7 @@ import { socket } from './verbindung.js';
 import { el } from './basis.js';
 import { tr } from './sprache.js';
 import { wertVon, jsonFelder, feldAusFormel, feldFormel, feldWert, jsonVon } from './werte.js';
-import { musterVon, erkenneEntwurf, platzFuerRolle, typVomPlatz, typenVomPlatz, typPasstZuPlatz } from './erkennung.js';
+import { musterVon, erkenneEntwurf, platzFuerRolle, typenFuerRolle } from './erkennung.js';
 import { musterName } from './musternamen.js';
 import { rollenFeld } from './rollenwahl.js';
 import { opt , quellenAuswahl, vorlagenAbweichung, bestandsAbweichung } from './entwurf.js';
@@ -378,16 +378,20 @@ export function detailZeile(e, s, idx) {
        die Rolle erneut wechselt. */
     beiWahl: function (r) {
       s.role = r;
-      var t = typVomPlatz(platzFuerRolle(e.want, r));
-      if (t && s.typ !== t) { s.typ = t; }
+      /* Nur wo die Rolle im Muster genau einen Datentyp zulaesst, gibt
+         es etwas vorzugeben. Trifft sie mehrere Plaetze mit
+         verschiedenen Typen - wie die Fahrtrichtung boolean und number -
+         sind beide richtig, und die Wahl bleibt beim Nutzer. */
+      var moegliche = typenFuerRolle(e.want, r);
+      if (moegliche.length === 1 && s.typ !== moegliche[0]) { s.typ = moegliche[0]; }
       neu();
     }
   }));
 
   var must = e.want && musterVon(e.want);
   if (must) {
-    var treffer = platzFuerRolle(e.want, s.role);
-    var erlaubt = typenVomPlatz(treffer);
+    var treffer = platzFuerRolle(e.want, s.role, s.typ);
+    var erlaubt = typenFuerRolle(e.want, s.role);
     var hin = el('div', 'sugg');
     if (treffer) {
       hin.appendChild(document.createTextNode(tr('pattern.fitsOn')));
@@ -404,7 +408,7 @@ export function detailZeile(e, s, idx) {
     /* Passt der Typ nicht zum Platz, faellt der Punkt aus dem Muster -
        lautlos, denn die Rolle stimmt ja. Genau das ist am 11.09.2026
        an einem Tasmota-Stromzaehler passiert (I33). */
-    if (!typPasstZuPlatz(treffer, s.typ)) {
+    if (treffer && s.typ && erlaubt.length && erlaubt.indexOf(s.typ) === -1) {
       rb.appendChild(el('div', 'aside w',
         tr('pattern.typeMismatch', treffer.name, erlaubt.join(tr('pattern.typeOr')), s.typ)));
     }

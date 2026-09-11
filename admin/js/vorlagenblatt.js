@@ -9,7 +9,7 @@ import { D, $, el, kurz } from './basis.js';
 import { tr, sprachtext, sprache } from './sprache.js';
 import { katalogFehlt } from './katalog.js';
 import { funktionsAuswahl, kennungZuFunktion } from './aufzaehlungen.js';
-import { musterVon, platzFuerRolle, typVomPlatz, typenVomPlatz, typPasstZuPlatz } from './erkennung.js';
+import { musterVon, platzFuerRolle, typenFuerRolle } from './erkennung.js';
 import { musterZeile, musterName } from './musternamen.js';
 import { ladeVorlagen, aendereVorlagen, setzeMeta, pruefeVorlage, hinweisTaugt, INSTANZ_ID } from './vorlagen.js';
 import { kindZustaende, hatPunkt, feldAusFormel } from './werte.js';
@@ -557,16 +557,17 @@ function rollenBlock(rolle, geraetetyp, setzen, typJetzt, setzeTyp) {
        beim Waehlen der Rolle gleich gesetzt. Eine Vorlage, deren Rolle
        stimmt und deren Typ nicht, faellt sonst lautlos aus dem Muster. */
     beiWahl: function (r) {
-      var t = typVomPlatz(platzFuerRolle(geraetetyp, r));
-      if (t && setzeTyp && typJetzt !== t) { setzeTyp(t); }
+      /* Wie am Geraet: nur ein eindeutiger Typ wird gesetzt. */
+      var moegliche = typenFuerRolle(geraetetyp, r);
+      if (moegliche.length === 1 && setzeTyp && typJetzt !== moegliche[0]) { setzeTyp(moegliche[0]); }
       setzen(r);
     }
   }));
 
   var must = geraetetyp && musterVon(geraetetyp);
   if (must) {
-    var treffer = platzFuerRolle(geraetetyp, rolle);
-    var erlaubt = typenVomPlatz(treffer);
+    var treffer = platzFuerRolle(geraetetyp, rolle, typJetzt);
+    var erlaubt = typenFuerRolle(geraetetyp, rolle);
     var hin = el('div', 'sugg');
     if (treffer) {
       hin.appendChild(document.createTextNode(tr('pattern.fitsOn')));
@@ -580,7 +581,7 @@ function rollenBlock(rolle, geraetetyp, setzen, typJetzt, setzeTyp) {
       hin.textContent = tr('pattern.noPlaceLong', musterName(geraetetyp) || geraetetyp);
     }
     rb.appendChild(hin);
-    if (!typPasstZuPlatz(treffer, typJetzt)) {
+    if (treffer && typJetzt && erlaubt.length && erlaubt.indexOf(typJetzt) === -1) {
       rb.appendChild(el('div', 'aside w',
         tr('pattern.typeMismatch', treffer.name, erlaubt.join(tr('pattern.typeOr')), typJetzt)));
     }

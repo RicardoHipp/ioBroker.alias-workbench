@@ -214,15 +214,50 @@ export function musterVon(typ) {
 
    Dieselbe Suche stand vorher zweimal im Code (detail.js und
    vorlagenblatt.js), beide Male ohne den Typ anzusehen. */
-export function platzFuerRolle(musterName, rolle) {
-  if (!rolle) { return null; }
+export function plaetzeFuerRolle(musterName, rolle) {
+  if (!rolle) { return []; }
   var mu = musterName && musterVon(musterName);
-  if (!mu) { return null; }
-  var treffer = null;
-  mu.states.forEach(function (st) {
-    if (!treffer && st.role && rolleTrifft(st.role, rolle)) { treffer = st; }
+  if (!mu) { return []; }
+  return mu.states.filter(function (st) {
+    return st.role && rolleTrifft(st.role, rolle);
   });
-  return treffer;
+}
+
+/* Der Platz, den eine Rolle trifft - und zwar der, dessen Datentyp
+   auch passt.
+
+   Dieselbe Rolle kann mehrere Plaetze treffen: das blinds-Muster hat
+   DIRECTION (boolean, /^indicator\.direction$/) und daneben
+   DIRECTION_ENUM (number, /^(indicator|value)\.direction$/). Homematic
+   meldet die Fahrtrichtung als Zahl (0 steht, 1 faehrt auf, 2 faehrt
+   zu, 3 unbekannt), und der Detector legt sie richtig auf
+   DIRECTION_ENUM. Wer nur die Rolle vergleicht und den ersten Treffer
+   nimmt, landet auf DIRECTION und meldet einen Konflikt, den es nicht
+   gibt - genau das tat diese Funktion am 11.09.2026 einen halben Tag
+   lang, samt einer "begruendeten Ausnahme" im Test, die keine war. */
+export function platzFuerRolle(musterName, rolle, typ) {
+  var alle = plaetzeFuerRolle(musterName, rolle);
+  if (!alle.length) { return null; }
+  if (typ) {
+    for (var i = 0; i < alle.length; i++) {
+      if (typPasstZuPlatz(alle[i], typ)) { return alle[i]; }
+    }
+  }
+  return alle[0];
+}
+
+/* Alle Datentypen, die eine Rolle in diesem Muster annehmen darf -
+   ueber alle Plaetze, die sie trifft. Bei der Fahrtrichtung sind das
+   boolean und number: beide Formen sind richtig, nur auf verschiedenen
+   Plaetzen. */
+export function typenFuerRolle(musterName, rolle) {
+  var raus = [];
+  plaetzeFuerRolle(musterName, rolle).forEach(function (st) {
+    typenVomPlatz(st).forEach(function (t) {
+      if (raus.indexOf(t) === -1) { raus.push(t); }
+    });
+  });
+  return raus;
 }
 
 /* Die Datentypen, die ein Platz zulaesst - als Liste.

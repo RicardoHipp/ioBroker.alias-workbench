@@ -10,7 +10,7 @@
 import { S } from './zustand.js';
 import { D, el, $ } from './basis.js';
 import { tr, sprachtext } from './sprache.js';
-import { VORSCHAU, musterVon, erkenneEntwurf, platzFuerRolle, typenVomPlatz, typPasstZuPlatz } from './erkennung.js';
+import { VORSCHAU, musterVon, erkenneEntwurf, platzFuerRolle, typenFuerRolle } from './erkennung.js';
 import { anMusterAnpassen } from './vorlagen.js';
 import { ratePlaetze, rateZurueck, rateAnzahl, rateMoeglich } from './vorschlagen.js';
 import { zeichneErgebnis, entwurfAngefasst, knopfFrisch } from './ergebnis.js';
@@ -150,13 +150,11 @@ export function baueMusterwahl(e, haupt, pflichtFehlt) {
            Punkt fiel lautlos aus dem Muster. */
         mark = tr('pattern.doesNotFit');
         (pruefE.states || []).some(function (st) {
+          var moegliche = typenFuerRolle(m, st.role);
+          if (!st.typ || !moegliche.length || moegliche.indexOf(st.typ) > -1) { return false; }
           var pl = platzFuerRolle(m, st.role);
-          if (pl && !typPasstZuPlatz(pl, st.typ)) {
-            mark = tr('pattern.fitsNotType', pl.name, st.typ,
-              typenVomPlatz(pl).join(tr('pattern.typeOr')));
-            return true;
-          }
-          return false;
+          mark = tr('pattern.fitsNotType', pl.name, st.typ, moegliche.join(tr('pattern.typeOr')));
+          return true;
         });
       }
     } else {

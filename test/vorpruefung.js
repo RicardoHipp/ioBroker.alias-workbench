@@ -164,32 +164,51 @@ describe('Die Vorlagen und ihre Datentypen', () => {
     });
     const musterVon = typ => muster[typ] || muster[typZuMuster[typ]] || null;
 
-    function platzFuerRolle(musterName, rolle) {
+    // Dieselbe Rolle kann mehrere Plaetze treffen: blinds hat DIRECTION
+    // (boolean) und DIRECTION_ENUM (number), beide auf
+    // indicator.direction. Homematic meldet die Fahrtrichtung als Zahl,
+    // und der Detector legt sie auf DIRECTION_ENUM - richtig. Wer nur
+    // den ersten Treffer nimmt, sieht dort faelschlich einen Konflikt.
+    function plaetzeFuerRolle(musterName, rolle) {
         const mu = musterVon(musterName);
         if (!mu || !rolle) {
-            return null;
+            return [];
         }
-        return (
-            mu.states.find(st => {
-                if (!st.role) {
-                    return false;
-                }
-                // st.role kommt als Text mit Schraegstrichen: "/^value\.power$/".
-                // Wer den unveraendert an new RegExp gibt, sucht nach
-                // Schraegstrichen und trifft nie - erkennung.js schaelt sie
-                // in ausdruckText() heraus, hier steht dasselbe.
-                const roh = st.role.source !== undefined ? st.role.source : String(st.role);
-                const m = /^\/(.*)\/[a-z]*$/.exec(roh);
-                let re;
-                try {
-                    re = new RegExp(m ? m[1] : roh);
-                } catch {
-                    return false;
-                }
-                return re.test(rolle);
-            }) || null
-        );
+        return mu.states.filter(st => {
+            if (!st.role) {
+                return false;
+            }
+            // st.role kommt als Text mit Schraegstrichen: "/^value\.power$/".
+            // Wer den unveraendert an new RegExp gibt, sucht nach
+            // Schraegstrichen und trifft nie - erkennung.js schaelt sie
+            // in ausdruckText() heraus, hier steht dasselbe.
+            const roh = st.role.source !== undefined ? st.role.source : String(st.role);
+            const m = /^\/(.*)\/[a-z]*$/.exec(roh);
+            let re;
+            try {
+                re = new RegExp(m ? m[1] : roh);
+            } catch {
+                return false;
+            }
+            return re.test(rolle);
+        });
     }
+
+    // Alle Typen, die eine Rolle in diesem Muster annehmen darf
+    const typenFuerRolle = (musterName, rolle) => {
+        const raus = [];
+        plaetzeFuerRolle(musterName, rolle).forEach(st => {
+            if (!st.type) {
+                return;
+            }
+            (Array.isArray(st.type) ? st.type : [String(st.type)]).forEach(t => {
+                if (raus.indexOf(t) === -1) {
+                    raus.push(t);
+                }
+            });
+        });
+        return raus;
+    };
 
     const vorlagen = liesJson(path.join(wurzel, 'admin', 'vorlagen', 'index.json')).vorlagen.map(name =>
         // index.json fuehrt die Dateinamen samt Endung
@@ -203,25 +222,6 @@ describe('Die Vorlagen und ihre Datentypen', () => {
         expect(ohne, `Geraetetyp ohne Muster: ${ohne.join(', ')}`).to.be.empty;
     });
 
-    // 622 Plaetze nennen genau einen Typ, 28 nennen mehrere
-    // (mediaPlayer/STATE: ["boolean","number"]), 82 nennen keinen.
-    // Wer die Liste als String liest, erhaelt "boolean,number" - den
-    // Typ gibt es nicht.
-    const typenVon = platz => {
-        if (!platz || !platz.type) {
-            return [];
-        }
-        return Array.isArray(platz.type) ? platz.type : [String(platz.type)];
-    };
-
-    // Eine begruendete Ausnahme: Homematic meldet die Fahrtrichtung als
-    // Zahl (0 steht, 1 faehrt auf, 2 faehrt zu, 3 unbekannt), das Muster
-    // blinds/DIRECTION laesst nur boolean zu. Vier Zustaende passen nicht
-    // in einen Wahrheitswert - die Vorlage hat recht, das Muster ist zu
-    // eng. Der Platz ist optional, der Punkt wird also trotzdem angelegt
-    // und ist voll benutzbar; er zaehlt nur nicht zur Erkennung.
-    const AUSNAHMEN = ['hm-rollladen/DIRECTION'];
-
     it('geben jedem Zustand einen Datentyp, den sein Platz zulaesst', () => {
         const schief = [];
         vorlagen.forEach(v => {
@@ -229,14 +229,14 @@ describe('Die Vorlagen und ihre Datentypen', () => {
                 return;
             }
             (v.zustaende || []).forEach(z => {
-                const platz = platzFuerRolle(v.geraetetyp, z.rolle);
-                const erlaubt = typenVon(platz);
+                const erlaubt = typenFuerRolle(v.geraetetyp, z.rolle);
                 if (!erlaubt.length || !z.typ) {
                     return; // kein Platz, keine Vorgabe, oder kein Typ gesetzt
                 }
-                if (erlaubt.indexOf(z.typ) === -1 && AUSNAHMEN.indexOf(`${v.id}/${z.name}`) === -1) {
+                if (erlaubt.indexOf(z.typ) === -1) {
+                    const plaetze = plaetzeFuerRolle(v.geraetetyp, z.rolle).map(x => x.name);
                     schief.push(
-                        `${v.id}/${z.name}: Platz ${platz.name} laesst ${erlaubt.join('/')} zu, Vorlage sagt ${z.typ}`,
+                        `${v.id}/${z.name}: ${plaetze.join(' bzw. ')} laesst ${erlaubt.join('/')} zu, Vorlage sagt ${z.typ}`,
                     );
                 }
             });
@@ -251,7 +251,7 @@ describe('Die Vorlagen und ihre Datentypen', () => {
                 return;
             }
             (v.zustaende || []).forEach(z => {
-                const erlaubt = typenVon(platzFuerRolle(v.geraetetyp, z.rolle));
+                const erlaubt = typenFuerRolle(v.geraetetyp, z.rolle);
                 if (erlaubt.length && !z.typ) {
                     ohne.push(`${v.id}/${z.name}: Platz laesst ${erlaubt.join('/')} zu, Vorlage nennt keinen`);
                 }
