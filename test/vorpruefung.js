@@ -135,6 +135,68 @@ describe('Die Uebersetzungen des Reiters', () => {
     });
 });
 
+describe('Die Entwicklerdateien', () => {
+    // Beide Dateien laufen nie mit aus - sie sind Werkzeug. Trotzdem
+    // stehen sie hier: der Adapterpruefer vergleicht die Schema-Adressen
+    // Zeichen fuer Zeichen und meldet eine abweichende als *Fehler*
+    // (E4041, E4043, E4045), nicht als Hinweis.
+    const SCHEMA_IO_PACKAGE =
+        'https://raw.githubusercontent.com/ioBroker/ioBroker.js-controller/master/schemas/io-package.json';
+    const SCHEMA_JSONCONFIG =
+        'https://raw.githubusercontent.com/ioBroker/ioBroker.admin/master/packages/jsonConfig/schemas/jsonConfig.json';
+
+    describe('.vscode/settings.json', () => {
+        // Kommentare sind hier erlaubt - der Pruefer liest die Datei mit
+        // JSON5. Fuer diesen Test reicht es, die // -Zeilen zu entfernen.
+        const roh = lies(path.join(wurzel, '.vscode', 'settings.json'));
+        const einstellungen = JSON.parse(roh.replace(/^\s*\/\/.*$/gm, ''));
+        const schemata = einstellungen['json.schemas'];
+
+        it('fuehrt eine Liste "json.schemas"', () => {
+            expect(schemata, 'json.schemas').to.be.an('array').that.is.not.empty;
+        });
+
+        it('nennt fuer io-package.json die erwartete Adresse', () => {
+            const eintrag = schemata.find(s => (s.fileMatch || []).indexOf('io-package.json') > -1);
+            expect(eintrag, 'kein Eintrag fuer io-package.json').to.be.an('object');
+            expect(eintrag.url).to.equal(SCHEMA_IO_PACKAGE);
+        });
+
+        it('deckt beide Formen der jsonConfig ab, json und json5', () => {
+            // Der Pruefer sucht zweimal: einen Eintrag, dessen fileMatch
+            // alle drei .json nennt, und einen, der alle drei .json5
+            // nennt. Ein Eintrag mit allen sechs erfuellt beides.
+            const json = ['admin/jsonConfig.json', 'admin/jsonCustom.json', 'admin/jsonTab.json'];
+            const json5 = json.map(f => `${f}5`);
+            [json, json5].forEach(gruppe => {
+                const eintrag = schemata.find(s => gruppe.every(f => (s.fileMatch || []).indexOf(f) > -1));
+                expect(eintrag, `kein Eintrag fuer ${gruppe[0]} und Geschwister`).to.be.an('object');
+                expect(eintrag.url).to.equal(SCHEMA_JSONCONFIG);
+            });
+        });
+    });
+
+    describe('.github/dependabot.yml', () => {
+        const roh = lies(path.join(wurzel, '.github', 'dependabot.yml'));
+        // Kommentarzeilen weg, sonst zaehlt die Begruendung als Fund.
+        const ohneKommentar = roh.replace(/^\s*#.*$/gm, '');
+
+        it('nimmt keinen monatlichen Takt', () => {
+            // "monthly" laesst alle Adapter am Monatsersten gleichzeitig
+            // anfragen (S8906), und ein "day" waere dort wirkungslos (W8909).
+            expect(/interval:\s*monthly/.test(ohneKommentar), 'interval: monthly gefunden').to.be.false;
+        });
+
+        it('gibt jedem cron-Takt seinen Ausdruck mit', () => {
+            // Ohne cronjob ist der Eintrag ungueltig - das Schema von
+            // Dependabot verlangt ihn, sobald interval auf cron steht.
+            const cronBloecke = (ohneKommentar.match(/interval:\s*cron/g) || []).length;
+            const ausdruecke = (ohneKommentar.match(/cronjob:\s*\S+/g) || []).length;
+            expect(ausdruecke, 'cron ohne cronjob').to.equal(cronBloecke);
+        });
+    });
+});
+
 describe('Die Changelog-Eintraege', () => {
     // common.news wird im Adapterkatalog angezeigt - in der Sprache des
     // Lesers. Bis 11.09.2026 stand dort fuer neun Sprachen nur eine

@@ -1,0 +1,29 @@
+{
+  // Schemata fuer die ioBroker-Dateien. Damit meckert der Editor beim
+  // Tippen statt erst der Adapterpruefer (S4036).
+  //
+  // Die beiden Adressen sind vorgegeben - der Pruefer vergleicht sie
+  // Zeichen fuer Zeichen und meldet eine abweichende als Fehler
+  // (E4041 fuer io-package.json, E4043/E4045 fuer die jsonConfig).
+  //
+  // Der zweite Eintrag fuehrt auch Dateien, die es hier nicht gibt
+  // (jsonCustom, jsonTab, und die .json5-Formen). Das ist Absicht: der
+  // Pruefer sucht einen Eintrag, dessen fileMatch sie alle nennt.
+  "json.schemas": [
+    {
+      "fileMatch": ["io-package.json"],
+      "url": "https://raw.githubusercontent.com/ioBroker/ioBroker.js-controller/master/schemas/io-package.json"
+    },
+    {
+      "fileMatch": [
+        "admin/jsonConfig.json",
+        "admin/jsonCustom.json",
+        "admin/jsonTab.json",
+        "admin/jsonConfig.json5",
+        "admin/jsonCustom.json5",
+        "admin/jsonTab.json5"
+      ],
+      "url": "https://raw.githubusercontent.com/ioBroker/ioBroker.admin/master/packages/jsonConfig/schemas/jsonConfig.json"
+    }
+  ]
+}

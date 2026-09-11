@@ -52,7 +52,13 @@ updates:
 
   - package-ecosystem: github-actions
     directory: /
+    # Nicht "monthly": das laesst Dependabot am Monatsersten anfragen, und
+    # das tun dann alle gleichzeitig. Ein krummer Zeitpunkt verteilt die
+    # Last (S8906). Der Takt bleibt monatlich - Actions aendern sich
+    # selten, und jede Aenderung an ihnen ist eine am Auslieferweg.
     schedule:
-      interval: monthly
+      interval: cron
+      cronjob: '13 7 5 * *'
+      timezone: Europe/Berlin
     commit-message:
       prefix: 'ci'
