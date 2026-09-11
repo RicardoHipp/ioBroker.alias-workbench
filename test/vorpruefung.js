@@ -135,6 +135,94 @@ describe('Die Uebersetzungen des Reiters', () => {
     });
 });
 
+describe('Die Changelog-Eintraege', () => {
+    // common.news wird im Adapterkatalog angezeigt - in der Sprache des
+    // Lesers. Bis 11.09.2026 stand dort fuer neun Sprachen nur eine
+    // Kurzfassung: das Englische zu 0.9.7 hatte 3000 Zeichen mit fuenf
+    // Ueberschriften und 22 Punkten, das Russische 480 Zeichen ohne
+    // Gliederung. Der Adapterpruefer meldet das als W1145, sobald mehr
+    // als zwei Sprachen unter 60 % der englischen Laenge liegen.
+    //
+    // Chinesisch nimmt der Pruefer aus (excludedNewsTranslationLanguages),
+    // weil es dichter schreibt - hier steht es aus demselben Grund nicht
+    // in der Laengenpruefung, wohl aber in der Gliederungspruefung.
+    const news = liesJson(path.join(wurzel, 'io-package.json')).common.news;
+    const OHNE_LAENGENPRUEFUNG = ['en', 'zh-cn'];
+
+    function jedeUebersetzung(tuwas) {
+        Object.keys(news).forEach(version => {
+            const en = news[version].en;
+            Object.keys(news[version]).forEach(sprache => {
+                if (sprache === 'en') {
+                    return;
+                }
+                tuwas(version, sprache, news[version][sprache], en);
+            });
+        });
+    }
+
+    it('haben zu jeder Fassung einen englischen Text', () => {
+        const ohne = Object.keys(news).filter(v => !String(news[v].en || '').trim());
+        expect(ohne, `ohne en: ${ohne.join(', ')}`).to.be.empty;
+    });
+
+    it('tragen jede Fassung in allen elf Sprachen', () => {
+        const luecken = [];
+        Object.keys(news).forEach(version => {
+            SPRACHEN.forEach(s => {
+                if (!String(news[version][s] || '').trim()) {
+                    luecken.push(`${version}/${s}`);
+                }
+            });
+        });
+        expect(luecken, `fehlt: ${luecken.join(', ')}`).to.be.empty;
+    });
+
+    it('kuerzen keine Uebersetzung auf unter 60 Prozent', () => {
+        const kurz = [];
+        jedeUebersetzung((version, sprache, text, en) => {
+            if (OHNE_LAENGENPRUEFUNG.indexOf(sprache) > -1) {
+                return;
+            }
+            if (text.length < en.length * 0.6) {
+                kurz.push(`${version}/${sprache} ${Math.round((100 * text.length) / en.length)} %`);
+            }
+        });
+        expect(kurz, `zu kurz: ${kurz.join(', ')}`).to.be.empty;
+    });
+
+    it('behalten die Gliederung des englischen Textes', () => {
+        const schief = [];
+        jedeUebersetzung((version, sprache, text, en) => {
+            const punkte = s => (s.match(/\n\* /g) || []).length;
+            const marken = s => (s.match(/\*\*/g) || []).length;
+            if (punkte(text) !== punkte(en) || marken(text) !== marken(en)) {
+                schief.push(
+                    `${version}/${sprache}: ${punkte(text)}/${punkte(en)} Punkte, ` +
+                        `${marken(text)}/${marken(en)} Marken`,
+                );
+            }
+        });
+        expect(schief, `abweichend: ${schief.join(' | ')}`).to.be.empty;
+    });
+
+    it('lassen keine Uebersetzung beim englischen Text stehen', () => {
+        // [E1144] beim Pruefer: nicht uebersetzt, nur kopiert.
+        const kopiert = [];
+        jedeUebersetzung((version, sprache, text, en) => {
+            if (text === en) {
+                kopiert.push(`${version}/${sprache}`);
+            }
+        });
+        expect(kopiert, `unuebersetzt: ${kopiert.join(', ')}`).to.be.empty;
+    });
+
+    it('fuehren hoechstens sieben Fassungen', () => {
+        // Der Repository-Builder schneidet bei sieben ab (W1032).
+        expect(Object.keys(news).length, 'Eintraege in common.news').to.be.at.most(7);
+    });
+});
+
 describe('Die Einstellungsseite', () => {
     const jc = liesJson(path.join(wurzel, 'admin', 'jsonConfig.json'));
     // Seit dem Umzug traegt die jsonConfig nur noch englische Texte; die
