@@ -201,6 +201,58 @@ export function musterVon(typ) {
   return D.patterns[typ] || (TYP_ZU_MUSTER[typ] ? D.patterns[TYP_ZU_MUSTER[typ]] : null) || null;
 }
 
+/* Welchen Platz trifft eine Rolle im gewaehlten Muster?
+
+   Gibt den ganzen Platz zurueck, nicht nur seinen Namen - denn er
+   traegt mehr als die Rolle: `type` sagt, welchen Datentyp der
+   type-detector dort erwartet. Am 11.09.2026 stand in einer eigenen
+   Vorlage `value.power.consumption` mit Typ `mixed`. Die Rolle war
+   richtig, der Platz CONSUMPTION verlangt aber `number` - der Punkt
+   fiel durch, kein Platz blieb belegt, und das ganze Geraet wurde
+   statt als `electricity` nur noch als `info` erkannt. Am Bildschirm
+   stand dazu nichts weiter als „passt nicht".
+
+   Dieselbe Suche stand vorher zweimal im Code (detail.js und
+   vorlagenblatt.js), beide Male ohne den Typ anzusehen. */
+export function platzFuerRolle(musterName, rolle) {
+  if (!rolle) { return null; }
+  var mu = musterName && musterVon(musterName);
+  if (!mu) { return null; }
+  var treffer = null;
+  mu.states.forEach(function (st) {
+    if (!treffer && st.role && rolleTrifft(st.role, rolle)) { treffer = st; }
+  });
+  return treffer;
+}
+
+/* Die Datentypen, die ein Platz zulaesst - als Liste.
+
+   Drei Faelle, gemessen am type-detector 6.0.1: 622 Plaetze nennen
+   genau einen Typ, 28 nennen mehrere (mediaPlayer/STATE etwa
+   ["boolean","number"]), 82 nennen gar keinen - WORKING und ERROR
+   zum Beispiel. Wer `String(platz.type)` nimmt, macht aus den 28 den
+   Typ "boolean,number", und den gibt es nicht. */
+export function typenVomPlatz(platz) {
+  if (!platz || !platz.type) { return []; }
+  return Array.isArray(platz.type) ? platz.type.slice() : [String(platz.type)];
+}
+
+/* Der Typ, den ein Platz *vorgibt* - nur wenn er eindeutig ist. Wo ein
+   Platz mehrere zulaesst, gibt es nichts vorzugeben: dann ist jede der
+   erlaubten Formen richtig, und die Wahl bleibt beim Nutzer. */
+export function typVomPlatz(platz) {
+  var t = typenVomPlatz(platz);
+  return t.length === 1 ? t[0] : '';
+}
+
+/* Passt ein eingestellter Typ zu dem, was der Platz zulaesst? Ohne
+   Vorgabe passt jeder; ohne eingestellten Typ wird nicht geurteilt. */
+export function typPasstZuPlatz(platz, typ) {
+  var t = typenVomPlatz(platz);
+  if (!t.length || !typ) { return true; }
+  return t.indexOf(String(typ)) > -1;
+}
+
 /* Welche Rolle faende im gewaehlten Muster einen Platz? */
 export function plaetzeFuerRollen(musterName) {
   var raus = {};

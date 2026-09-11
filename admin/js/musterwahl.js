@@ -10,7 +10,7 @@
 import { S } from './zustand.js';
 import { D, el, $ } from './basis.js';
 import { tr, sprachtext } from './sprache.js';
-import { VORSCHAU, musterVon, erkenneEntwurf } from './erkennung.js';
+import { VORSCHAU, musterVon, erkenneEntwurf, platzFuerRolle, typenVomPlatz, typPasstZuPlatz } from './erkennung.js';
 import { anMusterAnpassen } from './vorlagen.js';
 import { ratePlaetze, rateZurueck, rateAnzahl, rateMoeglich } from './vorschlagen.js';
 import { zeichneErgebnis, entwurfAngefasst, knopfFrisch } from './ergebnis.js';
@@ -138,8 +138,27 @@ export function baueMusterwahl(e, haupt, pflichtFehlt) {
     if (!r.length) {
       var fehlend = musterVon(m).states.filter(function (x) { return x.required; })
         .map(function (x) { return x.name; });
-      mark = fehlend.length ? ('✕ ' + tr('pattern.missing', fehlend.join(', ')))
-                            : tr('pattern.doesNotFit');
+      if (fehlend.length) {
+        mark = '✕ ' + tr('pattern.missing', fehlend.join(', '));
+      } else {
+        /* Kein Pflichtplatz fehlt und trotzdem passt nichts - dann liegt
+           es an einer Zeile, die ihren Platz trifft, aber im falschen
+           Datentyp steht. Bis 11.09.2026 stand hier nur „passt nicht",
+           und genau dieser Fall (electricity hat keinen einzigen
+           Pflichtplatz) kostete Ricardo eine Stunde Suche: Rolle
+           value.power.consumption richtig, Typ mixed statt number, der
+           Punkt fiel lautlos aus dem Muster. */
+        mark = tr('pattern.doesNotFit');
+        (pruefE.states || []).some(function (st) {
+          var pl = platzFuerRolle(m, st.role);
+          if (pl && !typPasstZuPlatz(pl, st.typ)) {
+            mark = tr('pattern.fitsNotType', pl.name, st.typ,
+              typenVomPlatz(pl).join(tr('pattern.typeOr')));
+            return true;
+          }
+          return false;
+        });
+      }
     } else {
       var g = r[0].states.filter(function (x) { return x.id; }).length;
       mark = tr('pattern.slotsTaken', g, r[0].states.length);
@@ -281,9 +300,16 @@ export function baueMusterwahl(e, haupt, pflichtFehlt) {
      Auswahlfeld. */
   var mBeschriften = function () {
     /* Im Feld der Beiname, der rohe Name im Tooltip - fuer beides
-       nebeneinander ist das Feld zu schmal. */
-    sel.value = e.want ? ((musterName(e.want) || e.want) + '   ' + markeFuer(e.want)) : '';
-    sel.title = e.want || '';
+       nebeneinander ist das Feld zu schmal.
+
+       Die Marke nennt seit 11.09.2026 auch den Grund, wenn ein Muster
+       an einem falschen Datentyp scheitert („✕ CONSUMPTION: Typ mixed
+       statt number"). Das ist laenger als „passt nicht" und wird im
+       schmalen Feld abgeschnitten - deshalb steht sie zusaetzlich im
+       Tooltip, wo sie ganz lesbar ist. */
+    var marke = e.want ? markeFuer(e.want) : '';
+    sel.value = e.want ? ((musterName(e.want) || e.want) + '   ' + marke) : '';
+    sel.title = e.want ? (e.want + (marke ? '   ' + marke : '')) : '';
   };
   mBeschriften();
 

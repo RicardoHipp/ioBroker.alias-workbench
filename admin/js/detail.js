@@ -5,7 +5,7 @@ import { socket } from './verbindung.js';
 import { el } from './basis.js';
 import { tr } from './sprache.js';
 import { wertVon, jsonFelder, feldAusFormel, feldFormel, feldWert, jsonVon } from './werte.js';
-import { musterVon, erkenneEntwurf, rolleTrifft } from './erkennung.js';
+import { musterVon, erkenneEntwurf, platzFuerRolle, typVomPlatz, typenVomPlatz, typPasstZuPlatz } from './erkennung.js';
 import { musterName } from './musternamen.js';
 import { rollenFeld } from './rollenwahl.js';
 import { opt , quellenAuswahl, vorlagenAbweichung, bestandsAbweichung } from './entwurf.js';
@@ -371,24 +371,43 @@ export function detailZeile(e, s, idx) {
     muster: e.want,
     belegtVon: belegtVon,
     breite: '300px',
-    beiWahl: function (r) { s.role = r; neu(); }
+    /* Die Rolle bestimmt den Platz, und der Platz bestimmt den Typ -
+       beides steht im selben Datensatz des type-detector. Wer eine
+       Rolle waehlt, bekommt deshalb den passenden Typ gleich mit.
+       Wer danach den Typ von Hand aendert, behaelt seine Wahl, bis er
+       die Rolle erneut wechselt. */
+    beiWahl: function (r) {
+      s.role = r;
+      var t = typVomPlatz(platzFuerRolle(e.want, r));
+      if (t && s.typ !== t) { s.typ = t; }
+      neu();
+    }
   }));
 
   var must = e.want && musterVon(e.want);
   if (must) {
-    var treffer = null;
-    must.states.forEach(function (p) {
-      if (!treffer && p.role && rolleTrifft(p.role, s.role)) { treffer = p; }
-    });
+    var treffer = platzFuerRolle(e.want, s.role);
+    var erlaubt = typenVomPlatz(treffer);
     var hin = el('div', 'sugg');
     if (treffer) {
       hin.appendChild(document.createTextNode(tr('pattern.fitsOn')));
       hin.appendChild(el('b', null, String(treffer.role)));
       hin.appendChild(document.createTextNode(tr('pattern.toSlot', treffer.name, musterName(e.want) || e.want)));
+      if (erlaubt.length) {
+        hin.appendChild(document.createTextNode(
+          tr('pattern.expectsType', erlaubt.join(tr('pattern.typeOr')))));
+      }
     } else {
       hin.textContent = tr('pattern.noPlaceLong', musterName(e.want) || e.want);
     }
     rb.appendChild(hin);
+    /* Passt der Typ nicht zum Platz, faellt der Punkt aus dem Muster -
+       lautlos, denn die Rolle stimmt ja. Genau das ist am 11.09.2026
+       an einem Tasmota-Stromzaehler passiert (I33). */
+    if (!typPasstZuPlatz(treffer, s.typ)) {
+      rb.appendChild(el('div', 'aside w',
+        tr('pattern.typeMismatch', treffer.name, erlaubt.join(tr('pattern.typeOr')), s.typ)));
+    }
   }
   zeigeBeide(zeile(tr('detail.role'), rb), ['role']);
 
@@ -399,6 +418,8 @@ export function detailZeile(e, s, idx) {
   ['boolean', 'number', 'string', 'mixed'].forEach(function (t) { selT.appendChild(opt(t, t)); });
   selT.value = s.typ || 'number';
   selT.addEventListener('click', function (ev) { ev.stopPropagation(); });
+  /* Eine Aenderung von Hand bleibt stehen - bis die Rolle erneut
+     gewaehlt wird, dann gilt wieder der Typ des Platzes. */
   selT.addEventListener('change', function () { s.typ = selT.value; neu(); });
   var lT = el('label', 'fld');
   lT.appendChild(el('span', null, tr('detail.type')));

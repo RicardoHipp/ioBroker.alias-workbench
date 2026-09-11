@@ -9,7 +9,7 @@ import { D, $, el, kurz } from './basis.js';
 import { tr, sprachtext, sprache } from './sprache.js';
 import { katalogFehlt } from './katalog.js';
 import { funktionsAuswahl, kennungZuFunktion } from './aufzaehlungen.js';
-import { musterVon, rolleTrifft } from './erkennung.js';
+import { musterVon, platzFuerRolle, typVomPlatz, typenVomPlatz, typPasstZuPlatz } from './erkennung.js';
 import { musterZeile, musterName } from './musternamen.js';
 import { ladeVorlagen, aendereVorlagen, setzeMeta, pruefeVorlage, hinweisTaugt, INSTANZ_ID } from './vorlagen.js';
 import { kindZustaende, hatPunkt, feldAusFormel } from './werte.js';
@@ -543,7 +543,7 @@ function dtFeld(beschriftung, element) {
 
 /* Rollenauswahl samt Begruendung. geraetetyp darf leer sein — dann
    entfaellt nur der Hinweis, welchen Platz die Rolle traefe. */
-function rollenBlock(rolle, geraetetyp, setzen) {
+function rollenBlock(rolle, geraetetyp, setzen, typJetzt, setzeTyp) {
   var rb = el('div');
   /* Dasselbe durchsuchbare Feld wie am Geraet - ein Aussehen fuer alle
      Rollenwahlen. Ohne Belegt-Vermerk: in der Vorlage gibt es keinen
@@ -553,24 +553,37 @@ function rollenBlock(rolle, geraetetyp, setzen) {
     muster: geraetetyp,
     leerErlaubt: true,
     breite: '300px',
-    beiWahl: function (r) { setzen(r); }
+    /* Wie am Geraet: der Platz bringt seinen Datentyp mit, also wird er
+       beim Waehlen der Rolle gleich gesetzt. Eine Vorlage, deren Rolle
+       stimmt und deren Typ nicht, faellt sonst lautlos aus dem Muster. */
+    beiWahl: function (r) {
+      var t = typVomPlatz(platzFuerRolle(geraetetyp, r));
+      if (t && setzeTyp && typJetzt !== t) { setzeTyp(t); }
+      setzen(r);
+    }
   }));
 
   var must = geraetetyp && musterVon(geraetetyp);
   if (must) {
-    var treffer = null;
-    must.states.forEach(function (pp) {
-      if (!treffer && pp.role && rolleTrifft(pp.role, rolle)) { treffer = pp; }
-    });
+    var treffer = platzFuerRolle(geraetetyp, rolle);
+    var erlaubt = typenVomPlatz(treffer);
     var hin = el('div', 'sugg');
     if (treffer) {
       hin.appendChild(document.createTextNode(tr('pattern.fitsOn')));
       hin.appendChild(el('b', null, String(treffer.role)));
       hin.appendChild(document.createTextNode(tr('pattern.toSlot', treffer.name, musterName(geraetetyp) || geraetetyp)));
+      if (erlaubt.length) {
+        hin.appendChild(document.createTextNode(
+          tr('pattern.expectsType', erlaubt.join(tr('pattern.typeOr')))));
+      }
     } else {
       hin.textContent = tr('pattern.noPlaceLong', musterName(geraetetyp) || geraetetyp);
     }
     rb.appendChild(hin);
+    if (!typPasstZuPlatz(treffer, typJetzt)) {
+      rb.appendChild(el('div', 'aside w',
+        tr('pattern.typeMismatch', treffer.name, erlaubt.join(tr('pattern.typeOr')), typJetzt)));
+    }
   }
   return rb;
 }
@@ -782,7 +795,7 @@ function vZeilenDetail(z, nr) {
 
   dtZeile(d, tr('detail.role'), rollenBlock(z.rolle, v.geraetetyp, function (neu) {
     setzeFeld('rolle', neu);
-  }));
+  }, z.typ, function (t) { setzeFeld('typ', t); }));
 
   dtZeile(d, tr('detail.display'), anzeigeBlock(
     function (was) {

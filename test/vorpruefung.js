@@ -135,6 +135,132 @@ describe('Die Uebersetzungen des Reiters', () => {
     });
 });
 
+describe('Die Vorlagen und ihre Datentypen', () => {
+    // Am 11.09.2026 stand in einer selbstgebauten Vorlage die Rolle
+    // value.power.consumption mit Typ "mixed". Die Rolle war richtig,
+    // der Platz CONSUMPTION verlangt aber "number" - der Punkt fiel
+    // durch, kein Platz blieb belegt, und das Geraet wurde statt als
+    // "electricity" nur noch als "info" erkannt. Am Bildschirm stand
+    // dazu nichts weiter als "passt nicht".
+    //
+    // Hier wird dieselbe Pruefung fuer die mitgelieferten Vorlagen
+    // gemacht: Wo ein Platz einen Datentyp verlangt, muss der Zustand
+    // ihn tragen. Eigene Vorlagen des Nutzers kann dieser Test nicht
+    // sehen - sie liegen in der Instanzkonfiguration; dort warnt seit
+    // 11.09.2026 die Oberflaeche.
+    const detector = require('@iobroker/type-detector');
+    const muster = detector.default.getPatterns();
+
+    // Der gemeldete Geraetetyp ist nicht immer der Musterschluessel:
+    // das Muster "blinds" meldet den Typ "blind". Wer den Typ als
+    // Schluessel nimmt, greift ins Leere - erkennung.js loest das mit
+    // TYP_ZU_MUSTER, hier steht dieselbe Ableitung.
+    const typZuMuster = {};
+    Object.keys(muster).forEach(k => {
+        const t = muster[k].type;
+        if (t && t !== k) {
+            typZuMuster[t] = k;
+        }
+    });
+    const musterVon = typ => muster[typ] || muster[typZuMuster[typ]] || null;
+
+    function platzFuerRolle(musterName, rolle) {
+        const mu = musterVon(musterName);
+        if (!mu || !rolle) {
+            return null;
+        }
+        return (
+            mu.states.find(st => {
+                if (!st.role) {
+                    return false;
+                }
+                // st.role kommt als Text mit Schraegstrichen: "/^value\.power$/".
+                // Wer den unveraendert an new RegExp gibt, sucht nach
+                // Schraegstrichen und trifft nie - erkennung.js schaelt sie
+                // in ausdruckText() heraus, hier steht dasselbe.
+                const roh = st.role.source !== undefined ? st.role.source : String(st.role);
+                const m = /^\/(.*)\/[a-z]*$/.exec(roh);
+                let re;
+                try {
+                    re = new RegExp(m ? m[1] : roh);
+                } catch {
+                    return false;
+                }
+                return re.test(rolle);
+            }) || null
+        );
+    }
+
+    const vorlagen = liesJson(path.join(wurzel, 'admin', 'vorlagen', 'index.json')).vorlagen.map(name =>
+        // index.json fuehrt die Dateinamen samt Endung
+        liesJson(path.join(wurzel, 'admin', 'vorlagen', name)),
+    );
+
+    it('findet zu jedem Geraetetyp ein Muster', () => {
+        const ohne = vorlagen
+            .filter(v => v.geraetetyp && !musterVon(v.geraetetyp))
+            .map(v => `${v.id}: ${v.geraetetyp}`);
+        expect(ohne, `Geraetetyp ohne Muster: ${ohne.join(', ')}`).to.be.empty;
+    });
+
+    // 622 Plaetze nennen genau einen Typ, 28 nennen mehrere
+    // (mediaPlayer/STATE: ["boolean","number"]), 82 nennen keinen.
+    // Wer die Liste als String liest, erhaelt "boolean,number" - den
+    // Typ gibt es nicht.
+    const typenVon = platz => {
+        if (!platz || !platz.type) {
+            return [];
+        }
+        return Array.isArray(platz.type) ? platz.type : [String(platz.type)];
+    };
+
+    // Eine begruendete Ausnahme: Homematic meldet die Fahrtrichtung als
+    // Zahl (0 steht, 1 faehrt auf, 2 faehrt zu, 3 unbekannt), das Muster
+    // blinds/DIRECTION laesst nur boolean zu. Vier Zustaende passen nicht
+    // in einen Wahrheitswert - die Vorlage hat recht, das Muster ist zu
+    // eng. Der Platz ist optional, der Punkt wird also trotzdem angelegt
+    // und ist voll benutzbar; er zaehlt nur nicht zur Erkennung.
+    const AUSNAHMEN = ['hm-rollladen/DIRECTION'];
+
+    it('geben jedem Zustand einen Datentyp, den sein Platz zulaesst', () => {
+        const schief = [];
+        vorlagen.forEach(v => {
+            if (!v.geraetetyp || !musterVon(v.geraetetyp)) {
+                return;
+            }
+            (v.zustaende || []).forEach(z => {
+                const platz = platzFuerRolle(v.geraetetyp, z.rolle);
+                const erlaubt = typenVon(platz);
+                if (!erlaubt.length || !z.typ) {
+                    return; // kein Platz, keine Vorgabe, oder kein Typ gesetzt
+                }
+                if (erlaubt.indexOf(z.typ) === -1 && AUSNAHMEN.indexOf(`${v.id}/${z.name}`) === -1) {
+                    schief.push(
+                        `${v.id}/${z.name}: Platz ${platz.name} laesst ${erlaubt.join('/')} zu, Vorlage sagt ${z.typ}`,
+                    );
+                }
+            });
+        });
+        expect(schief, schief.join(' | ')).to.be.empty;
+    });
+
+    it('lassen keinen Zustand ohne Typ, wo der Platz einen verlangt', () => {
+        const ohne = [];
+        vorlagen.forEach(v => {
+            if (!v.geraetetyp || !musterVon(v.geraetetyp)) {
+                return;
+            }
+            (v.zustaende || []).forEach(z => {
+                const erlaubt = typenVon(platzFuerRolle(v.geraetetyp, z.rolle));
+                if (erlaubt.length && !z.typ) {
+                    ohne.push(`${v.id}/${z.name}: Platz laesst ${erlaubt.join('/')} zu, Vorlage nennt keinen`);
+                }
+            });
+        });
+        expect(ohne, ohne.join(' | ')).to.be.empty;
+    });
+});
+
 describe('Die Entwicklerdateien', () => {
     // Beide Dateien laufen nie mit aus - sie sind Werkzeug. Trotzdem
     // stehen sie hier: der Adapterpruefer vergleicht die Schema-Adressen
