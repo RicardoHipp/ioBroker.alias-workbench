@@ -1,0 +1,14 @@
+{
+  "Add missing icons to functions": "Adicionar ícones em falta às funções",
+  "Add missing icons to rooms": "Adicionar ícones em falta às divisões",
+  "Admin ships 62 function and 58 room templates, each with an icon. When the workbench creates an enumeration, it takes the icon from there. Existing enumerations keep whatever they have — unless you allow it to fill in what is missing. Nothing is ever written without the dry run showing it first.": "O Admin inclui 62 modelos de função e 58 modelos de divisão, cada um com um ícone. Quando a bancada cria uma enumeração, retira o ícone daí. As enumerações existentes mantêm o que têm — a menos que permita preencher o que falta. Nada é escrito sem que a simulação o mostre primeiro.",
+  "Also replace unusable icon entries": "Substituir também entradas de ícone inutilizáveis",
+  "Applies when a room has no icon at all and a template of the same name or ID exists.": "Aplica-se quando uma divisão não tem qualquer ícone e existe um modelo com o mesmo nome ou ID.",
+  "Icons for rooms and functions": "Ícones para divisões e funções",
+  "Offer the Admin's room and function templates": "Oferecer os modelos de divisão e função do Admin",
+  "Same for functions. Enumerations mirrored from a HomeMatic CCU never carry an icon.": "O mesmo para as funções. As enumerações espelhadas de uma CCU HomeMatic nunca têm ícone.",
+  "The Admin setup wizard leaves a bare name such as \"Playroom\" in the icon field, which no longer resolves to a picture and shows as a broken box. With this on, the workbench replaces it. It overwrites a field that is not empty — the dry run names it explicitly.": "O assistente de configuração do Admin deixa no campo do ícone um nome simples como «Playroom», que já não corresponde a nenhuma imagem e aparece como uma caixa partida. Com esta opção ligada, a bancada substitui-o. Isso sobrescreve um campo que não está vazio — a simulação indica-o explicitamente.",
+  "The Alias Workbench has no running process — everything happens in the Admin tab. These settings control how it writes.": "A Bancada de Alias não tem processo em execução — tudo acontece no separador do Admin. Estas definições determinam como escreve.",
+  "The workbench reads them at runtime from the Admin's own bundle instead of keeping a copy that would age with every update. If that fails, the selection lists simply show what already exists — no error, just fewer entries.": "A bancada lê-os em tempo de execução a partir do próprio pacote do Admin, em vez de manter uma cópia que envelheceria a cada atualização. Se isso falhar, as listas de seleção mostram apenas o que já existe — não é um erro, apenas menos entradas.",
+  "Where the templates come from": "De onde vêm os modelos"
+}

@@ -11,7 +11,9 @@ import { $ } from './basis.js';
 export var expertenVorgabe = false;
 
 /* ================== Sprachen ==================
-   Woerterbuch als flache Schluessel-Text-Karte unter admin/i18n/.
+   Woerterbuch als flache Schluessel-Text-Karte unter admin/sprachen/.
+   (Nicht admin/i18n/ - dort liegt das Woerterbuch der Einstellungsseite,
+   das der Admin selbst laedt.)
    Neue Sprache = neue Datei, sonst nichts. Faellt eine Uebersetzung
    aus, greift Englisch, danach der Schluessel selbst — so bleibt die
    Oberflaeche bedienbar statt leer. */
@@ -38,7 +40,7 @@ export function ladeSprache(fertig) {
   var vorgabe = (navigator.language || 'en').slice(0, 2).toLowerCase();
 
   function hole(code, ziel, danach) {
-    fetch('./i18n/' + code + '.json')
+    fetch('./sprachen/' + code + '.json')
       .then(function (r) { return r.ok ? r.json() : {}; })
       .then(function (d) { Object.keys(d).forEach(function (k) { ziel[k] = d[k]; }); danach(); })
       .catch(function () { danach(); });

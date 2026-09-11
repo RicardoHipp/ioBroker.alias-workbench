@@ -1,0 +1,14 @@
+{
+  "Add missing icons to functions": "Compléter les icônes manquantes des fonctions",
+  "Add missing icons to rooms": "Compléter les icônes manquantes des pièces",
+  "Admin ships 62 function and 58 room templates, each with an icon. When the workbench creates an enumeration, it takes the icon from there. Existing enumerations keep whatever they have — unless you allow it to fill in what is missing. Nothing is ever written without the dry run showing it first.": "L'Admin fournit 62 modèles de fonction et 58 modèles de pièce, chacun avec une icône. Lorsque l'établi crée une énumération, il y prend l'icône. Les énumérations existantes conservent ce qu'elles ont — sauf si vous autorisez le complément de ce qui manque. Rien n'est jamais écrit sans que la simulation ne l'ait montré au préalable.",
+  "Also replace unusable icon entries": "Remplacer aussi les entrées d'icône inutilisables",
+  "Applies when a room has no icon at all and a template of the same name or ID exists.": "S'applique lorsqu'une pièce n'a aucune icône et qu'un modèle du même nom ou du même ID existe.",
+  "Icons for rooms and functions": "Icônes pour les pièces et les fonctions",
+  "Offer the Admin's room and function templates": "Proposer les modèles de pièce et de fonction de l'Admin",
+  "Same for functions. Enumerations mirrored from a HomeMatic CCU never carry an icon.": "Idem pour les fonctions. Les énumérations reprises d'une centrale HomeMatic ne portent jamais d'icône.",
+  "The Admin setup wizard leaves a bare name such as \"Playroom\" in the icon field, which no longer resolves to a picture and shows as a broken box. With this on, the workbench replaces it. It overwrites a field that is not empty — the dry run names it explicitly.": "L'assistant de configuration de l'Admin laisse dans le champ d'icône un simple nom tel que « Playroom », qui ne renvoie plus à aucune image et s'affiche comme un cadre cassé. Si cette option est activée, l'établi le remplace. Un champ non vide est alors écrasé — la simulation le signale explicitement.",
+  "The Alias Workbench has no running process — everything happens in the Admin tab. These settings control how it writes.": "L'Établi d'alias n'a aucun processus en cours — tout se passe dans l'onglet Admin. Ces réglages déterminent la manière dont il écrit.",
+  "The workbench reads them at runtime from the Admin's own bundle instead of keeping a copy that would age with every update. If that fails, the selection lists simply show what already exists — no error, just fewer entries.": "L'établi les lit à l'exécution depuis le bundle de l'Admin plutôt que de conserver une copie qui vieillirait à chaque mise à jour. En cas d'échec, les listes de sélection n'affichent que l'existant — pas d'erreur, simplement moins d'entrées.",
+  "Where the templates come from": "D'où viennent les modèles"
+}

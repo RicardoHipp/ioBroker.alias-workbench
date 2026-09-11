@@ -1,0 +1,14 @@
+{
+  "Add missing icons to functions": "Uzupełniać brakujące ikony funkcji",
+  "Add missing icons to rooms": "Uzupełniać brakujące ikony pomieszczeń",
+  "Admin ships 62 function and 58 room templates, each with an icon. When the workbench creates an enumeration, it takes the icon from there. Existing enumerations keep whatever they have — unless you allow it to fill in what is missing. Nothing is ever written without the dry run showing it first.": "Admin dostarcza 62 szablony funkcji i 58 szablonów pomieszczeń, każdy z ikoną. Gdy warsztat tworzy wyliczenie, pobiera ikonę stamtąd. Istniejące wyliczenia zachowują to, co mają — chyba że pozwolisz uzupełnić braki. Nic nie jest zapisywane bez uprzedniego pokazania przez próbny przebieg.",
+  "Also replace unusable icon entries": "Zastępować także nieprzydatne wpisy ikon",
+  "Applies when a room has no icon at all and a template of the same name or ID exists.": "Działa, gdy pomieszczenie nie ma żadnej ikony, a istnieje szablon o tej samej nazwie lub ID.",
+  "Icons for rooms and functions": "Ikony dla pomieszczeń i funkcji",
+  "Offer the Admin's room and function templates": "Oferować szablony pomieszczeń i funkcji z Admina",
+  "Same for functions. Enumerations mirrored from a HomeMatic CCU never carry an icon.": "To samo dotyczy funkcji. Wyliczenia odwzorowane z centrali HomeMatic nigdy nie mają ikony.",
+  "The Admin setup wizard leaves a bare name such as \"Playroom\" in the icon field, which no longer resolves to a picture and shows as a broken box. With this on, the workbench replaces it. It overwrites a field that is not empty — the dry run names it explicitly.": "Kreator konfiguracji Admina pozostawia w polu ikony samą nazwę, np. „Playroom”, która nie prowadzi już do żadnego obrazka i wyświetla się jako uszkodzona ramka. Przy włączonej opcji warsztat ją zastępuje. Nadpisywane jest wtedy niepuste pole — próbny przebieg wskazuje to osobno.",
+  "The Alias Workbench has no running process — everything happens in the Admin tab. These settings control how it writes.": "Warsztat aliasów nie ma działającego procesu — wszystko dzieje się w zakładce Admina. Te ustawienia określają, jak zapisuje.",
+  "The workbench reads them at runtime from the Admin's own bundle instead of keeping a copy that would age with every update. If that fails, the selection lists simply show what already exists — no error, just fewer entries.": "Warsztat odczytuje je w czasie działania z własnego pakietu Admina, zamiast utrzymywać kopię, która starzałaby się z każdą aktualizacją. Jeśli się to nie powiedzie, listy wyboru pokazują tylko to, co już istnieje — to nie błąd, po prostu mniej pozycji.",
+  "Where the templates come from": "Skąd pochodzą szablony"
+}

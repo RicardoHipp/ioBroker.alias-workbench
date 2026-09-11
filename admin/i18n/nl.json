@@ -1,0 +1,14 @@
+{
+  "Add missing icons to functions": "Ontbrekende pictogrammen bij functies aanvullen",
+  "Add missing icons to rooms": "Ontbrekende pictogrammen bij ruimtes aanvullen",
+  "Admin ships 62 function and 58 room templates, each with an icon. When the workbench creates an enumeration, it takes the icon from there. Existing enumerations keep whatever they have — unless you allow it to fill in what is missing. Nothing is ever written without the dry run showing it first.": "Admin levert 62 functie- en 58 ruimtesjablonen, elk met een pictogram. Wanneer de werkbank een opsomming aanmaakt, neemt zij het pictogram daarvandaan. Bestaande opsommingen behouden wat ze hebben — tenzij u toestaat dat ontbrekende worden aangevuld. Er wordt nooit iets geschreven zonder dat de proefrun het eerst toont.",
+  "Also replace unusable icon entries": "Ook onbruikbare pictogramvermeldingen vervangen",
+  "Applies when a room has no icon at all and a template of the same name or ID exists.": "Geldt wanneer een ruimte helemaal geen pictogram heeft en er een sjabloon met dezelfde naam of ID bestaat.",
+  "Icons for rooms and functions": "Pictogrammen voor ruimtes en functies",
+  "Offer the Admin's room and function templates": "De ruimte- en functiesjablonen van Admin aanbieden",
+  "Same for functions. Enumerations mirrored from a HomeMatic CCU never carry an icon.": "Hetzelfde voor functies. Opsommingen die vanaf een HomeMatic-CCU worden gespiegeld, hebben nooit een pictogram.",
+  "The Admin setup wizard leaves a bare name such as \"Playroom\" in the icon field, which no longer resolves to a picture and shows as a broken box. With this on, the workbench replaces it. It overwrites a field that is not empty — the dry run names it explicitly.": "De installatiewizard van Admin laat in het pictogramveld een kale naam als \"Playroom\" achter, die niet langer naar een afbeelding verwijst en als een kapot kadertje verschijnt. Staat dit aan, dan vervangt de werkbank hem. Daarbij wordt een niet-leeg veld overschreven — de proefrun benoemt dat uitdrukkelijk.",
+  "The Alias Workbench has no running process — everything happens in the Admin tab. These settings control how it writes.": "De Alias-werkbank heeft geen draaiend proces — alles gebeurt in het Admin-tabblad. Deze instellingen bepalen hoe er geschreven wordt.",
+  "The workbench reads them at runtime from the Admin's own bundle instead of keeping a copy that would age with every update. If that fails, the selection lists simply show what already exists — no error, just fewer entries.": "De werkbank leest ze tijdens het uitvoeren uit de bundel van Admin zelf, in plaats van een kopie bij te houden die bij elke update veroudert. Mislukt dat, dan tonen de keuzelijsten alleen wat er al is — geen fout, alleen minder items.",
+  "Where the templates come from": "Waar de sjablonen vandaan komen"
+}

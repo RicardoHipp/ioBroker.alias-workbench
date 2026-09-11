@@ -1,0 +1,14 @@
+{
+  "Add missing icons to functions": "Añadir los iconos que faltan a las funciones",
+  "Add missing icons to rooms": "Añadir los iconos que faltan a las habitaciones",
+  "Admin ships 62 function and 58 room templates, each with an icon. When the workbench creates an enumeration, it takes the icon from there. Existing enumerations keep whatever they have — unless you allow it to fill in what is missing. Nothing is ever written without the dry run showing it first.": "El Admin incluye 62 plantillas de función y 58 de habitación, cada una con un icono. Cuando el banco de trabajo crea una enumeración, toma el icono de ahí. Las enumeraciones existentes conservan lo que tienen, salvo que permita completar lo que falta. Nunca se escribe nada sin que la simulación lo muestre antes.",
+  "Also replace unusable icon entries": "Reemplazar también las entradas de icono inservibles",
+  "Applies when a room has no icon at all and a template of the same name or ID exists.": "Se aplica cuando una habitación no tiene ningún icono y existe una plantilla con el mismo nombre o ID.",
+  "Icons for rooms and functions": "Iconos para habitaciones y funciones",
+  "Offer the Admin's room and function templates": "Ofrecer las plantillas de habitación y función del Admin",
+  "Same for functions. Enumerations mirrored from a HomeMatic CCU never carry an icon.": "Lo mismo para las funciones. Las enumeraciones reflejadas desde una CCU HomeMatic nunca llevan icono.",
+  "The Admin setup wizard leaves a bare name such as \"Playroom\" in the icon field, which no longer resolves to a picture and shows as a broken box. With this on, the workbench replaces it. It overwrites a field that is not empty — the dry run names it explicitly.": "El asistente de configuración del Admin deja en el campo del icono un simple nombre como «Playroom», que ya no lleva a ninguna imagen y aparece como un recuadro roto. Con esta opción activada, el banco de trabajo lo sustituye. Con ello se sobrescribe un campo que no está vacío: la simulación lo indica expresamente.",
+  "The Alias Workbench has no running process — everything happens in the Admin tab. These settings control how it writes.": "El Banco de trabajo de alias no tiene ningún proceso en ejecución: todo ocurre en la pestaña del Admin. Estos ajustes determinan cómo escribe.",
+  "The workbench reads them at runtime from the Admin's own bundle instead of keeping a copy that would age with every update. If that fails, the selection lists simply show what already exists — no error, just fewer entries.": "El banco de trabajo las lee en tiempo de ejecución desde el propio paquete del Admin, en lugar de mantener una copia que envejecería con cada actualización. Si eso falla, las listas de selección solo muestran lo existente: no es un error, solo menos entradas.",
+  "Where the templates come from": "De dónde vienen las plantillas"
+}

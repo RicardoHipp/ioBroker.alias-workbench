@@ -12,6 +12,13 @@ const { expect } = require('chai');
 
 const wurzel = path.join(__dirname, '..');
 const jsDir = path.join(wurzel, 'admin', 'js');
+// Zwei getrennte Woerterbuecher, mit verschiedenen Aufgaben:
+//   admin/sprachen/  - die Oberflaeche des Reiters, 588 Schluessel,
+//                      von sprache.js selbst geladen. Deutsch und Englisch.
+//   admin/i18n/      - die Einstellungsseite, die der Admin zeigt. Den
+//                      Ordner liest der Admin (jsonConfig i18n: true), und
+//                      der Adapterpruefer erwartet dort alle elf Sprachen.
+const sprachenDir = path.join(wurzel, 'admin', 'sprachen');
 const i18nDir = path.join(wurzel, 'admin', 'i18n');
 
 const SPRACHEN = ['en', 'de', 'ru', 'pt', 'nl', 'fr', 'it', 'es', 'pl', 'uk', 'zh-cn'];
@@ -40,18 +47,18 @@ describe('Die Module', () => {
     });
 });
 
-describe('Die Uebersetzungen', () => {
+describe('Die Uebersetzungen des Reiters', () => {
     const dateien = {};
     SPRACHEN.forEach(s => {
-        const p = path.join(i18nDir, `${s}.json`);
+        const p = path.join(sprachenDir, `${s}.json`);
         if (fs.existsSync(p)) {
             dateien[s] = liesJson(p);
         }
     });
 
     it('haben Englisch und Deutsch', () => {
-        expect(dateien.en, 'admin/i18n/en.json fehlt').to.be.an('object');
-        expect(dateien.de, 'admin/i18n/de.json fehlt').to.be.an('object');
+        expect(dateien.en, 'admin/sprachen/en.json fehlt').to.be.an('object');
+        expect(dateien.de, 'admin/sprachen/de.json fehlt').to.be.an('object');
     });
 
     it('tragen in jeder vorhandenen Sprache dieselben Schluessel', () => {
@@ -130,23 +137,84 @@ describe('Die Uebersetzungen', () => {
 
 describe('Die Einstellungsseite', () => {
     const jc = liesJson(path.join(wurzel, 'admin', 'jsonConfig.json'));
+    // Seit dem Umzug traegt die jsonConfig nur noch englische Texte; die
+    // Uebersetzungen stehen in admin/i18n/. Diesen Ordner laedt der Admin
+    // selbst (i18n: true), und Weblate kann ihn lesen. Vorher lagen elf
+    // Sprachen in jedem Feld - dieselben Worte, nur an einer Stelle, die
+    // ausser uns niemand kennt.
+    const TEXTFELDER = ['text', 'label', 'help'];
+    const woerter = {};
+    SPRACHEN.forEach(s => {
+        const p = path.join(i18nDir, `${s}.json`);
+        if (fs.existsSync(p)) {
+            woerter[s] = liesJson(p);
+        }
+    });
 
-    it('fuehrt jeden Text in allen elf Sprachen', () => {
-        const luecken = [];
+    function texte() {
+        const gefunden = [];
         Object.keys(jc.items).forEach(feld => {
-            ['text', 'label', 'help'].forEach(attr => {
+            TEXTFELDER.forEach(attr => {
                 const w = jc.items[feld][attr];
-                if (!w || typeof w !== 'object') {
-                    return;
+                if (typeof w === 'string' && w.trim()) {
+                    gefunden.push({ ort: `${feld}.${attr}`, text: w });
                 }
-                SPRACHEN.forEach(s => {
-                    if (!w[s]) {
-                        luecken.push(`${feld}.${attr}/${s}`);
-                    }
-                });
             });
         });
-        expect(luecken, `fehlt: ${luecken.slice(0, 12).join(', ')}`).to.be.empty;
+        return gefunden;
+    }
+
+    it('schaltet die Uebersetzung ein', () => {
+        // i18n: false hiesse: der Admin sieht admin/i18n gar nicht an,
+        // und jeder Nutzer bekommt Englisch.
+        expect(jc.i18n, 'jsonConfig i18n').to.equal(true);
+    });
+
+    it('traegt ihre Texte als Schluessel, nicht als Sprachobjekt', () => {
+        const objekte = [];
+        Object.keys(jc.items).forEach(feld => {
+            TEXTFELDER.forEach(attr => {
+                const w = jc.items[feld][attr];
+                if (w && typeof w === 'object') {
+                    objekte.push(`${feld}.${attr}`);
+                }
+            });
+        });
+        expect(objekte, `noch eingebaut statt im Woerterbuch: ${objekte.join(', ')}`).to.be.empty;
+        expect(texte().length, 'kein einziger Text gefunden - Suchmuster kaputt?').to.be.above(5);
+    });
+
+    it('findet jeden ihrer Texte im Woerterbuch, in allen elf Sprachen', () => {
+        const luecken = [];
+        texte().forEach(({ ort, text }) => {
+            SPRACHEN.forEach(s => {
+                if (!woerter[s]) {
+                    luecken.push(`admin/i18n/${s}.json fehlt ganz`);
+                } else if (!woerter[s][text]) {
+                    luecken.push(`${ort}/${s}`);
+                }
+            });
+        });
+        expect([...new Set(luecken)], `fehlt: ${[...new Set(luecken)].slice(0, 12).join(', ')}`).to.be
+            .empty;
+    });
+
+    it('fuehrt im Woerterbuch keinen Schluessel, den die Seite nicht zeigt', () => {
+        const gebraucht = new Set(texte().map(t => t.text));
+        const tot = Object.keys(woerter.en || {}).filter(k => !gebraucht.has(k));
+        expect(tot, `in admin/i18n/en.json, aber nirgends verwendet: ${tot.join(' | ')}`).to.be.empty;
+    });
+
+    it('laesst in keiner Sprache einen Text leer', () => {
+        const leer = [];
+        Object.keys(woerter).forEach(s => {
+            Object.keys(woerter[s]).forEach(k => {
+                if (!String(woerter[s][k]).trim()) {
+                    leer.push(`${s}: ${k.slice(0, 30)}`);
+                }
+            });
+        });
+        expect(leer, `ohne Text: ${leer.join(', ')}`).to.be.empty;
     });
 
     it('nennt fuer jedes Bedienfeld einen Vorgabewert', () => {

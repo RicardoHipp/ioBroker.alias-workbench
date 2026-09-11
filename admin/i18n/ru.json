@@ -1,0 +1,14 @@
+{
+  "Add missing icons to functions": "Дополнять отсутствующие значки у функций",
+  "Add missing icons to rooms": "Дополнять отсутствующие значки у комнат",
+  "Admin ships 62 function and 58 room templates, each with an icon. When the workbench creates an enumeration, it takes the icon from there. Existing enumerations keep whatever they have — unless you allow it to fill in what is missing. Nothing is ever written without the dry run showing it first.": "Admin поставляется с 62 шаблонами функций и 58 шаблонами комнат, у каждого есть значок. Когда верстак создаёт перечисление, он берёт значок оттуда. Существующие перечисления сохраняют то, что у них есть, — если только вы не разрешите дополнить недостающее. Ничего не записывается без того, чтобы пробный прогон сначала это показал.",
+  "Also replace unusable icon entries": "Также заменять непригодные записи значков",
+  "Applies when a room has no icon at all and a template of the same name or ID exists.": "Действует, когда у комнаты вообще нет значка и существует шаблон с тем же именем или идентификатором.",
+  "Icons for rooms and functions": "Значки для комнат и функций",
+  "Offer the Admin's room and function templates": "Предлагать шаблоны комнат и функций из Admin",
+  "Same for functions. Enumerations mirrored from a HomeMatic CCU never carry an icon.": "То же для функций. Перечисления, зеркалируемые с центрального блока HomeMatic, никогда не содержат значка.",
+  "The Admin setup wizard leaves a bare name such as \"Playroom\" in the icon field, which no longer resolves to a picture and shows as a broken box. With this on, the workbench replaces it. It overwrites a field that is not empty — the dry run names it explicitly.": "Мастер настройки Admin оставляет в поле значка голое имя вроде «Playroom», которое больше не ведёт к изображению и отображается как сломанный прямоугольник. Если это включено, верстак заменяет его. При этом перезаписывается непустое поле — пробный прогон называет это отдельно.",
+  "The Alias Workbench has no running process — everything happens in the Admin tab. These settings control how it writes.": "У «Верстака алиасов» нет запущенного процесса — всё происходит во вкладке администратора. Эти настройки определяют, как он записывает.",
+  "The workbench reads them at runtime from the Admin's own bundle instead of keeping a copy that would age with every update. If that fails, the selection lists simply show what already exists — no error, just fewer entries.": "Верстак читает их во время выполнения из собственного бандла Admin, вместо того чтобы держать копию, устаревающую с каждым обновлением. Если это не удаётся, списки выбора показывают только то, что уже есть, — не ошибка, просто меньше вариантов.",
+  "Where the templates come from": "Откуда берутся шаблоны"
+}
