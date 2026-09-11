@@ -12,8 +12,8 @@ import config, { esmConfig } from '@iobroker/eslint-config';
 
 export default [
     {
-        // admin/detector.js ist das gebuendelte Ergebnis von src/, nicht
-        // von Hand geschrieben.
+        // admin/detector.js ist das gebuendelte Ergebnis von src-admin/,
+        // nicht von Hand geschrieben.
         ignores: ['admin/detector.js', 'node_modules/**', 'admin/vorlagen/**'],
     },
     ...config,
@@ -65,9 +65,12 @@ export default [
         },
     },
     {
-        // src/ wird von esbuild verarbeitet und schreibt am Ende ans
-        // window des Admin - deshalb dieselben Browser-Namen.
-        files: ['src/**/*.js'],
+        // src-admin/ wird von esbuild verarbeitet und schreibt am Ende
+        // ans window des Admin - deshalb dieselben Browser-Namen.
+        // Der Ordner hiess bis 11.09.2026 src/; wer ihn umbenennt, muss
+        // diese Zeile mitnehmen, sonst faellt 'window' hier durch
+        // (no-undef) und die GitHub-Action wird rot.
+        files: ['src-admin/**/*.js'],
         languageOptions: {
             sourceType: 'module',
             globals: { window: 'readonly' },
