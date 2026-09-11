@@ -268,7 +268,7 @@ describe('Die Rollen-Schreibweisen', () => {
 
    Die drei Tests darueber pruefen die Zerlegung fuer sich. Dieser hier
    nimmt die Muster so, wie die Werkbank sie bekommt — ueber
-   `ChannelDetector.getPatterns()`, genau wie `src/detector-bundle.js` es
+   `ChannelDetector.getPatterns()`, genau wie `src-admin/detector-bundle.js` es
    tut — und rechnet damit dieselbe Rollenliste aus wie `erkennung.js`.
    Waere die Schraegstrich-Frage wieder offen, faellt hier die Zahl auf
    ihre Haelfte und `indicator.lowbat` verschwindet.

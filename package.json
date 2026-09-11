@@ -22,7 +22,7 @@
     "esbuild": "^0.28.2"
   },
   "scripts": {
-    "build": "esbuild src/detector-bundle.js --bundle --minify --format=iife --target=es2019 --outfile=admin/detector.js",
+    "build": "esbuild src-admin/detector-bundle.js --bundle --minify --format=iife --target=es2019 --outfile=admin/detector.js",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "test:package": "mocha test/package.js --exit",

@@ -61,7 +61,7 @@ jobs:
         # eingecheckte admin/detector.js Byte fuer Byte trifft. Das tut
         # er derzeit naemlich nicht: die eingecheckte Fassung stammt vom
         # 19.08.2026 und ist 131 Zeichen laenger als ein Bau von heute,
-        # bei unveraendertem src/ und type-detector 6.0.0. Ausgeliefert
+        # bei unveraendertem src-admin/ und type-detector 6.0.0. Ausgeliefert
         # wird bewusst die gepruefte Fassung.
         run: npm run build
       - name: Der gepruefen Fassung nicht in die Quere kommen

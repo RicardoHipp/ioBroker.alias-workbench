@@ -584,6 +584,9 @@ beide Sprachdateien dieselben Schlüssel tragen.
 
 ## Änderungen
 
+### **WORK IN PROGRESS**
+* Die Bauvorlage liegt jetzt in `src-admin/` statt in `src/`. Diesen Namen hat ioBroker für Frontend-Quellen vorgesehen, die nach `admin/` gebacken werden und beim Nutzer nie ankommen; der Adapterprüfer überspringt solche Ordner bei der Suche nach fehlenden Abhängigkeiten. `@iobroker/type-detector` bleibt deshalb in `devDependencies`, und dort gehört er hin: esbuild backt ihn beim Bauen in `admin/detector.js` ein, zur Laufzeit lädt ihn niemand. Ausgeliefert werden die fertigen 71 KB, nicht das 548-KB-Paket (W5042)
+
 ### 0.9.8
 * Der Changelog nennt nur noch Fassungen, die es auf npm wirklich gibt. Die Einträge 0.9.1 bis 0.9.6 waren lokale Zwischenstände und wurden nie veröffentlicht; ihr Inhalt steht jetzt zusammengefasst bei 0.9.7. Gefunden vom Repochecker (E2004, E1032)
 * Die README beschreibt nicht mehr, wie man den Adapter von Hand hinzufügt — im offiziellen Repository wählt man ihn aus der Adapterliste (E6013)
