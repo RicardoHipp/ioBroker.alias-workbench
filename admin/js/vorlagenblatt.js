@@ -2068,12 +2068,7 @@ export function zeichneVorlagenDialog() {
        Objektdump eine eigene Vorlage anlegen wollte - grauer Knopf,
        kein Wort dazu (I32, 11.09.2026). Ein Knopf, der nicht sagt warum,
        ist derselbe Fehler wie eine Sperre ohne Begruendung (U28). */
-    var gruende = [];
-    if (fehlerErk) { gruende.push(tr('tpls.lockNoRequired')); }
-    if (!k.id) { gruende.push(tr('tpls.lockNoId')); }
-    if (fremdeMitId(k)) { gruende.push(tr('tpls.lockIdTaken', fremdeMitId(k).id)); }
-    if (!hinweisTaugt(k.namenshinweis)) { gruende.push(tr('tpls.lockBadHint')); }
-    if (!z.zeilen.filter(function (r) { return !r.weg; }).length) { gruende.push(tr('tpls.lockNoRows')); }
+    var gruende = sperrgruende(z);
     b.disabled = gruende.length > 0;
     b.title = gruende.join(' · ');
     b.textContent = k.modus === 'update' ? tr('tpls.saveUpdate') : tr('tpls.saveNew');
@@ -2091,9 +2086,52 @@ export function zeichneVorlagenDialog() {
   if (tt) { tt.textContent = tr('tpls.title', z.e.kanal.split('.').pop()); }
 }
 
+/* Die fuenf Gruende, die das Speichern sperren - an einer Stelle.
+
+   Gebraucht werden sie zweimal: beim Zeichnen, um Knopf und Kasten zu
+   beschriften, und beim Speichern selbst. Das zweite ist keine
+   Doppelung, sondern die eigentliche Sicherung: Der Knopf wird beim
+   VERLASSEN eines Feldes neu bewertet, nicht beim Tippen. Wer eine
+   offene Klammer in den Namenshinweis schreibt und ohne Umweg auf
+   „Vorlage speichern" klickt, hat einen blauen Knopf vor sich - und die
+   Vorlage wurde mit `namenshinweis: "("` gespeichert (Ricardo,
+   12.09.2026, am Testsystem nachgestellt; `hinweisTrifft` faengt den
+   kaputten Ausdruck zwar ab, aber gespeichert gehoert er trotzdem
+   nicht). */
+export function sperrgruende(z) {
+  if (!z) { return []; }
+  var k = z.kopf;
+  var neu = baueVorlage(z);
+  var gruende = [];
+  if (!neu.erkennung.erforderlich.length) { gruende.push(tr('tpls.lockNoRequired')); }
+  if (!k.id) { gruende.push(tr('tpls.lockNoId')); }
+  var fremd = fremdeMitId(k);
+  if (fremd) { gruende.push(tr('tpls.lockIdTaken', fremd.id)); }
+  if (!hinweisTaugt(k.namenshinweis)) { gruende.push(tr('tpls.lockBadHint')); }
+  if (!z.zeilen.filter(function (r) { return !r.weg; }).length) { gruende.push(tr('tpls.lockNoRows')); }
+  return gruende;
+}
+
 export function speichereVorlageAusDialog() {
   if (!S.tplZ) { return; }
   var neu = baueVorlage(S.tplZ);
+
+  /* Letzte Instanz, unabhaengig vom Zustand des Knopfes. */
+  var gesperrt = sperrgruende(S.tplZ);
+  if (gesperrt.length) {
+    var bodyS = $('#tpl-body');
+    var altS = bodyS.querySelector('.sperrgrund-kasten');
+    if (altS) { altS.remove(); }
+    var wS = el('div', 'aside w sperrgrund-kasten');
+    wS.style.borderLeftColor = 'var(--bad)';
+    wS.appendChild(el('b', null, tr('tpls.lockedWhy')));
+    var ulS = el('ul');
+    gesperrt.forEach(function (x) { ulS.appendChild(el('li', null, x)); });
+    wS.appendChild(ulS);
+    bodyS.insertBefore(wS, bodyS.firstChild);
+    bodyS.scrollTop = 0;
+    return;
+  }
 
   /* Widerspricht sie sich, wird nicht gespeichert — eine Vorlage, die
      auf nichts passen kann, hilft niemandem und ist spaeter schwer zu
