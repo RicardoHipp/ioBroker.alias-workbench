@@ -14,7 +14,8 @@ import {
 } from './aufzaehlungen.js';
 import { enumVorlagen, katalogFehlt, ikonCache, ikonErlaubt, ikonNachtrag,
          ikonTaugt, vorlageZu, holeIkon } from './katalog.js';
-import { kindZustaende, aliasQuellen, holeEinzelne, schreibQuelle } from './werte.js';
+import { kindZustaende, aliasQuellen, holeEinzelne,
+         zeileAusAlias } from './werte.js';
 import { aliasFuer, zielId, knotenDa } from './entwurf.js';
 import { zeichneErgebnis, entwurfAngefasst, angebotFrisch } from './ergebnis.js';
 
@@ -580,7 +581,8 @@ export function uebernehmeBestand(e) {
      hiesse, dem Vorlagenknopf den Wert zu nehmen, den er zurueckholen
      soll. */
   function vomAliasUebernehmen(z, o) {
-    var c = o.common || {}, a = c.alias || {}, q2 = aliasQuellen(o);
+    var c = o.common || {}, q2 = aliasQuellen(o);
+    var ist = zeileAusAlias(o, z.n);
     if (!z.vorlagenWert) {
       z.vorlagenWert = {
         on: z.on, role: z.role, typ: z.typ, unit: z.unit, caption: z.caption,
@@ -593,10 +595,10 @@ export function uebernehmeBestand(e) {
        stellen, kann der Stand nicht wieder auseinanderlaufen. */
     if (c.role !== undefined) { z.role = c.role; }
     if (c.type !== undefined) { z.typ = c.type; }
-    z.unit = c.unit || '';
-    z.states = c.states || undefined;
-    z.f = (typeof a.read === 'string') ? a.read : '';
-    z.fw = (typeof a.write === 'string') ? a.write : '';
+    z.unit = ist.unit;
+    z.states = ist.states;
+    z.f = ist.f;
+    z.fw = ist.fw;
     /* Die Beschriftung steht im Alias und gehoert dem Nutzer.
 
        Sie fehlte hier als einzige - `bestandVorrang` holt sie laengst
@@ -607,8 +609,7 @@ export function uebernehmeBestand(e) {
        „Bezug" geworden (Ricardo, 07.09.2026, an alias.0.Solar.Netz).
        Gleicht die Beschriftung dem Zeilennamen, bleibt sie leer - so
        haelt es der Zweig darunter, der neue Zeilen anlegt, auch. */
-    var nm2 = txt(c.name);
-    z.caption = (nm2 && nm2 !== z.n) ? nm2 : '';
+    z.caption = ist.caption;
     if (q2.read) { z.srcR = q2.read; }
     /* Und dieselbe Schreibregel wie im Bestandsvorrang.
 
@@ -622,7 +623,7 @@ export function uebernehmeBestand(e) {
        Belegt ist das Schreiben durch `common.write` oder durch eine
        hinterlegte Schreibformel; bei getrennten Quellen zaehlt, was in
        `alias.id.write` steht. */
-    z.srcW = schreibQuelle(o);
+    z.srcW = ist.srcW;
     if (q2.write && !q2.einfach && q2.write !== q2.read) {
       /* Die Gegenzeile eines Paars ist keine eigene mehr - ihre Quelle
          steckt jetzt als Schreibquelle in dieser Zeile. */
@@ -663,7 +664,7 @@ export function uebernehmeBestand(e) {
   kindZustaende(e.ziel).forEach(function (id) {
     var n = id.slice(e.ziel.length + 1);
     if (n.indexOf('.') !== -1 || kennt[n]) { return; }
-    var o = S.objects[id], c = o.common || {}, a = c.alias || {}, q = aliasQuellen(o);
+    var o = S.objects[id], q = aliasQuellen(o);
 
     /* Derselbe Punkt unter anderem Namen? Dann ist es kein zweiter,
        sondern derselbe — und der Name, der schon im Alias steht, gilt.
@@ -699,31 +700,24 @@ export function uebernehmeBestand(e) {
       kennt[n] = vorhanden;
       return;
     }
-    var nm = txt(c.name);
-    e.states.push({
-      n: n, on: true, ausBestand: true, nurImAlias: true,
-      role: c.role || '', typ: c.type || '', unit: c.unit || '',
-      states: c.states || undefined,
-      wr: !!c.write,
-      srcR: q.read || '',
-      /* Dieselbe Schreibregel wie oben und im Bestandsvorrang.
+    /* Rolle, Typ, Einheit, Zustaende, Formeln, Quellen und Beschriftung
+       kommen geschlossen aus `zeileAusAlias` - dieselbe Ablesung wie in
+       `bestandVorrang`, `bestandsAbweichung` und `vomAliasUebernehmen`.
 
-         Hier stand `q.einfach ? '' : (q.write || '')` - bei schlichtem
-         `alias.id` also immer leer, ohne `common.write` ueberhaupt
-         anzusehen. Es trifft jeden Alias, bei dem MEHRERE Punkte auf
-         denselben Quellpunkt zeigen: die eine Vorschlagszeile bekommt
-         der erste von ihnen, alle weiteren landen hier. Am
-         `alias.0.Badezimmer.Rollladen` zeigen OPEN, CLOSE, SET und pct
-         alle auf `…Bad.level`; CLOSE lief oben durch und behielt seine
-         Schreibquelle, OPEN, SET und pct verloren sie - ein
-         Aktualisieren haette den Rollladen ueber den Alias unfahrbar
-         gemacht (Ricardo, 08.09.2026). */
-      srcW: schreibQuelle(o),
-      f: (typeof a.read === 'string') ? a.read : '',
-      fw: (typeof a.write === 'string') ? a.write : '',
-      caption: (nm && nm !== n) ? nm : '',
-      manuell: false
-    });
+       Dazu gehoert die Schreibregel: Hier stand `q.einfach ? '' :
+       (q.write || '')` - bei schlichtem `alias.id` also immer leer, ohne
+       `common.write` ueberhaupt anzusehen. Es trifft jeden Alias, bei dem
+       MEHRERE Punkte auf denselben Quellpunkt zeigen: die eine
+       Vorschlagszeile bekommt der erste von ihnen, alle weiteren landen
+       hier. Am `alias.0.Badezimmer.Rollladen` zeigen OPEN, CLOSE, SET und
+       pct alle auf `…Bad.level`; CLOSE lief oben durch und behielt seine
+       Schreibquelle, OPEN, SET und pct verloren sie - ein Aktualisieren
+       haette den Rollladen ueber den Alias unfahrbar gemacht (Ricardo,
+       08.09.2026). Seit dem Zusammenlegen der vier Stellen (Y5) gilt die
+       Regel fuer alle zugleich. */
+    e.states.push(Object.assign(zeileAusAlias(o, n), {
+      n: n, on: true, ausBestand: true, nurImAlias: true, manuell: false
+    }));
   });
 
   /* Einmal nachzeichnen.

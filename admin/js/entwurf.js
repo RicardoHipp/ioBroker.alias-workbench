@@ -9,7 +9,7 @@ import { txt, tr } from './sprache.js';
 import './enums.js';
 import { zusatzName, setzeModus, zeichneBaum, merkeKlappstand } from './baum.js';
 import { kindZustaende, aliasQuellen, holeWerte,
-  mitVorspann, schreibQuelle
+  mitVorspann, schreibQuelle, zeileAusAlias
 } from './werte.js';
 import { erkenneEntwurf } from './erkennung.js';
 import { vorschlag , pruefeVorlage, zeigeAbozahl } from './vorlagen.js';
@@ -1167,18 +1167,28 @@ export function bestandVorrang(e, aliasId) {
          her, nachdem der Bestand ihn ueberschrieben hat. */
       on: s.on
     };
+    var ist = zeileAusAlias(o, s.n);
+    /* Rolle und Typ NUR, wenn sie im Alias ueberhaupt stehen.
+
+       `zeileAusAlias` liefert an dieser Stelle `''` - fuer die anderen
+       drei Aufrufer richtig, hier nicht: ein Alias ohne eigene Rolle
+       soll die der Vorlage behalten, statt sie gegen einen Leerstring zu
+       tauschen. Das ist der eine Unterschied, der beim Zusammenlegen der
+       fuenf Stellen erhalten bleiben musste (Y5) - wer ihn wegraeumt,
+       nimmt jedem vorlagenbasierten Alias seine Rollen. */
     if (c.role !== undefined) { s.role = c.role; }
     if (c.type !== undefined) { s.typ = c.type; }
-    s.unit = (c.unit !== undefined) ? c.unit : '';
+    s.unit = ist.unit;
     s.states = c.states;
     /* Die Beschriftung gehoert dem Nutzer - sie wird auch spaeter vom
-       Vorlagen-Abgleich nicht angefasst (Ricardo, 25.08.2026). */
+       Vorlagen-Abgleich nicht angefasst (Ricardo, 25.08.2026). Und sie
+       gilt hier auch dann, wenn sie dem Zeilennamen gleicht; die Regel
+       von `zeileAusAlias` („leer, wenn gleich") wuerde sie verwerfen. */
     if (c.name !== undefined) { s.caption = txt(c.name); }
-    var a = c.alias || {};
-    s.f = (typeof a.read === 'string') ? a.read : '';
-    s.fw = (typeof a.write === 'string') ? a.write : '';
+    s.f = ist.f;
+    s.fw = ist.fw;
     if (q.read) { s.srcR = q.read; }
-    s.srcW = schreibQuelle(o);
+    s.srcW = ist.srcW;
     s.on = true;
     s.ausBestand = true;
   });
@@ -1209,14 +1219,7 @@ export function bestandsAbweichung(s, aliasId) {
   if (!s || !s.n || !s.on || !aliasId) { return []; }
   var o = S.objects[aliasId + '.' + s.n];
   if (!o || !o.common) { return []; }
-  var c = o.common, a = c.alias || {}, q = aliasQuellen(o);
-  var ist = {
-    role: c.role || '', typ: c.type || '', unit: c.unit || '',
-    f: (typeof a.read === 'string') ? a.read : '',
-    fw: (typeof a.write === 'string') ? a.write : '',
-    srcR: q.read || '',
-    srcW: schreibQuelle(o)
-  };
+  var ist = zeileAusAlias(o, s.n);
   var raus = [];
   ['role', 'typ', 'unit', 'f', 'fw', 'srcR', 'srcW'].forEach(function (k) {
     var jetzt = s[k] || '';

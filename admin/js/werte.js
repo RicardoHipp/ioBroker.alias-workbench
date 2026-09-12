@@ -6,7 +6,7 @@
 
 import { S } from './zustand.js';
 import { socket } from './verbindung.js';
-import { tr } from './sprache.js';
+import { tr, txt } from './sprache.js';
 import './entwurf.js';
 
 /* Direkt nachschlagen — die Vorlagen nennen den Pfad ja vollstaendig
@@ -110,6 +110,55 @@ export function schreibQuelle(o) {
   var q = aliasQuellen(o);
   if (!q.einfach) { return q.write || ''; }
   return (c.write === true || typeof a.write === 'string') ? (q.write || '') : '';
+}
+
+/* Aus einem Alias-Objekt die Felder einer Entwurfszeile.
+
+   Dieselbe Umrechnung stand fuenfmal ausprogrammiert - dreimal in
+   `entwurf.js`, zweimal in `zuordnung.js` -, jedes Mal mit derselben
+   Schreibquellenregel und leicht anderem Drumherum. Die Kommentare an
+   jenen Stellen dokumentieren vier Fehler, die genau daraus entstanden
+   sind: eine verlorene Schreibquelle am Rollladen, ein schaltender Punkt
+   der zum lesenden wurde, eine fehlende Beschriftung an Solar.Netz und
+   eine Abweichung, die die Werkbank selbst erzeugt hatte (Y5).
+
+   Was hier steht, ist die ABLEITUNG - nicht, was damit geschieht. Die
+   eine Stelle vergleicht nur, die zweite legt eine Zeile an, die beiden
+   anderen ueberschreiben eine bestehende; das bleibt bei den Aufrufern.
+
+   `baueEntwurf` ruft sie bewusst NICHT: die Funktion baut Zeilen fuer
+   zwei Faelle, Alias und rohe Quelle, und drei der Felder haengen dort
+   an dieser Unterscheidung. Sie mit Schaltern hereinzuholen waere
+   schlechter als zwei ehrliche Stellen.
+
+   Die Beschriftung folgt der Regel „leer, wenn sie dem Zeilennamen
+   gleicht" - so halten es `vomAliasUebernehmen` und der Zweig, der neue
+   Zeilen anlegt. `bestandVorrang` will sie anders (uebernehmen, sobald
+   `common.name` gesetzt ist) und behaelt dafuer eine eigene Zeile.
+
+   Und `role`/`typ` bleiben bei den beiden Stellen, die eine BESTEHENDE
+   Zeile ueberschreiben (`bestandVorrang`, `vomAliasUebernehmen`), an
+   ihrer `!== undefined`-Frage: dort steht schon der Vorlagenwert, und
+   ein Alias, der gar keine Rolle nennt, soll ihn behalten statt ihn
+   gegen den Leerstring zu tauschen, den diese Funktion liefert. Wer das
+   wegraeumt, nimmt jedem vorlagenbasierten Alias seine Rollen. */
+export function zeileAusAlias(o, zeilenname) {
+  var c = (o && o.common) || {};
+  var a = c.alias || {};
+  var q = aliasQuellen(o);
+  var nm = txt(c.name);
+  return {
+    role: c.role || '',
+    typ: c.type || '',
+    unit: c.unit || '',
+    states: c.states || undefined,
+    wr: !!c.write,
+    srcR: q.read || '',
+    srcW: schreibQuelle(o),
+    f: (typeof a.read === 'string') ? a.read : '',
+    fw: (typeof a.write === 'string') ? a.write : '',
+    caption: (nm && nm !== zeilenname) ? nm : ''
+  };
 }
 
 export function aliasQuellen(obj) {
