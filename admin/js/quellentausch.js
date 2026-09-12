@@ -475,6 +475,40 @@ function zeichneTausch() {
   /* Die Zuordnung, Zeile fuer Zeile. */
   if (!S.tauschPlan) { S.tauschPlan = tauschPlan(kanal, S.tauschNeu); }
   var plan = S.tauschPlan;
+
+  /* Steht die Wahl eine Ebene zu tief?
+
+     Der Baum laesst jeden Knoten waehlen, unter dem Datenpunkte haengen -
+     absichtlich, denn welche Ebene beim fremden Adapter das Geraet ist,
+     kann die Werkbank nicht wissen; bei einem flachen Adapter ist der
+     Kanal die richtige (Kommentar in `tauschPlan`). Bei MQTT sind
+     `stat`, `tele` und `cmnd` aber Themenordner, keine Geraete, und wer
+     dort landet, bekommt schlechtere Treffer: am RGB-Deckenlicht fanden
+     ueber das Geraet alle sieben Punkte ein Ziel, ueber `…Licht.tele`
+     nur fuenf - die beiden aus `stat` gar nichts (12.09.2026).
+
+     Verboten wird nichts. Aber die Werkbank kann nachrechnen, was eine
+     Ebene hoeher herauskaeme, und es sagen - sonst hakt man zwei Punkte
+     zum Entfernen an und opfert seinen Schalter, statt den Knoten
+     darueber zu nehmen (Ricardos Frage, 12.09.2026). */
+  var eltern = S.tauschNeu.split('.').slice(0, -1).join('.');
+  if (eltern.split('.').length > 2 && S.tauschNeu !== alt) {
+    var trefferHier = plan.filter(function (z) { return z.neuR; }).length;
+    var planOben = tauschPlan(kanal, eltern);
+    var trefferOben = planOben.filter(function (z) { return z.neuR; }).length;
+    if (trefferOben > trefferHier) {
+      var eb = el('div', 'aside w');
+      eb.style.borderLeftColor = 'var(--warn)';
+      eb.appendChild(el('b', null, tr('swap.higherLevel',
+        eltern, trefferOben, plan.length, trefferHier)));
+      var knopf = el('button', 'btn mini wichtig', tr('swap.goHigher'));
+      knopf.style.marginTop = '5px';
+      knopf.addEventListener('click', function () { gewaehlt(eltern); });
+      eb.appendChild(el('div', null, ''));
+      eb.appendChild(knopf);
+      body.appendChild(eb);
+    }
+  }
   var k = el('div', 'card');
   k.style.marginTop = '11px';
   var ch = el('div', 'ch');
