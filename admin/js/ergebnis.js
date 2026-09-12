@@ -705,6 +705,27 @@ var warumAuf = false;
         neuE.roh = rohJetzt;
         neuE.vorschlag = true;
         neuE.tplName = e.tplName; neuE.grund = e.grund; neuE.ziel = e.ziel;
+        /* Ordner und Name getrennt mitgeben, nicht nur das fertige Ziel.
+
+           `setzeZiel` rechnet den Ordner nur aus, solange keiner dasteht —
+           und dabei liest es das letzte Segment von `e.ziel` als
+           Geraetenamen. Bei einem Geraet mit mehreren Ausgaengen ist das
+           letzte Segment aber der AUSGANG (`…Garten-Ventilinsel.POWER2`),
+           und der Ordner bekam ihn angehaengt. Jeder Druck auf diesen
+           Knopf schob den Ablageort eine Ebene tiefer, und geschrieben
+           wurde er auch so: gemessen 12.09.2026 am Testsystem entstanden
+           nach drei Klicks vier Ordner statt einem
+           (`…Garten-Ventilinsel.POWER2.POWER2.POWER2.POWER2`).
+
+           Der Ausgangswechsel eine Stelle weiter oben macht es seit jeher
+           richtig — hier dieselbe Form. Im Aliasmodus sind beide Felder
+           `undefined`; dann bleibt alles wie bisher, `setzeZiel` steigt
+           dort ohnehin sofort aus. `ordnerVonHand` gehoert mit, sonst
+           verliert der Raumvorschlag die Entscheidung, wer den Ordner
+           gesetzt hat (E41). */
+        neuE.zielOrdner = e.zielOrdner;
+        neuE.zielName = e.zielName;
+        neuE.ordnerVonHand = e.ordnerVonHand;
         if (fest) { neuE.vonHandGewaehlt = false; neuE.ausBestand = true; }
         if (vorh && S.objects[vorh]) { bestandVorrang(neuE, vorh); }
         S.entwurf = neuE; S.openRow = null; zeichneErgebnis();

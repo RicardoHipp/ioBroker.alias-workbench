@@ -584,6 +584,9 @@ beide Sprachdateien dieselben Schlüssel tragen.
 
 ## Änderungen
 
+### **WORK IN PROGRESS**
+* „Alle Datenpunkte des Geräts" verschiebt den Ablageort nicht mehr. Bei einem Gerät mit mehreren Ausgängen legt die Werkbank einen Ordner an und darin je Ausgang einen Kanal. Der Knopf baut den Entwurf neu auf und gab ihm dabei nur das **fertige Ziel** mit; `setzeZiel` liest dessen letztes Segment als Gerätenamen — bei mehreren Ausgängen ist das aber der Ausgang, und er landete zusätzlich im Ordner. Jeder Druck schob den Ablageort eine Ebene tiefer, und geschrieben wurde er auch so: nach drei Klicks entstanden vier Ordner statt einem (`…Garten-Ventilinsel.POWER2.POWER2.POWER2.POWER2`). Jetzt gibt der Knopf Ordner und Namen getrennt weiter, wie es der Ausgangswechsel daneben seit jeher tut. Bei einem Gerät mit einem Ausgang trat es nie auf
+
 ### 0.9.9
 * Die Bauvorlage liegt jetzt in `src-admin/` statt in `src/`. Diesen Namen hat ioBroker für Frontend-Quellen vorgesehen, die nach `admin/` gebacken werden und beim Nutzer nie ankommen; der Adapterprüfer überspringt solche Ordner bei der Suche nach fehlenden Abhängigkeiten. `@iobroker/type-detector` bleibt deshalb in `devDependencies`, und dort gehört er hin: esbuild backt ihn beim Bauen in `admin/detector.js` ein, zur Laufzeit lädt ihn niemand. Ausgeliefert werden die fertigen 71 KB, nicht das 548-KB-Paket (W5042)
 * Die Einstellungsseite nimmt ihre Übersetzungen jetzt aus `admin/i18n/` — dem Wörterbuch, das ioBroker selbst liest (`"i18n": true`) und mit dem Weblate arbeiten kann. Die elf Sprachen, die sie ohnehin schon trug, sind unverändert dorthin umgezogen; kein Wort wurde neu übersetzt. Der Reiter behält sein eigenes Wörterbuch, jetzt unter `admin/sprachen/`: 588 Schlüssel auf Deutsch und Englisch, eine unbekannte Sprache fällt auf Englisch zurück. Zwei Wörterbücher, zwei Aufgaben — den Namen `i18n` sieht sich der Adapterprüfer an und erwartet dort alle elf Sprachen (W5603, W5614, W5015)

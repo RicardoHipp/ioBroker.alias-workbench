@@ -564,6 +564,9 @@ imported, and that both language files carry the same keys.
 
 ## Changelog
 
+### **WORK IN PROGRESS**
+* "All data points of the device" no longer moves the storage location. For a device with several outputs the workbench creates a folder with one channel per output. The button rebuilds the draft and passed on only the **finished target**; `setzeZiel` reads its last segment as the device name — with several outputs that segment is the output, and it ended up in the folder as well. Every press pushed the location one level deeper, and that is where it was written, too: three clicks produced four folders instead of one (`…Garten-Ventilinsel.POWER2.POWER2.POWER2.POWER2`). The button now passes folder and name separately, the way the output selector next to it has always done. A single-output device was never affected
+
 ### 0.9.9
 * The build source moved from `src/` to `src-admin/`. ioBroker reserves that name for frontend sources that are bundled into `admin/` and never reach the user, and the adapter checker skips such directories when it looks for missing dependencies. `@iobroker/type-detector` therefore stays in `devDependencies`, which is where it belongs: esbuild bakes it into `admin/detector.js` at build time and nothing loads it at runtime. Users receive the finished 71 KB file, not the 548 KB package (W5042)
 * The settings page now takes its translations from `admin/i18n/` — the dictionary ioBroker reads itself (`"i18n": true`) and that Weblate can work with. The eleven languages it already carried moved there unchanged; not a word was retranslated. The tab keeps its own dictionary, now at `admin/sprachen/`: 588 keys in German and English, with an unknown language falling back to English. Two dictionaries, two jobs — the name `i18n` is the one the adapter checker inspects, and it expects all eleven languages there (W5603, W5614, W5015)
