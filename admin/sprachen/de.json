@@ -288,6 +288,7 @@
   "pattern.manualInstead": "von Hand statt {0}",
   "pattern.missing": "{0} fehlt",
   "pattern.noMatch": "kein Muster passt zu „{0}“",
+  "pattern.noPlaceBecauseType": "Das {0}-Muster greift gerade nicht: {1} verlangt {2}, eingestellt ist {3}. Deshalb hat keine Zeile einen Platz.",
   "pattern.noPlaceLegend": "So hinterlegte Zeilen haben keinen Platz im {0}-Muster",
   "pattern.noPlaceLong": "kein Platz im {0}-Muster — der Punkt wird trotzdem angelegt und ist voll benutzbar, nur Alexa & Co. zählen ihn separat",
   "pattern.notDetected": "nicht erkannt",

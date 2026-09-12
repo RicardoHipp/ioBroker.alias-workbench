@@ -9,7 +9,7 @@
 import { S } from './zustand.js';
 import { el, $ } from './basis.js';
 import { tr } from './sprache.js';
-import { erkenneEntwurf, musterVon, rolleVonPlatz } from './erkennung.js';
+import { erkenneEntwurf, musterVon, rolleVonPlatz, typKonflikte } from './erkennung.js';
 import { kindZustaende, wertVon, fmt } from './werte.js';
 import { steuerKanaele, vorlagenAbweichung, bestandsAbweichung, waehle, quelleHier, quellenVerteilung } from './entwurf.js';
 import { musterName } from './musternamen.js';
@@ -670,7 +670,21 @@ export function baueListe(host, e, pl, rateKnopf, musterBlock) {
   if (ohnePlatzZahl) {
     var mn = musterName(e.want) || e.want || '?';
     var lg = el('div', 'legendenzeile');
-    lg.appendChild(document.createTextNode(tr('pattern.noPlaceLegend', mn)));
+    /* Steht die ganze Liste ohne Platz da, weil EINE Zeile im falschen
+       Datentyp ist, sagt die Legende das - statt acht Zeilen pauschal zu
+       beschuldigen.
+
+       Der Ablauf: der Punkt faellt wegen des Typs aus dem Muster, damit
+       ist ein Pflichtplatz leer, damit greift das Muster nicht mehr, und
+       damit hat KEINE Zeile mehr einen Platz. Am Bastelzimmer_Licht
+       reichte ein Wechsel an SET von `boolean` auf `mixed`: acht von acht
+       Zeilen getoent, Musterfeld „✕ SET fehlt", und die Ursache stand
+       nur in der aufgeklappten SET-Zeile (Ricardo, 12.09.2026). */
+    var kippt = typKonflikte(e.states, e.want).filter(function (x) { return x.pflicht; })[0];
+    lg.appendChild(document.createTextNode(kippt
+      ? tr('pattern.noPlaceBecauseType', mn, kippt.platz,
+          kippt.erwartet.join(tr('pattern.typeOr')), kippt.typ)
+      : tr('pattern.noPlaceLegend', mn)));
 
     var ib = el('button', 'infoknopf', 'i');
     ib.type = 'button';

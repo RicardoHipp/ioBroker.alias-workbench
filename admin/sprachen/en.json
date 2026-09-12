@@ -288,6 +288,7 @@
   "pattern.manualInstead": "by hand instead of {0}",
   "pattern.missing": "{0} missing",
   "pattern.noMatch": "no pattern matches \"{0}\"",
+  "pattern.noPlaceBecauseType": "The {0} pattern does not apply right now: {1} requires {2}, but {3} is set. That is why no row has a slot.",
   "pattern.noPlaceLegend": "Rows shaded like this have no slot in the {0} pattern",
   "pattern.noPlaceLong": "no slot in the {0} pattern — the point is still created and fully usable, only Alexa and friends count it separately",
   "pattern.notDetected": "not detected",

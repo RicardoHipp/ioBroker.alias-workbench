@@ -260,6 +260,36 @@ export function typenFuerRolle(musterName, rolle) {
   return raus;
 }
 
+/* Welche angehakten Zeilen treffen ihren Platz in der Rolle, aber nicht
+   im Datentyp?
+
+   Ein solcher Punkt faellt lautlos aus dem Muster - und wenn es ein
+   Pflichtplatz war, greift das Muster gar nicht mehr. Dann hat auf
+   einmal KEINE Zeile einen Platz, und die Oberflaeche beschuldigte alle:
+   am Bastelzimmer_Licht standen nach einem Typwechsel an SET alle acht
+   Zeilen getoent da, das Musterfeld sagte „✕ SET fehlt", und die
+   Wahrheit stand nur in der aufgeklappten SET-Zeile (Ricardo,
+   12.09.2026).
+
+   Hier steht die Frage einmal, damit Musterfeld, Legende und Zeile
+   dieselbe Antwort geben. `pflicht` sagt, ob der betroffene Platz ein
+   Pflichtplatz ist - nur dann kippt das ganze Muster. */
+export function typKonflikte(states, musterName) {
+  var mu = musterName && musterVon(musterName);
+  if (!mu) { return []; }
+  var raus = [];
+  (states || []).forEach(function (s) {
+    if (!s.on || !s.role || !s.typ) { return; }
+    var moegliche = typenFuerRolle(musterName, s.role);
+    if (!moegliche.length || moegliche.indexOf(s.typ) > -1) { return; }
+    var platz = platzFuerRolle(musterName, s.role);
+    if (!platz) { return; }
+    raus.push({ n: s.n, typ: s.typ, erwartet: moegliche, platz: platz.name,
+                pflicht: !!platz.required });
+  });
+  return raus;
+}
+
 /* Die Datentypen, die ein Platz zulaesst - als Liste.
 
    Drei Faelle, gemessen am type-detector 6.0.1: 622 Plaetze nennen

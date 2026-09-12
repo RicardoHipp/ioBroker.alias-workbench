@@ -10,7 +10,7 @@
 import { S } from './zustand.js';
 import { D, el, $ } from './basis.js';
 import { tr, sprachtext } from './sprache.js';
-import { VORSCHAU, musterVon, erkenneEntwurf, platzFuerRolle, typenFuerRolle } from './erkennung.js';
+import { VORSCHAU, musterVon, erkenneEntwurf, platzFuerRolle, typenFuerRolle, typKonflikte } from './erkennung.js';
 import { anMusterAnpassen } from './vorlagen.js';
 import { ratePlaetze, rateZurueck, rateAnzahl, rateMoeglich } from './vorschlagen.js';
 import { zeichneErgebnis, entwurfAngefasst, knopfFrisch } from './ergebnis.js';
@@ -138,7 +138,17 @@ export function baueMusterwahl(e, haupt, pflichtFehlt) {
     if (!r.length) {
       var fehlend = musterVon(m).states.filter(function (x) { return x.required; })
         .map(function (x) { return x.name; });
-      if (fehlend.length) {
+      /* Ein Pflichtplatz kann auch deshalb leer sein, weil die Zeile
+         dafuer im falschen Datentyp steht - die Rolle stimmt, der Typ
+         nicht, und der Punkt faellt aus dem Muster. „SET fehlt" ist dann
+         die falsche Auskunft: SET ist da. Der Typ-Grund geht vor, wo es
+         einen gibt (Ricardo, 12.09.2026, am Bastelzimmer_Licht). */
+      var konflikt = typKonflikte(pruefE.states, m)
+        .filter(function (x) { return fehlend.indexOf(x.platz) > -1; })[0];
+      if (konflikt) {
+        mark = tr('pattern.fitsNotType', konflikt.platz, konflikt.typ,
+          konflikt.erwartet.join(tr('pattern.typeOr')));
+      } else if (fehlend.length) {
         mark = '✕ ' + tr('pattern.missing', fehlend.join(', '));
       } else {
         /* Kein Pflichtplatz fehlt und trotzdem passt nichts - dann liegt
