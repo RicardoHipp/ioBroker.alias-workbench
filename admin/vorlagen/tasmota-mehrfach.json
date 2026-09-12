@@ -85,7 +85,8 @@
       "einheit": "dBm",
       "lesen": "tele.STATE",
       "feld": "Wifi.Signal",
-      "optional": true
+      "optional": true,
+      "vorgabeAus": true
     },
     {
       "name": "UPTIME",

@@ -337,6 +337,8 @@
   "swap.goHigher": "use the level above",
   "swap.gone": "This device no longer exists — which is exactly what this is for.",
   "swap.guessHint": "Rows marked “guessed” were matched by name or role — please check those individually.",
+  "swap.guessedByName": "Guessed from the point name: something under the new source is also called \"{0}\". That can be far off — please check.",
+  "swap.guessedByRole": "Guessed from the role: a point under the new source carries the same role \"{0}\". Please check.",
   "swap.higherLevel": "One level up ({0}) finds a target for {1} of {2} points, here only {3}.",
   "swap.keeps": "The alias keeps its id, names, roles and formulas, its history in the database and its room and function. Only where each point reads from and writes to changes.",
   "swap.mapping": "Mapping",

@@ -553,9 +553,14 @@
   .erow .nm3 .geae { font-family:var(--sans); font-size:8px; font-weight:700; letter-spacing:.05em;
                      text-transform:uppercase; background:var(--warn-soft); color:var(--warn);
                      padding:0 6px; border-radius:999px; margin-left:6px; }
-  .erow .nm3 .rat { font-family:var(--sans); font-size:8px; font-weight:700; letter-spacing:.05em;
-                    text-transform:uppercase; background:var(--accent-soft); color:var(--accent);
-                    padding:0 6px; border-radius:999px; margin-left:6px; }
+  /* Die Marke gilt ueberall gleich, nicht nur in der Zustandsliste.
+     Mit den drei Ebenen davor griff sie im Tausch-Dialog nicht: dort
+     haengt das span unter .sn, und "vermutet" stand als blosser Text
+     am Punktnamen - ohne Abstand, ohne Farbe, in 12 statt 8 px
+     (Ricardo, 12.09.2026, an alias.0.Garten.FK_Badezimmer). */
+  .rat { font-family:var(--sans); font-size:8px; font-weight:700; letter-spacing:.05em;
+         text-transform:uppercase; background:var(--accent-soft); color:var(--accent);
+         padding:0 6px; border-radius:999px; margin-left:6px; white-space:nowrap; }
   .erow .nm3 .ratknopf { font-family:var(--sans); font-size:11px; cursor:pointer; margin-left:5px;
                          color:var(--ink-3); padding:0 4px; border-radius:var(--r-sm); }
   .erow .nm3 .ratknopf:hover { background:var(--surface-3); color:var(--ink); }

@@ -337,6 +337,8 @@
   "swap.goHigher": "eine Ebene höher nehmen",
   "swap.gone": "Dieses Gerät gibt es nicht mehr — genau dafür ist dieser Weg gedacht.",
   "swap.guessHint": "Die mit „vermutet“ gekennzeichneten Zeilen sind über Namen oder Rolle geraten — die bitte einzeln prüfen.",
+  "swap.guessedByName": "Über den Punktnamen geraten: unter der neuen Quelle heißt ebenfalls etwas „{0}\". Das kann weit danebenliegen — bitte prüfen.",
+  "swap.guessedByRole": "Über die Rolle geraten: unter der neuen Quelle trägt ein Punkt dieselbe Rolle „{0}\". Bitte prüfen.",
   "swap.higherLevel": "Eine Ebene höher ({0}) finden {1} von {2} Punkten ein Ziel, hier nur {3}.",
   "swap.keeps": "Der Alias behält seine Kennung, seine Namen, Rollen und Formeln, die Aufzeichnung in der Datenbank sowie Raum und Funktion. Geändert wird nur, woher jeder Punkt liest und wohin er schreibt.",
   "swap.mapping": "Zuordnung",

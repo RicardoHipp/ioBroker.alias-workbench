@@ -61,11 +61,25 @@ export function rolleTrifft(r, rolle) {
    Ableitung bekam so ein Punkt gar keine: er belegte seinen Platz nie,
    liess sich beliebig oft hinzufuegen, und die Rolle fehlte auch in der
    Auswahlliste — der Platz war auf keinem Weg zu befuellen. */
+/* Der fehlende Anfangsanker zaehlt nicht gegen den Platz.
+
+   `vacuumCleaner.MAP_URL` schreibt `/vacuum\.map\.url$/` - ohne `^`.
+   Gemeint ist derselbe eine Rollenname wie bei den anderen; der Platz
+   blieb aber ohne Rolle, weil hier beide Anker verlangt wurden
+   (gemessen 12.09.2026 ueber alle 53 Muster: ausser MAP_URL traf es
+   nur `media.COVER`, und dessen Ausdruck `/^media\.cover(\..*)$/`
+   beschreibt wirklich keinen einen Namen - der Platz hat dafuer eine
+   `defaultRole`).
+
+   Das Endezeichen bleibt Pflicht: ohne `$` waere `/^level\.dimmer/`
+   auch von `level.dimmer.irgendwas` erfuellt, und dann ist es kein
+   Name mehr, sondern ein Praefix. */
 export function rolleAusAusdruck(r) {
   var q = ausdruckText(r);
   if (!q) { return ''; }
-  if (q.charAt(0) !== '^' || q.slice(-1) !== '$') { return ''; }
-  var t = q.slice(1, -1).split(String.fromCharCode(92)).join('');
+  if (q.slice(-1) !== '$') { return ''; }
+  if (q.charAt(0) === '^') { q = q.slice(1); }
+  var t = q.slice(0, -1).split(String.fromCharCode(92)).join('');
   return /^[A-Za-z0-9_]+([.][A-Za-z0-9_]+)*$/.test(t) ? t : '';
 }
 

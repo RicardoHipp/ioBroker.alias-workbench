@@ -92,6 +92,15 @@ function ausVorlage(punktId, neuKanal) {
 
 /* Stufe 3: gleicher Punktname irgendwo unter dem neuen Geraet, oder
    gleiche Rolle. Bewusst schwach - deshalb nur als Vorschlag. */
+/* Und WORUEBER geraten wurde, wird mitgegeben.
+
+   „vermutet" allein sagt nur, dass die Zuordnung schwach ist - nicht,
+   woran sie haengt. Ueber den Namen geraten heisst: irgendein Punkt
+   heisst hinten gleich; das kann weit danebenliegen (ein Fensterkontakt
+   `…1.STATE` landete so auf `…tele.STATE`, dem Telemetrie-JSON einer
+   Tasmota). Ueber die Rolle geraten ist etwas anderes und muss anders
+   geprueft werden. Der Tooltip an der Marke sagt es jetzt (Ricardo,
+   12.09.2026). */
 function geraten(altQuelle, neuKanal) {
   var name = altQuelle.split('.').pop();
   var kandidaten = kindZustaende(neuKanal);
@@ -99,7 +108,7 @@ function geraten(altQuelle, neuKanal) {
   kandidaten.forEach(function (id) {
     if (!treffer && id.split('.').pop() === name) { treffer = id; }
   });
-  if (treffer) { return treffer; }
+  if (treffer) { return { id: treffer, ueber: 'name' }; }
   var altO = S.objects[altQuelle];
   var rolle = altO && altO.common && altO.common.role;
   if (rolle) {
@@ -108,7 +117,7 @@ function geraten(altQuelle, neuKanal) {
       if (!treffer && o && o.common && o.common.role === rolle) { treffer = id; }
     });
   }
-  return treffer;
+  return treffer ? { id: treffer, ueber: 'rolle', rolle: rolle } : null;
 }
 
 /* Die Zuordnungstabelle: je Alias-Punkt, was heute gilt und was danach
@@ -158,10 +167,14 @@ export function tauschPlan(kanal, neuKanal) {
     /* 3. geraten */
     if (!zeile.neuR && zeile.altR) {
       var g = geraten(zeile.altR, neuKanal);
-      if (g) { zeile.neuR = g; zeile.stufe = 3; }
+      if (g) {
+        zeile.neuR = g.id; zeile.stufe = 3;
+        zeile.geratenUeber = g.ueber; zeile.geratenRolle = g.rolle || '';
+      }
     }
     if (!zeile.neuW && zeile.altW) {
-      var gw = geraten(zeile.altW, neuKanal);
+      var gwT = geraten(zeile.altW, neuKanal);
+      var gw = gwT && gwT.id;
       /* Was hier geraten wird, muss ein anderer Punkt sein als die
          Lesequelle. Bei getrennten Quellen heissen Melder und Befehl oft
          gleich - `stat.POWER` und `cmnd.POWER` -, und das Raten greift
@@ -535,7 +548,16 @@ function zeichneTausch() {
                  && (z.einfach || (z.neuW || '') === (z.altW || ''));
     var nm = el('span', 'sn', z.name);
     if (gleich) { nm.appendChild(el('span', 'rat', tr('swap.unchanged'))); }
-    else if (z.stufe === 3) { nm.appendChild(el('span', 'rat', tr('guess.mark'))); }
+    else if (z.stufe === 3) {
+      /* Die Marke sagt jetzt auch, WORUEBER geraten wurde - ueber den
+         blossen Punktnamen oder ueber die Rolle. Das sind zwei sehr
+         verschiedene Vermutungen, und sie pruefen sich verschieden. */
+      var rm = el('span', 'rat', tr('guess.mark'));
+      rm.title = z.geratenUeber === 'rolle'
+        ? tr('swap.guessedByRole', z.geratenRolle || '?')
+        : tr('swap.guessedByName', (z.altR || '').split('.').pop());
+      nm.appendChild(rm);
+    }
     r.appendChild(nm);
     var rechts = el('span');
     /* Das Kaestchen „entfernen" - an zwei Stellen gebraucht, deshalb hier.
