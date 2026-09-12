@@ -600,6 +600,20 @@ export function zeigeTrockenlauf(alleAusgaenge) {
     body.appendChild(zwK);
   }
 
+  /* Was beim letzten Anlegen der Sendepunkte schiefging - hier oben, wo
+     man es sieht, und nicht als Tooltip an einem Knopf, den derselbe
+     Rueckruf gleich wieder wegwirft (H17). */
+  if (S.mqFehler && S.mqFehler.length) {
+    var mk = el('div', 'aside w');
+    mk.style.borderLeftColor = 'var(--bad)';
+    mk.style.marginBottom = '11px';
+    mk.appendChild(el('b', null, tr('write.failed', S.mqFehler.length)));
+    var mul = el('ul');
+    S.mqFehler.forEach(function (x) { mul.appendChild(el('li', null, x)); });
+    mk.appendChild(mul);
+    body.appendChild(mk);
+  }
+
   /* Die Aufzaehlungen sind gerade nicht bekannt — dann wird auch keine
      geschrieben. Das gehoert hierher und nicht in eine Sperre: der Alias
      selbst braucht sie nicht, und aus einem stillen Datenverlust eine
@@ -685,6 +699,19 @@ export function zeigeTrockenlauf(alleAusgaenge) {
                 kn2.disabled = false;
                 kn2.textContent = tr('write.retry');
                 kn2.title = mqFehler.join(' | ');
+                /* Und zwar so, dass es den Neuaufbau ueberlebt.
+
+                   Drei Zeilen weiter unten wird der Entwurf neu gebaut
+                   und der Trockenlauf noch einmal gerechnet - dabei
+                   verschwindet dieser Knopf samt seiner Begruendung aus
+                   dem DOM. Gemessen 12.09.2026: nach rund 120 ms war er
+                   weg. Der neue Dialog sperrte wieder und sagte, welcher
+                   Sendepunkt fehlt, aber nicht mehr, WARUM er nicht
+                   entstanden ist (H17). Am Zustand gemerkt, zeichnet
+                   `zeigeTrockenlauf` ihn oben wieder hin. */
+                S.mqFehler = mqFehler.slice();
+              } else {
+                S.mqFehler = null;
               }
               /* Erst den Entwurf neu aufbauen lassen, dann den
                  Trockenlauf noch einmal rechnen. Sofort geoeffnet zeigte
@@ -1024,6 +1051,16 @@ export function loescheAlias() {
         m.style.fontSize = '13px';
         if (fehler.length) {
           m.appendChild(el('b', null, tr('write.failed', fehler.length)));
+          /* Und WAS schiefging, nicht nur wie viel.
+
+             Beim Schreiben steht die Liste seit jeher da (`melden` beim
+             Verlegen, der Trockenlauf-Dialog beim Anlegen); beim Loeschen
+             fehlte sie, und zurueck blieb die blosse Zahl. Wer wissen
+             will, welcher Punkt haengt — etwa weil ein Skript ihn sperrt
+             —, erfuhr es nicht (G44, gemessen 12.09.2026). */
+          var ul = el('ul');
+          fehler.forEach(function (x) { ul.appendChild(el('li', null, x)); });
+          m.appendChild(ul);
         } else {
           m.appendChild(el('b', null, tr('del.done', alle.length)));
         }

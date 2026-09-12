@@ -2058,10 +2058,34 @@ export function zeichneVorlagenDialog() {
 
   var b = $('#btn-tpl-save');
   if (b) {
-    b.disabled = fehlerErk || !k.id || !!fremdeMitId(k) ||
-      !hinweisTaugt(k.namenshinweis) ||
-      !z.zeilen.filter(function (r) { return !r.weg; }).length;
+    /* Fuenf Gruende sperren den Knopf - und jeder von ihnen gehoert
+       hingeschrieben.
+
+       Bisher wurde nur `disabled` gesetzt, `title` blieb leer. Bei
+       fehlenden Pflichtpunkten stand die Erklaerung weiter unten in der
+       Probelauf-Karte, fuer die man scrollen musste; bei den anderen
+       vier stand sie nirgends. Ricardo stiess darauf, als er fuer den
+       Objektdump eine eigene Vorlage anlegen wollte - grauer Knopf,
+       kein Wort dazu (I32, 11.09.2026). Ein Knopf, der nicht sagt warum,
+       ist derselbe Fehler wie eine Sperre ohne Begruendung (U28). */
+    var gruende = [];
+    if (fehlerErk) { gruende.push(tr('tpls.lockNoRequired')); }
+    if (!k.id) { gruende.push(tr('tpls.lockNoId')); }
+    if (fremdeMitId(k)) { gruende.push(tr('tpls.lockIdTaken', fremdeMitId(k).id)); }
+    if (!hinweisTaugt(k.namenshinweis)) { gruende.push(tr('tpls.lockBadHint')); }
+    if (!z.zeilen.filter(function (r) { return !r.weg; }).length) { gruende.push(tr('tpls.lockNoRows')); }
+    b.disabled = gruende.length > 0;
+    b.title = gruende.join(' · ');
     b.textContent = k.modus === 'update' ? tr('tpls.saveUpdate') : tr('tpls.saveNew');
+    if (gruende.length) {
+      var sk = el('div', 'aside w');
+      sk.style.borderLeftColor = 'var(--bad)';
+      sk.appendChild(el('b', null, tr('tpls.lockedWhy')));
+      var sul = el('ul');
+      gruende.forEach(function (x) { sul.appendChild(el('li', null, x)); });
+      sk.appendChild(sul);
+      body.appendChild(sk);
+    }
   }
   var tt = $('#tpl-titel');
   if (tt) { tt.textContent = tr('tpls.title', z.e.kanal.split('.').pop()); }

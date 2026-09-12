@@ -1071,9 +1071,16 @@ var warumAuf = false;
   function verkabeleDialoge() {
     var bc = $('#btn-checks'), bd = $('#btn-dry'), bw = $('#btn-dry-write');
     if (bc) { bc.addEventListener('click', function () { $('#dlg-checks').showModal(); }); }
-    if (bd) { bd.addEventListener('click', function () { zeigeTrockenlauf(false); }); }
+    /* Beim Oeffnen von Hand faengt der Dialog frisch an - ein alter
+       Sendepunkt-Fehler von vorhin hat dann nichts mehr zu sagen (H17).
+       Aus dem Rueckruf heraus wird zeigeTrockenlauf direkt gerufen, dort
+       bleibt die Meldung also stehen. */
+    var frisch = function (alle) {
+      return function () { S.mqFehler = null; zeigeTrockenlauf(alle); };
+    };
+    if (bd) { bd.addEventListener('click', frisch(false)); }
     var ba2 = $('#btn-dry-alle');
-    if (ba2) { ba2.addEventListener('click', function () { zeigeTrockenlauf(true); }); }
+    if (ba2) { ba2.addEventListener('click', frisch(true)); }
     if (bw) { bw.addEventListener('click', schreibeObjekte); }
     var bdel = $('#btn-del'), bdg = $('#btn-del-go');
     if (bdel) { bdel.addEventListener('click', zeigeLoeschen); }
