@@ -367,6 +367,11 @@ export function baueListe(host, e, pl, rateKnopf, musterBlock) {
   var legendenPlatz = el('div');
   card.appendChild(legendenPlatz);
 
+  /* Kippt das ganze Muster an einem einzelnen Typkonflikt? Einmal
+     gerechnet: die Zeilenschleife braucht es, die Legende darunter
+     ebenso, und beide sollen dieselbe Antwort geben. */
+  var kipptAnTyp = typKonflikte(e.states, e.want).filter(function (x) { return x.pflicht; })[0] || null;
+
   /* --- Zustandsliste --- */
   e.states.forEach(function (s, i) {
     var pl = platzVon[s.n];
@@ -378,12 +383,27 @@ export function baueListe(host, e, pl, rateKnopf, musterBlock) {
        06.09.2026). Jetzt traegt die Zeile eine Marke, der Satz steht
        einmal als Legende ueber der Liste, und der lange Text haengt als
        Hinweis an der Zeile. */
-    var ohnePlatz = (s.on && !unfertig && !pl);
+    /* Kippt das Muster an einem Typkonflikt, wird nur der Verursacher
+       getoent - nicht die ganze Liste.
+
+       Dass danach keine Zeile einen Platz hat, stimmt zwar, taugt aber
+       nicht als Auskunft: Die Toenung liest sich als „mit dieser Zeile
+       stimmt etwas nicht", und das trifft auf sieben von acht nicht zu.
+       Sie zeigte die Folge und nicht die Ursache (Ricardo, 12.09.2026).
+       Die Legende darueber nennt den Grund; markiert wird die Zeile, an
+       der er haengt. */
+    var ohnePlatz = (s.on && !unfertig && !pl &&
+                     (!kipptAnTyp || kipptAnTyp.n === s.n));
     if (ohnePlatz) { ohnePlatzZahl++; ohnePlatzNamen.push(s.n); }
     var row = el('div', 'erow' + (s.on ? '' : ' skip') + (S.openRow === i ? ' open' : '') +
                  (ohnePlatz ? ' ohneplatz' : ''));
     row.tabIndex = 0;
-    if (ohnePlatz) { row.title = tr('pattern.noPlaceLong', musterName(e.want) || e.want || '?'); }
+    if (ohnePlatz) {
+      row.title = kipptAnTyp
+        ? tr('pattern.noPlaceBecauseType', musterName(e.want) || e.want || '?',
+            kipptAnTyp.platz, kipptAnTyp.erwartet.join(tr('pattern.typeOr')), kipptAnTyp.typ)
+        : tr('pattern.noPlaceLong', musterName(e.want) || e.want || '?');
+    }
 
     var cbw = el('span');
     var cb = document.createElement('input');
@@ -680,10 +700,9 @@ export function baueListe(host, e, pl, rateKnopf, musterBlock) {
        reichte ein Wechsel an SET von `boolean` auf `mixed`: acht von acht
        Zeilen getoent, Musterfeld „✕ SET fehlt", und die Ursache stand
        nur in der aufgeklappten SET-Zeile (Ricardo, 12.09.2026). */
-    var kippt = typKonflikte(e.states, e.want).filter(function (x) { return x.pflicht; })[0];
-    lg.appendChild(document.createTextNode(kippt
-      ? tr('pattern.noPlaceBecauseType', mn, kippt.platz,
-          kippt.erwartet.join(tr('pattern.typeOr')), kippt.typ)
+    lg.appendChild(document.createTextNode(kipptAnTyp
+      ? tr('pattern.noPlaceBecauseType', mn, kipptAnTyp.platz,
+          kipptAnTyp.erwartet.join(tr('pattern.typeOr')), kipptAnTyp.typ)
       : tr('pattern.noPlaceLegend', mn)));
 
     var ib = el('button', 'infoknopf', 'i');
