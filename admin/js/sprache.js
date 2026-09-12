@@ -56,7 +56,12 @@ export function ladeSprache(fertig) {
 
   var beantwortet = false;
   socket.emit('getObject', 'system.config', function (err, obj) {
-    if (beantwortet) { return; }
+    /* Hier stand `if (beantwortet) { return; }` - der Waechter aus der
+       Zeit vor dem Nachziehen. Er stieg genau im Fall aus, fuer den der
+       Zweig weiter unten gebaut wurde, und machte ihn zu totem Text
+       (gemessen 12.09.2026: mit `expertMode: true` am System und einer
+       um 4 s verzoegerten Antwort blieb `expertenVorgabe` auch nach
+       zehn Sekunden auf `false`). */
     /* Auch eine spaete Antwort gilt noch.
 
        Nach 2,5 Sekunden geht es ohne weiter — richtig, sonst haengt der
