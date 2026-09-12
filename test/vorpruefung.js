@@ -302,6 +302,32 @@ describe('Die Entwicklerdateien', () => {
         });
     });
 
+    describe('LICENSE', () => {
+        // E4051: Der Adapterpruefer verlangt in der Copyright-Zeile der
+        // LICENSE eine Mailadresse - dieselbe, die auch in package.json
+        // unter author.email steht. package.json allein genuegt ihm
+        // nicht; er liest die LICENSE eigens und meldet die fehlende
+        // Adresse als *Fehler*, nicht als Hinweis (Ricardo, 12.09.2026,
+        // gesehen am laufenden Check zu PR 6634).
+        const lizenz = lies(path.join(wurzel, 'LICENSE'));
+        const paket = JSON.parse(lies(path.join(wurzel, 'package.json')));
+
+        it('nennt eine Mailadresse in der Copyright-Zeile', () => {
+            const zeile = lizenz.split(String.fromCharCode(10)).find((z) => /^Copyright/.test(z.trim()));
+            expect(zeile, 'keine Copyright-Zeile gefunden').to.be.a('string');
+            expect(/[^\s<>@]+@[^\s<>@]+\.[^\s<>@]+/.test(zeile),
+                'Copyright-Zeile ohne Mailadresse: ' + zeile).to.be.true;
+        });
+
+        it('nimmt dieselbe Adresse wie package.json', () => {
+            // Zwei verschiedene Adressen waeren schlimmer als eine
+            // fehlende: dann steht im Katalog eine andere als im Paket.
+            const zeile = lizenz.split(String.fromCharCode(10)).find((z) => /^Copyright/.test(z.trim()));
+            expect(zeile.indexOf(paket.author.email) > -1,
+                'LICENSE nennt nicht ' + paket.author.email).to.be.true;
+        });
+    });
+
     describe('.github/dependabot.yml', () => {
         const roh = lies(path.join(wurzel, '.github', 'dependabot.yml'));
         // Kommentarzeilen weg, sonst zaehlt die Begruendung als Fund.
