@@ -354,6 +354,25 @@ function zeichneAuswahlbaum(host, filter, beiWahl) {
   if (!host.childNodes.length) {
     host.appendChild(el('div', 'empty', tr('swap.noDevice')));
   }
+
+  /* Die Liste bleibt stehen, wo sie stand.
+
+     Beim Aufklappen fiel das nicht auf: derselbe Behaelter, nur neu
+     gefuellt, und `scrollTop` ueberlebt das. Beim WAEHLEN schon -
+     `zeichneTausch` baut den ganzen Dialog neu, der Baum ist danach ein
+     anderes Element und faengt bei 0 an. Wer weit unten ein Geraet
+     anklickte, sah danach den Anfang der Liste und seinen eben
+     gewaehlten Eintrag gar nicht mehr (Ricardo, 12.09.2026, an einer
+     Liste mit 42 Zeilen: scrollTop 700 -> 0).
+
+     Gemerkt wird an `S`, nicht am Element: das Element gibt es beim
+     naechsten Zeichnen nicht mehr. `block: 'nearest'` schiebt nur, wenn
+     die Zeile wirklich draussen ist - sonst springt die Liste bei jedem
+     Klick ein Stueck, und das waere die naechste Unruhe. */
+  if (S.tauschScroll) { host.scrollTop = S.tauschScroll; }
+  var gewaehlteZeile = host.querySelector('.node.sel');
+  if (gewaehlteZeile) { gewaehlteZeile.scrollIntoView({ block: 'nearest' }); }
+  host.addEventListener('scroll', function () { S.tauschScroll = host.scrollTop; });
 }
 
 export function zeigeTausch() {
@@ -370,6 +389,9 @@ export function zeigeTausch() {
      schlimmsten Fall genau dann, wenn im Feld noch das eben getauschte,
      inzwischen geloeschte Geraet stand (W13, gemessen 26.08.2026). */
   S.tauschFilter = '';
+  /* Und die Liste faengt oben an - sonst startet der naechste Tausch
+     dort, wo der letzte aufgehoert hat. */
+  S.tauschScroll = 0;
   var b = $('#btn-swap-go');
   if (b) { b.hidden = false; b.textContent = tr('swap.now'); }
   zeichneTausch();
@@ -435,6 +457,10 @@ function zeichneTausch() {
   zeichneAuswahlbaum(baumHost, S.tauschFilter, gewaehlt);
   feld.addEventListener('input', function () {
     S.tauschFilter = feld.value;
+    /* Andere Suche, andere Liste - die alte Scrollhoehe passt nicht mehr
+       und zeigte sonst ins Leere. */
+    S.tauschScroll = 0;
+    baumHost.scrollTop = 0;
     zeichneAuswahlbaum(baumHost, S.tauschFilter, gewaehlt);
   });
 
