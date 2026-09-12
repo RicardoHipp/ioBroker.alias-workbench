@@ -463,6 +463,37 @@ function zeichneTausch() {
     else if (z.stufe === 3) { nm.appendChild(el('span', 'rat', tr('guess.mark'))); }
     r.appendChild(nm);
     var rechts = el('span');
+    /* Das Kaestchen „entfernen" - an zwei Stellen gebraucht, deshalb hier.
+
+       Es gab es bisher nur, wenn GAR NICHTS gefunden wurde. Der zweite
+       Fall braucht es genauso: Lesequelle gefunden, Schreibziel nicht.
+       Ein Punkt mit Schreibrecht ohne Schreibziel laesst sich in ioBroker
+       nicht ausdruecken - jede Form, die der js-controller annimmt,
+       schreibt irgendwohin, und `{read: X}` ohne `write` lehnt er ab
+       („The id is empty", gemessen 12.09.2026). Also entscheidet der
+       Nutzer: mitnehmen geht nicht, entfernen schon (Ricardo). */
+    var entfernenKaestchen = function () {
+      var lb = document.createElement('label');
+      lb.style.display = 'flex';
+      lb.style.gap = '6px';
+      lb.style.alignItems = 'center';
+      lb.style.marginTop = '3px';
+      lb.style.cursor = 'pointer';
+      var cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = !!S.tauschWeg[z.id];
+      cb.addEventListener('change', function () {
+        S.tauschWeg[z.id] = cb.checked;
+        /* Der Knopf haengt daran - also neu rechnen, nicht erst beim
+           naechsten Oeffnen. `zeichneTausch`, nicht `zeigeTausch`: das
+           zweite setzt Auswahl, Plan und Haken zurueck und faengt von
+           vorn an. */
+        zeichneTausch();
+      });
+      lb.appendChild(cb);
+      lb.appendChild(el('span', 'hint', tr('swap.removeIt')));
+      return lb;
+    };
     /* Beschriftet, sonst raet man, welche der beiden Zeilen die neue ist. */
     var paarZeile = function (beschriftung, text, klasse, farbe) {
       var zz = el('div');
@@ -489,6 +520,7 @@ function zeichneTausch() {
         kw.style.color = 'var(--bad)';
         kw.textContent = tr('swap.noWriteMatch');
         rechts.appendChild(kw);
+        rechts.appendChild(entfernenKaestchen());
       }
     } else {
       var fehlt = el('div');
@@ -497,19 +529,7 @@ function zeichneTausch() {
       rechts.appendChild(fehlt);
       /* Was nichts findet, laesst sich mit entfernen - sonst bliebe ein
          Punkt zurueck, der ins Leere zeigt (Ricardos Wahl, 25.08.2026). */
-      var lb = document.createElement('label');
-      lb.style.display = 'flex';
-      lb.style.gap = '6px';
-      lb.style.alignItems = 'center';
-      lb.style.marginTop = '3px';
-      lb.style.cursor = 'pointer';
-      var cb = document.createElement('input');
-      cb.type = 'checkbox';
-      cb.checked = !!S.tauschWeg[z.id];
-      cb.addEventListener('change', function () { S.tauschWeg[z.id] = cb.checked; });
-      lb.appendChild(cb);
-      lb.appendChild(el('span', 'hint', tr('swap.removeIt')));
-      rechts.appendChild(lb);
+      rechts.appendChild(entfernenKaestchen());
     }
     r.appendChild(rechts);
     k.appendChild(r);
@@ -556,7 +576,39 @@ function zeichneTausch() {
   if (plan.some(function (z) { return z.stufe === 3; })) {
     body.appendChild(el('div', 'aside', tr('swap.guessHint')));
   }
-  if (go) { go.disabled = false; }
+
+  /* Punkte, die nicht mitkoennen, halten den Tausch auf - bis der Nutzer
+     sagt, was mit ihnen geschehen soll.
+
+     Zwei Faelle, beide mit demselben Ausgang (das Kaestchen daneben):
+     gar kein Treffer, oder getrennte Quellen mit Lesetreffer und ohne
+     Schreibziel. Frueher lief der Tausch in beiden Faellen los. Der
+     zweite endete dabei im Fehler des js-controllers, und weil
+     `tauscheAus` Objekt fuer Objekt schrieb, stand der Alias danach
+     halb auf der alten und halb auf der neuen Quelle (W20, gemessen
+     12.09.2026). Der erste lief still durch und liess den Punkt auf der
+     alten Quelle stehen - derselbe Mischzustand, nur ohne Meldung.
+
+     Gesperrt wird mit Begruendung am Knopf, nicht bloss grau: ein
+     Knopf, der nicht sagt warum, ist der Fehler aus I32. */
+  var offeneStolper = plan.filter(function (z) {
+    if (S.tauschWeg[z.id]) { return false; }
+    if (!z.neuR) { return true; }
+    return !!(z.altW && z.altW !== z.altR && !z.neuW);
+  });
+  if (go) {
+    if (offeneStolper.length) {
+      go.disabled = true;
+      go.title = tr('swap.blocked', offeneStolper.map(function (z) { return z.name; }).join(', '));
+      var sp = el('div', 'aside w');
+      sp.style.borderLeftColor = 'var(--bad)';
+      sp.appendChild(el('b', null, go.title));
+      body.appendChild(sp);
+    } else {
+      go.disabled = false;
+      go.title = '';
+    }
+  }
 }
 
 export function tauscheAus() {
@@ -585,6 +637,17 @@ export function tauscheAus() {
   };
 
   var weiter = function () {
+    /* Schlug beim Umschreiben etwas fehl, wird nichts geloescht.
+
+       Dieselbe Regel wie beim Verlegen (T11): erst alles Neue, und geht
+       dabei etwas schief, bleibt der Rest unberuehrt. Hier fehlte sie -
+       `weiter` loeschte auch dann, wenn die Haelfte der Punkte noch auf
+       der alten Quelle stand. Zurueck kann die Werkbank nichts nehmen,
+       aber sie kann aufhoeren, es schlimmer zu machen: der Nutzer sieht
+       die Fehler und drueckt „Noch einmal versuchen", und die schon
+       umgeschriebenen Punkte stoeren dabei nicht - sie stehen ja bereits
+       richtig (12.09.2026). */
+    if (fehler.length) { return fertig(); }
     if (!loeschen.length) { return fertig(); }
     var offen2 = loeschen.length;
     loeschen.forEach(function (id) {

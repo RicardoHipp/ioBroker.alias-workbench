@@ -326,6 +326,7 @@
   "roles.slot": "slot {0} in the {1} pattern",
   "roles.slotFree": "free",
   "roles.slotTaken": "taken by {0}",
+  "swap.blocked": "Decide first: {0} cannot come along. Either remove it during the swap or leave the swap be — a point that is meant to write needs a write target.",
   "swap.button": "Swap source …",
   "swap.diffRange": "range {0} → {1}",
   "swap.diffType": "type {0} → {1}",

@@ -326,6 +326,7 @@
   "roles.slot": "Platz {0} im {1}-Muster",
   "roles.slotFree": "frei",
   "roles.slotTaken": "belegt von {0}",
+  "swap.blocked": "Erst entscheiden: {0} kann nicht mitziehen. Entweder beim Tauschen entfernen oder den Tausch lassen — ein Punkt, der schreiben soll, braucht ein Schreibziel.",
   "swap.button": "Quelle tauschen …",
   "swap.diffRange": "Wertebereich {0} → {1}",
   "swap.diffType": "Typ {0} → {1}",
