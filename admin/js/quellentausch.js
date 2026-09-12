@@ -172,6 +172,21 @@ export function tauschPlan(kanal, neuKanal) {
          (gemessen 09.09.2026). Lieber kein Treffer als dieser. */
       if (gw && gw !== zeile.neuR) { zeile.neuW = gw; }
     }
+    /* Bei getrennten Quellen darf das Schreibziel nie die Lesequelle
+       sein - egal, aus welcher der drei Stufen es kam.
+
+       Beim Raten stand diese Regel schon (siehe oben), beim PFADTREFFER
+       fehlte sie: `suchePfad` probiert als letzte Form den blossen
+       Punktnamen, und `cmnd.POWER` findet so `…Stumm.stat.POWER` - den
+       Melder. Sichtbar wird es, wenn man beim Tauschen nicht das Geraet,
+       sondern einen Unterknoten waehlt (`…Stumm.stat` statt `…Stumm`):
+       dann verschwand der rote Hinweis, der Knopf wurde frei, und
+       geschrieben haette der Alias auf seine eigene Lesequelle - genau
+       der Fehler, den W20 abschaffen sollte (Ricardo, 12.09.2026).
+
+       Danach steht `neuW` leer, und die Sperre aus W20 greift: der
+       Nutzer entscheidet, ob der Punkt entfernt wird. */
+    if (!zeile.einfach && zeile.neuW && zeile.neuW === zeile.neuR) { zeile.neuW = ''; }
     /* Bei einfacher Quelle gilt die Lesequelle fuer beides. */
     if (zeile.einfach && zeile.neuR) { zeile.neuW = zeile.neuR; }
     return zeile;
