@@ -567,6 +567,83 @@ describe('Die Vorlagen', () => {
     });
 });
 
+/* Die Feldpfade laufen ohne Browser: `feldFormel` macht aus einem
+   Feldnamen den abgesicherten Zugriff, `feldAusFormel` liest ihn wieder
+   zurueck. Beides sind reine Funktionen, deshalb lassen sie sich hier
+   pruefen.
+
+   Anlass war ein Frigate-Telegramm: von 233 angebotenen Feldern ergaben
+   206 keinen gueltigen Zugriff, weil der Schluessel ein Minus, einen
+   Schraegstrich oder eine fuehrende Ziffer traegt. Der Test haelt beides
+   fest — dass diese Faelle gehen, und dass sich an der Schreibweise
+   gewoehnlicher Namen nichts geaendert hat. */
+describe('Die Feldpfade', () => {
+    const quelle = fs.readFileSync(path.join(jsDir, 'werte.js'), 'utf8');
+    const anfang = quelle.indexOf('/* ---- Feldpfade: Anfang');
+    const ende = quelle.indexOf('/* ---- Feldpfade: Ende');
+    expect(anfang, 'Anfangsmarke in werte.js').to.be.above(-1);
+    expect(ende, 'Endmarke in werte.js').to.be.above(anfang);
+    const code = quelle.slice(anfang, ende).split('export function').join('function');
+    const { feldFormel, feldAusFormel } = new Function(
+        code + '; return { feldFormel, feldAusFormel };')();
+
+    /* Ein Ausschnitt aus mqtt-client.0.SmartHome.frigate.stats, gekuerzt
+       auf die Schluessel, um die es geht. */
+    const roh = JSON.stringify({
+        cameras: { e1pro: { pid: 584 } },
+        gpu_usages: { 'amd-vaapi': { gpu: '0.00%' } },
+        cpu_usages: { 1111740: { mem: 1.2 } },
+        service: { storage: { '/dev/shm': { free: 147.8 } } },
+        ENERGY: { Power: 42 },
+    });
+    const ergibt = feld => new Function('val', `return ${feldFormel(feld)}`)(roh);
+
+    it('schreiben gewoehnliche Namen unveraendert', () => {
+        expect(feldFormel('ENERGY.Power')).to.equal('JSON.parse(val)?.ENERGY?.Power ?? null');
+        expect(feldFormel('Time')).to.equal('JSON.parse(val)?.Time ?? null');
+        expect(feldFormel('cameras.e1pro.pid')).to.equal('JSON.parse(val)?.cameras?.e1pro?.pid ?? null');
+    });
+
+    it('setzen Klammern, wo der Schluessel kein Name ist', () => {
+        expect(feldFormel('gpu_usages.amd-vaapi.gpu'))
+            .to.equal("JSON.parse(val)?.gpu_usages?.['amd-vaapi']?.gpu ?? null");
+        expect(feldFormel('cpu_usages.1111740.mem'))
+            .to.equal("JSON.parse(val)?.cpu_usages?.['1111740']?.mem ?? null");
+        expect(feldFormel('service.storage./dev/shm.free'))
+            .to.equal("JSON.parse(val)?.service?.storage?.['/dev/shm']?.free ?? null");
+    });
+
+    it('liefern zu jedem angebotenen Feld auch einen Wert', () => {
+        expect(ergibt('ENERGY.Power')).to.equal(42);
+        expect(ergibt('cameras.e1pro.pid')).to.equal(584);
+        expect(ergibt('gpu_usages.amd-vaapi.gpu')).to.equal('0.00%');
+        expect(ergibt('cpu_usages.1111740.mem')).to.equal(1.2);
+        expect(ergibt('service.storage./dev/shm.free')).to.equal(147.8);
+    });
+
+    it('geben den Feldnamen wieder her', () => {
+        [
+            'ENERGY.Power', 'Time', 'cameras.e1pro.pid',
+            'gpu_usages.amd-vaapi.gpu', 'cpu_usages.1111740.mem',
+            'service.storage./dev/shm.free',
+        ].forEach(f => expect(feldAusFormel(feldFormel(f)), f).to.equal(f));
+    });
+
+    it('erkennen auch die Schreibweise von frueher', () => {
+        expect(feldAusFormel('JSON.parse(val).POWER')).to.equal('POWER');
+        expect(feldAusFormel('JSON.parse(val)?.ENERGY?.Power ?? null')).to.equal('ENERGY.Power');
+    });
+
+    it('schweigen, wo die Formel mehr tut als ein Feld zu holen', () => {
+        expect(feldAusFormel('JSON.parse(val).POWER === "ON"')).to.equal('');
+        expect(feldAusFormel('val * 10')).to.equal('');
+        expect(feldAusFormel('')).to.equal('');
+        /* Ein Punkt im Schluessel selbst ist im Pfadformat nicht
+           eindeutig - lieber „eigene Formel" als ein falscher Pfad. */
+        expect(feldAusFormel("JSON.parse(val)?.['a.b']?.c ?? null")).to.equal('');
+    });
+});
+
 /* Die Ausdrucks-Zerlegung laeuft ohne Browser und ohne den Detector —
    sie bekommt einen regulaeren Ausdruck und gibt Rollennamen zurueck.
    Genau deshalb laesst sie sich hier pruefen, waehrend der Rest von

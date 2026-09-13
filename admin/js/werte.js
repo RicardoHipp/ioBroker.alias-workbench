@@ -348,20 +348,57 @@ export function fmt(s) {
    `JSON.parse(val)?.ENERGY?.Power ?? null`. Beide Schreibweisen muessen
    als Feldzugriff durchgehen - sonst zeigt die Feldauswahl an einem
    Punkt, den die Werkbank selbst gebaut hat, „eigene Formel". */
-var FELDPFAD = /^JSON\.parse\(val\)\??\.([A-Za-z_$][\w$]*(?:\??\.[A-Za-z_$][\w$]*)*)(?:\s*\?\?\s*null)?$/;
+/* ---- Feldpfade: Anfang (die Vorpruefung schneidet diesen Block heraus) ---- */
+
+/* Ein Schluessel darf nur dann hinter den Punkt, wenn er ein gueltiger
+   JS-Bezeichner ist. Sonst entsteht kein Zugriff, sondern etwas anderes:
+   aus `?.DS18B20-1` wird die Rechnung `?.DS18B20 - 1?.…` (ergibt NaN),
+   aus `?./dev/shm` und `?.1111740` wird ein Syntaxfehler. Gemessen an
+   einem Frigate-Telegramm: von 233 angebotenen Feldern liessen sich so
+   nur 27 benutzen. Deshalb Klammern, wo der Name keiner ist. */
+var NAME_OK = /^[A-Za-z_$][\w$]*$/;
+
+function feldSegment(name) {
+  if (NAME_OK.test(name)) { return '?.' + name; }
+  return "?.['" + String(name).replace(/\\/g, '\\\\').replace(/'/g, "\\'") + "']";
+}
+
+/* Ein Wegstueck ist entweder `?.name` oder `?.['name']` — die zweite
+   Form auch mit doppelten Anfuehrungszeichen, falls sie jemand von Hand
+   so geschrieben hat. */
+var FELDTEIL = "\\??\\.(?:[A-Za-z_$][\\w$]*|\\[(?:'(?:[^'\\\\]|\\\\.)*'|\"(?:[^\"\\\\]|\\\\.)*\")\\])";
+var FELDPFAD = new RegExp('^JSON\\.parse\\(val\\)((?:' + FELDTEIL + ')+)(?:\\s*\\?\\?\\s*null)?$');
+var FELDSTUECK = new RegExp(FELDTEIL, 'g');
 
 export function feldAusFormel(f) {
   var m = FELDPFAD.exec(f || '');
-  /* Der Feldname selbst traegt keine Fragezeichen. */
-  return m ? m[1].split('?.').join('.') : '';
+  if (!m) { return ''; }
+  var teile = [];
+  var t;
+  FELDSTUECK.lastIndex = 0;
+  while ((t = FELDSTUECK.exec(m[1])) !== null) {
+    var s = t[0].slice(t[0].indexOf('.') + 1);
+    if (s.charAt(0) === '[') {
+      /* Nur die Fluchtzeichen zurueckdrehen, die feldSegment setzt. */
+      s = s.slice(2, -2).replace(/\\(.)/g, '$1');
+      /* Ein Punkt im Schluessel selbst laesst sich im Pfadformat von
+         `jsonFelder` nicht wieder auseinanderhalten — dann lieber
+         „eigene Formel" zeigen als einen Pfad, der nicht zurueckfuehrt. */
+      if (s.indexOf('.') > -1) { return ''; }
+    }
+    teile.push(s);
+  }
+  return teile.join('.');
 }
 
 /* Der abgesicherte Zugriff auf ein JSON-Feld. An einer Stelle, damit die
    Vorlagen-Abkuerzung und die Feldauswahl im Detail dasselbe bauen. */
 export function feldFormel(feld) {
   if (!feld) { return ''; }
-  return 'JSON.parse(val)?.' + String(feld).split('.').join('?.') + ' ?? null';
+  return 'JSON.parse(val)' + String(feld).split('.').map(feldSegment).join('') + ' ?? null';
 }
+
+/* ---- Feldpfade: Ende ---- */
 
 export function jsonFelder(id) {
   var st = S.werte[id];
