@@ -58,6 +58,17 @@ export function merkeHakenVorgabe(e) {
   return e;
 }
 
+/* Was von `common.name` als Beschriftung uebrig bleibt.
+
+   Gleicht der Name dem Zeilennamen, ist er keine eigene Beschriftung,
+   sondern die Vorgabe - dann bleibt das Feld leer. Dieselbe Regel gilt
+   in `zeileAusAlias` (werte.js) und damit an allen vier Stellen, die
+   eine Zeile aus einem Alias-Objekt bauen. */
+function beschriftungAus(name, zeilenname) {
+  var nm = txt(name);
+  return (nm && nm !== zeilenname) ? nm : '';
+}
+
 export function baueEntwurf(kanal) {
   var istAlias = (kanal.indexOf('alias.') === 0);
   var e = { kanal: kanal, states: [], want: null, wantAuto: null, alleMuster: false };
@@ -106,7 +117,18 @@ export function baueEntwurf(kanal) {
       srcW: istAlias ? schreibQuelle(o) : (c.write ? id : ''),
       f: (typeof a.read === 'string') ? a.read : '',
       fw: (typeof a.write === 'string') ? a.write : '',
-      caption: istAlias ? txt(c.name) : kanalBeschriftung(kanal, kurzName),
+      /* Dieselbe Regel wie ueberall sonst: „leer, wenn sie dem
+         Zeilennamen gleicht".
+
+         Hier stand `istAlias ? txt(c.name) : …` ohne diese Pruefung.
+         Folge: Wo `common.name` dem Punktnamen gleicht - bei fast jedem
+         Alias, den die Werkbank selbst angelegt hat -, zeigte „Alias
+         bearbeiten" den Namen und „Alias anlegen" ein leeres Feld.
+         Derselbe Alias, zwei Ansichten, zwei Antworten (U21, gemessen
+         12.09.2026). Geschrieben wurde in beiden Faellen dasselbe; zu
+         sehen war es trotzdem. */
+      caption: istAlias ? beschriftungAus(c.name, kurzName)
+                        : kanalBeschriftung(kanal, kurzName),
       manuell: false
     });
   });
@@ -1181,10 +1203,15 @@ export function bestandVorrang(e, aliasId) {
     s.unit = ist.unit;
     s.states = c.states;
     /* Die Beschriftung gehoert dem Nutzer - sie wird auch spaeter vom
-       Vorlagen-Abgleich nicht angefasst (Ricardo, 25.08.2026). Und sie
-       gilt hier auch dann, wenn sie dem Zeilennamen gleicht; die Regel
-       von `zeileAusAlias` („leer, wenn gleich") wuerde sie verwerfen. */
-    if (c.name !== undefined) { s.caption = txt(c.name); }
+       Vorlagen-Abgleich nicht angefasst (Ricardo, 25.08.2026).
+
+       Seit dem 12.09.2026 gilt hier dieselbe Regel wie ueberall sonst:
+       gleicht sie dem Zeilennamen, bleibt das Feld leer. Vorher stand
+       hier `if (c.name !== undefined) s.caption = txt(c.name)` - und
+       weil `vomAliasUebernehmen` danach laeuft und verwirft, hing es
+       an der Reihenfolge, welche der beiden Antworten man zu sehen
+       bekam (U21). */
+    if (c.name !== undefined) { s.caption = ist.caption; }
     s.f = ist.f;
     s.fw = ist.fw;
     if (q.read) { s.srcR = q.read; }

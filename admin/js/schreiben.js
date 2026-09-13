@@ -445,12 +445,31 @@ export function zuSchreiben(alleAusgaenge) {
     }).filter(Boolean);
   }
   if (!alleAusgaenge || !S.entwurf.instanzen || S.entwurf.instanzen.length < 2) { return [S.entwurf]; }
+  /* Der Kanalname wird zur Kennung - und zwei koennen dabei gleich werden.
+
+     `ausgangName` saeubert seit dem 12.09.2026 selbst (G31), und damit
+     ergeben „Licht Bar" und „Licht, Bar" beide `Licht_Bar`: der zweite
+     Kanal ueberschriebe den ersten, still und ohne Meldung. Deshalb
+     wird hier mitgezaehlt, was schon vergeben ist - der zweite bekommt
+     `_2`, der dritte `_3`. Der Anzeigename bleibt der des Kanals. */
+  var vergeben = {};
+  var eindeutig = function (name) {
+    if (!vergeben[name]) { vergeben[name] = 1; return name; }
+    var z = 1, n2;
+    do { z++; n2 = name + '_' + z; } while (vergeben[n2]);
+    vergeben[n2] = 1;
+    return n2;
+  };
   return S.entwurf.instanzen.map(function (n) {
-    if (String(n) === String(S.entwurf.instanz)) { return S.entwurf; }
+    if (String(n) === String(S.entwurf.instanz)) {
+      S.entwurf.zielName = eindeutig(S.entwurf.zielName);
+      S.entwurf.ziel = S.entwurf.zielOrdner + '.' + S.entwurf.zielName;
+      return S.entwurf;
+    }
     var v = vorschlag(S.current, S.entwurf.vorlage, n);
     if (v) {
       v.zielOrdner = S.entwurf.zielOrdner;
-      v.zielName = ausgangName(v, n);
+      v.zielName = eindeutig(ausgangName(v, n));
       v.ziel = v.zielOrdner + '.' + v.zielName;
       enumsUebertragen(v);
     }
@@ -485,6 +504,35 @@ function sammle(liste, o) {
   vorh.weg = vorh.weg && o.weg;
   vorh.ikonDazu = vorh.ikonDazu || o.ikonDazu;
   vorh.neu = vorh.neu && o.neu;
+}
+
+/* Eine selbst angelegte Aufzaehlung, die durch diesen Schreibvorgang
+   leer wird, geht mit.
+
+   Beim LOESCHEN eines Alias tut das `enumsDieLeerWuerden` seit jeher.
+   Beim blossen WECHSEL der Funktion nicht: wer „Stehlampe" waehlte,
+   schrieb, dann auf „Licht" umstellte, hinterliess ein leeres
+   `enum.functions.floor_lamp` - von der Werkbank angelegt, von der
+   Werkbank geleert, und trotzdem stehengeblieben (gemessen 12.09.2026).
+
+   Dieselbe Regel wie dort: nur was `angelegtVon` traegt, und nur wenn
+   hinterher kein Mitglied uebrig ist. Der Eintrag wandert aus der
+   Schreibliste in die Loeschliste - sonst schriebe ihn `setObject`
+   parallel zum `delObject` wieder hin.
+
+   Gerufen von `zeigeTrockenlauf` UND `schreibeObjekte`: beide bauen ihre
+   Liste selbst, und was der Trockenlauf zeigt, muss das Schreiben tun. */
+function leereEigeneEnums(liste, weg) {
+  liste.slice().forEach(function (x) {
+    if (!x.istEnum || !x.weg) { return; }
+    var o = enums[x.id];
+    if (!o || !o.native || o.native.angelegtVon !== 'alias-workbench') { return; }
+    if (((x.obj.common || {}).members || []).length) { return; }
+    liste.splice(liste.indexOf(x), 1);
+    if (!weg.some(function (y) { return y.id === x.id; })) {
+      weg.push({ id: x.id, vorgabe: true, grund: tr('enums.nowEmpty') });
+    }
+  });
 }
 
 export function zeigeTrockenlauf(alleAusgaenge) {
@@ -532,6 +580,7 @@ export function zeigeTrockenlauf(alleAusgaenge) {
       if (!weg.some(function (x) { return x.id === v.id; })) { weg.push(v); }
     });
   });
+  leereEigeneEnums(liste, weg);
   S.loeschListe = weg;
   var body = $('#dry-body');
   body.textContent = '';
@@ -632,7 +681,12 @@ export function zeigeTrockenlauf(alleAusgaenge) {
     var wch = el('div', 'ch');
     wch.appendChild(el('span', 'typ', tr('write.remove')));
     wch.appendChild(el('span', 'chip bad', tr('write.removeCount', weg.length)));
-    wch.appendChild(el('span', 'chip mut', tr('write.removeHint')));
+    /* Der Satz gilt fuer Datenpunkte. Steht eine leer gewordene
+       Aufzaehlung mit in der Liste, waere er dort falsch - die liegt
+       nicht im Alias und stand nie im Entwurf (12.09.2026). */
+    if (weg.some(function (v) { return String(v.id).indexOf('enum.') !== 0; })) {
+      wch.appendChild(el('span', 'chip mut', tr('write.removeHint')));
+    }
     wk.appendChild(wch);
     weg.forEach(function (v, i) {
       var r = el('div', 'slot');
@@ -1711,6 +1765,10 @@ export function schreibeObjekte() {
     schlecht += pruefeSchreiben(en).length;
   });
   if (schlecht) { return; }
+  /* Dieselbe Bereinigung wie im Trockenlauf - diese Liste entsteht neu,
+     und ohne den Griff hier schriebe `setObject` die leere Aufzaehlung
+     parallel zum `delObject` wieder hin. */
+  leereEigeneEnums(liste, S.loeschListe);
 
   var body = $('#dry-body');
   var offen = liste.length;

@@ -130,6 +130,7 @@
   "enums.members": "{0} drin",
   "enums.newSuffix": "neu",
   "enums.noMatch": "nichts gefunden zu „{0}“",
+  "enums.nowEmpty": "ist danach leer und wird entfernt",
   "enums.placeholder": "leer = keine Zuordnung",
   "enums.removeFrom": "wird herausgenommen",
   "enums.room": "Raum",

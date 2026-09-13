@@ -130,6 +130,7 @@
   "enums.members": "{0} in it",
   "enums.newSuffix": "new",
   "enums.noMatch": "nothing found for \"{0}\"",
+  "enums.nowEmpty": "is empty afterwards and will be removed",
   "enums.placeholder": "empty = no assignment",
   "enums.removeFrom": "is taken out",
   "enums.room": "Room",

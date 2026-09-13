@@ -7,7 +7,7 @@
 import { S } from './zustand.js';
 import { D, $, el } from './basis.js';
 import { hatPunkt, jsonVon, feldWert, kindZustaende, feldFormel } from './werte.js';
-import { eigenerKanalName, merkeHakenVorgabe } from './entwurf.js';
+import { eigenerKanalName, merkeHakenVorgabe, kennungtauglich } from './entwurf.js';
 import { tasmotaBefehle } from './mqtt.js';
 import { socket } from './verbindung.js';
 
@@ -271,7 +271,17 @@ export function setzeInstanz(text, v, n) {
 export function ausgangName(e, n) {
   if (e && e.kanal) {
     var eigen = eigenerKanalName(e.kanal + '.' + n);
-    if (eigen) { return eigen.replace(/\./g, '_'); }
+    /* Der Kanalname wird hier zur KENNUNG - also durch dieselbe
+       Saeuberung wie ueberall sonst.
+
+       Vorher stand hier nur `replace(/\./g, '_')`. Leerzeichen und
+       Kommas blieben damit stehen, und der js-controller lehnt so etwas
+       nicht ab, er saeubert still: aus dem Kanalnamen „Licht, Bar" wurde
+       `alias.0.…Licht_ Bar`, waehrend die Werkbank „Licht, Bar" anzeigte
+       und in die Aufzaehlungen eintrug - eine Kennung, die es nie gab
+       (G31, gemessen 12.09.2026). Der Name selbst bleibt unberuehrt: er
+       steht als Beschriftung im Objekt. */
+    if (eigen) { return kennungtauglich(eigen) || eigen.replace(/\./g, '_'); }
   }
   if (!e || !e.kanalnameRoh) { return 'POWER' + n; }
   return String(e.kanalnameRoh).split(e.platzhalter || '%N%').join(n);

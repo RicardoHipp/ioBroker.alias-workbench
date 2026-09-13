@@ -76,10 +76,23 @@ export function mitVorspann(pre) {
   return raus;
 }
 
+/* Wie der Baum: POWER2 vor POWER10.
+
+   `keysSorted` MUSS byteweise sortiert bleiben - die Binaersuche in
+   `mitVorspann` haengt daran. Fuer die Anzeige ist das die falsche
+   Ordnung: an einer Mehrfachsteckdose stand `POWER10` vor `POWER2`,
+   waehrend der Baum daneben richtig zaehlte (er nimmt `Intl.Collator`
+   mit `numeric: true`). Also wird hier nachsortiert, wo die Liste
+   entsteht - je Kanal ein paar Dutzend Eintraege, nicht der
+   Gesamtindex (gemessen 12.09.2026). */
+var ZEILEN_VERGLEICH = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+
 export function kindZustaende(kanal) {
   var pre = kanal + '.';
   return mitVorspann(pre).filter(function (k) {
     return S.objects[k] && S.objects[k].type === 'state';
+  }).sort(function (a, b) {
+    return ZEILEN_VERGLEICH.compare(a.slice(pre.length), b.slice(pre.length));
   });
 }
 

@@ -848,15 +848,32 @@ var warumAuf = false;
       ba.hidden = !mehr && !mehrK;
       if (mehr) {
         ba.textContent = tr('write.createAll', e.instanzen.length);
+        /* Dieselbe Rechnung wie beim Schreiben, samt Kollisionsschutz.
+
+           Zwei Kanaele koennen nach der Saeuberung denselben Namen
+           ergeben („Licht Bar" und „Licht, Bar" beide `Licht_Bar`); der
+           Schreibpfad haengt dann `_2` an. Ohne dieselbe Rechnung stuende
+           im Hinweis zweimal derselbe Name und danach etwas anderes am
+           System - genau die Luecke, die G31 beschreibt (12.09.2026). */
+        var belegt = {};
         ba.title = e.instanzen.map(function (n) {
-          return (e.zielOrdner || '') + '.' + ausgangName(e, n);
+          var nm = (String(n) === String(e.instanz)) ? e.zielName : ausgangName(e, n);
+          if (belegt[nm]) {
+            var z = 1, n2;
+            do { z++; n2 = nm + '_' + z; } while (belegt[n2]);
+            nm = n2;
+          }
+          belegt[nm] = 1;
+          return (e.zielOrdner || '') + '.' + nm;
         }).join(String.fromCharCode(10));
       } else if (mehrK) {
         ba.textContent = tr('write.createPerChannel', e.kanalGeraete.length);
         /* Im Hinweis stehen die Namen, die entstehen wuerden — sonst
            klickt man auf eine Zahl und weiss nicht, was danach dasteht. */
         ba.title = e.kanalGeraete.map(function (k) {
-          return (e.zielOrdner || '') + '.' + k.name + '   (' + k.typ + ')';
+          /* Die Kennung, nicht den Anzeigenamen - so heisst das Objekt
+             hinterher wirklich (G31). */
+          return (e.zielOrdner || '') + '.' + (k.kennung || k.name) + '   (' + k.typ + ')';
         }).join(String.fromCharCode(10));
       }
       ba.disabled = false;
