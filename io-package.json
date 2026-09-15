@@ -122,7 +122,7 @@
       "zh-cn": "轻松创建别名——生成 vis、Alexa 和设备适配器都能识别的设备。模板承担主要工作：内置模板适用于 HomeMatic 和 Tasmota，自建模板适用于其他所有设备。构建时显示实时值，写入前先行试运行。"
     },
     "authors": [
-      "Ricardo"
+      "Ricardo Hipp <ricardo.hipp@googlemail.com>"
     ],
     "platform": "Javascript/Node.js",
     "mode": "none",

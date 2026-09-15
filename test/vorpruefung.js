@@ -326,6 +326,27 @@ describe('Die Entwicklerdateien', () => {
             expect(zeile.indexOf(paket.author.email) > -1,
                 'LICENSE nennt nicht ' + paket.author.email).to.be.true;
         });
+
+        // E4048: Dieselbe Frage, dritte Stelle. Die Adresse steht an drei
+        // Orten - `package.json` unter `author`, in der Copyright-Zeile
+        // der LICENSE und in `io-package.json` unter `common.authors`.
+        // Die ersten beiden waren seit dem 12.09.2026 abgedeckt, die
+        // dritte nicht: dort stand seit dem ersten Commit nur "Ricardo".
+        // Gemeldet hat es der Bot in Issue 5; bemerkt wurde es erst nach
+        // dem Release 0.9.11 (Ricardo, 16.09.2026). Deshalb steht die
+        // Pruefung jetzt hier - eine Stelle mehr, dieselbe Regel.
+        it('nennt eine Mailadresse in io-package.json common.authors', () => {
+            const ip = JSON.parse(lies(path.join(wurzel, 'io-package.json')));
+            const autoren = ip.common.authors || [];
+            expect(autoren.length, 'common.authors ist leer').to.be.above(0);
+            autoren.forEach((a) => {
+                const t = typeof a === 'string' ? a : (a.name || '') + ' <' + (a.email || '') + '>';
+                expect(/[^\s<>@]+@[^\s<>@]+\.[^\s<>@]+/.test(t),
+                    'common.authors ohne Mailadresse: ' + t).to.be.true;
+                expect(t.indexOf(paket.author.email) > -1,
+                    'common.authors nennt nicht ' + paket.author.email + ': ' + t).to.be.true;
+            });
+        });
     });
 
     describe('.github/dependabot.yml', () => {
