@@ -41,6 +41,7 @@ export function ladeObjekte(danach) {
       if (--offen === 0) {
         S.keysSorted = Object.keys(S.objects).sort();
         S.kleinIndex = {};
+        kaputteAliaseNeu();
         ladeEnums();
         /* Erst die Einstellungen, dann die Vorlagen - sonst holt die
            Werkbank sie auch dann, wenn sie abgeschaltet sind. */
@@ -206,9 +207,39 @@ export function uebernimmObjekt(id, o) {
 /* Der Baum liest aus S.keysSorted, nicht aus S.objects. Wer einen Punkt
    hinzufuegt oder entfernt, muss den Index neu bauen — sonst kennt der
    Baum ihn nicht, egal wie oft man zeichnet. */
+/* Aliase, bei denen mindestens ein Punkt auf eine Quelle zeigt, die es
+   nicht (mehr) gibt.
+
+   Der teuerste Fehler am Alias: der js-controller merkt sich „Quelle
+   fehlt" dauerhaft und korrigiert das nie - nur loeschen und neu anlegen
+   hilft (siehe schreiben.js). Bis zum 14.09.2026 stand das nur im
+   aufgeklappten Detail und im Pruefungen-Kasten; die Zeile in der Liste
+   schwieg, weil sie „ist eine Quelle eingetragen" fragte statt „gibt es
+   sie".
+
+   Einmal gerechnet und gemerkt, nicht bei jedem Zeichnen: den Baum baut
+   die Werkbank an sechzehn Stellen neu. Gemessen am Produktivsystem:
+   531 Alias-Punkte in 5,2 ms. */
+export function kaputteAliaseNeu() {
+  var raus = {};
+  Object.keys(S.objects).forEach(function (id) {
+    if (id.indexOf('alias.') !== 0) { return; }
+    var ob = S.objects[id];
+    if (!ob || ob.type !== 'state') { return; }
+    var a = (ob.common || {}).alias;
+    if (!a || !a.id) { return; }
+    var ziele = (typeof a.id === 'string') ? [a.id] : [a.id.read, a.id.write];
+    if (!ziele.some(function (q) { return q && !S.objects[q]; })) { return; }
+    var kanal = id.split('.').slice(0, -1).join('.');
+    raus[kanal] = (raus[kanal] || 0) + 1;
+  });
+  S.aliasKaputt = raus;
+}
+
 export function indexNeu() {
   S.keysSorted = Object.keys(S.objects).sort();
   S.kleinIndex = {};
+  kaputteAliaseNeu();
   zeigeObjektzahl();
 }
 

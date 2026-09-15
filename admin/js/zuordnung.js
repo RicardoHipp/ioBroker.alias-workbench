@@ -610,7 +610,9 @@ export function uebernehmeBestand(e) {
        Gleicht die Beschriftung dem Zeilennamen, bleibt sie leer - so
        haelt es der Zweig darunter, der neue Zeilen anlegt, auch. */
     z.caption = ist.caption;
-    if (q2.read) { z.srcR = q2.read; }
+    /* Wie im Bestandsvorrang: `ist.srcR` kennt den Taster, `q2.read`
+       nicht. */
+    if (q2.read) { z.srcR = ist.srcR; }
     /* Und dieselbe Schreibregel wie im Bestandsvorrang.
 
        Hier stand die Schreibquelle nur fuer das getrennte Paar; sonst

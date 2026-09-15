@@ -14,6 +14,9 @@ export var S = {
   objects: {},
   keysSorted: [],
   kleinIndex: {},
+  /* Alias-Kanal -> Zahl der Punkte, deren Quelle es nicht (mehr) gibt.
+     Einmal beim Laden gerechnet; der Baum schlaegt nur nach. */
+  aliasKaputt: {},
   werte: {},
   current: null,
   openRow: null,

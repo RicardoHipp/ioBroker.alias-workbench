@@ -17,6 +17,7 @@ import { detailZeile } from './detail.js';
 import { rateAnzahl, rateZurueck, rateZurueckEine, rateBehalten } from './vorschlagen.js';
 import { mqttEinzeln } from './mqtt.js';
 import { zeichneErgebnis, entwurfAngefasst } from './ergebnis.js';
+import { taster } from './schreiben.js';
 
 export function berechnePlaetze(e, haupt) {
   /* --- welcher Punkt sitzt auf welchem Platz --- */
@@ -375,7 +376,22 @@ export function baueListe(host, e, pl, rateKnopf, musterBlock) {
   /* --- Zustandsliste --- */
   e.states.forEach(function (s, i) {
     var pl = platzVon[s.n];
-    var unfertig = (!s.n || !s.srcR);
+    /* „Quelle eingetragen" und „Quelle vorhanden" sind zweierlei. Bis
+       zum 14.09.2026 fragte die Zeile nur das erste - ein Alias, dessen
+       Geraet aus dem System verschwunden ist (Ricardo: der Fensterkontakt
+       zeigte noch auf den laengst abgeloesten zigbee-Adapter), stand
+       deshalb ohne jedes Zeichen da. Gesagt wurde es nur im aufgeklappten
+       Detail und im Pruefungen-Kasten. */
+    var quelleWeg = !!(s.srcR && !S.objects[s.srcR]);
+    /* Ein Taster hat keine Lesequelle, und das ist kein Mangel: das Ziel
+       sagt selbst, dass dort nichts abzuholen ist (`read: false`). Ohne
+       diese Ausnahme stand an der STOP-Zeile weiter das rote `!` mit
+       „Quelle fehlt", obwohl der Alias sich laengst schreiben liess —
+       zwei Ansichten, zwei Urteile (Ricardo, 15.09.2026, K23). */
+    var istTaster = taster(s);
+    var unfertig = (!s.n || (!s.srcR && !istTaster) || quelleWeg);
+    var wasFehlt = !s.n ? tr('list.nameMissing')
+                        : (quelleWeg ? tr('list.sourceGone') : tr('list.sourceMissing'));
     /* Angehakt, vollstaendig, aber ohne Platz im Muster. Frueher stand
        dazu in JEDER betroffenen Zeile derselbe Satz — bei einem
        Thermostat mit 42 Punkten zwanzigmal dasselbe, und die Spalte
@@ -425,7 +441,7 @@ export function baueListe(host, e, pl, rateKnopf, musterBlock) {
        Ueberfliegen wirklich sucht: wo klemmt es. */
     var mk = el('span', 'mk2 bad');
     mk.textContent = (s.on && unfertig) ? '!' : '';
-    if (mk.textContent) { mk.title = !s.n ? tr('list.nameMissing') : tr('list.sourceMissing'); }
+    if (mk.textContent) { mk.title = wasFehlt; }
     row.appendChild(mk);
 
     var n3 = el('span', 'nm3', s.n || tr('list.newPoint'));
@@ -567,7 +583,10 @@ export function baueListe(host, e, pl, rateKnopf, musterBlock) {
       n3.appendChild(fb2);
     }
     if (s.on) {
-      if (unfertig) { n3.appendChild(el('em', null, !s.n ? tr('list.nameMissing') : tr('list.sourceMissing'))); }
+      if (unfertig) { n3.appendChild(el('em', null, wasFehlt)); }
+      /* Beim Taster gehoert hin, WARUM keine Lesequelle dasteht — sonst
+         sieht die leere Spalte aus wie ein vergessener Eintrag. */
+      else if (istTaster) { n3.appendChild(el('em', null, tr('list.buttonOnly'))); }
       else if (pl && pl !== s.n && platzAnzahl[pl] === 1) {
         var pe = el('em', null, pl);
         pe.title = tr('pattern.slotName', pl, musterName(e.want) || e.want || '?');

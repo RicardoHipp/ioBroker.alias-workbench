@@ -11,7 +11,7 @@ import { katalogFehlt } from './katalog.js';
 import { funktionsAuswahl, kennungZuFunktion } from './aufzaehlungen.js';
 import { musterVon, platzFuerRolle, typenFuerRolle } from './erkennung.js';
 import { musterZeile, musterName } from './musternamen.js';
-import { ladeVorlagen, aendereVorlagen, setzeMeta, pruefeVorlage, hinweisTaugt, INSTANZ_ID } from './vorlagen.js';
+import { ladeVorlagen, aendereVorlagen, setzeMeta, pruefeVorlage, wendeAn, hinweisTaugt, INSTANZ_ID } from './vorlagen.js';
 import { kindZustaende, hatPunkt, feldAusFormel } from './werte.js';
 import { opt } from './entwurf.js';
 import { zeichneErgebnis } from './ergebnis.js';
@@ -287,7 +287,17 @@ export function zeichneVorlagenBlatt(host) {
      Musterschluessel. musterwahl.js loest es seit laengerem so. */
   (D ? Object.keys(D.patterns).sort() : []).forEach(function (m) {
     var typ = D.patterns[m].type || m;
-    var o = opt(typ, musterZeile(m));
+    /* Beschriftet wird nach dem TYP, nicht nach dem Musterschluessel.
+
+       Der Wert stand seit dem 11.09.2026 richtig da, die Beschriftung
+       nicht: `musterZeile(m)` schlug den Schluessel nach, und fuer die
+       drei Muster, die anders heissen als ihr Typ (`blinds`,
+       `mediaPlayer`, `levelSlider`), kennt der Admin keinen Beinamen.
+       Im Feld stand am Rollladen deshalb „blinds" statt „Jalousien ·
+       blind" - der Musterschluessel, den der Nutzer nirgends sonst
+       sieht. Die Musterwahl (musterwahl.js) geht seit jeher ueber den
+       Typ. Gefunden produktiv am 15.09.2026 (I37). */
+    var o = opt(typ, musterZeile(typ));
     if (typ === v.geraetetyp) { o.selected = true; }
     st.appendChild(o);
   });
@@ -465,6 +475,18 @@ export function zeichneVorlagenBlatt(host) {
     ? probelauf(ohneUnterstrich(v), v._quelle === 'benutzer') : [];
   var gew = treffer.filter(function (t) { return t.gewinnt; }).length;
   ph2.appendChild(el('span', 'chip ' + (gew ? 'ok' : 'warn'), tr('tpls.hits', treffer.length, gew)));
+  /* „Getroffen" heisst nur, dass die Erkennung anspringt. Wie oft die
+     Vorlage danach gar nicht antreten kann, weil eine Pflichtzeile ihre
+     Quelle nicht findet, gehoert daneben — das ist die Zahl, an der man
+     beim Bauen einer Vorlage merkt, dass ihre Erkennung breiter greift
+     als ihre Zeilen. Neutral gefaerbt: eine Spezialvorlage SOLL auf die
+     meisten Geraete nicht passen. */
+  var passtNicht = treffer.filter(function (t) { return !t.greift; }).length;
+  if (passtNicht) {
+    var cl = el('span', 'chip mut', tr('tpls.fitsNot', passtNicht));
+    cl.title = tr('tpls.needsRowHint');
+    ph2.appendChild(cl);
+  }
   pk.appendChild(ph2);
   var pb2 = el('div');
   pb2.style.padding = '9px 12px 11px';
@@ -473,14 +495,35 @@ export function zeichneVorlagenBlatt(host) {
   } else {
     treffer.slice(0, 40).forEach(function (t) {
       var r = el('div', 'slot');
-      r.style.gridTemplateColumns = '1fr 110px 150px';
+      /* Die Kennung darf schrumpfen, die Marke rechts nicht: ihr Text
+         ist nicht umbrechbar (`.chip` steht auf nowrap) und wuerde in
+         einer festen Spalte abgeschnitten. */
+      r.style.gridTemplateColumns = 'minmax(0,1fr) 72px 64px auto';
       var idl = el('span', 'sn', t.id);
       idl.style.fontFamily = 'var(--mono)';
+      idl.style.wordBreak = 'break-all';
       r.appendChild(idl);
       r.appendChild(el('span', 'rx', tr('tpls.evidence', t.eigen.belege)));
-      r.appendChild(el('span', 'chip ' + (t.gewinnt ? 'ok' : 'bad'),
-        t.gewinnt ? (t.gegner ? tr('tpls.beats', textIn(t.gegner.vorlage.name, sprache)) : tr('tpls.onlyOne'))
-                  : tr('tpls.losesTo', textIn(t.gegner.vorlage.name, sprache))));
+      /* Wie viele Zeilen dort wirklich entstehen. Die Belege sagen, wie
+         gut die Erkennung greift; erst die Zeilen sagen, was dabei
+         herauskommt. */
+      r.appendChild(el('span', 'rx',
+        t.zeilen === 1 ? tr('tpls.rowBuilt') : tr('tpls.rowsBuilt', t.zeilen)));
+      /* Drei Ausgaenge, nicht zwei: gewonnen und getragen, duenn
+         gewonnen, verloren. Der mittlere sah ohne eigene Marke aus wie
+         ein Erfolg. */
+      if (!t.greift) {
+        /* Passt hier nicht — und es steht dabei, woran es liegt. Ohne
+           den Namen der Zeile raet man, welches Feld am Geraet fehlt. */
+        var cn = el('span', 'chip bad', t.fehlendeZeile
+          ? tr('tpls.needsRow', t.fehlendeZeile) : tr('tpls.buildsNone'));
+        cn.title = tr('tpls.needsRowHint');
+        r.appendChild(cn);
+      } else {
+        r.appendChild(el('span', 'chip ' + (t.gewinnt ? 'ok' : 'bad'),
+          t.gewinnt ? (t.gegner ? tr('tpls.beats', textIn(t.gegner.vorlage.name, sprache)) : tr('tpls.onlyOne'))
+                    : tr('tpls.losesTo', textIn(t.gegner.vorlage.name, sprache))));
+      }
       pb2.appendChild(r);
     });
     if (treffer.length > 40) {
@@ -1540,16 +1583,41 @@ var probeGeholt = {};
 
 function probeWerteHolen(v, danach) {
   var erk = v.erkennung || {};
-  if (!erk.inhalt) { return false; }
   var ph = v.mehrfach ? (v.mehrfach.platzhalter || '%N%') : null;
+
+  /* Nicht nur die Erkennungspunkte, sondern auch die, aus denen die
+     ZEILEN lesen — samt ihrer Ersatzwege.
+
+     Sonst urteilt der Probelauf ueber Felder in Werten, die er gar nicht
+     hat: am `Brenner` lag `tele.STATE` im Speicher und `tele.SENSOR`
+     nicht, und derselbe Probelauf meldete je nachdem, was man vorher
+     angeklickt hatte, „1 statt 11" oder „1 statt 20" (Ricardo,
+     14.09.2026). Eine Zahl, die von der Vorgeschichte abhaengt, ist
+     keine. Hier soll dasselbe herauskommen wie beim „Alias anlegen",
+     und dort sind alle Werte des Geraets geladen. */
+  var pfade = Object.keys(erk.inhalt || {});
+  (v.zustaende || []).forEach(function (z) {
+    if (z.absolut) { return; }
+    if (z.lesen) { pfade.push(z.lesen); }
+    var sonst = z.lesenSonst;
+    if (!sonst) { return; }
+    (Array.isArray(sonst) ? sonst : [sonst]).forEach(function (x) {
+      var pf = (typeof x === 'string') ? x : x.punkt;
+      if (pf) { pfade.push(pf); }
+    });
+  });
+  pfade = pfade.filter(function (x, i, a) { return x && a.indexOf(x) === i; });
+  if (!pfade.length) { return false; }
+
   var fehlt = [];
   kandidatenFuer(v).forEach(function (kanal) {
-    Object.keys(erk.inhalt).forEach(function (p0) {
+    pfade.forEach(function (p0) {
       var pfad = ph ? String(p0).split(ph).join('1') : p0;
       var id = hatPunkt(kanal, pfad);
       if (id && S.werte[id] === undefined && !probeGeholt[id]) { fehlt.push(id); }
     });
   });
+  fehlt = fehlt.filter(function (x, i, a) { return a.indexOf(x) === i; });
   if (!fehlt.length) { return false; }
   var offen = fehlt.length;
   fehlt.forEach(function (id) {
@@ -1581,19 +1649,57 @@ export function probelauf(vorlage, alsEigene) {
 
     /* Wer gewinnt hier heute, mit dem Bestand wie er ist? Beim
        Aktualisieren ist das oft die Vorlage selbst — dann wechselt
-       nichts, auch wenn sie den Vergleich gegen alle anderen gewinnt. */
-    var jetzt = null, andere = null;
+       nichts, auch wenn sie den Vergleich gegen alle anderen gewinnt.
+
+       Die Punktbeste ist nicht zwingend die Gewinnerin: greift sie am
+       Geraet nicht, ruecken die naechsten nach — genau wie in
+       `vorschlag`. Vorher stand hier nur DIE eine punktbeste andere, und
+       griff die nicht, erklaerte sich die gepruefte Vorlage zur
+       Siegerin. An `PC_Bastelzimmer` meldete deshalb „Reiner Messpunkt"
+       einen Sieg, obwohl `tasmota-steckdose` dazwischenliegt und dort
+       wirklich greift (Ricardo, 14.09.2026). */
+    var rang = [];
     S.VORLAGEN.forEach(function (v) {
       var x = pruefeVorlage(v, p);
-      if (!x.passt) { return; }
-      if (!jetzt || x.punkte > jetzt.punkte) { jetzt = x; }
-      if (v.id !== neu.id && (!andere || x.punkte > andere.punkte)) { andere = x; }
+      if (x.passt) { rang.push(x); }
     });
+    rang.sort(function (a, b) { return b.punkte - a.punkte; });
+    var ersteGreifende = function (ausser) {
+      for (var i = 0; i < rang.length; i++) {
+        if (ausser && rang[i].vorlage.id === ausser) { continue; }
+        var x = wendeAn(rang[i].vorlage, p, rang[i].gruende, rang[i].instanz, true);
+        if (x && x.states.length && !x.pflichtFehlt) { return rang[i]; }
+      }
+      return null;
+    };
+    var jetzt = ersteGreifende(null);
+    var andere = ersteGreifende(neu.id);
+    /* Gewinnen ist nicht dasselbe wie greifen.
+
+       `pruefeVorlage` fragt, ob die genannten Punkte da sind; `wendeAn`
+       braucht bestimmte Felder darin. Eine Vorlage, deren Zeilen
+       `SML.Total_Summe` lesen, gewinnt an jeder Tasmota mit
+       `tele.SENSOR` — und baut dort dann keine einzige Zeile.
+
+       Das laesst sich nicht vorhersagen, ohne zu raten. Also wird es
+       gemessen: derselbe Aufruf, der beim Anlegen auch laeuft. Kostet
+       nichts, weil die Kandidatenliste ohnehin schon durchgegangen
+       wird (gefunden 14.09.2026, C3). */
+    /* Mit `auchOhneTreffer`, damit auch der gescheiterte Fall zurueckkommt
+       — sonst wuesste man nur „null", nicht warum. */
+    var gebaut = wendeAn(neu, p, t.gruende, t.instanz, true);
+    var greift = !!(gebaut && gebaut.states.length && !gebaut.pflichtFehlt);
+
+    /* Gewonnen hat nur, wer hier auch greift — und `andere` ist bereits
+       die beste, die das tut. */
+    var vorn = greift && (!andere || t.punkte > andere.punkte);
+
     raus.push({
       id: p, eigen: t, gegner: andere,
-      gewinnt: !andere || t.punkte > andere.punkte,
-      wechsel: !!(jetzt && jetzt.vorlage.id !== neu.id &&
-                  (!andere || t.punkte > andere.punkte))
+      greift: greift, fehlendeZeile: gebaut ? gebaut.pflichtFehlt : null,
+      zeilen: gebaut ? gebaut.states.length : 0,
+      gewinnt: vorn,
+      wechsel: !!(jetzt && jetzt.vorlage.id !== neu.id && vorn)
     });
   });
   return raus;
@@ -1738,7 +1844,17 @@ export function zeichneVorlagenDialog() {
      "- keiner -", obwohl "blind" gesetzt war. */
   (D ? Object.keys(D.patterns).sort() : []).forEach(function (m) {
     var typ = D.patterns[m].type || m;
-    var o = opt(typ, musterZeile(m));
+    /* Beschriftet wird nach dem TYP, nicht nach dem Musterschluessel.
+
+       Der Wert stand seit dem 11.09.2026 richtig da, die Beschriftung
+       nicht: `musterZeile(m)` schlug den Schluessel nach, und fuer die
+       drei Muster, die anders heissen als ihr Typ (`blinds`,
+       `mediaPlayer`, `levelSlider`), kennt der Admin keinen Beinamen.
+       Im Feld stand am Rollladen deshalb „blinds" statt „Jalousien ·
+       blind" - der Musterschluessel, den der Nutzer nirgends sonst
+       sieht. Die Musterwahl (musterwahl.js) geht seit jeher ueber den
+       Typ. Gefunden produktiv am 15.09.2026 (I37). */
+    var o = opt(typ, musterZeile(typ));
     if (typ === k.geraetetyp) { o.selected = true; }
     st.appendChild(o);
   });
@@ -2026,6 +2142,7 @@ export function zeichneVorlagenDialog() {
       r.style.gridTemplateColumns = '1fr 150px 130px';
       var idl = el('span', 'sn', t.id);
       idl.style.fontFamily = 'var(--mono)';
+      idl.style.wordBreak = 'break-all';
       if (t.id === (z.e.kanal || '')) { idl.style.fontWeight = '700'; }
       r.appendChild(idl);
       r.appendChild(el('span', 'rx', tr('tpls.evidence', t.eigen.belege)));

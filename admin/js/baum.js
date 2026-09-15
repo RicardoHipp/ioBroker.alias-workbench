@@ -412,6 +412,14 @@ function renderKinder(knoten, filter, tiefe) {
        ueberschreibt ihn die Zeile darueber wieder. */
     if (leer) { d.title = (d.title ? d.title + '  ·  ' : '') + tr('tree.emptyNode'); }
     if (waehlbar) {
+      /* Ein Alias, dessen Quelle es nicht mehr gibt, faellt sonst nur
+         auf, wenn man ihn anklickt und die Zeile aufklappt. Die Menge
+         steht fertig in S.aliasKaputt - hier wird nur nachgeschlagen. */
+      if (S.aliasKaputt[k.id]) {
+        var kp = el('span', 'kaputt', '!');
+        kp.title = tr('tree.sourceGone', S.aliasKaputt[k.id]);
+        d.appendChild(kp);
+      }
       if (wohlGeraet(k)) {
         var pk = el('span', 'geraetepunkt', '●');
         pk.title = tr('tree.looksLikeDevice');

@@ -462,7 +462,8 @@ export function schreibZiel(z, kanal, auf) {
    einzige Zeile ein Fehlgriff. */
 export function wendeAn(v, kanal, gruende, instanz, auchOhneTreffer) {
   var auf = function (t) { return setzeInstanz(t, v, instanz); };
-  var e = { kanal: kanal, states: [], want: v.geraetetyp, wantAuto: v.geraetetyp,
+  var e = { kanal: kanal, states: [], pflichtFehlt: null,
+            want: v.geraetetyp, wantAuto: v.geraetetyp,
             alleMuster: false, vorschlag: true, roh: false,
             vorlage: v.id, vorlageVersion: v.version, tplName: sprachtext(v.name),
             grund: (gruende || []).slice(), uebersprungen: [],
@@ -542,6 +543,7 @@ export function wendeAn(v, kanal, gruende, instanz, auchOhneTreffer) {
       var ziel0 = schreibZiel(z, kanal, auf);
       if (!ziel0) {
         e.uebersprungen.push(tr('tpl.skippedSource', z.name, auf(z.schreiben)));
+        if (!z.optional) { e.pflichtFehlt = z.name; }
         return;
       }
       e.states.push({
@@ -563,6 +565,18 @@ export function wendeAn(v, kanal, gruende, instanz, auchOhneTreffer) {
       e.uebersprungen.push(gescheitert.length > 1
         ? tr('tpl.skippedNowhere', z.name, gescheitert.join(tr('tpl.nor')))
         : tr('tpl.skippedSource', z.name, gescheitert[0] || auf(z.lesen)));
+      /* Eine Pflichtzeile, die ihre Quelle nicht findet, heisst: die
+         Vorlage passt zu diesem Geraet nicht. Die Erkennung sieht das
+         nicht — sie prueft, ob die genannten *Punkte* da sind, nicht ob
+         die Zeilen ihre *Felder darin* finden. Genau daran gewann eine
+         von Hand gebaute Stromzaehler-Vorlage an siebzehn Tasmotas und
+         lieferte dort eine einzige, obendrein abgewaehlte Zeile, waehrend
+         die Steckdosen-Vorlage elf gebaut haette (Ricardo, 14.09.2026).
+
+         Optionale Zeilen zaehlen nicht: sie duerfen fehlen, dafuer sind
+         sie optional. Gemessen am Testsystem betrifft die Regel keine
+         einzige der fuenfzehn uebrigen Vorlagen. */
+      if (!z.optional) { e.pflichtFehlt = z.name; }
       return;
     }
 
@@ -624,8 +638,33 @@ export function wendeAn(v, kanal, gruende, instanz, auchOhneTreffer) {
     });
   });
 
-  return (e.states.length || auchOhneTreffer) ? e : null;
+  /* `auchOhneTreffer` gilt beim Von-Hand-Waehlen: wer eine Vorlage
+     ausdruecklich auswaehlt, bekommt sie auch dann, wenn eine
+     Pflichtzeile fehlt — samt der Liste in „uebersprungen". */
+  return ((e.states.length && !e.pflichtFehlt) || auchOhneTreffer) ? e : null;
 }
+
+/* ---- Rueckfall: Anfang ---------------------------------------------
+
+   Die erste Vorlage nehmen, die wirklich etwas baut.
+
+   Bewusst ohne jede Abhaengigkeit: `anwenden` wird hereingereicht. So
+   laesst sich die Reihenfolge ohne Browser und ohne Objektdatenbank
+   pruefen, und test/vorpruefung.js schneidet diesen Block heraus.
+
+   `uebergangen` sammelt die Vorlagen, die vorne lagen und trotzdem
+   nichts ergaben — sie gehoeren ins „Warum", sonst wundert man sich,
+   warum die punktbeste nicht griff. */
+export function ersteAnwendbare(treffer, anwenden) {
+  var uebergangen = [];
+  for (var i = 0; i < treffer.length; i++) {
+    var e = anwenden(treffer[i]);
+    if (e) { return { gewaehlt: treffer[i], e: e, uebergangen: uebergangen }; }
+    uebergangen.push(treffer[i]);
+  }
+  return { gewaehlt: null, e: null, uebergangen: uebergangen };
+}
+/* ---- Rueckfall: Ende ---------------------------------------------- */
 
 /* Beste Vorlage suchen und anwenden. */
 export function vorschlag(kanal, vorlagenId, instanz) {
@@ -634,20 +673,50 @@ export function vorschlag(kanal, vorlagenId, instanz) {
   var alle = S.VORLAGEN.map(function (v) { return pruefeVorlage(v, kanal, instanz); });
   var treffer = alle.filter(function (t) { return t.passt; });
 
-  var gewaehlt = null;
+  var gewaehlt = null, e = null, uebergangen = [];
   if (vorlagenId) {
     /* Von Hand gewaehlt gilt auch, wenn die Erkennung nicht anspringt —
-       die Verarbeitung laesst dann weg, wofuer die Quelle fehlt. */
+       die Verarbeitung laesst dann weg, wofuer die Quelle fehlt. Hier
+       gibt es auch keinen Rueckfall: wer eine Vorlage ausdruecklich
+       auswaehlt, meint genau diese und keine andere. */
     alle.forEach(function (t) { if (t.vorlage.id === vorlagenId) { gewaehlt = t; } });
+    if (gewaehlt) {
+      e = wendeAn(gewaehlt.vorlage, kanal, gewaehlt.gruende, gewaehlt.instanz, true);
+    }
   }
   if (!gewaehlt) {
     if (!treffer.length) { return null; }
     treffer.sort(function (a, b) { return b.punkte - a.punkte; });
-    gewaehlt = treffer[0];
+
+    /* Die Erkennung und das Anwenden stellen zwei verschiedene Fragen.
+       `pruefeVorlage` prueft, ob die genannten *Punkte* da sind;
+       `wendeAn` braucht bestimmte *Felder darin*. Eine Vorlage kann die
+       Erkennung also gewinnen und danach keine einzige Zeile bauen —
+       `wendeAn` gibt dann `null` zurueck.
+
+       Vorher war an dieser Stelle Schluss: `treffer[0]` anwenden, und
+       wenn das nichts ergab, gar keine Vorlage. Am Geraet stand dann
+       „Keine Vorlage erkannt", waehrend die Auswahlliste daneben
+       „Tasmota-Steckdose v6 passt" meldete — zwei Urteile ueber zwei
+       verschiedene Fragen, nebeneinander in derselben Ansicht
+       (gefunden 14.09.2026 am Testsystem, C3).
+
+       Jetzt kommt die naechstbeste an die Reihe. Was uebergangen wurde,
+       steht danach im „Warum" — sonst wundert man sich, warum
+       ausgerechnet die eigene Vorlage nicht griff. */
+    var reihe = ersteAnwendbare(treffer, function (t) {
+      return wendeAn(t.vorlage, kanal, t.gruende, t.instanz, false);
+    });
+    if (!reihe.gewaehlt) { return null; }
+    gewaehlt = reihe.gewaehlt;
+    e = reihe.e;
+    uebergangen = reihe.uebergangen;
   }
 
-  var e = wendeAn(gewaehlt.vorlage, kanal, gewaehlt.gruende, gewaehlt.instanz, !!vorlagenId);
   if (!e) { return null; }
+  uebergangen.forEach(function (t) {
+    e.grund.push(tr('tpl.skippedEmpty', sprachtext(t.vorlage.name)));
+  });
   if (!vorlagenId && gewaehlt.passt) {
     var gleichAuf = treffer.filter(function (t) { return t.punkte === gewaehlt.punkte; });
     var ohneHinweis = !gewaehlt.namenstreffer;

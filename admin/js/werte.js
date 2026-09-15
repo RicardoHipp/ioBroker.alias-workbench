@@ -166,7 +166,12 @@ export function zeileAusAlias(o, zeilenname) {
     unit: c.unit || '',
     states: c.states || undefined,
     wr: !!c.write,
-    srcR: q.read || '',
+    /* Ein Taster meldet nichts, und der Alias sagt es mit `read: false`.
+       Die Kennung steht trotzdem in `alias.id` — ioBroker verlangt sie —,
+       aber als Lesequelle gilt sie nicht: sonst zeigte „Alias bearbeiten"
+       eine Quelle, die „Alias anlegen" nie eingetragen hat, und beim
+       naechsten Aktualisieren kippte `read` still auf `true` zurueck. */
+    srcR: (c.read === false && q.einfach) ? '' : (q.read || ''),
     srcW: schreibQuelle(o),
     f: (typeof a.read === 'string') ? a.read : '',
     fw: (typeof a.write === 'string') ? a.write : '',
@@ -415,5 +420,53 @@ export function jsonFelder(id) {
       else { raus.push(p); }
     });
   })(o, '', 0);
+  return raus;
+}
+
+
+/* ---- Was das Ziel kann ---------------------------------------------
+
+   Die Werkbank schreibt auf fremde Punkte und liest aus fremden Punkten.
+   Ob die koennen, was von ihnen verlangt wird, stand nirgends: weder
+   `common.read` noch `common.write` noch der Typ des Ziels wurden je
+   angesehen (Ricardo, 15.09.2026).
+
+   Drei Arten, wie es auseinandergeht, alle drei still:
+
+     `formelBlind`  Die Schreibformel liefert Text, das Ziel nimmt keinen.
+                    Der js-controller rechnet ihn auf den Zieltyp zurueck,
+                    die Formel war umsonst. Aus `"ON"` wird wieder `true`.
+     `nichtSchreibbar`  Das Ziel traegt `write: false`. ioBroker laesst den
+                    Schreibvorgang trotzdem durch — gemessen —, der Adapter
+                    dahinter reicht ihn aber nicht ans Geraet weiter.
+                    Ein stiller Blindgaenger.
+     `meldetNichts` Die Lesequelle traegt `read: false`. Ein Tastendruck
+                    hat keinen Zustand; gelesen wird dort nie etwas.
+
+   Gibt eine Liste zurueck, nicht ein Urteil — wer sie anzeigt, entscheidet
+   ueber die Schaerfe. */
+export function zielKann(s) {
+  var raus = [];
+  if (!s) { return raus; }
+
+  if (s.srcW) {
+    var w = S.objects[s.srcW];
+    var wc = (w && w.common) || null;
+    if (wc) {
+      if (wc.write === false) { raus.push({ art: 'nichtSchreibbar', punkt: s.srcW }); }
+      /* Anfuehrungszeichen im Ausdruck sind der Beleg, dass die Formel Text
+         liefert; ohne sie rechnet sie mit Zahlen oder Wahrheitswerten und
+         passt zum Ziel. */
+      if (s.fw && /['"`]/.test(s.fw) && (wc.type === 'boolean' || wc.type === 'number')) {
+        raus.push({ art: 'formelBlind', punkt: s.srcW, typ: wc.type });
+      }
+    }
+  }
+
+  if (s.srcR) {
+    var r = S.objects[s.srcR];
+    var rc = (r && r.common) || null;
+    if (rc && rc.read === false) { raus.push({ art: 'meldetNichts', punkt: s.srcR }); }
+  }
   return raus;
 }

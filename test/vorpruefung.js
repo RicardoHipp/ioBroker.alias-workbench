@@ -808,3 +808,75 @@ describe('Der eingebackene Detektor', () => {
             .to.equal(paket.version);
     });
 });
+
+/* Der Rueckfall auf die naechstbeste Vorlage.
+
+   Die Erkennung und das Anwenden stellen zwei verschiedene Fragen:
+   `pruefeVorlage` prueft, ob die genannten Punkte da sind, `wendeAn`
+   braucht bestimmte Felder darin. Eine Vorlage kann die Erkennung also
+   gewinnen und danach keine einzige Zeile bauen. Vorher war dann
+   Schluss - am Geraet stand „Keine Vorlage erkannt", waehrend die
+   Auswahlliste daneben „passt" meldete (gefunden 14.09.2026, C3).
+
+   `ersteAnwendbare` nimmt `anwenden` als Argument entgegen, damit genau
+   diese Reihenfolge ohne Browser und ohne Objektdatenbank pruefbar ist. */
+describe('Der Rueckfall auf die naechstbeste Vorlage', () => {
+    const quelle = fs.readFileSync(path.join(jsDir, 'vorlagen.js'), 'utf8');
+    const anfang = quelle.indexOf('/* ---- Rueckfall: Anfang');
+    const ende = quelle.indexOf('/* ---- Rueckfall: Ende');
+    expect(anfang, 'Anfangsmarke in vorlagen.js').to.be.above(-1);
+    expect(ende, 'Endmarke in vorlagen.js').to.be.above(anfang);
+    const code = quelle.slice(anfang, ende).split('export function').join('function');
+    const { ersteAnwendbare } = new Function(code + '; return { ersteAnwendbare };')();
+
+    /* Drei Treffer, absteigend nach Punkten - so kommen sie aus
+       `vorschlag`. Welche etwas baut, sagt `baut`. */
+    const treffer = [
+        { name: 'eigene', baut: false },
+        { name: 'steckdose', baut: true },
+        { name: 'lampe', baut: true },
+    ];
+    const anwenden = t => (t.baut ? { states: [{ n: 'SET' }] } : null);
+
+    it('nimmt die punktbeste, wenn sie etwas baut', () => {
+        const r = ersteAnwendbare([{ name: 'steckdose', baut: true }].concat(treffer), anwenden);
+        expect(r.gewaehlt.name).to.equal('steckdose');
+        expect(r.uebergangen).to.be.empty;
+    });
+
+    it('geht weiter, wenn die punktbeste nichts baut', () => {
+        const r = ersteAnwendbare(treffer, anwenden);
+        expect(r.gewaehlt.name).to.equal('steckdose');
+        expect(r.e).to.not.equal(null);
+    });
+
+    it('merkt sich, was es uebergangen hat - in der Reihenfolge', () => {
+        const r = ersteAnwendbare(
+            [{ name: 'a', baut: false }, { name: 'b', baut: false }, { name: 'c', baut: true }],
+            anwenden);
+        expect(r.uebergangen.map(t => t.name)).to.deep.equal(['a', 'b']);
+    });
+
+    it('gibt auf, wenn keine einzige etwas baut', () => {
+        const r = ersteAnwendbare([{ name: 'a', baut: false }], anwenden);
+        expect(r.gewaehlt).to.equal(null);
+        expect(r.e).to.equal(null);
+        expect(r.uebergangen).to.have.lengthOf(1);
+    });
+
+    it('fragt nicht weiter, sobald eine gegriffen hat', () => {
+        const gefragt = [];
+        const r = ersteAnwendbare(treffer, t => {
+            gefragt.push(t.name);
+            return t.baut ? { states: [] } : null;
+        });
+        expect(r.gewaehlt.name).to.equal('steckdose');
+        expect(gefragt).to.deep.equal(['eigene', 'steckdose']);
+    });
+
+    it('kommt mit einer leeren Liste zurecht', () => {
+        const r = ersteAnwendbare([], anwenden);
+        expect(r.gewaehlt).to.equal(null);
+        expect(r.uebergangen).to.be.empty;
+    });
+});

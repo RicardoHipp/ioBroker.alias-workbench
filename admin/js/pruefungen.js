@@ -1,9 +1,9 @@
-/* Die sieben Pruefungen - laufen immer mit, fassen nichts an. */
+/* Die acht Pruefungen - laufen immer mit, fassen nichts an. */
 
 import { S } from './zustand.js';
 import { $, el } from './basis.js';
 import { tr } from './sprache.js';
-import { wertVon } from './werte.js';
+import { wertVon, zielKann } from './werte.js';
 import './erkennung.js';
 import { sofortRueckmeldung, mqttEinstellung } from './mqtt.js';
 
@@ -94,6 +94,31 @@ export function pruefungSenden(e) {
 }
 
 
+/* Kann das Ziel, was der Punkt von ihm verlangt?
+
+   Drei Fragen an fremde Objekte, die die Werkbank vorher nie gestellt hat:
+   Nimmt das Schreibziel den Wert der Formel an? Laesst es sich ueberhaupt
+   beschreiben? Meldet die Lesequelle etwas? Was dabei schiefgeht, faellt
+   nirgends auf — geschrieben wird trotzdem, gelesen auch, es kommt nur
+   nichts dabei heraus (Ricardo, 15.09.2026).
+
+   Hinweis, nicht Fehler: Ob am Ende wirklich nichts passiert, entscheidet
+   der Adapter hinter dem Punkt, und den kennt die Werkbank nicht. */
+export function pruefungZielKann(e) {
+  var treffer = [];
+  e.states.forEach(function (s) {
+    if (!s.on) { return; }
+    zielKann(s).forEach(function (x) { treffer.push({ n: s.n, art: x.art, typ: x.typ }); });
+  });
+  if (!treffer.length) { return { s: 'ok', t: tr('check.targetCan'), d: tr('check.targetCanFine') }; }
+  var text = treffer.map(function (x) {
+    if (x.art === 'formelBlind') { return tr('check.targetVoidFormula', x.n, x.typ); }
+    if (x.art === 'nichtSchreibbar') { return tr('check.targetNoWrite', x.n); }
+    return tr('check.targetNoRead', x.n);
+  }).join(', ');
+  return { s: 'warn', t: tr('check.targetCan'), d: text };
+}
+
 export function baueChecks(e, haupt, pflichtFehlt) {
   var an = e.states.filter(function (s) { return s.on; });
   var ohneQuelle = an.filter(function (s) { return s.srcR && !S.objects[s.srcR]; });
@@ -113,6 +138,7 @@ export function baueChecks(e, haupt, pflichtFehlt) {
             : haupt.type) : tr('check.noPatternFits') },
     pruefungSenden(e),
     pruefungRueckmeldung(e),
+    pruefungZielKann(e),
     pruefungDopplung(e)
   ];
 

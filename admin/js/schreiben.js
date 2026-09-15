@@ -28,6 +28,7 @@ import { zeichneErgebnis } from './ergebnis.js';
 import { uebernehmeBestand , enumAenderungen, setzeZiel } from './zuordnung.js';
 
 import { mqttEinzelnStill } from './mqtt.js';
+import { sucheInSkripten, sucheInSkriptenMehrere, skriptListe } from './verwendung.js';
 
 import { rateBehalten } from './vorschlagen.js';
 
@@ -270,20 +271,33 @@ export function baueObjekte(e) {
   } });
 
   e.states.forEach(function (s) {
-    if (!s.on || !s.n || !s.srcR) { return; }
+    if (!s.on || !s.n) { return; }
+    /* Ohne Lesequelle faellt die Zeile heraus - ausser sie ist ein
+       Taster, der nur schreibt (K23). */
+    if (!s.srcR && !taster(s)) { return; }
     var id = ziel + '.' + s.n;
 
     var alias = {};
-    if (s.srcW && s.srcW !== s.srcR) { alias.id = { read: s.srcR, write: s.srcW }; }
+    /* ioBroker verlangt immer eine `alias.id`; ein reines `{ write: … }`
+       weist der js-controller ab („Alias id is invalid: The id is
+       empty!", gemessen 15.09.2026). Beim Taster steht deshalb das
+       Schreibziel darin, und `common.read: false` sagt, dass dort nichts
+       abzuholen ist. */
+    if (!s.srcR) { alias.id = s.srcW; }
+    else if (s.srcW && s.srcW !== s.srcR) { alias.id = { read: s.srcR, write: s.srcW }; }
     else { alias.id = s.srcR; }
     if (s.f)  { alias.read = s.f; }
     if (s.fw && s.srcW) { alias.write = s.fw; }
 
+    /* Ein Taster meldet nichts — dann sagt der Alias-Punkt das auch.
+       Sonst malen vis, Alexa und matter einen Kippschalter, der ewig auf
+       „aus" steht, statt eines Knopfes. */
+    var istTaster = taster(s);
     var common = {
       name: s.caption || s.n,
       role: s.role,
       type: s.typ || 'mixed',
-      read: true,
+      read: !istTaster,
       write: !!s.srcW,
       alias: alias
     };
@@ -349,6 +363,19 @@ export function verwaiste(e) {
 }
 
 /* Was dem Schreiben im Weg steht. */
+/* Ein Taster: keine Lesequelle, ein Schreibziel, und das Ziel sagt
+   selbst, dass es nichts zu melden hat (`common.read === false`).
+
+   Nicht ueber die Rolle entschieden: `button.stop` ist Konvention, aber
+   nur der Adapter weiss wirklich, ob am Punkt etwas abzulesen ist. An
+   `hm-rpc.2.NEQ1795694.1.STOP` steht `read: false` — hingeschrieben von
+   hm-rpc, nicht von uns. */
+export function taster(s) {
+  if (!s || s.srcR || !s.srcW) { return false; }
+  var o = S.objects[s.srcW];
+  return !!(o && o.common && o.common.read === false);
+}
+
 export function pruefeSchreiben(e) {
   var probleme = [];
   var an = e.states.filter(function (s) { return s.on; });
@@ -361,7 +388,20 @@ export function pruefeSchreiben(e) {
     namen[s.n] = 1;
 
     if (!s.srcR) {
-      probleme.push(tr('write.noSourceChosen', s.n));
+      /* Ein Taster hat keinen Zustand zum Lesen.
+
+         `STOP` am Rollladen schreibt nur; am Geraet traegt der Punkt
+         `read: false`, der hm-rpc-Adapter setzt das selbst. Die Sperre
+         hier war deshalb richtig UND falsch zugleich: richtig, weil
+         ioBroker ohne `alias.id` keinen Punkt anlegt — falsch, weil sie
+         damit jeden Rollladen-Alias mit STOP unmoeglich machte. Kein
+         einziger ist je entstanden (gefunden 14.09.2026, K23).
+
+         Massgeblich ist, was das ZIEL kann, nicht was die Rolle
+         nahelegt: `read: false` ist eine Tatsache am Objekt, die der
+         Adapter hinschreibt. Beim Schreiben nimmt `alias.id` dann das
+         Schreibziel, und der Alias-Punkt bekommt selbst `read: false`. */
+      if (!(s.srcW && taster(s))) { probleme.push(tr('write.noSourceChosen', s.n)); }
     } else if (!S.objects[s.srcR]) {
       /* Der teuerste Fehler: der js-controller merkt sich „Quelle fehlt"
          dauerhaft und korrigiert das nie. Nur loeschen und neu anlegen
@@ -1069,6 +1109,32 @@ export function zeichneLoeschen() {
     body.appendChild(ew);
   }
 
+  /* Wer nennt diese Kennungen sonst noch?
+
+     Beim Verlegen steht die Liste seit jeher da, beim Loeschen fehlte
+     sie - dabei ist die Folge hier endgueltig: ein Skript, das den
+     Alias anspricht, laeuft danach ins Leere. Gesucht wird nur im
+     Klartext und nur in den Skripten; der Hinweis darunter sagt das. */
+  var skriptFeld = el('div');
+  skriptFeld.style.marginTop = '11px';
+  body.appendChild(skriptFeld);
+  var wurzeln = [ziel].concat(S.loeschAlleAusgaenge ? geschwisterVon(ziel) : []);
+  sucheInSkriptenMehrere(wurzeln, function (treffer) {
+    if (S.loeschZiel !== ziel) { return; }
+    skriptFeld.textContent = '';
+    if (!treffer.length) {
+      skriptFeld.appendChild(el('div', 'aside', tr('move.noScripts')));
+      return;
+    }
+    var w = el('div', 'aside w');
+    w.appendChild(el('b', null, treffer.length === 1
+      ? tr('del.scriptsHead1')
+      : tr('del.scriptsHead', treffer.length)));
+    w.appendChild(skriptListe(treffer));
+    w.appendChild(el('div', 'hint', tr('del.scriptsHint')));
+    skriptFeld.appendChild(w);
+  });
+
   var b = $('#btn-del-go');
   b.disabled = false;
   b.hidden = false;
@@ -1224,41 +1290,6 @@ function verlegeUmfang(alt) {
   return S.keysSorted.filter(function (id) {
     return id === alt || id.indexOf(alt + '.') === 0;
   });
-}
-
-/* Wer nennt diese Kennung sonst noch?
-
-   Die Skripte des javascript-Adapters lassen sich durchsuchen; sie sind
-   der haeufigste Ort, an dem eine Kennung im Klartext steht. vis-
-   Ansichten und fremde Adapter kann die Werkbank nicht durchsehen -
-   darauf weist der Dialog eigens hin, statt Vollstaendigkeit
-   vorzutaeuschen. */
-export function sucheInSkripten(kennung, fertig) {
-  var treffer = [];
-  var fertigMit = function () { fertig(treffer); };
-  try {
-    socket.emit('getObjectView', 'script', 'javascript',
-      { startkey: 'script.js.', endkey: 'script.js.\u9999' }, function (err, doc) {
-        if (err || !doc || !doc.rows) { return fertigMit(); }
-        doc.rows.forEach(function (r) {
-          var o = r.value;
-          var q = o && o.common && o.common.source;
-          if (!q || q.indexOf(kennung) === -1) { return; }
-          var zeilen = String(q).split('\n');
-          var stellen = [];
-          zeilen.forEach(function (z, i) {
-            if (z.indexOf(kennung) > -1) { stellen.push(i + 1); }
-          });
-          treffer.push({
-            id: r.id,
-            name: txt((o.common || {}).name) || r.id.split('.').pop(),
-            an: !!(o.common && o.common.enabled),
-            zeilen: stellen
-          });
-        });
-        fertigMit();
-      });
-  } catch { fertigMit(); }
 }
 
 export function zeigeVerlegen(altVorgabe, zielVorgabe) {
@@ -1531,14 +1562,7 @@ export function zeigeVerlegen(altVorgabe, zielVorgabe) {
       w3.appendChild(el('b', null, treffer.length === 1
         ? tr('move.scriptsHead1')
         : tr('move.scriptsHead', treffer.length)));
-      var ul3 = el('ul');
-      treffer.forEach(function (t) {
-        ul3.appendChild(el('li', null, t.name + (t.an ? '' : ' (' + tr('move.scriptOff') + ')') +
-          '  \u2014  ' + (t.zeilen.length === 1
-            ? tr('move.scriptLines', t.zeilen[0])
-            : tr('move.scriptLinesN', t.zeilen.join(', ')))));
-      });
-      w3.appendChild(ul3);
+      w3.appendChild(skriptListe(treffer));
       skriptFeld.appendChild(w3);
     });
   };
@@ -1849,9 +1873,32 @@ export function schreibeObjekte() {
        stehen, bis man den Reiter neu lud, und behauptete damit eine
        Abweichung, die es nicht mehr gibt. Nur bei Erfolg loeschen: ging
        etwas schief, ist die Aenderung tatsaechlich noch nicht drin. */
-    if (!fehler.length && S.entwurf && S.entwurf.states) {
-      S.entwurf.states.forEach(function (s) { s.geaendert = false; rateBehalten(s); });
+    if (!fehler.length && S.entwurf) {
+      if (S.entwurf.states) {
+        S.entwurf.states.forEach(function (s) { s.geaendert = false; rateBehalten(s); });
+      }
       S.entwurf.rateMeldung = null;
+      /* Und dasselbe eine Ebene hoeher (G51, Ricardo, 15.09.2026).
+
+         `angefasst` sagt „hier steht etwas Ungeschriebenes". Die Marke
+         wurde im ganzen Programm nur gesetzt, nie geloescht - weg war
+         sie allein, wenn der Entwurf ganz wegfiel (Loeschen, Verlegen).
+         Nach einem gelungenen Schreibvorgang blieb sie also stehen, und
+         der naechste Klick im Baum fragte „Ungespeicherte Aenderungen …
+         Wechselst du jetzt, sind sie weg" - ueber einen Alias, der
+         gerade eben geschrieben worden war.
+
+         Die Marke faellt nur bei Erfolg. Ging etwas schief, ist die
+         Aenderung tatsaechlich noch nicht drin, und die Frage ist dann
+         berechtigt.
+
+         Sie hat eine zweite Aufgabe, und die erledigt sich mit: Solange
+         `angefasst` steht, baut `neuZeichnenOderAufbauen` den Entwurf
+         absichtlich NICHT neu auf - es soll ja nichts Ungeschriebenes
+         ueberbuegeln. Das `holeZweig` unten laeuft gleich danach; jetzt
+         baut es den Entwurf am frisch geschriebenen Alias neu auf,
+         statt den alten stehenzulassen. */
+      S.entwurf.angefasst = false;
     }
 
     /* Nur der Aliaszweig, nicht die ganze Datenbank. */

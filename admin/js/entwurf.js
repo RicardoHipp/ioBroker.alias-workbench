@@ -102,8 +102,14 @@ export function baueEntwurf(kanal) {
       states: c.states || undefined,
       wr: !!c.write,
       /* Ohne common.alias ist der Punkt seine eigene Quelle. Vorher stand
-         hier nichts und man musste jede Zeile von Hand zuweisen. */
-      srcR: istAlias ? (q.read || '') : id,
+         hier nichts und man musste jede Zeile von Hand zuweisen.
+
+         Ein Taster hat keine Lesequelle, obwohl `alias.id` eine Kennung
+         nennt: ioBroker verlangt sie, `common.read: false` sagt, dass dort
+         nichts abzuholen ist (K23). Dieselbe Ablesung wie in
+         `zeileAusAlias` — sonst zeigte „Alias bearbeiten" eine Quelle,
+         die „Alias anlegen" nie eingetragen hat. */
+      srcR: istAlias ? ((c.read === false && q.einfach) ? '' : (q.read || '')) : id,
       /* Steht in `common.alias.id` ein einzelner Text, gilt er fuer Lesen
          UND Schreiben - dann ist die Schreibquelle dieselbe wie die
          Lesequelle. Hier stand frueher eine leere Zeichenkette, gedacht
@@ -1214,7 +1220,11 @@ export function bestandVorrang(e, aliasId) {
     if (c.name !== undefined) { s.caption = ist.caption; }
     s.f = ist.f;
     s.fw = ist.fw;
-    if (q.read) { s.srcR = q.read; }
+    /* `ist.srcR`, nicht `q.read`: bei einem Taster laesst
+       `zeileAusAlias` die Lesequelle bewusst leer, obwohl `alias.id` eine
+       Kennung nennt (K23). Die Wache auf `q.read` bleibt — sie verhindert,
+       dass ein Alias ohne Quellangabe die vorhandene ueberschreibt. */
+    if (q.read) { s.srcR = ist.srcR; }
     s.srcW = ist.srcW;
     s.on = true;
     s.ausBestand = true;

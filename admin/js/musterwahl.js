@@ -12,7 +12,7 @@ import { D, el, $ } from './basis.js';
 import { tr, sprachtext } from './sprache.js';
 import { VORSCHAU, musterVon, erkenneEntwurf, platzFuerRolle, typenFuerRolle, typKonflikte } from './erkennung.js';
 import { anMusterAnpassen } from './vorlagen.js';
-import { ratePlaetze, rateZurueck, rateAnzahl, rateMoeglich } from './vorschlagen.js';
+import { ratePlaetze, rateAnzahl } from './vorschlagen.js';
 import { zeichneErgebnis, entwurfAngefasst, knopfFrisch } from './ergebnis.js';
 import { musterName, musterZeile } from './musternamen.js';
 
@@ -52,51 +52,93 @@ export function baueMusterwahl(e, haupt, pflichtFehlt) {
      Er wird hier gebaut, weil er zum Muster gehoert - haengt aber unten
      in der Leiste ueber der Zustandsliste. Neben dem Musterfeld stand er
      am Rand; die Liste, die er veraendert, faengt darunter an. */
+  /* Der Trockenlauf, der beides beantwortet: ob der Knopf etwas
+     anzubieten haette, und - wenn nicht - warum nicht. Frueher lief er
+     zweimal (einmal fuer `rateMoeglich`, einmal fuer den Klick); einmal
+     reicht, das Ergebnis traegt den Grund gleich mit. */
+  var probe = ratePlaetze(e, true);
+
+  /* Was frueher ein Sammelsatz war („entweder alle Plaetze besetzt, oder
+     kein Datenpunkt passt"), steht jetzt als der Fall da, der wirklich
+     vorliegt - mit den Namen der Plaetze, die frei bleiben. Ohne die
+     Namen war die Meldung nicht nachpruefbar.
+
+     Gezeigt wird sie, solange keine Vermutung offen ist: dann fuehrt die
+     blaue Leiste das Wort, und zwei Meldungen uebereinander widersprechen
+     sich nur. */
+  function plaetzeText(frei) {
+    var kurz = frei.slice(0, 6).join(', ');
+    return frei.length > 6 ? tr('guess.slotsMore', kurz, frei.length - 6) : kurz;
+  }
+  function meldungZu(p) {
+    if (p.anzahl > 0) { return null; }
+    var satz = p.grund === 'voll' ? tr('guess.noneFull')
+      : p.grund === 'vergeben' ? tr('guess.noneUsed', plaetzeText(p.frei))
+      : p.grund === 'keinTreffer' ? tr('guess.noneFit', plaetzeText(p.frei))
+      : null;
+    /* Der Zusatz zur Handentscheidung (U15): Steht ein Platz nur deshalb
+       leer, weil die Zeile dazu von Hand entschieden ist, muss genau das
+       dastehen - sonst sieht es aus wie ein Fehler des Ratens. */
+    if (satz && p.handWeg) { satz += '  ' + tr('guess.noneHand', p.handWeg); }
+    return satz;
+  }
+  /* Ungefragt gezeigt wird sie nur, wo sie etwas erklaert: dass kein
+     Knopf dasteht, obwohl Plaetze frei sind. Der Fall „alle Plaetze
+     besetzt" bleibt stumm - er sagt „alles gut, nichts zu tun", und das
+     stuende dann an fast jedem Geraet (dieselbe Ueberlegung wie C27).
+     Ueber den Klick ist er weiter erreichbar. */
+  e.rateMeldung = (rateAnzahl(e) || probe.grund === 'voll')
+    ? null : meldungZu(probe);
+
   /* Und nur, wenn er etwas anzubieten haette: ohne freie Plaetze oder
      freie Zeilen ist der Knopf ein leeres Versprechen — dann faellt er
-     weg, statt beim Klick „nichts gefunden" zu melden. Zuruecknehmen
-     bleibt immer moeglich, solange Vermutungen im Entwurf stehen. */
+     weg, statt beim Klick „nichts gefunden" zu melden. Das Zuruecknehmen
+     steht seit dem 15.09.2026 nicht mehr auch hier: derselbe Knopf hiess
+     je nach Lage „Freie Plaetze vorschlagen" oder „Vorschlaege
+     verwerfen", und daneben stand in der blauen Leiste ein zweiter mit
+     demselben Wort. Verworfen wird dort - bei dem, was es betrifft. */
+  /* Der Rueckfrage-Dialog, wenn eine Vorlage greift (U27). Er sitzt hier
+     als eigene Funktion, weil ihn zwei Knoepfe brauchen: der in der
+     Leiste und der kleine neben dem Hinweis, der Muster wechselt und
+     gleich vorschlaegt. */
+  function mitVorlagenfrage(dann) {
+    var vq = null;
+    S.VORLAGEN.forEach(function (v) { if (v.id === e.vorlage) { vq = v; } });
+    var body = $('#guess-body');
+    body.textContent = '';
+    body.appendChild(el('div', 'aside w',
+      tr('guess.tplAsk', vq ? sprachtext(vq.name) : e.vorlage)));
+    /* onclick statt addEventListener: der Dialog ist einer fuer alle
+       Geraete, der Griff muss beim Oeffnen den alten ersetzen. */
+    $('#btn-guess-go').onclick = function () {
+      $('#dlg-guess').close();
+      dann();
+    };
+    $('#dlg-guess').showModal();
+  }
+
   var rateKnopf = null;
-  if (rateAnzahl(e) || rateMoeglich(e)) {
+  if (probe.anzahl > 0) {
     /* Mit passender Vorlage ist Raten nicht der normale Weg - die
        Zuordnung steht ja schon. Der Knopf bleibt, tritt aber leise auf
        und fragt vor dem Lauf nach (Ricardo, 25.08.2026). */
     var beilaeufig = !!e.vorlage && !rateAnzahl(e);
-    rateKnopf = el('button', 'btn mini' + (rateAnzahl(e) ? ' wichtig' : '')
+    rateKnopf = el('button', 'btn mini'
       + (beilaeufig ? ' leise' : '')
       /* Ein leiser Knopf pocht nicht - das Pochen wuerde genau die
          Aufmerksamkeit holen, die er nicht verdient. */
-      + (!beilaeufig && knopfFrisch('raten:' + S.current + ':' + (rateAnzahl(e) ? 'zurueck' : 'vor')) ? ' frisch' : ''),
-      rateAnzahl(e) ? tr('guess.undo') : tr('guess.button'));
+      + (!beilaeufig && knopfFrisch('raten:' + S.current + ':vor') ? ' frisch' : ''),
+      tr('guess.button'));
     rateKnopf.title = beilaeufig ? tr('guess.tplHint') : tr('guess.hint');
     var rateLos = function () {
-      e.rateMeldung = ratePlaetze(e) ? null : tr('guess.none');
+      e.rateMeldung = meldungZu(ratePlaetze(e));
       entwurfAngefasst();
       S.openRow = null;
       zeichneErgebnis();
     };
     rateKnopf.addEventListener('click', function () {
-      if (rateAnzahl(e)) {
-        rateZurueck(e); e.rateMeldung = null;
-        entwurfAngefasst();
-        S.openRow = null;
-        zeichneErgebnis();
-        return;
-      }
       if (!beilaeufig) { rateLos(); return; }
-      var vq = null;
-      S.VORLAGEN.forEach(function (v) { if (v.id === e.vorlage) { vq = v; } });
-      var body = $('#guess-body');
-      body.textContent = '';
-      body.appendChild(el('div', 'aside w',
-        tr('guess.tplAsk', vq ? sprachtext(vq.name) : e.vorlage)));
-      /* onclick statt addEventListener: der Dialog ist einer fuer alle
-         Geraete, der Griff muss beim Oeffnen den alten ersetzen. */
-      $('#btn-guess-go').onclick = function () {
-        $('#dlg-guess').close();
-        rateLos();
-      };
-      $('#dlg-guess').showModal();
+      mitVorlagenfrage(rateLos);
     });
   }
 
@@ -184,6 +226,58 @@ export function baueMusterwahl(e, haupt, pflichtFehlt) {
   }
   function markeFuer(m) { return bewerte(m).mark; }
 
+  /* ---- Was nach dem Raten passen wuerde ----------------------------
+
+     Ricardos Klimaanlage ist der Fall: `thermostat` greift und belegt 3
+     von 24 Plaetzen, `airCondition` faellt durch, weil sein einziger
+     Pflichtplatz MODE die Rolle nicht traegt. Nach dem Raten stuenden
+     dort 9 von 29 statt 8 von 24 - nur sieht man das nirgends, weil
+     „passt nicht" das letzte Wort behaelt. Wer nicht weiss, dass es den
+     Knopf gibt, waehlt `airCondition` nie aus.
+
+     Also wird einmal durchgerechnet, was jedes Muster nach dem Raten
+     ergaebe. Gerechnet wird auf einer Kopie - am Entwurf aendert das
+     nichts. Das Raten liest nur Namen, Werteliste, Einheit und Typ,
+     keine Messwerte; das Ergebnis haengt also allein an den Zeilen und
+     wird beim blossen Neuzeichnen nicht ungueltig. Gemerkt wird es
+     deshalb an `e` und faellt erst, wenn eine Zeile sich aendert
+     (`entwurfAngefasst`) oder ein anderes Muster gewaehlt ist.
+
+     Gemessen am `midea.AC` (43 Punkte): ein Trockenlauf 1,2 ms, alle 51
+     Muster 35 ms - einmal je Geraeteauswahl, gegen rund 200 ms fuers
+     Auswaehlen selbst. */
+  function probeMuster(m) {
+    if (!musterVon(m)) { return null; }
+    var kopie = JSON.parse(JSON.stringify({ kanal: e.kanal, states: e.states, want: m }));
+    /* Dieselbe Vorbereitung wie in `bewerte`: beim Vorschlag entscheidet
+       nicht das Muster, sondern die Rollen, die das Auswaehlen setzen
+       wuerde. */
+    if (e.vorschlag && !e.roh && m !== e.want) { anMusterAnpassen(kopie, m); }
+    ratePlaetze(kopie);
+    var r = erkenneEntwurf(kopie, m);
+    if (!r.length) { return { passt: false }; }
+    return { passt: true, gesamt: r[0].states.length,
+             belegt: r[0].states.filter(function (x) { return x.id; }).length };
+  }
+
+  function aussicht() {
+    if (e.rateAussicht && e.rateAussicht.want === e.want) { return e.rateAussicht; }
+    var proM = {}, neuPassend = [];
+    if (e.states && e.states.length) {
+      alleTypen.forEach(function (m) {
+        var p = probeMuster(m);
+        if (!p) { return; }
+        proM[m] = p;
+        /* „Neu" heisst: passt jetzt nicht, nach dem Raten schon. Das
+           gewaehlte Muster gehoert nicht dazu - es ist kein anderes. */
+        if (p.passt && m !== e.want && !bewerte(m).passt) { neuPassend.push(m); }
+      });
+    }
+    e.rateAussicht = { want: e.want, proM: proM, neu: neuPassend,
+                       selbst: proM[e.want] || null };
+    return e.rateAussicht;
+  }
+
   /* Welche Muster ohne Suchtext angeboten werden. Das erkannte und das
      gerade gewaehlte gehoeren immer dazu - sonst fiel rgbSingle heraus,
      sobald man einmal auf light gewechselt hatte, und der Weg zurueck
@@ -262,6 +356,7 @@ export function baueMusterwahl(e, haupt, pflichtFehlt) {
       return a.rang - b.rang;
     });
     mEintraege = treffer;
+    var auL = aussicht();
 
     mlist.textContent = '';
     if (!treffer.length) {
@@ -273,8 +368,13 @@ export function baueMusterwahl(e, haupt, pflichtFehlt) {
       var z = el('div', 'vz' + (n === mMarkiert ? ' an' : '')
         + (t0.m === e.want ? ' gewaehlt' : ''));
       z.appendChild(el('span', null, musterZeile(t0.m)));
+      /* Hinter „✕ MODE fehlt" steht, ob das Muster nach dem Raten doch
+         greift - sonst liest man nur, dass es nicht passt, und haelt es
+         fuer erledigt. */
+      var nachRaten = (!bewerte(t0.m).passt && auL.proM[t0.m] && auL.proM[t0.m].passt)
+        ? '   ' + tr('guess.alsoRow') : '';
       z.appendChild(el('span', 'tiefer',
-        (t0.via ? tr('pattern.viaRole', t0.via) + '   ' : '') + markeFuer(t0.m)));
+        (t0.via ? tr('pattern.viaRole', t0.via) + '   ' : '') + markeFuer(t0.m) + nachRaten));
       /* mousedown statt click: sonst greift der Fokusverlust zuerst und
          die Liste ist weg, bevor der Klick ankommt. */
       z.addEventListener('mousedown', function (ev) {
@@ -320,6 +420,73 @@ export function baueMusterwahl(e, haupt, pflichtFehlt) {
     sel.title = e.want ? (e.want + (marke ? '   ' + marke : '')) : '';
   };
   mBeschriften();
+
+  /* Der Hinweis neben dem Feld: genannt wird EIN Muster - das beste -
+     und nur, wenn es wirklich besser ist als das gewaehlte.
+
+     Der erste Anlauf zaehlte bloss, wie viele Muster nach dem Vorschlag
+     dazukaemen, und schrieb bei mehreren „12 weitere Muster" hin. Am
+     `midea.AC` sind das tatsaechlich zwoelf - aber elf davon sind
+     Beifang: `blind` 4/19, `illuminance` 3/7, `windowTilt` 3/7 an einer
+     Klimaanlage. Eine Zahl, die Beifang mitzaehlt, verdeckt genau die
+     eine Auskunft, um die es geht (Ricardo, 15.09.2026): `airCondition`
+     9/29 gegen `thermostat` 8/24.
+
+     Gemessen wird an den belegten Plaetzen, nicht am Anteil. 9 von 29
+     ist besser als 8 von 24, weil neun Punkte des Geraets einen Platz
+     bekommen statt acht - der Anteil waere hier sogar knapp kleiner.
+     Beide Zahlen stehen NACH dem Vorschlag; „3/24" ist der Stand jetzt
+     und gehoert nicht daneben.
+
+     Ist nichts besser, steht hier nichts - der haeufigste Fall bleibt
+     damit stumm. */
+  var auF = aussicht();
+  var bestes = null;
+  auF.neu.forEach(function (m) {
+    if (!bestes || auF.proM[m].belegt > auF.proM[bestes].belegt) { bestes = m; }
+  });
+  /* Der Vergleichswert ist der Stand des gewaehlten Musters NACH dem
+     Vorschlag. Passt es auch dann nicht, ist jedes andere besser. */
+  var jetzt = (auF.selbst && auF.selbst.passt) ? auF.selbst.belegt : -1;
+  if (bestes && auF.proM[bestes].belegt > jetzt) {
+    var pB = auF.proM[bestes], nB = musterName(bestes) || bestes;
+    var hw = el('span', 'ratAussicht');
+    var htx = el('span', null, '· ' + tr('guess.better', nB));
+    htx.title = jetzt >= 0
+      ? tr('guess.betterHint', nB, pB.belegt + '/' + pB.gesamt,
+           musterName(e.want) || e.want, auF.selbst.belegt + '/' + auF.selbst.gesamt)
+      : tr('guess.betterHintNone', nB, pB.belegt + '/' + pB.gesamt,
+           musterName(e.want) || e.want);
+    hw.appendChild(htx);
+
+    /* Der Weg dorthin in einem Griff: wechseln UND vorschlagen.
+       Sonst waere der Hinweis eine Ansage ohne Handlung - man muesste
+       das Muster in der Liste suchen und danach noch den Knopf in der
+       Leiste finden (Ricardo, 16.09.2026).
+
+       Ein Zeichen statt eines Wortes: neben dem Satz bleiben rund 55 px,
+       „wechseln" braucht 58. Dieselbe Bauart wie die Uebernahmeknoepfe
+       im Detail (`←`, `⟲`) - kleines Zeichen, ausfuehrlicher Tooltip. */
+    var hgo = el('button', 'btn winzig rtgo', '→');
+    hgo.title = tr('guess.betterGoHint', nB, tr('guess.button'));
+    hgo.addEventListener('click', function (ev) {
+      ev.stopPropagation();
+      var los = function () {
+        /* Beim Vorschlag entscheidet nicht das Muster, sondern die
+           Rollen, die das Auswaehlen setzt - genau wie in `mWaehlen`. */
+        if (e.vorschlag && !e.roh) { anMusterAnpassen(e, bestes); } else { e.want = bestes; }
+        e.rateMeldung = meldungZu(ratePlaetze(e));
+        entwurfAngefasst();
+        S.openRow = null;
+        zeichneErgebnis();
+      };
+      /* Greift eine Vorlage, fragt auch dieser Weg nach (U27) - er raet
+         ja genauso ueber eine fertige Zuordnung hinweg. */
+      if (e.vorlage && !rateAnzahl(e)) { mitVorlagenfrage(los); } else { los(); }
+    });
+    hw.appendChild(hgo);
+    vw.appendChild(hw);
+  }
 
   sel.addEventListener('focus', function () {
     sel.value = '';

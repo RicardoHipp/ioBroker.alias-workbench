@@ -96,7 +96,7 @@ function kernWoerter(name) {
    ueberhaupt etwas anzubieten haette. */
 function rateLage(e) {
   var mu = musterVon(e.want);
-  if (!mu) { return null; }
+  if (!mu) { return { grund: 'keinMuster', frei: [], handWeg: 0 }; }
 
   /* 1. Was schon belegt ist, bleibt unangetastet - in beide
         Richtungen: weder der Platz noch die Zeile. */
@@ -120,7 +120,11 @@ function rateLage(e) {
     gesehen[pl.name] = true;
     freiePlaetze.push(pl);
   });
-  if (!freiePlaetze.length) { return null; }
+  /* Die Namen der freien Plaetze werden auch dann gebraucht, wenn nichts
+     zu holen ist - die Meldung soll sagen, WAS frei bleibt, statt nur
+     „nichts vorzuschlagen". */
+  var freiNamen = freiePlaetze.map(function (pl) { return pl.name; });
+  if (!freiePlaetze.length) { return { grund: 'voll', frei: [], handWeg: 0 }; }
 
   /* Ein Quellpunkt gehoert an genau eine Stelle.
 
@@ -142,30 +146,58 @@ function rateLage(e) {
     if (st.srcW) { quelleBelegt[st.srcW] = true; }
   });
 
+  /* Was von Hand entschieden ist, bleibt liegen (U15, Ricardo,
+     15.09.2026).
+
+     Vorher fand der zweite Druck den Musterplatz wieder frei - die Rolle
+     stand ja nicht mehr auf dem, was das Muster verlangt - und bog
+     DIESELBE Zeile zurueck: aus der Handentscheidung `level.speed` wurde
+     wieder das vermutete `level.mode.fan`, samt Marke. Die Zeile war
+     damit doppelt bezeichnet („geaendert" UND „vermutet"), was sich
+     ausschliesst: was frisch geraten ist, kann nicht vorher geaendert
+     worden sein.
+
+     Eine zweite Zeile daneben zu legen waere die Alternative gewesen -
+     dann haette derselbe Quellpunkt aber zwei Plaetze, und die achte
+     Pruefung („Kein Punkt doppelt") meldete es zu Recht. Also bleibt der
+     Platz frei. Die Meldung unter der Leiste sagt, dass und warum. */
+  var handWeg = 0;
   var freieZeilen = e.states.filter(function (st) {
     if (!st.n || !st.srcR || zeileBelegt[st.n]) { return false; }
     if (quelleBelegt[st.srcR]) { return false; }
     if (st.srcW && quelleBelegt[st.srcW]) { return false; }
+    if (st.geaendert) { handWeg++; return false; }
     return true;
   });
-  if (!freieZeilen.length) { return null; }
-  return { mu: mu, namenDa: namenDa, freiePlaetze: freiePlaetze,
-           freieZeilen: freieZeilen };
+  if (!freieZeilen.length) {
+    return { grund: 'vergeben', frei: freiNamen, handWeg: handWeg };
+  }
+  return { grund: null, mu: mu, namenDa: namenDa, freiePlaetze: freiePlaetze,
+           freieZeilen: freieZeilen, frei: freiNamen, handWeg: handWeg };
 }
 
-/* Gibt es ueberhaupt etwas, das der Knopf vorschlagen koennte? Die
-   komplette Rechnung, nur ohne anzuwenden - eine grobe Vorpruefung
-   liess den Knopf stehen, obwohl die Schwelle hinterher alles verwarf
-   (Ricardos Thermostat: 3 Zeilen, 22 freie Plaetze, nichts passt).
-   Der Preis ist ein zusaetzlicher Bewertungslauf je Zeichnen; die
-   teuren Erkennungslaeufe macht das Zeichnen ohnehin mehrfach. */
-export function rateMoeglich(e) {
-  return ratePlaetze(e, true) > 0;
-}
+/* Der Rateschritt - mit `trocken` rechnet er nur, ohne den Entwurf
+   anzufassen. Zurueck kommt, wie viele Plaetze belegt wurden (`anzahl`),
+   und wenn keiner: warum nicht.
 
+   `grund` ist einer von vier Faellen - `keinMuster`, `voll` (kein Platz
+   frei), `vergeben` (Plaetze frei, aber kein uebriger Punkt mehr da),
+   `keinTreffer` (beides da, nichts kam ueber die Schwelle). `frei` nennt
+   die Plaetze, die frei bleiben, `handWeg` die Zeilen, die als
+   Handentscheidung liegenblieben. Der Text dazu wird dort gebaut, wo die
+   Sprachdatei liegt (musterwahl.js); hier steht nur der Befund.
+
+   Der Trockenlauf rechnet alles bis zur Schwelle durch. Eine grobe
+   Vorpruefung genuegte nicht: sie liess den Knopf stehen, obwohl die
+   Schwelle hinterher alles verwarf (Ricardos Thermostat, 3 Zeilen, 22
+   freie Plaetze, nichts passt). Seit dem 15.09.2026 laeuft er nur noch
+   einmal je Zeichnen - vorher fragte erst `rateMoeglich`, ob der Knopf
+   ueberhaupt hingehoert, und der Klick rechnete dasselbe noch einmal. */
 export function ratePlaetze(e, trocken) {
   var lage = rateLage(e);
-  if (!lage) { return 0; }
+  if (lage.grund) {
+    return { anzahl: 0, grund: lage.grund, frei: lage.frei, handWeg: lage.handWeg };
+  }
   var namenDa = lage.namenDa;
   var freiePlaetze = lage.freiePlaetze, freieZeilen = lage.freieZeilen;
 
@@ -355,7 +387,8 @@ export function ratePlaetze(e, trocken) {
       st.geratenPartner = partner.n;
     }
   });
-  return gesetzt;
+  return { anzahl: gesetzt, grund: gesetzt ? null : 'keinTreffer',
+           frei: lage.frei, handWeg: lage.handWeg };
 }
 
 /* Eine einzelne Vermutung zuruecknehmen. */

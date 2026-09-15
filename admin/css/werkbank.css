@@ -377,6 +377,50 @@
   .aside.w { border-left-color:var(--warn); }
   .aside b { color:var(--ink); }
 
+  /* Der Kasten „Wird genannt in“.
+
+     Zuerst mit den Klassen der Zustandsliste gebaut (.slot, .sn, .typ) -
+     die sind durchgehend Schreibmaschinenschrift, und der Kasten sah aus
+     wie Quelltext statt wie Text. Beschriftung links deshalb wie im
+     Detail (.k), Inhalt als gewoehnlicher Satz, und nur Kennungen in
+     Schreibmaschine. */
+  /* Der Blockkopf muss sich von den Zeilenbeschriftungen darunter
+     abheben - stand er in derselben grauen Versalschrift, las sich
+     „DER ALIAS“ wie eine weitere Zeile statt wie die Ueberschrift
+     darueber (Ricardo, 14.09.2026). Deshalb eigene Leiste mit Grund,
+     Akzentfarbe und etwas groesser. */
+  .vwkopf {
+    display:flex; align-items:baseline; gap:10px; flex-wrap:wrap;
+    padding:7px 13px; background:var(--surface-2);
+    border-top:1px solid var(--line); border-bottom:1px solid var(--line);
+  }
+  .vwkopf .t {
+    font-family:var(--sans); font-size:10px; text-transform:uppercase;
+    letter-spacing:.08em; color:var(--accent); font-weight:700;
+  }
+  .vwkopf .id { font-family:var(--mono); font-size:12px; color:var(--ink); word-break:break-all; }
+  .vwzeile {
+    display:grid; grid-template-columns:148px minmax(0,1fr); gap:10px;
+    align-items:start; padding:4px 13px; font-size:12px; color:var(--ink);
+  }
+  .vwzeile .k {
+    font-family:var(--sans); font-size:9px; text-transform:uppercase;
+    letter-spacing:.06em; color:var(--ink-3); font-weight:700; padding-top:3px;
+  }
+  .vwzeile .leer { color:var(--ink-3); }
+  .vwzeile .id { font-family:var(--mono); font-size:11.5px; word-break:break-all; }
+  .vwzeile ul { margin:0; padding-left:15px; }
+  .vwzeile li { margin:1px 0; line-height:1.5; }
+  .vwzeile li .id { font-weight:600; }
+  .vwzeile li .ord { color:var(--ink-3); }
+  .vwnote { padding:10px 13px 0; }
+  .vwnote:last-child { padding-bottom:12px; }
+
+  /* Der Alias im Baum, dessen Quelle es nicht mehr gibt. Klein und rot,
+     neben Geraetepunkt und Zahl - kein Kasten, keine Toenung: die Zeile
+     soll lesbar bleiben. */
+  .kaputt { color:var(--bad); font-weight:700; }
+
   .empty { color:var(--ink-3); font-size:13px; padding:36px 8px; text-align:center; }
   /* Der Erklaertext der leeren Seite: lesbar breit, nicht ueber die
      ganze Flaeche gezogen, zweiter Absatz gedaempft. */
@@ -460,6 +504,29 @@
     padding:2px 24px 2px 6px; width:290px; max-width:290px;
   }
   .vmeta { display:flex; gap:5px; align-items:center; flex-wrap:wrap; }
+  /* „mit Raten: Klimaanlage 9/29, Thermostat 8/24" - der Hinweis neben
+     dem Musterfeld. Kein Chip: es ist keine Marke am Geraet, sondern ein
+     Weg, den man gehen kann. Deshalb Text in der Farbe der Vermutung,
+     nicht in der von Gut oder Schlecht. */
+  /* Die Breite ist auf die des Feldes darueber gedeckelt, und der Satz
+     darf umbrechen.
+
+     Mit `nowrap` war er eine 315 px breite Zeile, und weil der Block
+     seine Breite aus dem breitesten Kind nimmt, wurde der ganze
+     Musterblock breiter. Im Vorlagenkasten passte die Knopfleiste damit
+     nicht mehr in dieselbe Zeile, rutschte in die naechste - und deren
+     `margin-top:16px` plus der Zeilenabstand von 18 px standen dann als
+     34 px Leere zwischen Hinweis und Knopf (Ricardo, 15.09.2026). Es
+     fehlten drei Pixel; jede Wortaenderung haette es wieder kippen
+     koennen. Ein Deckel ist verlaesslicher als ein knapper Umbruch. */
+  .ratAussicht { font-size:11px; color:var(--accent); max-width:290px;
+                 display:flex; gap:5px; align-items:center; flex-wrap:wrap; }
+  /* Der Knopf traegt die Farbe des Hinweises, nicht die eines
+     gewoehnlichen Knopfes - er gehoert zum Satz daneben. Reicht die
+     Breite nicht, rutscht er unter den Text statt den Block zu
+     verbreitern (siehe den Deckel darueber). */
+  .rtgo { color:var(--accent); border-color:var(--accent); flex:none;
+          font-size:12px; line-height:1; padding:1px 6px; }
 
   /* ---- Geraetekarte ---- */
 
@@ -715,6 +782,14 @@
   .tree .geraetepunkt { margin-left:auto; font-size:8px; color:var(--accent); }
   .tree .node.sel .geraetepunkt { color:var(--accent-ink); }
   .tree .geraetepunkt + .cnt { margin-left:5px; }
+  /* Die Warnung steht in derselben rechten Gruppe wie Geraetepunkt und
+     Zahl - und VOR dem Punkt, damit Punkt und Zahl ihr Paar behalten.
+     Stand sie dazwischen, verlor `.geraetepunkt + .cnt` seinen Griff und
+     die Zahl rutschte allein an den rechten Rand (Ricardo, 14.09.2026). */
+  .tree .kaputt { margin-left:auto; font-size:10px; line-height:1; }
+  .tree .kaputt + .geraetepunkt { margin-left:6px; }
+  .tree .kaputt + .cnt { margin-left:6px; }
+  .tree .node.sel .kaputt { color:var(--accent-ink); }
 
   .erow .fehltnoch {
     margin-left:7px; font-style:normal; font-size:10px; font-weight:700;
@@ -814,6 +889,7 @@
   /* Gleiche Strichstaerke wie Vorlage und Ausgang daneben - halbfett
      wirkte wie eine andere Schrift in der Zeile. */
   .suggestbox .verdictwrap .musterwahl { font-weight:400; width:250px; max-width:250px; }
+  .suggestbox .ratAussicht { max-width:250px; }
   .suggestbox .vmeta { font-size:10.5px; color:var(--ink-3); gap:6px; }
   .suggestbox .luecke { flex:1 1 20px; }
   .suggestbox .knoepfe { display:flex; gap:7px; align-items:flex-end; }
@@ -936,6 +1012,10 @@
   }
   .listbar .verdictwrap.inbar .musterwahl { font-size:12px; width:230px; max-width:230px; }
   .listbar .verdictwrap.inbar .vmeta { margin:0; }
+  /* In der Leiste steht der Hinweis NEBEN dem Feld (Reihe statt Spalte)
+     und hat die ganze Breite der Leiste zur Verfuegung - dort ist eine
+     Zeile richtig; reicht sie nicht, bricht die Leiste selbst um. */
+  .listbar .verdictwrap.inbar .ratAussicht { max-width:none; white-space:nowrap; flex-wrap:nowrap; }
 
   .feldwrap { position:relative; display:block; min-width:0; }
   /* Das Musterfeld ist ein Eingabefeld, sieht aber aus wie das Auswahlfeld

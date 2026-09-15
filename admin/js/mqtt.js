@@ -655,6 +655,27 @@ function mqttCustom(g, thema) {
    zurueckzulesen ist ein Wettlauf: die Sicht hinkt dem frisch
    geschriebenen Objekt einen Wimpernschlag hinterher, und der
    Trockenlauf sperrte weiter wegen eines Punktes, den es laengst gab. */
+/* Der Typ eines Sendepunktes: `mixed`, sobald eine Schreibformel im
+   Spiel ist.
+
+   Sonst rechnet der js-controller den Formelwert beim Schreiben auf den
+   Typ des Ziels zurueck, und die Formel war umsonst: `POWER` traegt im
+   Befehlswissen `typ: boolean` UND `schreibformel: val ? "ON" : "OFF"`.
+   Aus dem "ON" wurde am boolean-Ziel wieder true, auf der Leitung stand
+   true statt ON. Geschaltet hat die Tasmota trotzdem — sie nimmt beides —,
+   aber die Formel stand nutzlos im Alias, und der von der Werkbank
+   angelegte Punkt sah anders aus als jeder von mqtt-client angelegte
+   (die sind alle `mixed`). Am Produktivsystem war es genau EINER von 196
+   (Ricardo, 15.09.2026, an alias.0.Bastelzimmer.Deckenlicht).
+
+   Keine Ausnahme fuer POWER, sondern eine Regel, die sich selbst
+   durchsetzt — sie gilt ebenso fuer `Fade` und `LedTable`. Wo keine
+   Formel steht, bleibt der genaue Typ: aus `number` zieht der Admin
+   Min, Max und Einheit. */
+function punktTyp(w) {
+  return w.schreibformel ? 'mixed' : (w.typ || 'mixed');
+}
+
 export function mqttEinzelnStill(kanal, name, fertig) {
   var bau = mqttPunktBauen(kanal, name, 'neu');
   if (!bau) { return fertig && fertig(); }
@@ -694,7 +715,7 @@ function mqttPunktBauen(kanal, name, was) {
     var common0 = {
       name: name,
       role: w0.rolle || 'state',
-      type: w0.typ || 'mixed',
+      type: punktTyp(w0),
       read: true, write: true,
       desc: tr('mq.createdBy'),
       custom: mqttCustom(g, thema0)
@@ -728,7 +749,7 @@ export function mqttEinzeln(kanal, name, was, knopf) {
     var common = {
       name: name,
       role: w.rolle || 'state',
-      type: w.typ || 'mixed',
+      type: punktTyp(w),
       read: true, write: true,
       desc: tr('mq.createdBy'),
       custom: mqttCustom(g, thema)

@@ -38,6 +38,7 @@ import {
 import { setzeEnums, setzeZiel, unterschiede } from './zuordnung.js';
 import './detail.js';
 import { zeigeTausch, tauscheAus } from './quellentausch.js';
+import { baueVerwendungKarte } from './verwendung.js';
 
 import { baueChecks } from './pruefungen.js';
 import {
@@ -141,7 +142,15 @@ var warumAuf = false;
   }
 
   export function entwurfAngefasst() {
-    if (S.entwurf) { S.entwurf.angefasst = true; }
+    if (S.entwurf) {
+      S.entwurf.angefasst = true;
+      /* Die Aussicht „was passt nach dem Raten" haengt allein an den
+         Zeilen. Sie wird einmal gerechnet und gemerkt; eine Zeilen-
+         aenderung ist der einzige Anlass, sie fallen zu lassen. Beim
+         blossen Neuzeichnen bleibt sie stehen - das Raten liest keine
+         Messwerte, es kaeme dasselbe heraus. */
+      S.entwurf.rateAussicht = null;
+    }
   }
 
   export function neuZeichnenOderAufbauen(danach) {
@@ -323,6 +332,21 @@ var warumAuf = false;
        will, musste ihn bisher im Quellenbaum von Hand wiederfinden.
        Umgekehrt gilt dasselbe: steht man am Geraet und will nachsehen,
        was daraus geworden ist, fuehrt der zweite Knopf hin. */
+    /* Zeigt ein Punkt auf eine Quelle, die es nicht gibt, gehoert das
+       nach oben - nicht nur in die Zeile und in den Pruefungen-Kasten.
+       Der js-controller repariert diesen Zustand nie von allein. */
+    var insLeere = (S.entwurf && S.entwurf.states || []).filter(function (s) {
+      return s.on && s.srcR && !S.objects[s.srcR];
+    });
+    if (insLeere.length) {
+      sub.appendChild(document.createTextNode('  '));
+      var ml = el('span', 'chip bad', insLeere.length === 1
+        ? tr('result.sourceGone1')
+        : tr('result.sourceGoneN', insLeere.length));
+      ml.title = insLeere.map(function (s) { return s.n + ' → ' + s.srcR; }).join('\n');
+      sub.appendChild(ml);
+    }
+
     var sprung = null, sprungZiel = null, sprungModus = null;
     if (S.current.indexOf('alias.') === 0) {
       sprungZiel = quelleVon(S.current);
@@ -970,6 +994,15 @@ var warumAuf = false;
 
     /* --- Änderungen gegenüber dem, was gespeichert ist --- */
     baueDiffKarte(host, e);
+
+    /* --- Wo wird das benutzt? ---
+
+       Nur an einem Alias, den es schon gibt: an einem Entwurf, der noch
+       nicht geschrieben ist, kann ihn niemand nennen. */
+    var vAlias = e.ziel || e.kanal;
+    if (vAlias && String(vAlias).indexOf('alias.') === 0 && S.objects[vAlias]) {
+      baueVerwendungKarte(host, vAlias, quelleVon(vAlias));
+    }
 
     /* --- Prüfungen, Fusszeile, Knopfleiste --- */
     setzeKnoepfe(e, haupt, pflichtFehlt);

@@ -4,7 +4,7 @@ import { S } from './zustand.js';
 import { socket } from './verbindung.js';
 import { el } from './basis.js';
 import { tr } from './sprache.js';
-import { wertVon, jsonFelder, feldAusFormel, feldFormel, feldWert, jsonVon } from './werte.js';
+import { wertVon, jsonFelder, feldAusFormel, feldFormel, feldWert, jsonVon, zielKann } from './werte.js';
 import { musterVon, erkenneEntwurf, platzFuerRolle, typenFuerRolle } from './erkennung.js';
 import { musterName } from './musternamen.js';
 import { rollenFeld } from './rollenwahl.js';
@@ -71,15 +71,59 @@ export function detailZeile(e, s, idx) {
      steht die volle Kennung als eigene Zeile unter dem Feld. Dieselbe
      Bauart wie „Die Vorlage will hier: …": sie darf umbrechen und hat
      damit keine Breitengrenze. */
-  function mitVollId(felder, id) {
+  function mitVollId(felder, id, zusatz) {
     var w = el('div', 'feldstapel');
     w.appendChild(felder);
     var v = el('div', 'vollid');
     if (id) { v.textContent = id; v.title = id; }
+    /* Beim Schreibziel steht hinter der Kennung sein Typ. Er entscheidet,
+       ob die Schreibformel ueberhaupt ankommt - der js-controller rechnet
+       den Formelwert auf den Typ des ZIELS zurueck. Man tippt die Formel
+       also an einer Stelle, an der man bisher nicht sehen konnte, ob sie
+       etwas bewirkt (Ricardo, 15.09.2026). */
+    if (zusatz) { v.appendChild(zusatz); }
     w.appendChild(v);
     return w;
   }
 
+  /* Was der fremde Punkt kann, als kleine Marke hinter seiner Kennung.
+
+     Beide Seiten zeigen dasselbe, nur aus verschiedener Richtung: am
+     Schreibziel seinen Typ (er entscheidet, was von der Formel ankommt)
+     und ob es sich ueberhaupt beschreiben laesst; an der Lesequelle, ob
+     sie etwas meldet. `zielKann` in werte.js ist die eine Stelle, die
+     darueber urteilt - die Pruefungen-Karte fragt dieselbe Funktion. */
+  function zielMarke(s, seite) {
+    var id = seite === 'w' ? s.srcW : s.srcR;
+    if (!id) { return null; }
+    var o = S.objects[id];
+    if (!o || !o.common) { return null; }
+    var c = o.common;
+
+    var maengel = zielKann(s).filter(function (x) {
+      return seite === 'w' ? x.art !== 'meldetNichts' : x.art === 'meldetNichts';
+    });
+
+    var text, hinweis;
+    if (seite === 'w') {
+      if (!c.type) { return null; }
+      text = c.type;
+      var nw = maengel.some(function (x) { return x.art === 'nichtSchreibbar'; });
+      var bl = maengel.some(function (x) { return x.art === 'formelBlind'; });
+      hinweis = nw ? tr('detail.targetNoWrite')
+              : (bl ? tr('detail.targetTypeVoid', c.type) : tr('detail.targetTypeHint', c.type));
+      if (nw) { text = c.type + ' \u00b7 ' + tr('detail.notWritable'); }
+    } else {
+      if (!maengel.length) { return null; }
+      text = tr('detail.reportsNothing');
+      hinweis = tr('detail.targetNoRead');
+    }
+
+    var m = el('span', 'chip ' + (maengel.length ? 'warn' : 'mut'), text);
+    m.style.marginLeft = '7px';
+    m.title = hinweis;
+    return m;
+  }
   /* ---- Wo die Vorlage etwas anderes will --------------------------
 
      Die zugeklappte Zeile sagt nur, DASS etwas abweicht. Welches Feld,
@@ -282,7 +326,7 @@ export function detailZeile(e, s, idx) {
     lF.appendChild(selF);
     qf.appendChild(lF);
   }
-  zeigeBeide(zeile(tr('detail.readsFrom'), mitVollId(qf, s.srcR)), ['srcR']);
+  zeigeBeide(zeile(tr('detail.readsFrom'), mitVollId(qf, s.srcR, zielMarke(s, 'r'))), ['srcR']);
 
   if (s.frei) {
     var iFrei = el('input', 'tx w');
@@ -322,7 +366,7 @@ export function detailZeile(e, s, idx) {
   if (s.srcW && s.srcW !== s.srcR) {
     wf.appendChild(el('div', 'sugg', tr('detail.separateHint')));
   }
-  zeigeBeide(zeile(tr('detail.writesTo'), mitVollId(wf, s.srcW)), ['srcW']);
+  zeigeBeide(zeile(tr('detail.writesTo'), mitVollId(wf, s.srcW, zielMarke(s, 'w'))), ['srcW']);
 
   /* --- Leseformel --- */
   var fb = el('div');
@@ -436,7 +480,10 @@ export function detailZeile(e, s, idx) {
   iU.value = s.unit || '';
   iU.placeholder = '—';
   iU.addEventListener('click', function (ev) { ev.stopPropagation(); });
-  iU.addEventListener('input', function () { s.unit = iU.value; s.geaendert = true; });
+  /* `rateBehalten` gehoert zu jedem `geaendert` dazu - sonst traegt die
+     Zeile beim naechsten Zeichnen beide Marken („geaendert" UND
+     „vermutet"), und die schliessen sich aus (Ricardo, 15.09.2026). */
+  iU.addEventListener('input', function () { s.unit = iU.value; s.geaendert = true; rateBehalten(s); });
   iU.addEventListener('change', function () { neu(); });
   var lU = el('label', 'fld');
   lU.appendChild(el('span', null, tr('detail.unit')));
@@ -461,7 +508,7 @@ export function detailZeile(e, s, idx) {
   iC.value = s.caption || '';
   iC.placeholder = s.n;
   iC.addEventListener('click', function (ev) { ev.stopPropagation(); });
-  iC.addEventListener('input', function () { s.caption = iC.value; s.geaendert = true; });
+  iC.addEventListener('input', function () { s.caption = iC.value; s.geaendert = true; rateBehalten(s); });
   /* Was das Feld tut, stand nirgends - man tippte und sah keine
      Wirkung. Der Wert wird der Anzeigename des Punkts (common.name)
      und erscheint als Zusatz in der Zeile darueber. */
