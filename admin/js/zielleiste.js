@@ -11,7 +11,7 @@ import { el } from './basis.js';
 import { tr } from './sprache.js';
 import { enumListe } from './aufzaehlungen.js';
 import { enumZeile, setzeZiel } from './zuordnung.js';
-import { aliasFuer, ordnerUnterAlias, kennungtauglich, knotenDa } from './entwurf.js';
+import { aliasFuer, ausgangsQuellen, ordnerUnterAlias, kennungtauglich, knotenDa } from './entwurf.js';
 import { zeichneErgebnis, entwurfAngefasst, angebotFrisch } from './ergebnis.js';
 import { zeigeVerlegen } from './schreiben.js';
 
@@ -381,7 +381,13 @@ export function baueZielleiste(host, e) {
        irrt sie hier, irrt sie dort ebenso. Und der Hinweis haelt
        niemanden auf. */
     var zwilling = null;
-    var vorhAlias = aliasFuer(e.kanal);
+    /* Dieselbe Frage wie die Vorbelegung, also auch dieselbe Antwort:
+       am Mehrfachgeraet der Alias DIESES Ausgangs. Sonst nennt der
+       Hinweis einen anderen Alias als den, dessen Stand oben in der
+       Liste steht - zwei Aussagen auf einem Bildschirm, die sich
+       widersprechen (C13). */
+    var vorhAlias = aliasFuer(e.kanal, ausgangsQuellen(e)) ||
+      ((e.instanz === null || e.instanz === undefined) ? aliasFuer(e.kanal) : null);
     if (vorhAlias && S.objects[vorhAlias] && vorhAlias !== e.ziel) {
       var zw = el('div', 'uebernahme zwilling');
       zw.appendChild(el('span', 'zq', tr('target.twinExists', vorhAlias)));

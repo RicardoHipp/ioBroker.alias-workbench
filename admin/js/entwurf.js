@@ -12,7 +12,7 @@ import { kindZustaende, aliasQuellen, holeWerte,
   mitVorspann, schreibQuelle, zeileAusAlias
 } from './werte.js';
 import { erkenneEntwurf } from './erkennung.js';
-import { vorschlag , pruefeVorlage, zeigeAbozahl } from './vorlagen.js';
+import { vorschlag , pruefeVorlage, zeigeAbozahl, setzeInstanz } from './vorlagen.js';
 
 import { zeichneErgebnis } from './ergebnis.js';
 
@@ -922,7 +922,10 @@ export function waehle(id, fertig) {
         if (fest) { v.vonHandGewaehlt = false; v.ausBestand = true; }
         /* Gibt es den Alias schon, gilt sein Stand - in beiden Ansichten
            dasselbe Bild (Ricardo, 25.08.2026). */
-        if (vorh && S.objects[vorh]) { bestandVorrang(v, vorh); }
+        /* An einem Mehrfachgeraet zaehlt der Alias DIESES Ausgangs,
+           nicht der mit den meisten Punkten (C13). */
+        var vorhA = aliasFuer(id, ausgangsQuellen(v)) || (v.instanz === null || v.instanz === undefined ? vorh : null);
+        if (vorhA && S.objects[vorhA]) { bestandVorrang(v, vorhA); }
         S.entwurf = v;
       }
     }
@@ -1123,7 +1126,75 @@ function alsQuelleKarten() {
   return alsQuelleKarte;
 }
 
-export function aliasFuer(quelle) {
+/* Welche Quellen gehoeren zu genau diesem Ausgang?
+
+   An einem Mehrfachgeraet ist "der Alias dieses Geraets" keine
+   beantwortbare Frage - es gibt je Ausgang einen, dazu oft einen fuer
+   die gemeinsame Messung. Beantwortbar ist nur: welcher gehoert zu dem
+   Ausgang, der gerade gewaehlt ist.
+
+   Geraten wird dabei nichts an Namen herum. Gefragt wird die Vorlage:
+   welche ihrer Pfade tragen den Platzhalter? Genau die unterscheiden die
+   Ausgaenge (bei `tasmota-mehrfach` `stat.POWER%N%` und `cmnd.POWER%N%`),
+   alles andere (`tele.SENSOR`, `tele.LWT`) ist allen gemeinsam. Damit
+   faellt auch die Falle aus I31 weg: `tele.INFO2` traegt zwar eine Zwei,
+   aber keinen Platzhalter - es gehoert zu keinem Ausgang.
+
+   Fuer Ausgang 1 kommt das blanke `cmnd.POWER` dazu. Bei Tasmota ist
+   POWER ohne Nummer ein Zweitname fuer POWER1 - am 16.09.2026 an der
+   Steckdosenleiste nachgemessen: eine Abfrage an `cmnd/POWER` wird mit
+   `{"POWER1":"ON"}` beantwortet, und `stat/POWER` gibt es nicht. Ein
+   Alias, der so gebaut wurde, schaltet wirklich Ausgang 1 und gehoert
+   dorthin. */
+export function ausgangsQuellen(e) {
+  if (!e || e.instanz === null || e.instanz === undefined || !e.kanal) { return null; }
+  var v = null;
+  S.VORLAGEN.forEach(function (x) { if (x.id === e.vorlage) { v = x; } });
+  if (!v || !v.mehrfach) { return null; }
+  var platz = (v.mehrfach && v.mehrfach.platzhalter) || '%N%';
+  var raus = [];
+  var dazu = function (p) {
+    if (!p) { return; }
+    var voll = e.kanal + '.' + p;
+    if (raus.indexOf(voll) === -1) { raus.push(voll); }
+  };
+  (v.zustaende || []).forEach(function (z) {
+    [z.lesen, z.schreiben].forEach(function (p) {
+      if (!p || String(p).indexOf(platz) === -1) { return; }
+      dazu(setzeInstanz(p, v, e.instanz));
+      if (String(e.instanz) === '1') { dazu(String(p).split(platz).join('')); }
+    });
+  });
+  return raus.length ? raus : null;
+}
+
+/* Mit `ausgang` - der Liste aus `ausgangsQuellen` - fragt sie enger: nur
+   ein Alias, der wirklich aus einer dieser Quellen liest oder in eine
+   schreibt, gehoert zu diesem Ausgang. Ohne das Argument, und das sind
+   alle anderen sieben Aufrufer, bleibt sie Zeile fuer Zeile wie sie war.
+
+   Die Mehrheitsregel unten ist an einem Geraet mit einem Ausgang richtig
+   und an einem Mehrfachgeraet die falsche Frage: An Ricardos
+   Steckdosenleiste gewann `Verbrauch` mit sechs Punkten aus
+   `tele.SENSOR` gegen `RF1000` mit zwei Punkten aus `stat.POWER1`, und
+   der Entwurf fuer Ausgang 1 uebernahm dessen Haken. Im Musterfeld stand
+   danach "✕ SET fehlt" an einem Geraet mit funktionierendem SET
+   (C13, produktiv gemessen 16.09.2026).
+
+   Auch die Abkuerzung ueber `native.quelle` faellt in diesem Fall weg:
+   die zeigt auf das GERAET, nicht auf den Ausgang. */
+export function aliasFuer(quelle, ausgang) {
+  if (ausgang && ausgang.length) {
+    var karteA = alsQuelleKarten();
+    var zaehlA = {}, bestA = null, vielA = 0;
+    ausgang.forEach(function (q0) {
+      (karteA.zweig[q0] || []).forEach(function (kanal) {
+        zaehlA[kanal] = (zaehlA[kanal] || 0) + 1;
+        if (zaehlA[kanal] > vielA) { vielA = zaehlA[kanal]; bestA = kanal; }
+      });
+    });
+    return bestA;
+  }
   var karte = alsQuelleKarten();
   var treffer = karte.fest[quelle] || null;
   if (treffer) { return treffer; }

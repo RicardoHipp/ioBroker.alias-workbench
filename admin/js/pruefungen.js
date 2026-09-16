@@ -5,7 +5,7 @@ import { $, el } from './basis.js';
 import { tr } from './sprache.js';
 import { wertVon, zielKann } from './werte.js';
 import './erkennung.js';
-import { sofortRueckmeldung, mqttEinstellung } from './mqtt.js';
+import { sofortRueckmeldung, mqttEinstellung, telegesteuert } from './mqtt.js';
 
 
 /* Kommt die Rueckmeldung sofort oder erst mit der naechsten Telemetrie?
@@ -21,11 +21,14 @@ import { sofortRueckmeldung, mqttEinstellung } from './mqtt.js';
    da, tele/STATE kam erst nach der naechsten Telemetrie — bei
    TelePeriod 300 also bis zu fuenf Minuten spaeter. */
 export function pruefungRueckmeldung(e) {
-  var lahm = e.states.filter(function (x) {
-    if (!x.on || !x.srcW || !x.srcR) { return false; }
-    return /\.tele\./.test(x.srcR) && /\.cmnd\./.test(x.srcW);
-  });
-  if (!lahm.length) { return { s: 'ok', t: tr('check.feedback'), d: tr('check.feedbackFine') }; }
+  /* Dieselbe Frage wie die MQTT-Karte, damit beide nicht auseinander
+     laufen (Ricardo, 16.09.2026). */
+  var lahm = telegesteuert(e);
+  /* Kein Haken, sondern ein Punkt: Hier wurde nichts geprueft, weil es
+     nichts zu pruefen gab. „alle in Ordnung" las sich, als haette die
+     Werkbank etwas nachgesehen - an Ricardos Steckdosenleiste lesen alle
+     Zeilen aus stat/..., SetOption59 ist dort folgenlos. */
+  if (!lahm.length) { return { s: 'mut', t: tr('check.feedback'), d: tr('check.feedbackNone') }; }
   /* Nur warnen, wenn es wirklich langsam ist. Mit SetOption59 meldet
      das Geraet jede Aenderung sofort — dann ist die Bauform zwar
      dieselbe, aber kein Problem. Gemessen: drei Sekunden. */

@@ -16,7 +16,7 @@ import { enumVorlagen, katalogFehlt, ikonCache, ikonErlaubt, ikonNachtrag,
          ikonTaugt, vorlageZu, holeIkon } from './katalog.js';
 import { kindZustaende, aliasQuellen, holeEinzelne,
          zeileAusAlias } from './werte.js';
-import { aliasFuer, zielId, knotenDa } from './entwurf.js';
+import { aliasFuer, ausgangsQuellen, zielId, knotenDa } from './entwurf.js';
 import { zeichneErgebnis, entwurfAngefasst, angebotFrisch } from './ergebnis.js';
 
 
@@ -475,18 +475,35 @@ export function setzeZiel(e) {
       /* Mehrere Ausgaenge: das Geraet wird zum Ordner, jeder Ausgang
          ein Kanal darin. Ein folder darueber, kein device — sonst
          rutscht die Erkennung hoch und macht aus dreien wieder eins. */
-      if (vorhanden) {
-        /* Der gefundene Kanal ist einer der Ausgaenge; der Ordner liegt
-           darueber. Wie der einzelne Ausgang heisst, kann die Werkbank
-           nicht wissen — wer sie umbenannt hat, sieht den Vorschlag in
-           der Zielzeile und kann ihn anpassen. */
-        var tm = vorhanden.split('.');
-        tm.pop();
-        e.zielOrdner = tm.join('.');
+      /* Gibt es den Alias fuer GENAU DIESEN Ausgang, ist er das Ziel —
+         mit seinem eigenen Namen, nicht mit dem der Ausgangsnummer.
+
+         Hier stand: „Wie der einzelne Ausgang heisst, kann die Werkbank
+         nicht wissen." Das galt, solange sie nur nach dem GERAET fragen
+         konnte. Seit `ausgangsQuellen` weiss sie es: Ricardos `RF1000`
+         liest aus `stat.POWER1` und ist damit Ausgang 1. Vorher schlug
+         die Zielzeile `…Steckdosenleiste.POWER1` vor — eine Kennung, die
+         es gar nicht gibt —, meldete „wird neu angelegt" und haette beim
+         Klick einen zweiten Alias neben `RF1000` gesetzt (C13,
+         16.09.2026). */
+      var vorhAus = aliasFuer(S.current, ausgangsQuellen(e));
+      if (vorhAus) {
+        var ta = vorhAus.split('.');
+        e.zielName = ta.pop();
+        e.zielOrdner = ta.join('.');
       } else {
-        e.zielOrdner = zt0.join('.') + '.' + geraet;
+        if (vorhanden) {
+          /* Kein Alias fuer diesen Ausgang, aber einer am Geraet: der gibt
+             wenigstens den Ordner vor. Der Name kommt aus der
+             Ausgangsnummer — hier entsteht wirklich etwas Neues. */
+          var tm = vorhanden.split('.');
+          tm.pop();
+          e.zielOrdner = tm.join('.');
+        } else {
+          e.zielOrdner = zt0.join('.') + '.' + geraet;
+        }
+        e.zielName = ausgangName(e, e.instanz);
       }
-      e.zielName = ausgangName(e, e.instanz);
     } else if (vorhanden) {
       var te = vorhanden.split('.');
       e.zielName = te.pop();

@@ -27,6 +27,7 @@ import {
   mitNachfrage,
   geraeteDarunter,
   aliasFuer,
+  ausgangsQuellen,
   quellenVerteilung,
   quelleHier,
   tipptGerade,
@@ -634,6 +635,25 @@ var warumAuf = false;
             v2.zielOrdner = e.zielOrdner;
             v2.zielName = ausgangName(v2, selA.value);
             v2.ziel = v2.zielOrdner + '.' + v2.zielName;
+            /* Dieser Weg fragte bisher gar nicht nach dem Bestand -
+               deshalb sah derselbe Ausgang je nach Weg anders aus:
+               ueber den Baum kamen die Haken eines fremden Alias, hier
+               die Vorgaben der Vorlage. Jetzt stellen alle drei Wege
+               dieselbe Frage (C13, 16.09.2026).
+
+               Und die Zielzeile folgt derselben Antwort. Sie wird hier von
+               Hand zusammengesetzt und laeuft nicht durch `setzeZiel`;
+               ohne diese Zeilen zeigte sie beim Umschalten weiter auf
+               `…POWER2` und meldete „wird neu angelegt", waehrend
+               `SUNLU` daneben stand. */
+            var vorhA2 = aliasFuer(S.current, ausgangsQuellen(v2));
+            if (vorhA2) {
+              var t2 = vorhA2.split('.');
+              v2.zielName = t2.pop();
+              v2.zielOrdner = t2.join('.');
+              v2.ziel = vorhA2;
+            }
+            if (vorhA2 && S.objects[vorhA2]) { bestandVorrang(v2, vorhA2); }
             S.entwurf = v2; S.openRow = null; zeichneErgebnis();
           }
         });
@@ -751,7 +771,11 @@ var warumAuf = false;
         neuE.zielName = e.zielName;
         neuE.ordnerVonHand = e.ordnerVonHand;
         if (fest) { neuE.vonHandGewaehlt = false; neuE.ausBestand = true; }
-        if (vorh && S.objects[vorh]) { bestandVorrang(neuE, vorh); }
+        /* Wie beim ersten Aufbau: am Mehrfachgeraet zaehlt der Alias
+           DIESES Ausgangs (C13). */
+        var vorhW = aliasFuer(S.current, ausgangsQuellen(neuE)) ||
+          ((neuE.instanz === null || neuE.instanz === undefined) ? vorh : null);
+        if (vorhW && S.objects[vorhW]) { bestandVorrang(neuE, vorhW); }
         S.entwurf = neuE; S.openRow = null; zeichneErgebnis();
       });
       /* An der Quelle bleibt die Musterwahl im Vorlagenkasten, wo sie

@@ -149,6 +149,38 @@ export function befehlsWissen(name) {
   return null;
 }
 
+/* Welche Zeilen haengen ueberhaupt am Telemetrietakt?
+
+   Betroffen ist nur die eine Bauform: aus `tele/...` lesen und nach
+   `cmnd/...` schreiben. Wer aus `stat/POWER1` liest, bekommt die Antwort
+   bei jedem Befehl sofort — SetOption59 aendert daran nichts.
+
+   Ricardos Steckdosenleiste hat keine einzige solche Zeile: seine Aliase
+   lesen alle aus `stat.POWERn`. Trotzdem stand der SetOption59-Block an
+   der Karte und die Pruefung meldete "alle in Ordnung", als waere etwas
+   geprueft worden. Beides ist jetzt an diese Frage gebunden
+   (Ricardo, 16.09.2026). */
+export function telegesteuert(e) {
+  if (!e || !e.states) { return []; }
+  return e.states.filter(function (x) {
+    if (!x.on || !x.srcW || !x.srcR) { return false; }
+    return /\.tele\./.test(x.srcR) && /\.cmnd\./.test(x.srcW);
+  });
+}
+
+/* Wie oft meldet das Geraet von sich aus? Steht in tele/STATE.
+
+   Ohne diese Zahl stand im Hinweis "minutenlang" — das unterstellt die
+   Tasmota-Vorgabe von 300 Sekunden. An Ricardos Leiste sind es zehn
+   (gemessen 16.09.2026: tele/STATE im Zehnsekundentakt). Wer eine Zahl
+   nennt, soll die richtige nennen. */
+export function telePeriode(kanal) {
+  var id = hatPunkt(kanal, 'tele.STATE');
+  var j = id ? jsonVon(id) : null;
+  var n = j && Number(j.TelePeriod);
+  return (n && isFinite(n)) ? n : null;
+}
+
 /* Meldet das Geraet Aenderungen sofort? Das haengt an SetOption59.
 
    Die Bitmaske aus StatusLOG zu entziffern waere moeglich, ist aber
@@ -281,7 +313,12 @@ export function mqttKarte(host, kanal) {
   ch.appendChild(th);
   if (l.fehlen.length) { ch.appendChild(el('span', 'chip warn', tr('mq.missing', l.fehlen.length))); }
   if (l.stumm.length) { ch.appendChild(el('span', 'chip bad', tr('mq.mute', l.stumm.length))); }
-  if (l.sofort === false) { ch.appendChild(el('span', 'chip warn', tr('mq.instantOffShort'))); }
+  /* Nur warnen, wo es jemanden trifft: Ohne eine Zeile, die aus tele
+     liest und nach cmnd schreibt, ist SetOption59 folgenlos. */
+  var telZ = telegesteuert(S.entwurf);
+  if (l.sofort === false && telZ.length) {
+    ch.appendChild(el('span', 'chip warn', tr('mq.instantOffShort')));
+  }
   ch.insertBefore(klappZeichen(mqttAuf), ch.firstChild);
   ch.classList.add('klappbar');
   ch.addEventListener('click', function () { mqttAuf = !mqttAuf; zeichneErgebnis(); });
@@ -379,7 +416,13 @@ export function mqttKarte(host, kanal) {
   }
   b.appendChild(leiste);
 
-  /* Sofortige Rueckmeldung — Zustand und, wenn noetig, der Schalter. */
+  /* Sofortige Rueckmeldung — Zustand und, wenn noetig, der Schalter.
+
+     Nur, wenn ueberhaupt eine Zeile am Telemetrietakt haengt. An einem
+     Geraet, dessen Aliase alle aus `stat/...` lesen, ist SetOption59
+     folgenlos, und ein Block darueber ist bloss Betrieb. */
+  if (!telZ.length) { host.appendChild(k); return; }
+
   var sk = el('div');
   sk.style.marginTop = '11px';
   sk.style.paddingTop = '10px';
@@ -423,8 +466,14 @@ export function mqttKarte(host, kanal) {
     if (lauf) { bp.disabled = true; be.disabled = true; }
   }
   sk.appendChild(sl);
+  /* Der Hinweis nennt die betroffenen Zeilen und den wirklichen Takt,
+     statt pauschal "minutenlang" zu behaupten. */
+  var telNamen = telZ.map(function (x) { return x.n; }).join(', ');
+  var takt = telePeriode(kanal);
   var hinweis = l.sofort === true ? tr('mq.instantHintOn')
-    : (l.sofort === false ? tr('mq.instantHintOff') : tr('mq.instantHintUnknown'));
+    : (l.sofort === false
+        ? (takt ? tr('mq.instantHintOffTakt', telNamen, takt) : tr('mq.instantHintOff', telNamen))
+        : tr('mq.instantHintUnknown'));
   /* Woher der Befund stammt, gehoert dazu — sonst weiss niemand, ob er
      von eben ist oder von vorgestern. */
   var alter = (l.sofort === null) ? '' : so59Alter(kanal);
