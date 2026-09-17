@@ -715,7 +715,18 @@ var warumAuf = false;
           r.ziel = e.ziel; r.zielOrdner = e.zielOrdner; r.zielName = e.zielName;
           r.raum = e.raum; r.funktion = e.funktion;
           r.raumHer = e.raumHer; r.funktionHer = e.funktionHer;
-          r.instanz = e.instanz; r.instanzen = e.instanzen;
+          /* Der Ausgang wird NICHT uebernommen. Er ist keine Eigenschaft
+             des Geraets, sondern des `mehrfach`-Blocks der Vorlage:
+             `instanzenVon` gibt ohne ihn `[null]` zurueck. Wurde die
+             Vorlage abgewaehlt, gibt es keinen Platzhalter mehr und damit
+             nichts zu waehlen. Bis 17.09.2026 erbte der Rohentwurf die
+             Ausgaenge der alten Vorlage: der Kasten blieb stehen, und wer
+             ihn benutzte, holte die abgewaehlte Vorlage kommentarlos
+             zurueck — der Ausgang-Zweig ruft `vorschlag` mit leerem
+             `e.vorlage` und laesst neu erkennen (gemessen an
+             `hm.ZWEIKANAL`: nach dem Umschalten auf `Licht_Esstisch`
+             stand `hm-schaltaktor-mehrfach` wieder im Feld). Die beiden
+             Kanaele laufen ohne Vorlage ueber „Unterordner je Kanal". */
           S.entwurf = r;
           S.openRow = null;
           entwurfAngefasst();

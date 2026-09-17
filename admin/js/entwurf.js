@@ -699,36 +699,28 @@ export function kanalGruppen(e) {
   return gruppen;
 }
 
-/* Der Entwurf ohne jede Vorlage — das, was die Werkbank an einem Geraet
-   zeigt, fuer das keine passt: alle Punkte, das erkannte Muster, und
-   angehakt ist, was darin einen Platz hat.
+/* Der Entwurf ohne jede Vorlage — alle Punkte des Geraets, alle
+   angehakt, dazu das erkannte Muster als Anhaltspunkt.
 
    Gebraucht fuer „— keine Vorlage —" in der Vorlagenwahl. Bis zum
    17.09.2026 liess sich eine erkannte Vorlage nicht abwaehlen: der erste
    Eintrag der Liste war eine blosse Ueberschrift, sein Wert leer, und der
    Zweig stieg bei leerem Wert sofort aus. Wechseln ging, weglassen nicht
-   (Ricardo). */
+   (Ricardo).
+
+   Zuerst hakte dieser Weg an, was im erkannten Muster einen Platz hat.
+   Das ging an zwei GLEICHARTIGEN Kanaelen schief: am `hm.ZWEIKANAL`
+   nahm der Detektor einen der beiden Ausgaenge — und zwar den zweiten —,
+   `Licht_Esstisch` stand angehakt da und `Licht_Bar` leer. Welcher es
+   wird, ist Zufall, und danach zu raten ist nicht die Aufgabe eines
+   Entwurfs OHNE Vorlage. Wer sie abwaehlt, will die Punkte selbst
+   aussuchen; also stehen alle da (Ricardo, 17.09.2026). */
 export function rohEntwurf(id) {
   var e2 = baueEntwurf(id);
   if (!e2.states.length) { return null; }
   var f = erkenneEntwurf(e2, null);
   e2.wantAuto = f.length ? f[0].type : null;
   e2.want = e2.wantAuto;
-  /* Angehakt wird, was im erkannten Muster einen Platz hat — dieselbe
-     Vorbelegung wie an einem Geraet ohne Vorlage. Findet der Detektor
-     gar nichts, bleibt es bei allen Punkten; einen leeren Entwurf
-     hinzustellen waere schlechter als einen vollen. */
-  var funde = e2.want ? erkenneEntwurf(e2, e2.want) : f;
-  var haupt = funde.length ? funde[0] : null;
-  var platz = {};
-  if (haupt) {
-    haupt.states.forEach(function (x) {
-      if (x.id) { platz[x.id.slice(id.length + 1).replace(/\./g, '_')] = x.name; }
-    });
-  }
-  if (Object.keys(platz).length) {
-    e2.states.forEach(function (st) { st.on = !!platz[st.n]; });
-  }
   return merkeHakenVorgabe(e2);
 }
 
