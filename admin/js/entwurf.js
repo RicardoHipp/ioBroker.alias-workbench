@@ -75,6 +75,23 @@ export function baueEntwurf(kanal) {
   kindZustaende(kanal).forEach(function (id) {
     var o = S.objects[id], c = o.common || {}, a = c.alias || {}, q = aliasQuellen(o);
     var kurzName = id.slice(kanal.length + 1);
+    /* Ein Knopfdruck hat keinen Zustand — sonst hat auch ein
+       nur-schreibender Punkt einen.
+
+       `read: false` allein reicht als Merkmal nicht. Homematic vergibt es
+       fuer beides: fuer `OLD_LEVEL` und `RAMP_STOP` (Gerätebeschreibung
+       `TYPE: ACTION` — ein Tastendruck) ebenso wie fuer `ON_TIME` und
+       `RAMP_TIME` (`TYPE: FLOAT` — eine Vorgabe fuer den naechsten
+       Schaltbefehl, die stehen bleibt). Nur beim ersten ist eine
+       Lesequelle sinnlos.
+
+       Nachgemessen am 17.09.2026: einen Alias auf `1.ON_TIME` gelegt, die
+       QUELLE direkt auf 30 gesetzt — der Alias zeigte 30. `read: false`
+       sperrt das Lesen also nicht, es sagt nur, dass von allein nichts
+       kommt. Wer den Wert setzt, will ihn auch sehen. */
+    var nat = o.native || {};
+    var istTaster = (c.read === false && !!c.write) &&
+      (nat.TYPE === 'ACTION' || /^button/.test(String(c.role || '')));
     e.states.push({
       /* Bei einer Quelle wird aus stat.POWER der Zustand stat_POWER —
          ein Punkt im Namen wuerde sonst eine Unterebene im Alias
@@ -109,7 +126,32 @@ export function baueEntwurf(kanal) {
          nichts abzuholen ist (K23). Dieselbe Ablesung wie in
          `zeileAusAlias` — sonst zeigte „Alias bearbeiten" eine Quelle,
          die „Alias anlegen" nie eingetragen hat. */
-      srcR: istAlias ? ((c.read === false && q.einfach) ? '' : (q.read || '')) : id,
+      /* An der Quelle ist der Punkt seine eigene Lesequelle — ausser er
+         sagt selbst, dass dort nichts ankommt.
+
+         `read: false` heisst nicht „gesperrt": lesen kann den Punkt
+         jeder, er liegt in der Datenbank. Es heisst, dass nie eine
+         Aktualisierung eintrifft. Was drinsteht, ist der Wert, den
+         zuletzt jemand hineingeschrieben hat — meist der Anfangswert
+         beim Adapterstart. Ein Alias, der daraus liest, zeigt fuer immer
+         diesen einen Wert und sieht dabei aus wie ein Messwert.
+
+         Bei Homematic steht es in der Geraetebeschreibung: `OPERATIONS`
+         ist eine Bitmaske (1 lesen, 2 schreiben, 4 meldet von selbst),
+         und `2.OLD_LEVEL` traegt 2 bei `TYPE: ACTION` — ein Knopfdruck,
+         kein Zustand. Am Wohnzimmer_Dimmer sind das 15 von 43 Zeilen,
+         jede davon las und schrieb bisher auf denselben Befehlspunkt
+         (Ricardo, 17.09.2026).
+
+         Ist der Punkt beschreibbar, wird daraus also ein Taster: keine
+         Lesequelle, nur ein Schreibziel. Genau die Form, die K23/K26 am
+         Rollladen-STOP beschreiben — der Alias bekommt `read: false`,
+         und vis, Alexa und matter zeichnen einen Knopf statt eines
+         Schalters, der ewig auf „aus" steht. Kann der Punkt auch nicht
+         schreiben, bleibt er, wie er ist: dann ist die fehlende Meldung
+         wirklich ein Mangel, und die Marke sagt es. */
+      srcR: istAlias ? ((c.read === false && q.einfach) ? '' : (q.read || ''))
+                     : (istTaster ? '' : id),
       /* Steht in `common.alias.id` ein einzelner Text, gilt er fuer Lesen
          UND Schreiben - dann ist die Schreibquelle dieselbe wie die
          Lesequelle. Hier stand frueher eine leere Zeichenkette, gedacht
@@ -565,8 +607,30 @@ export function steuerKanaele(dev) {
     if (!S.objects[id] || S.objects[id].type !== 'channel') { return; }
     var e2 = baueEntwurf(id);
     if (!e2.states.length) { return; }
-    var f = erkenneEntwurf(e2, null).filter(function (x) { return x.type !== 'info'; });
-    if (!f.length) { return; }
+    /* Auch Informationskanaele zaehlen mit (Ricardo, 17.09.2026).
+
+       Vorher fielen sie hier heraus — und damit sagte der Knopf am
+       Geschirrspueler „3 Stueck", waehrend im Baum daneben sechs Kanaele
+       standen. Wer `general` einzeln anklickt, bekommt laengst einen
+       Entwurf („Information ✓ 7/14 belegt") und kann ihn anlegen; nur
+       der Sammelweg liess ihn aus. Zwei Wege, zwei Antworten am selben
+       Geraet.
+
+       Der Zweck dieses Wegs ist, die Struktur der Quelle abzubilden —
+       dann gehoert jeder Kanal hinein, der fuer sich einen Entwurf
+       ergibt, und nicht nur der, den der Detektor fuer ein Geraet haelt.
+       Nebenbei faellt damit das Verteilen der „gemeinsamen" Kanaele in
+       den meisten Faellen weg: was einen eigenen Ordner bekommt, muss
+       nicht mehr in jeden anderen hineinkopiert werden (produktiv
+       gemessen: beim Maeher wanderten 206 Rohdatenpunkte in jeden der
+       vier Entwuerfe, beim Shelly SHEM-3 galten die drei Emeter-Phasen
+       als „gemeinsam" statt als eigene Kanaele). */
+    var alle = erkenneEntwurf(e2, null);
+    if (!alle.length) { return; }
+    /* Ein Kanal, der ein Geraet ergibt, wird danach benannt; nur wenn er
+       nichts als Information hergibt, gilt der info-Fund. */
+    var f = alle.filter(function (x) { return x.type !== 'info'; });
+    if (!f.length) { f = alle; }
     /* Nur zaehlen, was einen Pflichtplatz wirklich besetzt — sonst
        gilt jeder Kanal mit irgendeinem Messwert als Geraet. */
     /* Alles, was der Kanal an Plaetzen belegt — nicht nur die
@@ -590,90 +654,137 @@ export function steuerKanaele(dev) {
   return raus;
 }
 
-/* Ein fertiger Entwurf fuer einen Knoten, so wie ihn `waehle` erzeugen
-   wuerde — Vorlage, sonst Rohentwurf mit erkanntem Muster und der
-   Vorbelegung „nur was einen Platz hat". Gebraucht wird das, wenn aus
-   mehreren Kanaelen auf einmal Aliase entstehen sollen. */
-/* Welche Kanaele eines Geraets gehoeren keinem einzelnen Verbraucher,
-   sondern allen? Bei Homematic ist das Kanal 0 mit Batterie, Empfang und
-   Erreichbarkeit — ein Funkmodul, zwei Lampen. */
-export function gemeinsameKanaele(dev, kanalGeraete) {
-  var eigen = {};
-  (kanalGeraete || []).forEach(function (k) { eigen[k.id] = 1; });
-  var pre = dev + '.';
-  var raus = [];
-  S.keysSorted.forEach(function (id) {
-    if (id.indexOf(pre) !== 0) { return; }
-    if (id.slice(pre.length).indexOf('.') !== -1) { return; }
-    if (!S.objects[id] || S.objects[id].type !== 'channel') { return; }
-    if (eigen[id]) { return; }
-    if (!kindZustaende(id).length) { return; }
-    raus.push(id);
+/* Welche Unterordner entstehen, wenn die Struktur der Quelle abgebildet
+   wird — und zwar nach den HAKEN, nicht nach einer Vermutung.
+
+   Bis 17.09.2026 baute dieser Weg je Kanal einen frischen Entwurf und
+   hakte an, was das Muster des Kanals hergab. Damit entstand, was
+   niemand ausgewaehlt hatte: am `MISCHKANAL` bekam der Wartungskanal
+   `LOW_BAT`, `RSSI_DEVICE` und `UNREACH`, obwohl oben nur `UNREACH`
+   angehakt war. Umgekehrt fiel weg, was jemand von Hand angehakt hatte —
+   der Entwurf wurde ja gar nicht gelesen (Ricardo, 17.09.2026).
+
+   Jetzt gilt: was angehakt ist, bestimmt beides — welche Ordner es gibt
+   und was darin steht. Ein Kanal ohne angehakte Zeile kommt nicht vor.
+   Zeilen, deren Quelle direkt am Geraet haengt oder von woanders kommt,
+   bleiben im Behaelter selbst (`eigen`). */
+export function kanalGruppen(e) {
+  if (!e || !e.kanal || e.kanal.indexOf('alias.') === 0) { return []; }
+  var basis = e.kanal + '.';
+  var gruppen = [], nach = {}, eigen = [];
+  (e.states || []).forEach(function (st) {
+    if (!st.on || !st.n) { return; }
+    var quelle = st.srcR || st.srcW || '';
+    var rest = (quelle.indexOf(basis) === 0) ? quelle.slice(basis.length) : '';
+    var p = rest.indexOf('.');
+    /* Ohne Punkt liegt der Punkt direkt am Geraet; ohne `rest` liest die
+       Zeile von woanders. Beides gehoert in den Behaelter, nicht in einen
+       erfundenen Unterordner. */
+    if (!rest || p < 0) { eigen.push(st); return; }
+    var kid = e.kanal + '.' + rest.slice(0, p);
+    if (!S.objects[kid]) { eigen.push(st); return; }
+    if (!nach[kid]) {
+      var kn = eigenerKanalName(kid);
+      var kurz = rest.slice(0, p);
+      nach[kid] = { id: kid, kurz: kurz, name: kn || kurz,
+                    kennung: kennungtauglich(kn || '') || kurz, zeilen: [] };
+      gruppen.push(nach[kid]);
+    }
+    nach[kid].zeilen.push(st);
   });
-  return raus;
+  if (eigen.length) {
+    gruppen.unshift({ id: e.kanal, kurz: '', name: '', kennung: '',
+                      eigen: true, zeilen: eigen });
+  }
+  return gruppen;
 }
 
-export function entwurfFuer(id, gemeinsam, gemAn) {
-  var v = vorschlag(id);
-  if (v) { return v; }
+/* Der Entwurf ohne jede Vorlage — das, was die Werkbank an einem Geraet
+   zeigt, fuer das keine passt: alle Punkte, das erkannte Muster, und
+   angehakt ist, was darin einen Platz hat.
+
+   Gebraucht fuer „— keine Vorlage —" in der Vorlagenwahl. Bis zum
+   17.09.2026 liess sich eine erkannte Vorlage nicht abwaehlen: der erste
+   Eintrag der Liste war eine blosse Ueberschrift, sein Wert leer, und der
+   Zweig stieg bei leerem Wert sofort aus. Wechseln ging, weglassen nicht
+   (Ricardo). */
+export function rohEntwurf(id) {
   var e2 = baueEntwurf(id);
   if (!e2.states.length) { return null; }
-
-  /* Die Wartungsdaten des gemeinsamen Kanals gehoeren in jedes Geraet,
-     nicht in eines davon oder in einen Kanal daneben.
-
-     Ein Alias-Punkt ist ein Verweis, kein Wert — zwei Geraete duerfen
-     auf dieselbe Quelle zeigen, und der Batteriestand des Funkmoduls
-     gilt fuer beide Lampen gleichermassen. Lagerte man ihn in einen
-     eigenen `info`-Kanal aus, haette keine der beiden eine
-     Batteriewarnung: der Detektor schaut nur innerhalb eines Kanals.
-     Genau so macht es die Tasmota-Mehrfachvorlage mit RSSI — jeder der
-     vier Ausgaenge bekommt seinen eigenen, alle lesen aus tele/STATE. */
-  (gemeinsam || []).forEach(function (gid) {
-    kindZustaende(gid).forEach(function (qid) {
-      var o = S.objects[qid]; if (!o) { return; }
-      var c = o.common || {};
-      var kurz = qid.slice(gid.length + 1).replace(/\./g, '_');
-      /* Traegt der Kanal selbst schon einen Punkt dieses Namens, den
-         gemeinsamen unterscheidbar machen. */
-      if (e2.states.some(function (x) { return x.n === kurz; })) {
-        kurz = gid.split('.').pop() + '_' + kurz;
-      }
-      e2.states.push({
-        n: kurz, on: false, role: c.role || '', typ: c.type || '',
-        unit: c.unit || '', states: c.states || undefined, wr: false,
-        srcR: qid, srcW: '', f: '', fw: '', caption: '', manuell: false,
-        gemeinsam: true
-      });
-    });
-  });
   var f = erkenneEntwurf(e2, null);
   e2.wantAuto = f.length ? f[0].type : null;
   e2.want = e2.wantAuto;
+  /* Angehakt wird, was im erkannten Muster einen Platz hat — dieselbe
+     Vorbelegung wie an einem Geraet ohne Vorlage. Findet der Detektor
+     gar nichts, bleibt es bei allen Punkten; einen leeren Entwurf
+     hinzustellen waere schlechter als einen vollen. */
   var funde = e2.want ? erkenneEntwurf(e2, e2.want) : f;
   var haupt = funde.length ? funde[0] : null;
   var platz = {};
   if (haupt) {
     haupt.states.forEach(function (x) {
-      if (x.id) { platz[x.id.slice(id.length + 1)] = x.name; }
+      if (x.id) { platz[x.id.slice(id.length + 1).replace(/\./g, '_')] = x.name; }
     });
   }
   if (Object.keys(platz).length) {
     e2.states.forEach(function (st) { st.on = !!platz[st.n]; });
   }
-  /* Zum Schluss die Wartungspunkte, die auf der Geraeteebene einen Platz
-     gefunden haben. Warum nicht einfach den Detektor auf dem Kanal
-     fragen? Weil er dort nur SET und WORKING zuordnet, obwohl dieselben
-     Punkte mit denselben Rollen im Abbild stehen — auf der Geraeteebene
-     findet er LOWBAT, UNREACH und RSSI. Die Zuordnung von dort ist die
-     belastbare; sie stammt aus demselben Detektor, nur aus dem Lauf, der
-     sie sieht. */
-  if (gemAn) {
-    e2.states.forEach(function (st) {
-      if (st.gemeinsam && gemAn[st.srcR]) { st.on = true; }
-    });
-  }
   return merkeHakenVorgabe(e2);
+}
+
+/* Wohin die Unterordner kommen — der Behaelter fuer das Geraet.
+
+   Beim ersten Mal ist das schlicht `zielOrdner` plus Geraetename. Nach
+   dem Aufteilen gibt es aber mehrere Aliase zu derselben Quelle, je Kanal
+   einen, und `aliasFuer` liefert einen davon — den mit den meisten
+   Punkten. Der Behaelter waere dann dieser Unterordner, und der zweite
+   Druck haengte alles eine Ebene tiefer: aus
+   `alias.0.Geschirrspueler.Befehle` wurde
+   `alias.0.Geschirrspueler.Allgemeine_Informationen.Befehle`, beim
+   dritten Druck noch eine Ebene tiefer (17.09.2026).
+
+   Woran man es erkennt: das gefundene Ziel fuehrt in `native.quelle`
+   einen KANAL der Quelle, nicht das Geraet. Dann ist es selbst ein
+   Unterordner aus einem frueheren Durchgang, und der Behaelter ist sein
+   Elternknoten. */
+export function aufteilBehaelter(e) {
+  var ordner = (e.zielOrdner || 'alias.0') + '.' + e.zielName;
+  var ziel = e.ziel;
+  if (!ziel) { return ordner; }
+  var q = ((S.objects[ziel] && S.objects[ziel].native) || {}).quelle;
+  if (q && e.kanal && q.indexOf(e.kanal + '.') === 0) {
+    var p = ziel.lastIndexOf('.');
+    if (p > 0) { return ziel.slice(0, p); }
+  }
+  return ordner;
+}
+
+/* Aus einer Gruppe wird ein Entwurf: dieselben Zeilen, nur auf den Kanal
+   bezogen benannt. Was jemand an einer Zeile geaendert hat — Rolle, Typ,
+   Einheit, Formel, Beschriftung — wandert unveraendert mit; es waere
+   sonderbar, eine Handeingabe beim Aufteilen wegzuwerfen. */
+export function teilEntwurf(e, g) {
+  var v = { kanal: g.id, states: [], want: null, wantAuto: null,
+            alleMuster: false, raum: e.raum, funktion: e.funktion };
+  g.zeilen.forEach(function (st) {
+    var k = JSON.parse(JSON.stringify(st));
+    /* Der Name wird auf den Kanal bezogen: aus `commands_BSH_…` wird im
+       Kanal `Befehle` schlicht `BSH_…`. Gekuerzt wird ueber die Quelle —
+       und bei einem Taster ist das die SCHREIBquelle, denn `srcR` ist
+       dort leer. Ohne diesen Zusatz behielt genau diese Zeile ihren
+       langen Namen: `…Befehle.commands_BSH_Common_Command_StopProgram`
+       neben `…Allgemeine_Informationen.brand` (17.09.2026). */
+    var quelle = st.srcR || st.srcW || '';
+    if (!g.eigen && quelle && quelle.indexOf(g.id + '.') === 0) {
+      k.n = quelle.slice(g.id.length + 1).replace(/\./g, '_');
+    }
+    k.on = true;
+    v.states.push(k);
+  });
+  var f = erkenneEntwurf(v, null);
+  v.wantAuto = f.length ? f[0].type : null;
+  v.want = v.wantAuto;
+  return merkeHakenVorgabe(v);
 }
 
 /* Alle laufenden Abos abmelden.

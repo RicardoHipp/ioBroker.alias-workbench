@@ -16,9 +16,10 @@ import { ausgangName, vorschlag } from './vorlagen.js';
 import {
   waehle,
   ordnerUnterAlias,
-  gemeinsameKanaele,
   kennungtauglich,
-  entwurfFuer,
+  kanalGruppen,
+  teilEntwurf,
+  aufteilBehaelter,
   aliasFuer,
   knotenDa,
   aboLoesen
@@ -434,8 +435,8 @@ export function zuSchreiben(alleAusgaenge) {
   /* Raum und Funktion gehoeren an jeden Kanal, nicht nur an den
      gezeigten.
 
-     Die Teil-Entwuerfe entstehen frisch aus `entwurfFuer` bzw.
-     `vorschlag` und trugen keins von beidem. `enumAenderungen` baute
+     Die Teil-Entwuerfe entstehen aus `teilEntwurf` bzw. `vorschlag` und
+     trugen keins von beidem. `enumAenderungen` baute
      deshalb fuer keinen einzigen Kanal ein Enum-Objekt: Wer oben einen
      Raum einstellte und „Alle erzeugen" drueckte, bekam Kanaele ohne
      Raum — der Einzelweg setzte ihn, der Sammelweg nicht.
@@ -461,25 +462,46 @@ export function zuSchreiben(alleAusgaenge) {
     return v;
   };
 
-  if (alleAusgaenge && S.entwurf.kanalGeraete && S.entwurf.kanalGeraete.length > 1) {
-    /* Ein Ordner fuer das Geraet, darunter je Kanal ein Kanal — dieselbe
-       Form, die die Tasmota-Mehrfachvorlage seit jeher erzeugt. */
-    var ordner = (S.entwurf.zielOrdner || 'alias.0') + '.' + S.entwurf.zielName;
-    var gem = gemeinsameKanaele(S.entwurf.kanal, S.entwurf.kanalGeraete);
-    return S.entwurf.kanalGeraete.map(function (k) {
-      var v = entwurfFuer(k.id, gem, S.entwurf.gemeinsamMitPlatz);
-      if (!v) { return null; }
-      v.zielOrdner = ordner;
-      /* Die Kennung, nicht der Anzeigename. „Licht Bar, oben" ergab eine
-         Kennung mit Leerzeichen und Komma, „Kueche.Decke" sogar eine
-         zusaetzliche Ebene samt Zwischenordner. Und der js-controller
-         lehnt so etwas nicht ab, er saeubert still: aus
-         `alias.0.wb[pruef]` wurde `alias.0.wb_pruef_`, der Rueckruf
-         meldete `null`. Das Objekt entstuende also unter einer anderen
-         Kennung als angezeigt (gemessen 08.09.2026). Der Name bleibt
-         davon unberuehrt — er steht als Beschriftung im Objekt. */
-      v.zielName = k.kennung || k.name;
-      v.ziel = ordner + '.' + v.zielName;
+  /* Greift eine Mehrfachvorlage, gilt IHR Weg — die Ausgaenge stehen im
+     `%N%` der Vorlage, nicht in den Kanaelen des Geraets. Ohne diese
+     Ausnahme kaperte die Kanal-Aufteilung den Vorlagenweg: „Alle 2
+     erzeugen" lieferte am NEQ1660737 `…Licht_Bar_Esstisch.Licht_Bar.
+     Licht_Bar.STATE` und dazu den Wartungskanal mitten hinein
+     (17.09.2026). Die Beschriftung hatte den Fall ausgenommen, der
+     Schreibweg nicht — zwei Stellen, eine Bedingung. */
+  var mehrfach = S.entwurf.instanzen && S.entwurf.instanzen.length > 1;
+  var gruppen = (alleAusgaenge && !mehrfach) ? kanalGruppen(S.entwurf) : [];
+  if (gruppen.filter(function (g) { return !g.eigen; }).length > 1) {
+    /* Ein Behaelter fuer das Geraet, darunter je Kanal einer — die
+       Struktur der Quelle, abgebildet nach den Haken (C51).
+
+       Die Teil-Entwuerfe kamen bis 17.09.2026 frisch aus `entwurfFuer`:
+       sie hakten an, was das Muster des Kanals hergab, und lasen den
+       Entwurf oben gar nicht. Damit entstand, was niemand gewaehlt
+       hatte, und was jemand gewaehlt hatte, fiel weg. */
+    var ordner = aufteilBehaelter(S.entwurf);
+    return gruppen.map(function (g) {
+      var v = teilEntwurf(S.entwurf, g);
+      if (!v || !v.states.length) { return null; }
+      if (g.eigen) {
+        /* Punkte, die direkt am Geraet haengen, bleiben im Behaelter —
+           sonst verschwaenden sie beim Aufteilen. */
+        v.zielOrdner = S.entwurf.zielOrdner;
+        v.zielName = S.entwurf.zielName;
+        v.ziel = ordner;
+      } else {
+        v.zielOrdner = ordner;
+        /* Die Kennung, nicht der Anzeigename. „Licht Bar, oben" ergab eine
+           Kennung mit Leerzeichen und Komma, „Kueche.Decke" sogar eine
+           zusaetzliche Ebene samt Zwischenordner. Und der js-controller
+           lehnt so etwas nicht ab, er saeubert still: aus
+           `alias.0.wb[pruef]` wurde `alias.0.wb_pruef_`, der Rueckruf
+           meldete `null`. Das Objekt entstuende also unter einer anderen
+           Kennung als angezeigt (gemessen 08.09.2026). Der Name bleibt
+           davon unberuehrt — er steht als Beschriftung im Objekt. */
+        v.zielName = g.kennung || g.name;
+        v.ziel = ordner + '.' + v.zielName;
+      }
       uebernehmeBestand(v);
       return enumsUebertragen(v);
     }).filter(Boolean);

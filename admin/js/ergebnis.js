@@ -34,7 +34,10 @@ import {
   opt,
   vorlagenAbweichung,
   vorlageAnwenden,
-  bestandVorrang
+  bestandVorrang,
+  kanalGruppen,
+  aufteilBehaelter,
+  rohEntwurf
 } from './entwurf.js';
 import { setzeEnums, setzeZiel, unterschiede } from './zuordnung.js';
 import './detail.js';
@@ -670,7 +673,10 @@ var warumAuf = false;
          das Ausgangsfeld daneben blieb ungestylt in der Browserschrift. */
       var selV = el('select', 'tx');
 
-      selV.appendChild(opt('', e.vorschlag ? tr('tpl.switch') : tr('tpl.choose')));
+      /* Greift eine Vorlage, ist der erste Eintrag kein Titel, sondern
+         eine Wahl: sie wieder loswerden. „— Vorlage wechseln —" stand
+         wie eine Handlung da, tat aber nichts (Ricardo, 17.09.2026). */
+      selV.appendChild(opt('', e.vorschlag ? tr('tpl.none') : tr('tpl.choose')));
       S.VORLAGEN.forEach(function (v) {
         var t = pruefeVorlage(v, S.current);
         /* Auch nicht passende bleiben waehlbar — mit Grund daneben. Sonst
@@ -683,7 +689,24 @@ var warumAuf = false;
         selV.appendChild(o);
       });
       selV.addEventListener('change', function () {
-        if (!selV.value) { return; }
+        if (!selV.value) {
+          /* „keine Vorlage": den Rohentwurf nehmen. Ziel, Raum und
+             Funktion bleiben — die hat der Mensch eingestellt, nicht die
+             Vorlage. `angefasst` verhindert, dass der naechste
+             eintreffende Messwert die Vorlage wieder heranzieht. */
+          if (!e.vorschlag) { return; }
+          var r = rohEntwurf(S.current);
+          if (!r) { selV.value = e.vorlage || ''; return; }
+          r.ziel = e.ziel; r.zielOrdner = e.zielOrdner; r.zielName = e.zielName;
+          r.raum = e.raum; r.funktion = e.funktion;
+          r.raumHer = e.raumHer; r.funktionHer = e.funktionHer;
+          r.instanz = e.instanz; r.instanzen = e.instanzen;
+          S.entwurf = r;
+          S.openRow = null;
+          entwurfAngefasst();
+          zeichneErgebnis();
+          return;
+        }
         var v = vorschlag(S.current, selV.value);
         if (v) {
           v.ziel = e.ziel;
@@ -868,7 +891,22 @@ var warumAuf = false;
     var bd = $('#btn-dry');
     var ba = $('#btn-dry-alle');
     var mehr = e.instanzen && e.instanzen.length > 1;
-    var mehrK = !mehr && (e.kanalGeraete || []).length > 1;
+    /* Welche Unterordner entstuenden — nach den Haken, dieselbe Rechnung
+       wie der Schreibweg (C51). */
+    var grp = mehr ? [] : kanalGruppen(e).filter(function (g) { return !g.eigen; });
+    /* Zwei Kanaele mit Haken genuegen — auch wenn einer davon der
+       Wartungskanal ist.
+
+       Zwischenzeitlich zaehlte `.0` hier nicht mit, damit der Knopf nicht
+       an jedem Fuehler steht. Das ergab aber eine Unstimmigkeit, die beim
+       Benutzen auffaellt: fuer den INHALT zaehlte der Kanal (er bekommt
+       seinen Ordner), fuer den ANLASS nicht — man hakt etwas an und
+       nichts passiert. Ricardo am 17.09.2026: „zählt ist ja eher ne
+       Expertenfunktion, da weiss man schon was man macht." Also eine
+       Regel statt zweier. */
+    var typVonK = {};
+    (e.kanalGeraete || []).forEach(function (k) { typVonK[k.id] = k.typ; });
+    var mehrK = !mehr && grp.length > 1;
     /* Die Knoepfe gehoeren zum Modus, nicht nur zum Objekt: Im Modus
        „Alias anlegen" wird angelegt, nicht verwaltet — Verlegen, Quelle
        tauschen und Entfernen haben dort nichts zu suchen. Im Modus
@@ -915,13 +953,25 @@ var warumAuf = false;
           return (e.zielOrdner || '') + '.' + nm;
         }).join(String.fromCharCode(10));
       } else if (mehrK) {
-        ba.textContent = tr('write.createPerChannel', e.kanalGeraete.length);
+        ba.textContent = tr('write.createPerChannel', grp.length);
         /* Im Hinweis stehen die Namen, die entstehen wuerden — sonst
            klickt man auf eine Zahl und weiss nicht, was danach dasteht. */
-        ba.title = e.kanalGeraete.map(function (k) {
+        /* Dieselbe Rechnung wie der Schreibweg (schreiben.js, `ordner`):
+           ein Behaelter fuer das Geraet, darunter je Kanal einer. Hier
+           stand nur `zielOrdner` — also eine Ebene zu wenig. Am
+           Geschirrspueler versprach der Hinweis `alias.0.Befehle`,
+           entstanden waere `alias.0.Geschirrspueler.Befehle`; am
+           Wohnzimmer_Dimmer las man `alias.0.1`, `alias.0.2`, `alias.0.3`
+           — drei Aliase, nach blanken Kanalnummern benannt, direkt unter
+           alias.0. Gefunden im Lauf vom 16.09.2026 (C15). */
+        var ordnerK = aufteilBehaelter(e);
+        ba.title = grp.map(function (g) {
           /* Die Kennung, nicht den Anzeigenamen - so heisst das Objekt
-             hinterher wirklich (G31). */
-          return (e.zielOrdner || '') + '.' + (k.kennung || k.name) + '   (' + k.typ + ')';
+             hinterher wirklich (G31). Dahinter, was hineinkommt: die
+             Zahl der angehakten Zeilen — daran sieht man vor dem Klick,
+             dass nichts Erfundenes dabei ist. */
+          return ordnerK + '.' + (g.kennung || g.name)
+            + '   (' + g.zeilen.length + (typVonK[g.id] ? ', ' + typVonK[g.id] : '') + ')';
         }).join(String.fromCharCode(10));
       }
       ba.disabled = false;

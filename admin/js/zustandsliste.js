@@ -52,21 +52,6 @@ export function berechnePlaetze(e, haupt) {
       ? steuerKanaele(S.current) : [];
   }
 
-  /* Welche Punkte aus den gemeinsamen Kanaelen haben hier, auf der
-     Geraeteebene, einen Platz gefunden? Diese Liste bekommen die
-     Kanal-Entwuerfe mit — dort erkennt der Detektor sie nicht. */
-  if (e.kanalGeraete && e.kanalGeraete.length > 1) {
-    var eigenerKanal = {};
-    e.kanalGeraete.forEach(function (k) { eigenerKanal[k.id] = 1; });
-    e.gemeinsamMitPlatz = {};
-    e.states.forEach(function (st) {
-      if (!st.srcR || !platzVon[st.n]) { return; }
-      var elt = st.srcR.slice(0, st.srcR.lastIndexOf('.'));
-      if (elt.indexOf(S.current + '.') === 0 && !eigenerKanal[elt]) {
-        e.gemeinsamMitPlatz[st.srcR] = platzVon[st.n];
-      }
-    });
-  }
 
   /* Vorbelegung eines Rohentwurfs: angehakt ist, was im erkannten Muster
      einen Platz findet.
