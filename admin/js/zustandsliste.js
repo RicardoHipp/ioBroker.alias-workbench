@@ -364,6 +364,31 @@ export function baueListe(host, e, pl, rateKnopf, musterBlock) {
      gerechnet: die Zeilenschleife braucht es, die Legende darunter
      ebenso, und beide sollen dieselbe Antwort geben. */
   var kipptAnTyp = typKonflikte(e.states, e.want).filter(function (x) { return x.pflicht; })[0] || null;
+  /* Gekippt ist es aber nur, wenn der genannte Platz auch wirklich leer
+     geblieben ist. Sonst hat eine ANDERE Zeile ihn besetzt, das Muster
+     greift, und der Konflikt betrifft nur diese eine Zeile.
+
+     `typKonflikte` fragt je Zeile „deine Rolle taugt fuer einen Platz,
+     dein Typ aber nicht" — es sieht nicht nach, wer den Platz am Ende
+     bekommen hat. Gemessen am 17.09.2026 an `hm-rpc.2.NEQ1660737` nach
+     „keine Vorlage": `0_AES_KEY` traegt (von hm-rpc selbst) die Rolle
+     `state` und den Typ `number`. `state` ist beim Licht-Platz SET
+     zugelassen, `number` nicht — also meldete die Legende „Das
+     Licht-Muster greift gerade nicht: SET verlangt boolean, eingestellt
+     ist number. Deshalb hat keine Zeile einen Platz." Dabei ist die
+     SET-Zeile `switch.light`/`boolean` und einwandfrei, das Muster greift
+     (SET, WORKING, UNREACH, LOWBAT, RSSI besetzt), und fuenf Zeilen haben
+     sehr wohl einen Platz. Die Meldung nannte den PLATZ und nie die
+     Zeile, um die es ging (Ricardo).
+
+     Fuer I34 aendert das nichts: dort ist SET selbst der Konflikt
+     (`mixed` statt `boolean`), der Platz bleibt leer, und die Legende
+     benennt weiter die Ursache. */
+  if (kipptAnTyp && Object.keys(platzVon).some(function (n) {
+    return platzVon[n] === kipptAnTyp.platz;
+  })) {
+    kipptAnTyp = null;
+  }
 
   /* --- Zustandsliste --- */
   e.states.forEach(function (s, i) {
