@@ -600,7 +600,10 @@ export function uebernehmeBestand(e) {
   function vomAliasUebernehmen(z, o) {
     var c = o.common || {}, q2 = aliasQuellen(o);
     var ist = zeileAusAlias(o, z.n);
-    if (!z.vorlagenWert) {
+    /* Dieselbe Frage wie in `bestandVorrang`: ohne Vorlage gibt es keinen
+       Vorlagenwert. Sonst verglich die Zeile gegen den Rohentwurf und
+       nannte das „weicht von der Vorlage ab" (17.09.2026). */
+    if (!z.vorlagenWert && e.vorschlag && e.vorlage) {
       z.vorlagenWert = {
         on: z.on, role: z.role, typ: z.typ, unit: z.unit, caption: z.caption,
         f: z.f, fw: z.fw, srcR: z.srcR, srcW: z.srcW, states: z.states

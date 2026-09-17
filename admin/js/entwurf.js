@@ -1344,6 +1344,22 @@ export function aliasFuer(quelle, ausgang) {
 export function bestandVorrang(e, aliasId) {
   if (!e || !e.states || !aliasId) { return e; }
   var kanal = aliasId;
+  /* `vorlagenWert` heisst, was es heisst: was die VORLAGE sagen wuerde.
+     Ist keine in Kraft — abgewaehlt oder nie gefunden —, gibt es nichts,
+     wovon etwas abweichen koennte, und die Kopie darf nicht entstehen.
+
+     Bis zum 17.09.2026 wurde sie unbesehen gesetzt, und dann log die
+     Zeile: an `hm-rpc.2.NEQ1660737` nach „keine Vorlage" stand an SET
+     „weicht von der Vorlage ab" und darunter „Die Vorlage will hier:
+     switch" — waehrend im Alias `switch.light` steht, was auf das Muster
+     `light` sogar passt. Verglichen wurde in Wahrheit gegen den
+     Rohentwurf, also gegen die blanke Rolle des Quellpunkts, und als
+     abweichend markiert ausgerechnet der bessere Wert. Dasselbe an einem
+     Geraet, zu dem NIE eine Vorlage gefunden wurde (nachgestellt an
+     `echt.Warmwasser`): auch dort erschien die Marke. Ricardo: „es gibt
+     ja gar keine Vorlage mehr, man kann hoechstens vom Muster
+     abweichen." */
+  var mitVorlage = !!(e.vorschlag && e.vorlage);
   e.states.forEach(function (s) {
     if (!s.n) { return; }
     var o = S.objects[kanal + '.' + s.n];
@@ -1353,22 +1369,26 @@ export function bestandVorrang(e, aliasId) {
          anlegen (Ricardo, 25.08.2026: UNREACH und RSSI standen angehakt,
          obwohl sie im Alias fehlen). Anhaken kann man sie weiterhin, und
          der Chip „Vorlage" holt die Vorgabe der Vorlage zurueck. */
-      s.vorlagenWert = { on: s.on, role: s.role, typ: s.typ, unit: s.unit,
-                         caption: s.caption, f: s.f, fw: s.fw,
-                         srcR: s.srcR, srcW: s.srcW, states: s.states };
+      if (mitVorlage) {
+        s.vorlagenWert = { on: s.on, role: s.role, typ: s.typ, unit: s.unit,
+                           caption: s.caption, f: s.f, fw: s.fw,
+                           srcR: s.srcR, srcW: s.srcW, states: s.states };
+      }
       s.on = false;
       return;
     }
     var c = o.common;
     var q = aliasQuellen(o);
     /* Was die Vorlage wollte - fuer den Vergleich und den Knopf. */
-    s.vorlagenWert = {
-      role: s.role, typ: s.typ, unit: s.unit, caption: s.caption,
-      f: s.f, fw: s.fw, srcR: s.srcR, srcW: s.srcW, states: s.states,
-      /* Auch der Haken der Vorlage - der Chip „Vorlage" stellt ihn wieder
-         her, nachdem der Bestand ihn ueberschrieben hat. */
-      on: s.on
-    };
+    if (mitVorlage) {
+      s.vorlagenWert = {
+        role: s.role, typ: s.typ, unit: s.unit, caption: s.caption,
+        f: s.f, fw: s.fw, srcR: s.srcR, srcW: s.srcW, states: s.states,
+        /* Auch der Haken der Vorlage - der Chip „Vorlage" stellt ihn wieder
+           her, nachdem der Bestand ihn ueberschrieben hat. */
+        on: s.on
+      };
+    }
     var ist = zeileAusAlias(o, s.n);
     /* Rolle und Typ NUR, wenn sie im Alias ueberhaupt stehen.
 

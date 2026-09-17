@@ -250,6 +250,11 @@ export function baueListe(host, e, pl, rateKnopf, musterBlock) {
      (Ricardo, 26.08.2026). „Freie Plaetze vorschlagen" bleibt oben - er
      gehoert zur Erkennung, nicht zur Auswahl. */
   var chipzeile = el('div', 'chipzeile');
+  /* „Vorlage" nur, wo eine in Kraft ist. Der Knopf holt die Haken der
+     Vorlage zurueck - ohne Vorlage holt er nichts und behauptet doch,
+     es gaebe etwas zu holen (Ricardo, 17.09.2026, zusammen mit der
+     Marke „weicht von der Vorlage ab"). */
+  var mitVorlage = !!(e.vorschlag && e.vorlage);
   (amAlias ? [] :
   [[tr('list.tpl'), function () {
       /* Die Haken, die die Vorlage vorgibt. Gibt es keinen Vorlagenwert
@@ -278,7 +283,9 @@ export function baueListe(host, e, pl, rateKnopf, musterBlock) {
         });
       }
       e.states.forEach(function (s) { s.on = !!drin[s.n]; });
-   }, tr('list.onlyPatternHint')]]).forEach(function (pr) {
+   }, tr('list.onlyPatternHint')]])
+  .filter(function (pr) { return mitVorlage || pr[0] !== tr('list.tpl'); })
+  .forEach(function (pr) {
     var b = el('button', null, pr[0]);
     if (pr[2]) { b.title = pr[2]; }
     b.addEventListener('click', function () {
