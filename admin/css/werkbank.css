@@ -840,15 +840,28 @@
   /* Der Aufklapper steht in der Kopfzeile ganz rechts. `margin-left:auto`
      schiebt ihn dorthin, ohne dass die Kopfzeile etwas davon wissen muss. */
   .suggestbox .hd .wkopf {
-    display:inline-flex; align-items:center; gap:6px; cursor:pointer;
-    margin-left:auto; padding:2px 7px; border-radius:var(--r-sm);
+    display:inline-flex; align-items:center; gap:5px; cursor:pointer;
+    margin-left:auto; padding:2px 5px; border-radius:var(--r-sm);
     font-size:11.5px; font-weight:400; color:var(--ink-3);
     user-select:none; transition:background .12s, color .12s;
-    white-space:nowrap;
+    white-space:nowrap; flex:0 0 auto;
   }
-  .suggestbox .hd .wkopf .klappz { color:var(--ink-2); font-size:10px; }
+  /* Statt „Warum diese Vorlage +" ein Fragezeichen mit Tooltip: die
+     Kopfzeile ist eng, der Satz ist lang, und gelesen wurde er ohnehin
+     nur einmal (Ricardo, 17.09.2026). Aufgeklappt wird das Zeichen
+     gefuellt - sonst saehe man dem Kopf nicht an, dass unten etwas steht. */
+  .suggestbox .hd .wkopf .fragez {
+    display:inline-flex; align-items:center; justify-content:center;
+    width:16px; height:16px; flex:0 0 auto; border-radius:50%;
+    border:1px solid var(--line-strong); color:var(--ink-2);
+    font-size:11px; font-weight:700; line-height:1;
+  }
+  .suggestbox .hd .wkopf.auf .fragez {
+    background:var(--accent); border-color:var(--accent); color:#fff;
+  }
   .suggestbox .hd .wkopf:hover { color:var(--ink); background:var(--surface-2); }
-  .suggestbox .hd .wkopf:hover .klappz { color:var(--accent); }
+  .suggestbox .hd .wkopf:hover .fragez { color:var(--accent); border-color:var(--accent); }
+  .suggestbox .hd .wkopf.auf:hover .fragez { color:#fff; }
   .warum .wleib { margin:0; }
   .warum .wleib ul { margin:0; padding-left:16px; }
   .warum .wleib li { margin:1px 0; }
@@ -857,7 +870,25 @@
     text-transform:uppercase; font-weight:700; color:var(--ink-3);
   }
 
-  .suggestbox .hd { display:flex; align-items:center; flex-wrap:wrap; }
+  /* Die Kopfzeile bleibt EINE Zeile. Sie umbrechen zu lassen half nicht:
+     der Hinweis rechts hat `margin-left:auto`, fand bei langem Namen und
+     zwei Marken keinen Platz mehr und nahm sich eine ganze Zeile fuer
+     sich allein. Jetzt weicht stattdessen der Vorlagenname zurueck - er
+     steht vollstaendig im Tooltip und im Auswahlfeld darunter. */
+  .suggestbox .hd { display:flex; align-items:center; flex-wrap:nowrap; overflow:hidden; }
+  .suggestbox .hd > * { flex:0 0 auto; }
+  .suggestbox .hd .tname,
+  .suggestbox .hd .tid {
+    flex:0 1 auto; min-width:0; overflow:hidden;
+    text-overflow:ellipsis; white-space:nowrap;
+  }
+  .suggestbox .hd .tid {
+    font-family:var(--mono); font-size:10.5px; font-weight:400; color:var(--ink-3);
+    /* Die Kennung weicht gar nicht: sie ist kurz, und abgeschnitten sagt
+       sie nichts mehr - `hm-rollladen…` ist keine Kennung. Platz macht der
+       Name, der bis auf null zurueckgehen darf. */
+    flex-shrink:0;
+  }
 
   .suggestbox { flex-direction:column; align-items:stretch; gap:9px; }
   .suggestbox .hd { width:100%; }

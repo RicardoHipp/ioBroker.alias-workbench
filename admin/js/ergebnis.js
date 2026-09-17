@@ -1,7 +1,7 @@
 import { S } from './zustand.js';
 import './start.js';
 import { socket } from './verbindung.js';
-import { D, $, el, klappZeichen } from './basis.js';
+import { D, $, el } from './basis.js';
 import { tr, sprachtext } from './sprache.js';
 import './einstellungen.js';
 import './enums.js';
@@ -516,15 +516,21 @@ var warumAuf = false;
         sg.style.borderColor = 'var(--line-strong)';
         sg.style.background = 'var(--surface-2)';
       }
-      var hd = el('div', 'hd', e.vorschlag
+      var hd = el('div', 'hd');
+      /* Der Name steht in einer eigenen Spanne, damit er sich kuerzen
+         laesst. Die Kopfzeile bricht nicht mehr um: vorher nahm sich der
+         Hinweis rechts eine eigene Zeile, sobald Marken dazukamen und der
+         Name lang wurde („Homematic Rollladenaktor" + von Hand gewaehlt +
+         erzwungen). Jetzt weicht stattdessen der Name zurueck — vollstaendig
+         steht er im Tooltip und im Auswahlfeld darunter (Ricardo, 17.09.2026). */
+      var hdText = e.vorschlag
         ? tr('tpl.identifiedAs', e.tplName)
-        : tr('tpl.noneDetected'));
+        : tr('tpl.noneDetected');
+      var hdName = el('span', 'tname', hdText);
+      hdName.title = hdText;
+      hd.appendChild(hdName);
       if (e.vorlageVersion) {
-        var vv2 = el('span', null, '  ·  ' + e.vorlage + ' v' + e.vorlageVersion);
-        vv2.style.fontFamily = 'var(--mono)';
-        vv2.style.fontSize = '10.5px';
-        vv2.style.fontWeight = '400';
-        vv2.style.color = 'var(--ink-3)';
+        var vv2 = el('span', 'tid', '  ·  ' + e.vorlage + ' v' + e.vorlageVersion);
         hd.appendChild(vv2);
       }
       if (e.vonHandGewaehlt) {
@@ -575,13 +581,22 @@ var warumAuf = false;
          Breite, die eine Liste braucht. */
       var warumKopf = null, warumLeib = null;
       if (gruende.length || weggelassen.length) {
-        warumKopf = el('div', 'wkopf');
         /* Ohne Vorlage waere „Warum diese Vorlage" die falsche Frage —
            dann steht hier, warum keine greift. */
-        warumKopf.appendChild(el('span', null, weggelassen.length
-          ? tr('tpl.skippedHead', weggelassen.length)
-          : tr(e.vorschlag ? 'tpl.whyThis' : 'tpl.whyNone')));
-        warumKopf.appendChild(klappZeichen(warumAuf));
+        var warumText = tr(e.vorschlag ? 'tpl.whyThis' : 'tpl.whyNone');
+        warumKopf = el('div', 'wkopf' + (warumAuf ? ' auf' : ''));
+        /* Statt „Warum diese Vorlage +" nur ein Fragezeichen: der Satz
+           steht im Tooltip und spart die halbe Kopfzeile. Was weggelassen
+           wurde, bleibt als kurze Marke stehen — dass Punkte fehlen, soll
+           niemand erst suchen muessen (Ricardo, 17.09.2026). */
+        if (weggelassen.length) {
+          warumKopf.appendChild(el('span', 'chip mut',
+            tr('tpl.skippedChip', weggelassen.length)));
+          warumText = tr('tpl.skippedHead', weggelassen.length) + ' — ' + warumText;
+        }
+        warumKopf.appendChild(el('span', 'fragez', '?'));
+        warumKopf.title = warumText;
+        warumKopf.setAttribute('aria-label', warumText);
         warumKopf.tabIndex = 0;
         var um2 = function () { warumAuf = !warumAuf; zeichneErgebnis(); };
         warumKopf.addEventListener('click', um2);
