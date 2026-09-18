@@ -15,6 +15,35 @@ import { anMusterAnpassen } from './vorlagen.js';
 import { ratePlaetze, rateAnzahl } from './vorschlagen.js';
 import { zeichneErgebnis, entwurfAngefasst, knopfFrisch } from './ergebnis.js';
 import { musterName, musterZeile } from './musternamen.js';
+import { nurWasInsMusterPasst } from './zustandsliste.js';
+import { kindZustaende } from './werte.js';
+
+/* Musterwechsel ohne Vorlage: die Haken folgen dem neuen Muster (C54).
+
+   Vorher lief die Vorbelegung nur einmal, beim Aufbau des Entwurfs; wer
+   danach das Muster wechselte, behielt die Haken des alten. Jetzt gilt
+   dieselbe Regel wie beim Aufbau — angehakt ist, was im gewaehlten
+   Muster einen Platz hat —, dazu jede Zeile, an der schon etwas von Hand
+   eingestellt wurde (Ricardo, 19.09.2026).
+
+   Nicht mit Vorlage: die bestimmt selbst, was an ist. Nicht an einem
+   Alias, den es schon gibt: dort ist jeder Haken eine getroffene
+   Entscheidung, abwaehlen hiesse loeschen — dieselben Ausnahmen wie bei
+   der Vorbelegung in `berechnePlaetze`. */
+function hakenNachMuster(e) {
+  if (e.vorlage) { return; }
+  if (S.current && S.current.indexOf('alias.') === 0) { return; }
+  if (e.ziel && kindZustaende(e.ziel).length > 0) { return; }
+  nurWasInsMusterPasst(e, true);
+  /* Wie beim Aufbau: der Schalter jedes weiteren Kanals kommt mit, damit
+     „als ein Geraet" keinen Ausgang heimlich verliert. */
+  (e.kanalGeraete || []).forEach(function (k) {
+    (k.pflicht || []).forEach(function (pid) {
+      var kurz = pid.slice(S.current.length + 1).replace(/\./g, '_');
+      e.states.forEach(function (st) { if (st.n === kurz) { st.on = true; } });
+    });
+  });
+}
 
 export function baueMusterwahl(e, haupt, pflichtFehlt) {
   var vw = el('div', 'verdictwrap' + (haupt && !pflichtFehlt.length ? '' : ' bad'));
@@ -323,6 +352,7 @@ export function baueMusterwahl(e, haupt, pflichtFehlt) {
     } else {
       e.want = neuTyp;
     }
+    hakenNachMuster(e);
     S.openRow = null;
     /* Kein Fokus zurueck ins Feld: der Fokus oeffnete die Liste sofort
        wieder, und nach der Wahl stand sie erneut offen — man musste
@@ -482,6 +512,7 @@ export function baueMusterwahl(e, haupt, pflichtFehlt) {
         /* Beim Vorschlag entscheidet nicht das Muster, sondern die
            Rollen, die das Auswaehlen setzt - genau wie in `mWaehlen`. */
         if (e.vorschlag && !e.roh) { anMusterAnpassen(e, bestes); } else { e.want = bestes; }
+        hakenNachMuster(e);
         e.rateMeldung = meldungZu(ratePlaetze(e));
         entwurfAngefasst();
         S.openRow = null;

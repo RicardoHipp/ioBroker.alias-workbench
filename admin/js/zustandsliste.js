@@ -117,6 +117,30 @@ export function berechnePlaetze(e, haupt) {
   return { platzVon: platzVon, platzAnzahl: platzAnzahl, imInfo: imInfo };
 }
 
+/* Angehakt wird genau, wer im Muster `e.want` einen Platz bekommt. Alle
+   Zeilen treten dazu an, unabhaengig vom Haken — sonst haette die
+   Auswahl ein Gedaechtnis: nach „alle" lieferte sie mehr als direkt nach
+   dem Oeffnen (Ricardo, 25.08.2026).
+
+   `geaenderteBehalten`: Zeilen, an denen jemand etwas eingestellt hat
+   (Rolle, Typ, Einheit, Formel, Beschriftung), bleiben angehakt. Das
+   braucht der Musterwechsel (C54) — wer eine Zeile von Hand hergerichtet
+   hat, will sie nicht verlieren, nur weil das neue Muster keinen Platz
+   fuer sie hat. Der Knopf „nur was ins Muster passt" behaelt sie nicht:
+   er sagt woertlich, was er tut. */
+export function nurWasInsMusterPasst(e, geaenderteBehalten) {
+  var kopie = JSON.parse(JSON.stringify({ kanal: e.kanal, states: e.states }));
+  kopie.states.forEach(function (s) { s.on = true; });
+  var f = erkenneEntwurf(kopie, e.want);
+  var drin = {};
+  if (f.length) {
+    f[0].states.forEach(function (x) {
+      if (x.id) { drin[x.id.slice(e.kanal.length + 1)] = true; }
+    });
+  }
+  e.states.forEach(function (s) { s.on = !!drin[s.n] || !!(geaenderteBehalten && s.geaendert); });
+}
+
 export function baueListe(host, e, pl, rateKnopf, musterBlock) {
   /* Bezugspunkt der Marken: die Quelle, an der ich gerade STEHE.
 
@@ -273,16 +297,7 @@ export function baueListe(host, e, pl, rateKnopf, musterBlock) {
          direkt nach dem Oeffnen (Ricardo, 25.08.2026). Jetzt treten
          alle Zeilen zur Platzvergabe an, unabhaengig vom Haken, und
          angehakt wird genau, wer einen Platz bekommt. */
-      var kopie = JSON.parse(JSON.stringify({ kanal: e.kanal, states: e.states }));
-      kopie.states.forEach(function (s) { s.on = true; });
-      var f = erkenneEntwurf(kopie, e.want);
-      var drin = {};
-      if (f.length) {
-        f[0].states.forEach(function (x) {
-          if (x.id) { drin[x.id.slice(e.kanal.length + 1)] = true; }
-        });
-      }
-      e.states.forEach(function (s) { s.on = !!drin[s.n]; });
+      nurWasInsMusterPasst(e, false);
    }, tr('list.onlyPatternHint')]])
   .filter(function (pr) { return mitVorlage || pr[0] !== tr('list.tpl'); })
   .forEach(function (pr) {
