@@ -751,17 +751,27 @@ export function baueListe(host, e, pl, rateKnopf, musterBlock) {
   var fehlt = [];
   var muL = e.want && musterVon(e.want);
   if (muL && !kipptAnTyp && !Object.keys(platzVon).length) {
-    var passtAuf = function (st, s) {
+    var passtAuf = function (st, s, auchTyp) {
       return plaetzeFuerRolle(e.want, s.role).some(function (p) {
-        return p.name === st.name && (!s.typ || typPasstZuPlatz(p, s.typ));
+        return p.name === st.name && (!auchTyp || !s.typ || typPasstZuPlatz(p, s.typ));
       });
     };
     var gesehenL = {};
     muL.states.forEach(function (st) {
       if (!st.required || gesehenL[st.name]) { return; }
       gesehenL[st.name] = 1;
-      if (e.states.some(function (s) { return s.on && passtAuf(st, s); })) { return; }
-      fehlt.push({ platz: st.name, aus: e.states.filter(function (s) { return !s.on && s.n && passtAuf(st, s); }) });
+      if (e.states.some(function (s) { return s.on && passtAuf(st, s, true); })) { return; }
+      /* Kandidat ist jede nicht angehakte Zeile, deren ROLLE passt — auch
+         wenn der Typ nicht passt. Am 3D-Drucker bringt `cmnd.POWER` die
+         Rolle `switch` selbst mit, aber den Typ `mixed`; nur nach
+         passendem Typ gefragt, fiel er stillschweigend heraus, und die
+         Legende nannte niemanden (Ricardo, 19.09.2026). Den Typ stellt
+         der Knopf gleich mit. Passende Typen zuerst. */
+      var aus = e.states.filter(function (s) { return !s.on && s.n && passtAuf(st, s, false); });
+      aus.sort(function (a, b) { return (passtAuf(st, b, true) ? 1 : 0) - (passtAuf(st, a, true) ? 1 : 0); });
+      var soll = Array.isArray(st.type) ? st.type[0] : st.type;
+      fehlt.push({ platz: st.name, aus: aus, soll: soll,
+                   typFalsch: aus.length ? !passtAuf(st, aus[0], true) : false });
     });
   }
 
@@ -787,13 +797,19 @@ export function baueListe(host, e, pl, rateKnopf, musterBlock) {
     var mitKandidat = fehlt.filter(function (f) { return f.aus.length; })[0];
     if (mitKandidat) {
       var kand = mitKandidat.aus[0];
-      lg.appendChild(document.createTextNode(' ' + tr('pattern.offCandidate', kand.n, mitKandidat.platz)));
-      var bk = el('button', 'btn schmal', tr('pattern.tickIt'));
+      var mitTyp = mitKandidat.typFalsch && mitKandidat.soll;
+      lg.appendChild(document.createTextNode(' ' + (mitTyp
+        ? tr('pattern.offCandidateType', kand.n, mitKandidat.platz, kand.typ, mitKandidat.soll)
+        : tr('pattern.offCandidate', kand.n, mitKandidat.platz))));
+      var bk = el('button', 'btn schmal', mitTyp
+        ? tr('pattern.tickItType', mitKandidat.soll) : tr('pattern.tickIt'));
       bk.type = 'button';
       bk.style.marginLeft = '6px';
       bk.addEventListener('click', function (ev) {
         ev.stopPropagation();
-        kand.on = true; entwurfAngefasst(); zeichneErgebnis();
+        kand.on = true;
+        if (mitTyp) { kand.typ = mitKandidat.soll; kand.geaendert = true; }
+        entwurfAngefasst(); zeichneErgebnis();
       });
       lg.appendChild(bk);
     }

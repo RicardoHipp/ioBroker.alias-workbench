@@ -323,6 +323,8 @@
   "pattern.offMissing": "The {0} pattern does not apply right now: {1} is missing. That is why no row has a slot.",
   "pattern.offCandidate": "{0} fits {1} but is not ticked.",
   "pattern.tickIt": "tick it",
+  "pattern.offCandidateType": "{0} fits {1} by its role, but is not ticked and has type {2} instead of {3}.",
+  "pattern.tickItType": "tick it, {0}",
   "pattern.noPlaceBecauseType": "The {0} pattern does not apply right now: {1} requires {2}, but {3} is set. That is why no row has a slot.",
   "pattern.noPlaceLegend": "Rows shaded like this have no slot in the {0} pattern",
   "pattern.noPlaceLong": "no slot in the {0} pattern — the point is still created and fully usable, only Alexa and friends count it separately",
