@@ -1204,9 +1204,13 @@ export function geraeteDarunter(wurzel) {
     }
   });
 
-  geraete.sort(function (a, b) { return a.id < b.id ? -1 : 1; });
+  /* Angezeigt wird wie im Baum: `seg_inf.10` hinter `seg_inf.9`, nicht
+     hinter `seg_inf.1` (E45). Die Liste dient nur der Anzeige — die
+     byteweise Ordnung von `keysSorted` bleibt unberuehrt (E42). */
+  geraete.sort(function (a, b) { return GERAETE_VERGLEICH.compare(a.id, b.id); });
   return geraete;
 }
+var GERAETE_VERGLEICH = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
 
 /* Gibt es fuer diese Quelle schon einen Alias?
 

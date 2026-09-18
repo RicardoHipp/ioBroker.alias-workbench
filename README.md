@@ -593,6 +593,7 @@ imported, and that both language files carry the same keys.
 ## Changelog
 
 ### **WORK IN PROGRESS**
+* A folder’s **“Devices”** card sorted differently from the tree beside it: on the robot vacuum it read `1, 10, 2, 3 …`, while the tree listed the same folders as `1, 2 … 9, 10`. It now sorts like the tree.
 * **“Ask” for SetOption59 took an old answer for a new one.** If `stat.RESULT` still held a `{"SetOption59":"ON"}` from days ago, the card reported “enabled · just asked” after asking — even when the device was off and did not answer at all. Only what arrives after sending counts now, as it long has when asking for the command list; if no answer comes, “No answer …” is shown and nothing is recorded. “Ask” is also always there now, even when enabled — before, the button disappeared exactly then, and an old value could not be re-checked.
 * The **“MQTT device”** card no longer opened on some devices: its header showed “–”, and nothing appeared below — no command list, no “Create”, no “Fix”. Since 0.9.12 the SetOption59 block only shows where a row reads from `tele/…`; on a device without such a row the card bailed out too early and never attached its content. Now only the SetOption59 block is left out, the rest is back.
 

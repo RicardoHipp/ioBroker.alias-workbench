@@ -613,6 +613,7 @@ beide Sprachdateien dieselben Schlüssel tragen.
 ## Änderungen
 
 ### **WORK IN PROGRESS**
+* Die Karte **„Geräte“** eines Ordners sortierte anders als der Baum daneben: am Saugroboter stand `1, 10, 2, 3 …`, links im Baum dieselben Ordner `1, 2 … 9, 10`. Sie sortiert jetzt wie der Baum.
 * **„nachfragen“ bei SetOption59 nahm eine alte Antwort für eine neue.** Stand in `stat.RESULT` noch ein `{"SetOption59":"ON"}` von vorgestern, meldete die Karte nach dem Nachfragen „eingeschaltet · gerade eben gefragt“ — auch wenn das Gerät aus war und gar nicht antwortete. Gewertet wird jetzt nur, was nach dem Senden kam, wie beim Abfragen der Befehle schon lange; bleibt die Antwort aus, steht „Keine Antwort …“ da, und gemerkt wird nichts. Dazu steht „nachfragen“ jetzt immer da, auch bei „eingeschaltet“ — vorher verschwand der Knopf genau dann, und ein alter Wert ließ sich nicht nachprüfen.
 * Die Karte **„MQTT-Gerät“** klappte an manchen Geräten nicht mehr auf: der Kopf zeigte „–“, darunter blieb es leer — keine Befehlsliste, kein „Anlegen“, kein „Beheben“. Seit 0.9.12 erscheint der SetOption59-Block nur noch, wo eine Zeile aus `tele/…` liest; an einem Gerät ohne eine solche Zeile stieg die Karte dabei zu früh aus und hängte ihren Inhalt nie an. Jetzt entfällt nur der SetOption59-Block, der Rest steht wieder da.
 
