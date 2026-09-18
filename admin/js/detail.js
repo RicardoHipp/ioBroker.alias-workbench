@@ -5,7 +5,7 @@ import { socket } from './verbindung.js';
 import { el } from './basis.js';
 import { tr } from './sprache.js';
 import { wertVon, jsonFelder, feldAusFormel, feldFormel, feldWert, jsonVon, zielKann } from './werte.js';
-import { musterVon, erkenneEntwurf, platzFuerRolle, typenFuerRolle } from './erkennung.js';
+import { musterVon, erkenneEntwurf, platzFuerRolle, typenFuerRolle, rolleVonPlatz } from './erkennung.js';
 import { musterName } from './musternamen.js';
 import { rollenFeld } from './rollenwahl.js';
 import { opt , quellenAuswahl, vorlagenAbweichung, bestandsAbweichung, aboErgaenzen } from './entwurf.js';
@@ -416,6 +416,70 @@ export function detailZeile(e, s, idx) {
       });
     }
   }
+  /* --- Platz im Muster ---
+
+     Umgekehrt zur Rolle: erst den Platz waehlen, und die Werkbank traegt
+     ein, was das Muster dafuer vorgibt — Rolle, Typ, Einheit, Werteliste.
+     Wer eine Zeile auf SET setzen wollte, musste bisher wissen, dass SET
+     `switch` heisst (Ricardo, 19.09.2026). Datenpunkt und Name bleiben;
+     dieselbe Vorgabe nimmt der Klick auf einen freien Platz unten, nur
+     dass der eine neue Zeile anlegt. */
+  var mPl = e.want && musterVon(e.want);
+  if (mPl) {
+    var meinPlatz = null;
+    Object.keys(belegtVon).forEach(function (pn) { if (belegtVon[pn] === s.n) { meinPlatz = pn; } });
+    var pb = el('div');
+    var selP = el('select', 'tx');
+    selP.style.width = '300px';
+    var oKein = opt('', tr('detail.slotNone'));
+    if (meinPlatz) { oKein.disabled = true; }
+    selP.appendChild(oKein);
+    var gesehen = {};
+    mPl.states.forEach(function (st) {
+      if (gesehen[st.name]) { return; }
+      gesehen[st.name] = 1;
+      var fremd = belegtVon[st.name] && belegtVon[st.name] !== s.n && !st.multiple;
+      var txt = st.name + (st.required ? '  ·  ' + tr('detail.slotRequired') : '') +
+        (fremd ? '  ·  ' + tr('roles.slotTaken', belegtVon[st.name]) : '');
+      var o = opt(st.name, txt);
+      if (fremd) { o.disabled = true; }
+      selP.appendChild(o);
+    });
+    /* Gewaehlt, aber nicht bekommen (etwa weil die Schreibrichtung nicht
+       passt): die Wahl bleibt im Feld stehen, darunter steht warum. */
+    var gewuenscht = !meinPlatz && s.platzWahl && gesehen[s.platzWahl] ? s.platzWahl : '';
+    selP.value = meinPlatz || gewuenscht;
+    selP.addEventListener('click', function (ev) { ev.stopPropagation(); });
+    selP.addEventListener('change', function () {
+      var st = null;
+      mPl.states.forEach(function (x) { if (!st && x.name === selP.value) { st = x; } });
+      if (!st) { return; }
+      s.platzWahl = st.name;
+      s.role = rolleVonPlatz(st);
+      var ty = Array.isArray(st.type) ? st.type[0] : st.type;
+      if (ty) { s.typ = ty; }
+      if (st.defaultUnit) { s.unit = st.defaultUnit; }
+      /* Ohne Werteliste bleibt so ein Platz leer, egal wie gut Rolle und
+         Typ passen — wie beim Klick auf einen freien Platz. */
+      if (st.statesDefined && !s.states) { s.states = st.defaultStates || { 0: 'None' }; }
+      neu();
+    });
+    pb.appendChild(selP);
+    pb.appendChild(el('div', 'sugg', tr('detail.slotHint')));
+    /* Die Schreibrichtung kommt aus den Datenpunkten, nicht aus der
+       Rolle — die fasst der Platz nicht an. Verlangt er etwas anderes,
+       steht es hier, statt dass der Platz lautlos frei bleibt. */
+    var stNow = null;
+    mPl.states.forEach(function (x) { if (!stNow && x.name === gewuenscht) { stNow = x; } });
+    var schreibt = !!(s.wr || s.srcW);
+    if (stNow && stNow.write === true && !schreibt) {
+      pb.appendChild(el('div', 'aside w', tr('detail.slotNeedsWrite', stNow.name)));
+    } else if (stNow && stNow.write === false && schreibt) {
+      pb.appendChild(el('div', 'aside w', tr('detail.slotNeedsReadOnly', stNow.name)));
+    }
+    zeile(tr('detail.slot'), pb);
+  }
+
   rb.appendChild(rollenFeld({
     wert: s.role,
     muster: e.want,
