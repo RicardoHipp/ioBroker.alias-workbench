@@ -613,6 +613,7 @@ beide Sprachdateien dieselben Schlüssel tragen.
 ## Änderungen
 
 ### **WORK IN PROGRESS**
+* Die kleinen **Typkästchen im Baum** (DEV, CHA, FOL …) sind jetzt alle gleich breit. Ein Knoten ohne eigenes Objekt trägt dort nur einen Punkt, und sein Kästchen war schmaler — der Name rückte aus der Flucht.
 * **„Verlegen …“ tat an manchen Aliasen gar nichts.** Wer Aliaspunkte von Hand im Admin anlegt, bekommt oft einen Alias ohne eigenes Kanalobjekt — der Knoten steht im Baum, ist aber selbst kein Objekt. Die Werkbank zeigte dort den Knopf „Verlegen …“ an, ein Klick darauf öffnete aber keinen Dialog und sagte auch nichts. Jetzt wird so ein Alias beim Verlegen genauso behandelt wie einer mit Kanal; ein fehlender Kanal wird dabei nicht nachträglich angelegt.
 * **Kein Deutsch mehr in der englischen Oberfläche.** An drei Stellen stand fest verdrahtet Deutsch: die Typmarke in der Detailzeile („Zahl“), das Feld „Datenpunkt“ bei „schreibt auf“ und die Vorlesehilfe der Häkchen („SET anlegen“). Die festen Vorgabetexte in `tab.html` sind jetzt englisch — vorher waren es 44 deutsche Texte, die erst zur Laufzeit übersetzt wurden. Auch die zwei Meldungen in der Browserkonsole sind jetzt englisch.
 * Der **Menüeintrag** des Reiters heißt jetzt in allen elf Admin-Sprachen so wie der Adapter. Bisher gab es ihn nur auf Deutsch und Englisch; bei jeder anderen Sprache stand „Alias Workbench“.

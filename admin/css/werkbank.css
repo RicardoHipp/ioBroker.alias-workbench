@@ -199,10 +199,15 @@
   .tree .node.sel .chip { background:rgba(255,255,255,.22); color:var(--accent-ink); border-color:transparent; }
   .tree .node.sel .nm { color:var(--accent-ink); }
   .tree .node.sel > span { color:var(--accent-ink) !important; }
+  /* Feste Breite: sonst bestimmt der Text die Breite, und ein Knoten ohne
+     eigenes Objekt (nur „·“) rueckte seinen Namen aus der Flucht der
+     anderen (Ricardo, 18.09.2026). Auch DEV/CHA/FOL/STA sind so gleich
+     breit. */
   .tree .kind {
     font-size:8px; padding:0 4px; border-radius:4px; background:var(--surface-3);
     color:var(--ink-3); text-transform:uppercase; letter-spacing:.04em;
     font-family:var(--sans); font-weight:700; flex:0 0 auto;
+    width:26px; box-sizing:border-box; text-align:center;
   }
   .tree .idstueck { flex:0 0 auto; }
   /* Der Name weicht zurueck: gedaempft, und er ist es, der gekuerzt wird,
