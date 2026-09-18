@@ -593,6 +593,7 @@ imported, and that both language files carry the same keys.
 ## Changelog
 
 ### **WORK IN PROGRESS**
+* **“Move …” did nothing on some aliases.** Creating alias points by hand in the admin often yields an alias without its own channel object — the node shows in the tree but is not an object itself. The workbench displayed the “Move …” button there, but clicking it opened no dialog and said nothing. Such an alias is now moved exactly like one with a channel; a missing channel is not created along the way.
 * **No German left in the English interface.** Three places were hard-wired German: the type badge in the detail row (“Zahl”), the “Datenpunkt” field next to “writes to” and the screen-reader label of the tick boxes (“SET anlegen”). The fixed default texts in `tab.html` are now English — before, 44 German texts were only translated at runtime. The two browser-console messages are English now as well.
 * The tab's **menu entry** now has the adapter's name in all eleven admin languages. Before, it existed in German and English only, and every other language showed “Alias Workbench”.
 * **Why `value.power.consumption`** — four shipped templates give consumption this role, which the ioBroker roles list marks as deprecated. That is deliberate: the type-detector 6.0.x recognises consumption only with exactly this role. The reason is now written into every affected template (field `_rolle`) and into the README. The README also explains why the workbench is an admin tab rather than a settings page.

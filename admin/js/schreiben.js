@@ -1329,7 +1329,14 @@ export function zeigeVerlegen(altVorgabe, zielVorgabe) {
      Zielleiste getippt wurde (`zielVorgabe`). */
   var alt = (typeof altVorgabe === 'string' && altVorgabe) ||
             (S.entwurf && (S.entwurf.ziel || S.entwurf.kanal)) || S.current;
-  if (!alt || alt.indexOf('alias.') !== 0 || !S.objects[alt]) { return; }
+  /* `knotenDa`, nicht `S.objects[alt]`: ein Alias muss kein eigenes
+     Kanalobjekt haben (E31). Der Knopf stand an so einem Alias schon
+     da - `ergebnis.js` fragt `knotenDa` -, der Dialog stieg hier aber
+     still aus: kein Fenster, keine Meldung. Produktiv betraf das
+     `alias.0.Solar.Einstellungen.Bilanz` und `alias.0.NSPanel.1.Helligkeit`
+     (T25, 18.09.2026). Verlegt wird ohnehin alles unter dem Pfad; ein
+     fehlender Kanal fehlt danach am neuen Ort genauso. */
+  if (!alt || alt.indexOf('alias.') !== 0 || !knotenDa(alt)) { return; }
   S.verlegeZiel = alt;
 
   var vorbelegt = (typeof zielVorgabe === 'string' && zielVorgabe &&
@@ -1761,7 +1768,7 @@ export function verlegeAlias(alt, neu) {
          markiert hatte. Wer danach nochmal verlegen wollte, fand keinen
          Knopf und musste den Alias erst wieder anklicken. `waehle` baut
          den Entwurf neu auf, und damit steht auch der Knopf wieder da. */
-      if (zielId && S.objects[zielId]) { waehle(zielId); }
+      if (zielId && knotenDa(zielId)) { waehle(zielId); }
       else { zeichneErgebnis(); }
     });
   }
