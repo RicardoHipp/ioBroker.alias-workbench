@@ -151,6 +151,19 @@ export function horcheAufObjekte() {
       return;
     }
 
+    /* Nur die vier Arten, aus denen der Baum besteht.
+
+       Beim Laden holt `ladeObjekte` gezielt `ARTEN`, beim Nachziehen
+       wurde dagegen alles aufgenommen: eine geaenderte Instanz, ein
+       Adapter-Update, `system.config` nach dem Umstellen der Sprache.
+       Der Zaehler in der Kopfzeile ging dadurch von 3145 auf 3146, und
+       mit jeder Stunde offenem Reiter wurden es mehr (A4, 17.09.2026).
+       Wechselt ein Objekt seine Art, faellt es hier ebenfalls heraus. */
+    if (obj && ARTEN.indexOf(obj.type) === -1) {
+      if (S.objects[id] === undefined) { return; }
+      obj = null;
+    }
+
     /* Alles Uebrige: nur was zaehlt, nicht jeder Schreibvorgang. */
     var vorher = kern(S.objects[id]);
     if (vorher === nachher) { return; }
