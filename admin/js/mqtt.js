@@ -487,7 +487,9 @@ function so59Kasten(b, kanal, l, telZ) {
     sz.appendChild(el('span', 'chip mut', tr('mq.instantUnknown')));
   }
   sk.appendChild(sz);
-  if (so59Stumm[kanal] && l.sofort === null) {
+  /* Auch wenn noch ein alter Wert dasteht: die Frage eben blieb
+     unbeantwortet, und das gehoert gesagt. */
+  if (so59Stumm[kanal]) {
     var st59 = el('div', 'hint');
     st59.style.marginTop = '4px';
     st59.style.color = 'var(--warn)';
@@ -500,19 +502,24 @@ function so59Kasten(b, kanal, l, telZ) {
   sl.style.display = 'flex';
   sl.style.gap = '8px';
   sl.style.flexWrap = 'wrap';
-  if (l.sofort !== true) {
-    /* Beide gleich gross - schmal neben normal las sich wie zwei
-       verschiedene Schriften (Ricardo, 25.08.2026). */
-    var lauf = so59Laeuft[kanal];
-    var bp = el('button', 'btn schmal' + (lauf === 'pruefen' ? ' laedt' : ''),
-      lauf === 'pruefen' ? tr('mq.instantChecking') : tr('mq.instantCheck'));
-    bp.addEventListener('click', function () { so59(kanal, bp, ''); });
-    sl.appendChild(bp);
+  /* „Nachfragen" steht immer da. Ein „eingeschaltet" kann von
+     vorgestern stammen — ein liegengebliebenes `stat.RESULT` —, und
+     ohne den Knopf liess es sich nicht nachpruefen (H15).
+     „Einschalten" nur, wo es noch nicht an ist oder die Frage eben
+     unbeantwortet blieb. Beide gleich gross - schmal neben normal las
+     sich wie zwei verschiedene Schriften (Ricardo, 25.08.2026). */
+  var lauf = so59Laeuft[kanal];
+  var bp = el('button', 'btn schmal' + (lauf === 'pruefen' ? ' laedt' : ''),
+    lauf === 'pruefen' ? tr('mq.instantChecking') : tr('mq.instantCheck'));
+  bp.addEventListener('click', function () { so59(kanal, bp, ''); });
+  sl.appendChild(bp);
+  if (lauf) { bp.disabled = true; }
+  if (l.sofort !== true || so59Stumm[kanal]) {
     var be = el('button', 'btn schmal' + (lauf === 'einschalten' ? ' laedt' : ''),
       lauf === 'einschalten' ? tr('mq.instantEnabling') : tr('mq.instantEnable'));
     be.addEventListener('click', function () { so59(kanal, be, '1'); });
     sl.appendChild(be);
-    if (lauf) { bp.disabled = true; be.disabled = true; }
+    if (lauf) { be.disabled = true; }
   }
   sk.appendChild(sl);
   /* Der Hinweis nennt die betroffenen Zeilen und den wirklichen Takt,
@@ -578,6 +585,13 @@ function so59(kanal, knopf, wert) {
   if (!g) { return; }
   so59Laeuft[kanal] = wert ? 'einschalten' : 'pruefen';
   delete so59Stumm[kanal];
+  /* Wie alt ist die letzte Antwort JETZT? Gewertet wird nur, was nach
+     dem Senden kam — wie beim Abfrageweg. Vorher reichte ein
+     `stat.RESULT` von vorgestern mit `SetOption59` darin fuer
+     „eingeschaltet · gerade gefragt", auch wenn das Geraet gar nicht
+     antwortete (H15, gemessen 17.09.2026). */
+  var rid = hatPunkt(kanal, 'stat.RESULT');
+  var vorTs = (rid && S.werte[rid]) ? (S.werte[rid].ts || 0) : 0;
   /* Sofort neu zeichnen: erst damit sperren sich BEIDE Knoepfe und die
      alte Antwortzeile verschwindet - vorher passierte das erst mit dem
      naechsten Nachzieher, Sekunden spaeter (Ricardo, 25.08.2026). */
@@ -600,7 +614,13 @@ function so59(kanal, knopf, wert) {
             setTimeout(function () {
               holeZweig(kanal + '.', function () {
                 delete so59Laeuft[kanal];
-                so59Stumm[kanal] = (sofortRueckmeldung(kanal, true) === null);
+                var rid2 = hatPunkt(kanal, 'stat.RESULT');
+                var jetzt = (rid2 && S.werte[rid2]) ? (S.werte[rid2].ts || 0) : 0;
+                /* Nichts Neues: nicht merken — sonst stuende der alte
+                   Wert mit frischer Uhrzeit da. */
+                so59Stumm[kanal] = jetzt > vorTs
+                  ? (sofortRueckmeldung(kanal, true) === null)
+                  : true;
                 zeichneErgebnis();
               });
             }, 4000);
