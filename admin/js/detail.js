@@ -473,16 +473,23 @@ export function detailZeile(e, s, idx) {
     });
     pb.appendChild(selP);
     pb.appendChild(el('div', 'sugg', tr('detail.slotHint')));
-    /* Die Schreibrichtung kommt aus den Datenpunkten, nicht aus der
-       Rolle — die fasst der Platz nicht an. Verlangt er etwas anderes,
-       steht es hier, statt dass der Platz lautlos frei bleibt. */
-    var stNow = null;
-    mPl.states.forEach(function (x) { if (!stNow && x.name === gewuenscht) { stNow = x; } });
-    var schreibt = !!(s.wr || s.srcW);
-    if (stNow && stNow.write === true && !schreibt) {
-      pb.appendChild(el('div', 'aside w', tr('detail.slotNeedsWrite', stNow.name)));
-    } else if (stNow && stNow.write === false && schreibt) {
-      pb.appendChild(el('div', 'aside w', tr('detail.slotNeedsReadOnly', stNow.name)));
+    /* Gewaehlt, aber nicht bekommen — warum?
+
+       Die Schreibrichtung ist es fast nie: traegt ein Punkt genau die
+       Vorgaberolle des Platzes, prueft der type-detector `read`/`write`
+       gar nicht (ChannelDetector: „When the default role is assigned …
+       we can be a bit more laxe"). Und das Feld setzt immer die
+       Vorgaberolle. Der erste Hinweis an dieser Stelle behauptete
+       deshalb etwas Falsches (Ricardo, 19.09.2026: an tele.SENSOR mit
+       Schreibziel blieb ELECTRIC_POWER vergeben, ohne Hinweis — zu
+       Recht). Der haeufige Grund ist ein anderer: das Muster greift als
+       Ganzes nicht, weil ein Pflichtplatz fehlt — dann vergibt der
+       Detektor gar keinen Platz, auch diesen nicht. */
+    if (gewuenscht) {
+      var greift = Object.keys(belegtVon).length > 0;
+      pb.appendChild(el('div', 'aside w', greift
+        ? tr('detail.slotNotGiven', gewuenscht)
+        : tr('detail.slotPatternOff', gewuenscht, musterName(e.want) || e.want)));
     }
     zeile(tr('detail.slot'), pb);
   }
