@@ -655,5 +655,7 @@
   "write.willKeep": "kept: {0}",
   "write.willRemove": "removed: {0}",
   "write.writeSourceMissing": "{0}: the send datapoint {1} does not exist yet",
-  "write.writing": "writing …"
+  "write.writing": "writing …",
+  "detail.typeNumber": "number",
+  "list.createAria": "create {0}"
 }

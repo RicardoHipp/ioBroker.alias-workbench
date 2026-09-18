@@ -141,7 +141,16 @@
     "adminTab": {
       "name": {
         "en": "Alias Workbench",
-        "de": "Alias-Werkbank"
+        "de": "Alias-Werkbank",
+        "ru": "Верстак алиасов",
+        "pt": "Bancada de alias",
+        "nl": "Alias-werkbank",
+        "fr": "Établi d'alias",
+        "it": "Banco di lavoro alias",
+        "es": "Banco de trabajo de alias",
+        "pl": "Warsztat aliasów",
+        "uk": "Верстак аліасів",
+        "zh-cn": "别名工作台"
       },
       "singleton": true,
       "link": "/adapter/alias-workbench/tab.html?%instance%&noFooter"

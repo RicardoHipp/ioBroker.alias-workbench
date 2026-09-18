@@ -442,7 +442,7 @@ export function baueListe(host, e, pl, rateKnopf, musterBlock) {
     var cb = document.createElement('input');
     cb.type = 'checkbox';
     cb.checked = s.on;
-    cb.setAttribute('aria-label', s.n + ' anlegen');
+    cb.setAttribute('aria-label', tr('list.createAria', s.n));
     cb.addEventListener('click', function (ev) { ev.stopPropagation(); });
     cb.addEventListener('change', function () {
       s.on = cb.checked; entwurfAngefasst(); zeichneErgebnis();

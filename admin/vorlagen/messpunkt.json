@@ -32,6 +32,7 @@
     {
       "name": "CONSUMPTION",
       "rolle": "value.power.consumption",
+      "_rolle": "value.power.consumption is struck through in the ioBroker state roles list, but @iobroker/type-detector 6.0.x recognises CONSUMPTION only with exactly this role (typePatterns.js, pattern 'consumption', defaultRole 'value.power.consumption'). With value.energy.consumed the point would drop out of the detected device, and vis, Alexa and the device manager would no longer show the consumption. Kept on purpose until the type-detector moves to the new role.",
       "typ": "number",
       "einheit": "kWh",
       "lesen": "tele.SENSOR",

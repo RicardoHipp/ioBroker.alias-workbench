@@ -40,8 +40,8 @@ export function ladeEnums(danach) {
         /* Den alten Stand behalten. Er ist vielleicht veraltet, aber
            veraltet ist naeher an der Wahrheit als leer. */
         unbekannt = true;
-        console.warn('[alias-workbench] Aufzaehlungen nicht geladen: ' +
-                     (err || 'keine Antwort'));
+        console.warn('[alias-workbench] Enumerations not loaded: ' +
+                     (err || 'no answer'));
         if (versuch < 3) {
           versuch++;
           wiederTimer = setTimeout(function () {

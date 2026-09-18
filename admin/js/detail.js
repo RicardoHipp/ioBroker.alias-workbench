@@ -364,7 +364,7 @@ export function detailZeile(e, s, idx) {
     neu();
   });
   var lW = el('label', 'fld');
-  lW.appendChild(el('span', null, 'Datenpunkt'));
+  lW.appendChild(el('span', null, tr('detail.datapoint')));
   lW.appendChild(selW);
   wf.appendChild(lW);
   /* Der Hinweis gilt nur, wenn die beiden Quellen wirklich
@@ -549,7 +549,7 @@ export function detailZeile(e, s, idx) {
     var t = typeof a.val;
     var passt = !s.typ || s.typ === t || s.typ === 'mixed';
     box.appendChild(el('span', 'chip ' + (passt ? 'ok' : 'warn'),
-      (passt ? '✓ ' : '≠ ') + (t === 'number' ? 'Zahl' : (t === 'boolean' ? 'boolean' : t))));
+      (passt ? '✓ ' : '≠ ') + (t === 'number' ? tr('detail.typeNumber') : t)));
     if (a.gewandelt) {
       box.appendChild(document.createTextNode('  '));
       box.appendChild(el('span', 'chip mut', tr('detail.converted')));

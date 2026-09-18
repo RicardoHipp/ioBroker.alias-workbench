@@ -285,7 +285,7 @@ export function auswerten(formel, roh) {
   var gedauert = performance.now() - t0;
   if (gedauert > GEDULD_MS) {
     formelGesperrt[formel] = Math.round(gedauert);
-    console.warn('[alias-workbench] Formel gesperrt nach ' + Math.round(gedauert) + ' ms: ' + formel);
+    console.warn('[alias-workbench] Formula blocked after ' + Math.round(gedauert) + ' ms: ' + formel);
     return { ok: false, txt: tr('detail.formulaTooSlow', Math.round(gedauert)), fehler: true };
   }
   if (sch !== null) {

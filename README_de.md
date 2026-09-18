@@ -26,6 +26,18 @@ Ein Werkzeug, das nur Datenpunkte verknüpft, hilft bei keinem dieser vier
 Punkte. Dieser Adapter zeigt alle vier, **während** du baust — nicht Stunden
 später im Protokoll.
 
+### Warum ein Admin-Reiter und keine Einstellungsseite
+
+Die Werkbank ist ein **Admin-Reiter** (`adminTab` in `io-package.json`) und läuft
+ohne Adapterprozess (`mode: none`). Das ist Absicht: Sie ist ein interaktiver
+Editor — links der Objektbaum, rechts der Entwurf mit Live-Werten, ein
+Trockenlauf vor jedem Schreiben, der Quellentausch, das Vorlagenblatt. Nichts
+davon passt in eine jsonConfig-Seite, die für Einstellungen gebaut ist. Die
+eigentlichen Einstellungen der Instanz liegen trotzdem in einer normalen
+jsonConfig-Seite (`adminUI.config: "json"`, vier Schalter, in alle elf Sprachen
+übersetzt). Ohne Prozess belegt der Adapter keinen Speicher, solange niemand den
+Reiter offen hat.
+
 ## Was er kann
 
 ![Die Werkbank mit einem gewählten Gerät](https://raw.githubusercontent.com/RicardoHipp/ioBroker.alias-workbench/main/docs/01-device.png)
@@ -323,6 +335,18 @@ treffen mit Absicht nichts. Fünfzig blanke `LEVEL`-Kanäle sind kein Gerät.
 Wird eine Vorlage abgelehnt, sagt die Auswahl warum: *„1.LEVEL fehlt"*, nicht
 *„passt nicht"*. Ein Grund, mit dem man nichts anfangen kann, ist kein Grund.
 
+**Zur Rolle `value.power.consumption`.** Vier Vorlagen (`messpunkt`,
+`tasmota-lampe`, `tasmota-mehrfach`, `tasmota-steckdose`) geben der Zeile
+`CONSUMPTION` die Rolle `value.power.consumption`, die in der
+[Rollenliste](https://github.com/ioBroker/ioBroker.docs/blob/master/docs/en/dev/stateroles.md)
+von ioBroker durchgestrichen ist. Sie bleibt mit Absicht: `@iobroker/type-detector`
+6.0.x erkennt `CONSUMPTION` nur mit genau dieser Rolle (`typePatterns.js`, Muster
+`consumption`, `defaultRole: 'value.power.consumption'`). Mit
+`value.energy.consumed` fiele der Punkt aus dem erkannten Gerät, und vis, Alexa
+und der Gerätemanager zeigten keinen Verbrauch mehr. Jede der vier Zeilen trägt
+diesen Grund im Feld `_rolle`. Die Rolle ändert sich, sobald der type-detector
+es tut.
+
 ### Rollenwissen neben den Zeilen
 
 Eine Vorlage kann `weiterePunkte` mitbringen: Rollen für Datenpunkte, die keine
@@ -560,13 +584,17 @@ ganze Kreislauf. Auf einer laufenden Installation hält der Admin Adapterdateien
 im Zwischenspeicher, deshalb ist `iobroker upload alias-workbench` nach dem
 Kopieren das, was den Browser die Änderung sehen lässt.
 
-Die Übersetzungen liegen in `admin/i18n/`. Eine neue Sprache ist eine neue Datei
-dort und ein Eintrag in `SPRACHEN` in `admin/js/sprache.js` — sonst nichts. Achte
+Es gibt zwei Wörterbücher. `admin/i18n/` gehört der **Einstellungsseite**
+(jsonConfig mit `"i18n": true`, alle elf Sprachen, der Admin lädt es selbst).
+`admin/sprachen/` gehört dem **Reiter** (Deutsch und Englisch, geladen von
+`admin/js/sprache.js`; jede andere Sprache fällt auf Englisch zurück). Eine neue
+Sprache für den Reiter ist eine neue Datei in `admin/sprachen/` und ein Eintrag in
+`SPRACHEN` in `admin/js/sprache.js` — sonst nichts. Achte
 auf Zeichenketten, die direkt in `admin/tab.html` stehen: Sie werden zur
-Laufzeit ersetzt, und eine, die niemand verdrahtet hat, bleibt für immer deutsch,
+Laufzeit ersetzt, und eine, die niemand verdrahtet hat, bleibt in jeder Sprache englisch,
 ohne dass es auffällt.
 
-Die Werkbank besteht aus **29 ES-Modulen** unter `admin/js/`, die der Browser
+Die Werkbank besteht aus **30 ES-Modulen** unter `admin/js/`, die der Browser
 direkt lädt — einen Bauschritt gibt es für sie nicht, und die Gestaltung liegt
 in einer Datei, `admin/css/werkbank.css`. Weil eine falsch gesetzte Modulgrenze
 erst zur Laufzeit auffällt, prüft `npm test` vor jedem Commit, ob sich noch
@@ -585,6 +613,9 @@ beide Sprachdateien dieselben Schlüssel tragen.
 ## Änderungen
 
 ### **WORK IN PROGRESS**
+* **Kein Deutsch mehr in der englischen Oberfläche.** An drei Stellen stand fest verdrahtet Deutsch: die Typmarke in der Detailzeile („Zahl“), das Feld „Datenpunkt“ bei „schreibt auf“ und die Vorlesehilfe der Häkchen („SET anlegen“). Die festen Vorgabetexte in `tab.html` sind jetzt englisch — vorher waren es 44 deutsche Texte, die erst zur Laufzeit übersetzt wurden. Auch die zwei Meldungen in der Browserkonsole sind jetzt englisch.
+* Der **Menüeintrag** des Reiters heißt jetzt in allen elf Admin-Sprachen so wie der Adapter. Bisher gab es ihn nur auf Deutsch und Englisch; bei jeder anderen Sprache stand „Alias Workbench“.
+* **Warum `value.power.consumption`** — vier mitgelieferte Vorlagen geben dem Verbrauch diese Rolle, die in der Rollenliste von ioBroker als veraltet gilt. Das ist Absicht: der type-detector 6.0.x erkennt den Verbrauch nur mit genau dieser Rolle. Der Grund steht jetzt in jeder betroffenen Vorlage (Feld `_rolle`) und im README. Dazu erklärt das README, warum die Werkbank ein Admin-Reiter ist und keine Einstellungsseite.
 * **Die Objektzahl in der Kopfzeile wuchs, je länger der Reiter offen war.** Gezählt werden sollen nur Geräte, Kanäle, Ordner und Datenpunkte — so wird auch geladen. Beim Nachziehen nahm die Werkbank aber jede geänderte Art auf: nach dem Umstellen der Systemsprache stand `system.config` im Vorrat und die Zahl auf 3146 statt 3145, ebenso nach jeder gespeicherten Instanzeinstellung oder einem Adapter-Update. Jetzt gilt beim Nachziehen dieselbe Regel wie beim Laden.
 * **Werte aus einem anderen Knoten liefen an einer Quelle nicht mit.** Wählt man eine Quelle, zu der es schon einen Alias gibt, zeigt die Liste auch dessen Zeilen — und die lesen oft woanders. Am Stromzähler stehen drei Zeilen „aus Solar.Netz“: Bezug, Bezug geglättet und Hausverbrauch. Ihr Wert wurde beim Anklicken einmal geholt und stand danach still, gemessen stundenlang auf 428 W, während das System 22 W meldete. Abonniert war nur der angeklickte Knoten; die Quellen der Zeilen kamen nur im Modus „Alias bearbeiten“ dazu. Jetzt abonniert die Werkbank überall, was sie anzeigt — auch eine Quelle, die man in der Detailzeile von Hand auf einen anderen Knoten stellt. Die Kopfleiste zeigt am Stromzähler entsprechend zwei Abos statt einem.
 * Die Legende über der Liste behauptete **„Das Licht-Muster greift gerade nicht: SET verlangt boolean, eingestellt ist number. Deshalb hat keine Zeile einen Platz."** — an einem Gerät, dessen SET-Zeile `switch.light`/`boolean` trägt und völlig in Ordnung ist. Schuld war `0_AES_KEY`: hm-rpc vergibt dafür die Rolle `state` und den Typ `number`, und `state` ist beim Licht-Platz SET zugelassen. Die Prüfung fragt je Zeile „deine Rolle taugt für einen Platz, dein Typ aber nicht" — sie sieht nicht nach, wer den Platz am Ende bekommen hat, und die Meldung schrieb dann den PLATZ hin statt der Zeile, um die es ging. Der Satz stimmte auch hinten nicht: fünf Zeilen hatten sehr wohl einen Platz. Der Typ-Grund gilt jetzt nur noch, wenn der genannte Platz auch wirklich leer geblieben ist; sonst steht wieder die gewöhnliche Legende da, und alle platzlosen Zeilen sind getönt statt nur einer. Der Fall, für den die Meldung gebaut wurde — SET selbst im falschen Typ, Platz bleibt leer — bleibt unverändert.

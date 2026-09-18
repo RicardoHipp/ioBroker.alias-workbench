@@ -25,6 +25,18 @@ good is decided by things you **cannot see**:
 A tool that only links datapoints helps with none of that. This adapter shows
 all four while you are building, not hours later in the log.
 
+### Why an admin tab, not a settings page
+
+The workbench is an **admin tab** (`adminTab` in `io-package.json`) and runs
+without an adapter process (`mode: none`). That is deliberate: it is an
+interactive editor — an object tree on the left, the draft with live values on
+the right, a dry run before anything is written, a source swap, a template
+sheet. None of that fits into a jsonConfig page, which is built for settings.
+The instance's actual settings do live in a normal jsonConfig page
+(`adminUI.config: "json"`, four switches, translated into all eleven
+languages). Without a process the adapter uses no memory while nobody has the
+tab open.
+
 ## What it does
 
 ![The workbench with a device picked](https://raw.githubusercontent.com/RicardoHipp/ioBroker.alias-workbench/main/docs/01-device.png)
@@ -311,6 +323,18 @@ nothing on purpose. Fifty bare `LEVEL` channels are not a device.
 When a template is rejected, the picker says why: *"1.LEVEL missing"*, not
 *"does not fit"*. A reason you cannot act on is not a reason.
 
+**About the role `value.power.consumption`.** Four templates (`messpunkt`,
+`tasmota-lampe`, `tasmota-mehrfach`, `tasmota-steckdose`) give the row
+`CONSUMPTION` the role `value.power.consumption`, which is struck through in
+the ioBroker [state roles list](https://github.com/ioBroker/ioBroker.docs/blob/master/docs/en/dev/stateroles.md).
+It stays on purpose: `@iobroker/type-detector` 6.0.x recognises `CONSUMPTION`
+only with exactly this role (`typePatterns.js`, pattern `consumption`,
+`defaultRole: 'value.power.consumption'`). With `value.energy.consumed` the
+point would drop out of the detected device, and vis, Alexa and the device
+manager would no longer show any consumption. Each of the four rows carries
+this reason in a field `_rolle`. The role will change once the type-detector
+does.
+
 ### Role knowledge beside the rows
 
 A template can carry `weiterePunkte`: roles for datapoints that get no row of
@@ -541,12 +565,16 @@ served as they are; editing one and reloading the tab is the whole cycle. On a
 running installation the admin caches adapter files, so `iobroker upload
 alias-workbench` after copying is what makes the browser see the change.
 
-Translations live in `admin/i18n/`. A new language is a new file there and an
-entry in `SPRACHEN` in `admin/js/sprache.js` — nothing else. Watch for strings
+There are two dictionaries. `admin/i18n/` belongs to the **settings page**
+(jsonConfig with `"i18n": true`, all eleven languages, loaded by the admin
+itself). `admin/sprachen/` belongs to the **tab** (German and English, loaded by
+`admin/js/sprache.js`; any other language falls back to English). A new tab
+language is a new file in `admin/sprachen/` and an entry in `SPRACHEN` in
+`admin/js/sprache.js` — nothing else. Watch for strings
 written straight into `admin/tab.html`: they are replaced at runtime, and one
-that nobody wired up stays German forever without anyone noticing.
+that nobody wired up stays English in every language without anyone noticing.
 
-The tab is **29 ES modules** under `admin/js/`, loaded by the browser as
+The tab is **30 ES modules** under `admin/js/`, loaded by the browser as
 modules — there is no build step for them, and styling lives in one file,
 `admin/css/werkbank.css`. Because a module boundary can be crossed wrongly in
 ways the browser only notices while running, `npm test` checks before every
@@ -565,6 +593,9 @@ imported, and that both language files carry the same keys.
 ## Changelog
 
 ### **WORK IN PROGRESS**
+* **No German left in the English interface.** Three places were hard-wired German: the type badge in the detail row (“Zahl”), the “Datenpunkt” field next to “writes to” and the screen-reader label of the tick boxes (“SET anlegen”). The fixed default texts in `tab.html` are now English — before, 44 German texts were only translated at runtime. The two browser-console messages are English now as well.
+* The tab's **menu entry** now has the adapter's name in all eleven admin languages. Before, it existed in German and English only, and every other language showed “Alias Workbench”.
+* **Why `value.power.consumption`** — four shipped templates give consumption this role, which the ioBroker roles list marks as deprecated. That is deliberate: the type-detector 6.0.x recognises consumption only with exactly this role. The reason is now written into every affected template (field `_rolle`) and into the README. The README also explains why the workbench is an admin tab rather than a settings page.
 * **The object count in the header grew the longer the tab stayed open.** Only devices, channels, folders and states are meant to be counted — and only those are loaded. When following changes, however, the workbench took in every changed object type: after switching the system language, `system.config` sat in its store and the count read 3146 instead of 3145, likewise after every saved instance setting or adapter update. Following changes now applies the same rule as loading.
 * **Values from another node did not update at a source.** When you select a source that already has an alias, the list also shows that alias’s rows — and they often read from somewhere else. The electricity meter shows three rows “from Solar.Netz”: import, smoothed import and house consumption. Their value was fetched once on selection and then froze; it stayed at 428 W for hours while the system reported 22 W. Only the selected node was subscribed; the rows’ sources were only added in “Edit alias” mode. The workbench now subscribes to everything it displays — including a source you point a row to by hand in the detail view. The header accordingly shows two subscriptions instead of one on the electricity meter.
 * The legend above the list claimed **“The light pattern does not apply right now: SET requires boolean, number is set. That is why no row has a place.”** — on a device whose SET row carries `switch.light`/`boolean` and is perfectly fine. The culprit was `0_AES_KEY`: hm-rpc gives it the role `state` and the type `number`, and `state` is allowed on the light pattern’s SET place. The check asks per row “your role would fit a place, your type does not” — it never looks at who ended up holding the place, and the message then printed the PLACE instead of the row it was about. The sentence was wrong at the end too: five rows did have a place. The type reason now only applies when the named place really did stay empty; otherwise the ordinary legend is back, and every placeless row is tinted instead of just one. The case the message was built for — SET itself in the wrong type, place stays empty — is unchanged.
