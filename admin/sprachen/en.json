@@ -528,7 +528,7 @@
   "tree.filterAria": "Filter objects",
   "tree.loading": "loading objects …",
   "tree.looksLikeDevice": "looks like a single device",
-  "tree.noObjectHint": "no object — derived from the ID only",
+  "tree.noObjectHint": "not a real folder",
   "tree.nothingFound": "nothing found",
   "tree.sourceGone": "{0} point(s) of this alias refer to a source that does not exist. The js-controller remembers this permanently — only deleting and recreating helps.",
   "tree.sources": "Create alias",

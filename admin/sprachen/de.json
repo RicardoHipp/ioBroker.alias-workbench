@@ -528,7 +528,7 @@
   "tree.filterAria": "Objekte filtern",
   "tree.loading": "lade Objekte …",
   "tree.looksLikeDevice": "sieht wie ein einzelnes Gerät aus",
-  "tree.noObjectHint": "kein Objekt — nur aus der ID abgeleitet",
+  "tree.noObjectHint": "kein echter Ordner",
   "tree.nothingFound": "nichts gefunden",
   "tree.sourceGone": "{0} Punkt(e) dieses Alias zeigen auf eine Quelle, die es nicht gibt. Der js-controller merkt sich das dauerhaft — hilft nur löschen und neu anlegen.",
   "tree.sources": "Alias anlegen",

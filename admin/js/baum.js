@@ -399,7 +399,11 @@ function renderKinder(knoten, filter, tiefe) {
       });
     }
     d.appendChild(tw);
-    var kk = el('span', 'kind', k.art ? k.art.slice(0, 3) : '·');
+    /* Ohne eigenes Objekt: „VIR“ statt eines Punkts. ioBroker selbst nennt
+       so eine Stufe `type: "virtual"` (web-Adapter, `/object` mit `depth`).
+       Gleich gestaltet wie DEV/CHA/FOL — die Reihe sieht einheitlich aus,
+       und wer es wissen will, liest es trotzdem ab (Ricardo, 19.09.2026). */
+    var kk = el('span', 'kind', k.art ? k.art.slice(0, 3) : 'vir');
     if (!k.art) { kk.title = tr('tree.noObjectHint'); }
     d.appendChild(kk);
     d.appendChild(el('span', 'idstueck', k.name));
