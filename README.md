@@ -592,7 +592,7 @@ imported, and that both language files carry the same keys.
 
 ## Changelog
 
-### **WORK IN PROGRESS**
+### 0.9.12 (2026-09-18)
 * The small **type badges in the tree** (DEV, CHA, FOL …) now all have the same width. A node without an object of its own shows just a dot there, and its badge was narrower — its name fell out of line.
 * **“Move …” did nothing on some aliases.** Creating alias points by hand in the admin often yields an alias without its own channel object — the node shows in the tree but is not an object itself. The workbench displayed the “Move …” button there, but clicking it opened no dialog and said nothing. Such an alias is now moved exactly like one with a channel; a missing channel is not created along the way.
 * **No German left in the English interface.** Three places were hard-wired German: the type badge in the detail row (“Zahl”), the “Datenpunkt” field next to “writes to” and the screen-reader label of the tick boxes (“SET anlegen”). The fixed default texts in `tab.html` are now English — before, 44 German texts were only translated at runtime. The two browser-console messages are English now as well.
