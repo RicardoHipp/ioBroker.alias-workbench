@@ -421,7 +421,56 @@ export function mqttKarte(host, kanal) {
      Nur, wenn ueberhaupt eine Zeile am Telemetrietakt haengt. An einem
      Geraet, dessen Aliase alle aus `stat/...` lesen, ist SetOption59
      folgenlos, und ein Block darueber ist bloss Betrieb. */
-  if (!telZ.length) { host.appendChild(k); return; }
+  /* Frueher stand hier ein vorzeitiges `return` — es haengte die Karte
+     an, bevor `b` in ihr steckte, und aufgeklappt blieb sie leer. */
+  if (telZ.length) { so59Kasten(b, kanal, l, telZ); }
+
+  /* Nachfragen liefert dasselbe wie tele/STATE — gemessen, Feld fuer
+     Feld. Der Knopf erscheint deshalb nur, wenn es etwas zu holen gibt:
+     gar nichts gelesen, oder nur stat.RESULT, das meist bloss die
+     Antwort auf den letzten Befehl enthaelt und nicht den ganzen
+     Zustand. Steht die Liste vollstaendig da, gibt es den Knopf nicht —
+     er koennte nichts hinzufuegen. */
+  var luecke = !l.befehle || l.befehle.woher === 'stat.RESULT';
+  if (luecke) {
+    var kasten = el('div');
+    kasten.style.marginTop = '11px';
+    kasten.style.paddingTop = '10px';
+    kasten.style.borderTop = '1px solid var(--line)';
+    var bf = el('button', 'btn' + (l.befehle ? '' : ' primary')
+      + (abfrageLaeuft[kanal] ? ' laedt' : ''),
+      abfrageLaeuft[kanal] ? tr('mq.asking') : tr('mq.ask'));
+    if (abfrageLaeuft[kanal]) { bf.disabled = true; }
+    bf.addEventListener('click', function () { mqttFragen(kanal, bf); });
+    kasten.appendChild(bf);
+    var warum = el('div', 'hint');
+    warum.style.marginTop = '6px';
+    warum.textContent = (l.befehle ? tr('mq.onlyResult') : tr('mq.neverReported')) +
+      '  ' + tr('mq.askHint');
+    kasten.appendChild(warum);
+    if (mqttAbfrage[kanal] !== undefined) {
+      var ah = el('div', 'hint');
+      ah.style.marginTop = '6px';
+      var ab = mqttAbfrage[kanal];
+      if (ab && ab.fehler) {
+        ah.textContent = tr('mq.askError', ab.fehler);
+        ah.style.color = 'var(--bad)';
+      } else {
+        ah.textContent = ab ? tr('mq.askGotAnswer', ab) : tr('mq.askNoAnswer');
+        ah.style.color = ab ? 'var(--ok)' : 'var(--warn)';
+      }
+      kasten.appendChild(ah);
+    }
+    b.appendChild(kasten);
+  }
+
+  k.appendChild(b);
+  host.appendChild(k);
+}
+
+/* Der Block zur sofortigen Rueckmeldung (SetOption59) — nur gerufen,
+   wenn eine Zeile am Telemetrietakt haengt. */
+function so59Kasten(b, kanal, l, telZ) {
 
   var sk = el('div');
   sk.style.marginTop = '11px';
@@ -479,48 +528,6 @@ export function mqttKarte(host, kanal) {
   var alter = (l.sofort === null) ? '' : so59Alter(kanal);
   sk.appendChild(el('div', 'hint', hinweis + (alter ? '  ·  ' + alter : '')));
   b.appendChild(sk);
-
-  /* Nachfragen liefert dasselbe wie tele/STATE — gemessen, Feld fuer
-     Feld. Der Knopf erscheint deshalb nur, wenn es etwas zu holen gibt:
-     gar nichts gelesen, oder nur stat.RESULT, das meist bloss die
-     Antwort auf den letzten Befehl enthaelt und nicht den ganzen
-     Zustand. Steht die Liste vollstaendig da, gibt es den Knopf nicht —
-     er koennte nichts hinzufuegen. */
-  var luecke = !l.befehle || l.befehle.woher === 'stat.RESULT';
-  if (luecke) {
-    var kasten = el('div');
-    kasten.style.marginTop = '11px';
-    kasten.style.paddingTop = '10px';
-    kasten.style.borderTop = '1px solid var(--line)';
-    var bf = el('button', 'btn' + (l.befehle ? '' : ' primary')
-      + (abfrageLaeuft[kanal] ? ' laedt' : ''),
-      abfrageLaeuft[kanal] ? tr('mq.asking') : tr('mq.ask'));
-    if (abfrageLaeuft[kanal]) { bf.disabled = true; }
-    bf.addEventListener('click', function () { mqttFragen(kanal, bf); });
-    kasten.appendChild(bf);
-    var warum = el('div', 'hint');
-    warum.style.marginTop = '6px';
-    warum.textContent = (l.befehle ? tr('mq.onlyResult') : tr('mq.neverReported')) +
-      '  ' + tr('mq.askHint');
-    kasten.appendChild(warum);
-    if (mqttAbfrage[kanal] !== undefined) {
-      var ah = el('div', 'hint');
-      ah.style.marginTop = '6px';
-      var ab = mqttAbfrage[kanal];
-      if (ab && ab.fehler) {
-        ah.textContent = tr('mq.askError', ab.fehler);
-        ah.style.color = 'var(--bad)';
-      } else {
-        ah.textContent = ab ? tr('mq.askGotAnswer', ab) : tr('mq.askNoAnswer');
-        ah.style.color = ab ? 'var(--ok)' : 'var(--warn)';
-      }
-      kasten.appendChild(ah);
-    }
-    b.appendChild(kasten);
-  }
-
-  k.appendChild(b);
-  host.appendChild(k);
 }
 
 var mqttStand = null;

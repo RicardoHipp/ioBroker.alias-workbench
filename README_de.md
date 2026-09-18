@@ -612,6 +612,9 @@ beide Sprachdateien dieselben Schlüssel tragen.
 
 ## Änderungen
 
+### **WORK IN PROGRESS**
+* Die Karte **„MQTT-Gerät“** klappte an manchen Geräten nicht mehr auf: der Kopf zeigte „–“, darunter blieb es leer — keine Befehlsliste, kein „Anlegen“, kein „Beheben“. Seit 0.9.12 erscheint der SetOption59-Block nur noch, wo eine Zeile aus `tele/…` liest; an einem Gerät ohne eine solche Zeile stieg die Karte dabei zu früh aus und hängte ihren Inhalt nie an. Jetzt entfällt nur der SetOption59-Block, der Rest steht wieder da.
+
 ### 0.9.12 (2026-09-18)
 * Die kleinen **Typkästchen im Baum** (DEV, CHA, FOL …) sind jetzt alle gleich breit. Ein Knoten ohne eigenes Objekt trägt dort nur einen Punkt, und sein Kästchen war schmaler — der Name rückte aus der Flucht.
 * **„Verlegen …“ tat an manchen Aliasen gar nichts.** Wer Aliaspunkte von Hand im Admin anlegt, bekommt oft einen Alias ohne eigenes Kanalobjekt — der Knoten steht im Baum, ist aber selbst kein Objekt. Die Werkbank zeigte dort den Knopf „Verlegen …“ an, ein Klick darauf öffnete aber keinen Dialog und sagte auch nichts. Jetzt wird so ein Alias beim Verlegen genauso behandelt wie einer mit Kanal; ein fehlender Kanal wird dabei nicht nachträglich angelegt.
