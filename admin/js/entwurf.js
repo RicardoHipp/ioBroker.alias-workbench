@@ -793,6 +793,108 @@ export function aboLoesen() {
   zeigeAbozahl();
 }
 
+/* Die Quellen eines Entwurfs - alles, woraus eine Zeile liest oder
+   wohin sie schreibt. */
+export function quellenVonEntwurf(e) {
+  var raus = [];
+  ((e && e.states) || []).forEach(function (s) {
+    if (s.srcR) { raus.push(s.srcR); }
+    if (s.srcW) { raus.push(s.srcW); }
+  });
+  return raus;
+}
+
+/* Abonniert Quellen dazu, die rechts angezeigt werden.
+
+   Ergaenzt nur: was ein laufendes Muster schon deckt, kommt nicht noch
+   einmal dazu, doppelt rufen schadet also nicht. Die Regeln stammen aus
+   `waehle`, wo sie vorher fest verbaut waren und nur am Alias griffen.
+
+   `quellenVerteilung` fasst zusammen, was die rechte Seite als
+   „Quellen" zeigt — dafuer bildet sie den ELTERNknoten jeder Quelle.
+   Bei einem flachen MQTT-Geraet ist das der halbe Adapter: gemessen
+   09.09.2026 wurde daraus `mqtt-client.0.*` mit 322 Objekten, an einem
+   einzigen Alias. Abonniert wird deshalb der Kanal jeder wirklich
+   gelesenen Quelle. */
+export function aboErgaenzen(quellen) {
+  var muster = (S.abo || []).slice();
+  var vorher = muster.length;
+  var drinSchon = function (was) {
+    return muster.some(function (m0) {
+      var p0 = m0.slice(-2) === '.*' ? m0.slice(0, -2) : m0;
+      return was === p0 || was.indexOf(p0 + '.') === 0;
+    });
+  };
+  var offen = [];
+  (quellen || []).forEach(function (x) {
+    if (x && !drinSchon(x) && offen.indexOf(x) === -1) { offen.push(x); }
+  });
+  if (!offen.length) { zeigeAbozahl(); return; }
+
+  var kanaele = [];
+  offen.forEach(function (x) {
+    var t = String(x).split('.');
+    t.pop();
+    var kn = t.join('.');
+    if (kn && kanaele.indexOf(kn) === -1) { kanaele.push(kn); }
+  });
+  var SCHWELLE = 30;
+  var wieBreit = function (knoten) {
+    var n = 0;
+    S.keysSorted.forEach(function (k0) { if (k0.indexOf(knoten + '.') === 0) { n++; } });
+    return n;
+  };
+
+  /* Sparten desselben Geraets zu einem Muster zusammenfassen.
+
+     Ein Tasmota-Alias liest aus `…Licht.stat`, `…Licht.tele` und
+     `…Licht.cmnd` — drei Kanaele, ein Geraet, und in der Kopfleiste
+     gehoert dort „ein Abo" zu stehen, nicht drei. Zusammengefasst wird
+     aber nur, wo wirklich MEHRERE Kanaele unter demselben Knoten
+     haengen: Sonst waere aus `…Garten.Weihnachten_aussen` schlicht
+     `…Garten` geworden — breiter als noetig, ohne dass etwas
+     zusammenfaellt. */
+  for (var runde = 0; runde < 4; runde++) {
+    var unter = {};
+    kanaele.forEach(function (kn) {
+      var t = kn.split('.');
+      if (t.length <= 3) { return; }
+      var ob = t.slice(0, -1).join('.');
+      (unter[ob] = unter[ob] || []).push(kn);
+    });
+    var geaendert = false;
+    Object.keys(unter).forEach(function (ob) {
+      if (unter[ob].length < 2 || wieBreit(ob) > SCHWELLE) { return; }
+      kanaele = kanaele.filter(function (kn) { return unter[ob].indexOf(kn) === -1; });
+      if (kanaele.indexOf(ob) === -1) { kanaele.push(ob); }
+      geaendert = true;
+    });
+    if (!geaendert) { break; }
+  }
+
+  /* Ein schmaler Kanal wird als Muster abonniert, ein breiter nicht.
+
+     Bei einem flachen Geraet IST der Kanal der breite Knoten: Die
+     Quelle `mqtt-client.0.SmartHome.Lavalampe_POWER` liegt direkt
+     unter `SmartHome`, und `SmartHome.*` sind 320 Objekte (gemessen
+     09.09.2026). Ab dieser Schwelle werden die Quellen einzeln
+     abonniert — ein paar Abos mehr, dafuer genau die, deren Werte auch
+     angezeigt werden. */
+  kanaele.forEach(function (kn) {
+    if (drinSchon(kn)) { return; }
+    if (wieBreit(kn) > SCHWELLE) { return; }
+    muster.push(kn + '.*');
+  });
+  offen.forEach(function (x) {
+    if (!drinSchon(x) && muster.indexOf(x) === -1) { muster.push(x); }
+  });
+
+  var neu = muster.slice(vorher);
+  S.abo = muster;
+  neu.forEach(function (m) { socket.emit('subscribe', m); });
+  zeigeAbozahl();
+}
+
 export function waehle(id, fertig) {
   /* Wer links etwas anderes anklickt, will es rechts sehen - auch wenn
      der Fokus noch in einem Feld der rechten Seite steht. `tipptGerade`
@@ -846,109 +948,28 @@ export function waehle(id, fertig) {
      `alias.0.Solar.Balkon.Energie`, wo sich im Sekundentakt etwas
      aendert, fiel es auf (Ricardo, 08.09.2026).
 
-     Deshalb am Alias zusaetzlich seine Quellen - `quellenVerteilung`
-     weiss ja, welche das sind. Und deshalb eine Liste: sonst bliebe
-     beim naechsten Wechsel die Haelfte abonniert und die Werkbank
-     bekaeme mit der Zeit Ereignisse fuer das halbe System. Die Zahl der
-     laufenden Abos steht in der Kopfleiste - dort sieht man sofort, ob
-     sich etwas ansammelt. */
+     Deshalb am Alias zusaetzlich seine Quellen, und - seit dem
+     18.09.2026 - an der Quelle ebenso: dort ergaenzt `uebernehmeBestand`
+     die Zeilen des vorhandenen Alias, und die lesen oft woanders
+     (`Stromzaehler` zeigt drei Zeilen „aus Solar.Netz"). Die standen
+     nach dem ersten Abholen still, gemessen 428 W gegen 22 W am System
+     (J9). `aboErgaenzen` wird darum von jeder Stelle gerufen, an der
+     Zeilen mit neuen Quellen dazukommen. Eine Liste, damit beim
+     naechsten Wechsel `aboLoesen` alles abmeldet. */
   aboLoesen();
-  var muster = [id + '.*'];
+  S.abo = [id + '.*'];
+  socket.emit('subscribe', id + '.*');
   if (id.indexOf('alias.') === 0) {
-    /* Aus den Quellen, nicht aus der Anzeige-Verteilung.
-
-       `quellenVerteilung` fasst zusammen, was die rechte Seite als
-       „Quellen" zeigt — dafuer bildet sie den ELTERNknoten jeder
-       Quelle. Bei einem flachen MQTT-Geraet ist das der halbe Adapter:
-       gemessen 09.09.2026 wurde daraus `mqtt-client.0.*` mit 322
-       Objekten, an einem einzigen Alias. Und `S.werte` wird nie
-       geleert, das sammelt sich also.
-
-       Abonniert wird deshalb der Kanal jeder wirklich gelesenen Quelle.
-       Wo die Quellen ohnehin gebuendelt liegen, bleibt es bei einem
-       Muster; wo nicht, sind es ein paar mehr — aber jedes davon eng. */
-    var kanaele = [];
+    var ausAlias = [];
     kindZustaende(id).forEach(function (kid) {
       var q = aliasQuellen(S.objects[kid]);
-      [q.read, q.write].forEach(function (x) {
-        if (!x) { return; }
-        var t = String(x).split('.');
-        t.pop();
-        var kn = t.join('.');
-        if (kn && kanaele.indexOf(kn) === -1) { kanaele.push(kn); }
-      });
+      if (q.read) { ausAlias.push(q.read); }
+      if (q.write) { ausAlias.push(q.write); }
     });
-    /* Ein schmaler Kanal wird als Muster abonniert, ein breiter nicht.
-
-       Bei einem flachen Geraet IST der Kanal der breite Knoten: Die
-       Quelle `mqtt-client.0.SmartHome.Lavalampe_POWER` liegt direkt
-       unter `SmartHome`, und `SmartHome.*` sind 320 Objekte. Ab dieser
-       Schwelle werden die Quellen einzeln abonniert — ein paar Abos
-       mehr, dafuer genau die, deren Werte auch angezeigt werden. */
-    var SCHWELLE = 30;
-    var wieBreit = function (knoten) {
-      var n = 0;
-      S.keysSorted.forEach(function (k0) { if (k0.indexOf(knoten + '.') === 0) { n++; } });
-      return n;
-    };
-    var drinSchon = function (was) {
-      return muster.some(function (m0) {
-        var p0 = m0.slice(-2) === '.*' ? m0.slice(0, -2) : m0;
-        return was === p0 || was.indexOf(p0 + '.') === 0;
-      });
-    };
-
-    /* Sparten desselben Geraets zu einem Muster zusammenfassen.
-
-       Ein Tasmota-Alias liest aus `…Licht.stat`, `…Licht.tele` und
-       `…Licht.cmnd` — drei Kanaele, ein Geraet, und in der Kopfleiste
-       gehoert dort „ein Abo" zu stehen, nicht drei. Zusammengefasst wird
-       aber nur, wo wirklich MEHRERE Kanaele unter demselben Knoten
-       haengen: Sonst waere aus `…Garten.Weihnachten_aussen` schlicht
-       `…Garten` geworden — breiter als noetig, ohne dass etwas
-       zusammenfaellt. */
-    for (var runde = 0; runde < 4; runde++) {
-      var unter = {};
-      kanaele.forEach(function (kn) {
-        var t = kn.split('.');
-        if (t.length <= 3) { return; }
-        var ob = t.slice(0, -1).join('.');
-        (unter[ob] = unter[ob] || []).push(kn);
-      });
-      var geaendert = false;
-      Object.keys(unter).forEach(function (ob) {
-        if (unter[ob].length < 2 || wieBreit(ob) > SCHWELLE) { return; }
-        kanaele = kanaele.filter(function (kn) { return unter[ob].indexOf(kn) === -1; });
-        if (kanaele.indexOf(ob) === -1) { kanaele.push(ob); }
-        geaendert = true;
-      });
-      if (!geaendert) { break; }
-    }
-
-    /* Ein schmaler Kanal wird als Muster abonniert, ein breiter nicht.
-
-       Bei einem flachen Geraet IST der Kanal der breite Knoten: Die
-       Quelle `mqtt-client.0.SmartHome.Lavalampe_POWER` liegt direkt
-       unter `SmartHome`, und `SmartHome.*` sind 320 Objekte (gemessen
-       09.09.2026; vorher wurde daraus sogar `mqtt-client.0.*` mit 322).
-       Ab dieser Schwelle werden die Quellen einzeln abonniert — ein paar
-       Abos mehr, dafuer genau die, deren Werte auch angezeigt werden. */
-    kanaele.forEach(function (kn) {
-      if (drinSchon(kn)) { return; }
-      if (wieBreit(kn) > SCHWELLE) { return; }
-      muster.push(kn + '.*');
-    });
-    /* Was jetzt noch von keinem Muster gedeckt ist, kommt einzeln. */
-    kindZustaende(id).forEach(function (kid) {
-      var q = aliasQuellen(S.objects[kid]);
-      [q.read, q.write].forEach(function (x) {
-        if (x && !drinSchon(x) && muster.indexOf(x) === -1) { muster.push(x); }
-      });
-    });
+    aboErgaenzen(ausAlias);
+  } else {
+    zeigeAbozahl();
   }
-  S.abo = muster;
-  muster.forEach(function (m) { socket.emit('subscribe', m); });
-  zeigeAbozahl();
 
   /* Erst die Werte, dann der Vorschlag. Die Erkennung schaut in den
      Rohwert von tele.SENSOR hinein — ohne Werte haelt sie ein Geraet
@@ -1032,6 +1053,7 @@ export function waehle(id, fertig) {
         S.entwurf = v;
       }
     }
+    aboErgaenzen(quellenVonEntwurf(S.entwurf));
     var nach = [];
     S.entwurf.states.forEach(function (s) {
       if (s.srcR && !S.werte[s.srcR]) { nach.push(s.srcR); }

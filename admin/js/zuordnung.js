@@ -16,7 +16,8 @@ import { enumVorlagen, katalogFehlt, ikonCache, ikonErlaubt, ikonNachtrag,
          ikonTaugt, vorlageZu, holeIkon } from './katalog.js';
 import { kindZustaende, aliasQuellen, holeEinzelne,
          zeileAusAlias } from './werte.js';
-import { aliasFuer, ausgangsQuellen, zielId, knotenDa } from './entwurf.js';
+import { aliasFuer, ausgangsQuellen, zielId, knotenDa,
+         aboErgaenzen, quellenVonEntwurf } from './entwurf.js';
 import { zeichneErgebnis, entwurfAngefasst, angebotFrisch } from './ergebnis.js';
 
 
@@ -788,6 +789,13 @@ export function uebernehmeBestand(e) {
       });
     }
   }
+  /* Geholt ist nur der erste Wert - mitlaufen tut er erst mit einem Abo.
+     Die Zeilen aus dem Alias lesen oft aus einem anderen Knoten als dem
+     angeklickten (J9, 18.09.2026: `Stromzaehler` zeigte drei Zeilen „aus
+     Solar.Netz" stundenlang auf dem Stand vom Anklicken). Ergaenzt wird
+     nur, was noch nicht laeuft; bei jedem Zeichnen zu rufen kostet also
+     nichts. */
+  if (S.entwurf === e && e.kanal === S.current) { aboErgaenzen(quellenVonEntwurf(e)); }
 }
 
 export function unterschiede(e) {

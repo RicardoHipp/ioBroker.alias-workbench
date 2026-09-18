@@ -8,7 +8,7 @@ import { wertVon, jsonFelder, feldAusFormel, feldFormel, feldWert, jsonVon, ziel
 import { musterVon, erkenneEntwurf, platzFuerRolle, typenFuerRolle } from './erkennung.js';
 import { musterName } from './musternamen.js';
 import { rollenFeld } from './rollenwahl.js';
-import { opt , quellenAuswahl, vorlagenAbweichung, bestandsAbweichung } from './entwurf.js';
+import { opt , quellenAuswahl, vorlagenAbweichung, bestandsAbweichung, aboErgaenzen } from './entwurf.js';
 import { zeichneErgebnis, entwurfAngefasst } from './ergebnis.js';
 
 import { rateBehalten } from './vorschlagen.js';
@@ -26,7 +26,13 @@ export function detailZeile(e, s, idx) {
 
   /* Wer die Zeile anfasst, hat entschieden - die Vermutung ist damit
      keine mehr und faellt beim Zuruecknehmen nicht mehr weg. */
-  function neu() { s.geaendert = true; rateBehalten(s); entwurfAngefasst(); zeichneErgebnis(); }
+  /* Eine von Hand umgestellte Quelle wird mit abonniert - sonst stuende
+     ihr Wert nach dem ersten Abholen still (J9b). */
+  function neu() {
+    s.geaendert = true; rateBehalten(s); entwurfAngefasst();
+    aboErgaenzen([s.srcR, s.srcW]);
+    zeichneErgebnis();
+  }
 
   /* ---- Die Auswahl der Datenpunkte ---------------------------------
 
