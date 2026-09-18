@@ -485,11 +485,10 @@ export function detailZeile(e, s, idx) {
        Recht). Der haeufige Grund ist ein anderer: das Muster greift als
        Ganzes nicht, weil ein Pflichtplatz fehlt — dann vergibt der
        Detektor gar keinen Platz, auch diesen nicht. */
-    if (gewuenscht) {
-      var greift = Object.keys(belegtVon).length > 0;
-      pb.appendChild(el('div', 'aside w', greift
-        ? tr('detail.slotNotGiven', gewuenscht)
-        : tr('detail.slotPatternOff', gewuenscht, musterName(e.want) || e.want)));
+    /* Greift das Muster als Ganzes nicht, steht das in der Legende ueber
+       der Liste — hier waere es an der falschen Zeile. */
+    if (gewuenscht && Object.keys(belegtVon).length > 0) {
+      pb.appendChild(el('div', 'aside w', tr('detail.slotNotGiven', gewuenscht)));
     }
     zeile(tr('detail.slot'), pb);
   }

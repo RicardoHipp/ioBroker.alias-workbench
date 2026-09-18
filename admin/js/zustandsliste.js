@@ -9,7 +9,7 @@
 import { S } from './zustand.js';
 import { el, $ } from './basis.js';
 import { tr } from './sprache.js';
-import { erkenneEntwurf, musterVon, rolleVonPlatz, typKonflikte } from './erkennung.js';
+import { erkenneEntwurf, musterVon, rolleVonPlatz, typKonflikte, plaetzeFuerRolle, typPasstZuPlatz } from './erkennung.js';
 import { kindZustaende, wertVon, fmt } from './werte.js';
 import { steuerKanaele, vorlagenAbweichung, bestandsAbweichung, waehle, quelleHier, quellenVerteilung } from './entwurf.js';
 import { musterName } from './musternamen.js';
@@ -738,7 +738,34 @@ export function baueListe(host, e, pl, rateKnopf, musterBlock) {
      hoch und legte sich ueber die Liste, die man gerade lesen wollte
      (Ricardo, 08.09.2026). Ein Klick auf das „i" oeffnet sie stattdessen
      als Dialog — dort darf sie so lang sein, wie sie ist. */
-  if (ohnePlatzZahl) {
+  /* Greift das Muster gar nicht, weil ein Pflichtplatz fehlt, sagt die
+     Legende welcher — und ob eine NICHT angehakte Zeile ihn bekaeme.
+
+     Vorher stand das nur als „✕ SET fehlt" im Musterfeld, und ob
+     `cmnd_POWER` mit seiner Rolle `switch` passen wuerde, sah man nicht:
+     nicht angehakte Zeilen bekommt der Detektor gar nicht zu sehen. Ein
+     Hinweis in der Detailzeile („… wird vergeben, sobald das Muster
+     greift") stand an der falschen Stelle — die Zeile, die ihn trug, war
+     in Ordnung (Ricardo, 19.09.2026). Deshalb steht es hier, auch wenn
+     gar nichts angehakt ist. */
+  var fehlt = [];
+  var muL = e.want && musterVon(e.want);
+  if (muL && !kipptAnTyp && !Object.keys(platzVon).length) {
+    var passtAuf = function (st, s) {
+      return plaetzeFuerRolle(e.want, s.role).some(function (p) {
+        return p.name === st.name && (!s.typ || typPasstZuPlatz(p, s.typ));
+      });
+    };
+    var gesehenL = {};
+    muL.states.forEach(function (st) {
+      if (!st.required || gesehenL[st.name]) { return; }
+      gesehenL[st.name] = 1;
+      if (e.states.some(function (s) { return s.on && passtAuf(st, s); })) { return; }
+      fehlt.push({ platz: st.name, aus: e.states.filter(function (s) { return !s.on && s.n && passtAuf(st, s); }) });
+    });
+  }
+
+  if (ohnePlatzZahl || fehlt.length) {
     var mn = musterName(e.want) || e.want || '?';
     var lg = el('div', 'legendenzeile');
     /* Steht die ganze Liste ohne Platz da, weil EINE Zeile im falschen
@@ -754,8 +781,24 @@ export function baueListe(host, e, pl, rateKnopf, musterBlock) {
     lg.appendChild(document.createTextNode(kipptAnTyp
       ? tr('pattern.noPlaceBecauseType', mn, kipptAnTyp.platz,
           kipptAnTyp.erwartet.join(tr('pattern.typeOr')), kipptAnTyp.typ)
-      : tr('pattern.noPlaceLegend', mn)));
+      : (fehlt.length
+          ? tr('pattern.offMissing', mn, fehlt.map(function (f) { return f.platz; }).join(', '))
+          : tr('pattern.noPlaceLegend', mn))));
+    var mitKandidat = fehlt.filter(function (f) { return f.aus.length; })[0];
+    if (mitKandidat) {
+      var kand = mitKandidat.aus[0];
+      lg.appendChild(document.createTextNode(' ' + tr('pattern.offCandidate', kand.n, mitKandidat.platz)));
+      var bk = el('button', 'btn schmal', tr('pattern.tickIt'));
+      bk.type = 'button';
+      bk.style.marginLeft = '6px';
+      bk.addEventListener('click', function (ev) {
+        ev.stopPropagation();
+        kand.on = true; entwurfAngefasst(); zeichneErgebnis();
+      });
+      lg.appendChild(bk);
+    }
 
+    if (!ohnePlatzZahl) { legendenPlatz.appendChild(lg); host.appendChild(card); return; }
     var ib = el('button', 'infoknopf', 'i');
     ib.type = 'button';
     ib.title = tr('info.more');
