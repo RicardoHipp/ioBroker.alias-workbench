@@ -361,6 +361,13 @@ export function detailZeile(e, s, idx) {
   selW.addEventListener('click', function (ev) { ev.stopPropagation(); });
   selW.addEventListener('change', function () {
     s.srcW = (selW.value === '=lesen') ? (s.srcR || '') : selW.value;
+    /* Wer hier waehlt, hat die Schreibrichtung entschieden. `wr` stammt
+       sonst vom Quellobjekt (`common.write`) und hielt die Zeile fuer den
+       Detektor beschreibbar, auch nach „nicht schreiben" — angelegt wird
+       aber nach `srcW` (`write: !!s.srcW`). Die Vorschau sagte also
+       „Platz bleibt frei", der fertige Alias haette ihn bekommen
+       (Ricardo, 19.09.2026, an 3D_Drucker tele.SENSOR). */
+    s.wr = !!s.srcW;
     neu();
   });
   var lW = el('label', 'fld');
@@ -492,6 +499,9 @@ export function detailZeile(e, s, idx) {
        die Rolle erneut wechselt. */
     beiWahl: function (r) {
       s.role = r;
+      /* Eine Rolle von Hand ersetzt eine fruehere Platzwahl — sonst
+         stuende ein Hinweis zu einem Platz da, den keiner mehr will. */
+      delete s.platzWahl;
       /* Nur wo die Rolle im Muster genau einen Datentyp zulaesst, gibt
          es etwas vorzugeben. Trifft sie mehrere Plaetze mit
          verschiedenen Typen - wie die Fahrtrichtung boolean und number -
