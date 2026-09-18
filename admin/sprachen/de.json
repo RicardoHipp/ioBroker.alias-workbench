@@ -322,6 +322,7 @@
   "pattern.required": "PFLICHT — fehlt",
   "pattern.search": "tippen zum Suchen …",
   "pattern.slotName": "Der Punkt sitzt auf dem Platz „{0}\" des {1}-Musters. Diese Platznamen kommen aus dem type-detector und sind überall gleich — sie werden nicht übersetzt, weil der Datenpunkt im Alias genau so heißt.",
+  "pattern.pointsTaken": "✓ {0} Punkte",
   "pattern.slotsTaken": "✓ {0}/{1} belegt",
   "pattern.toSlot": " → Platz {0} im {1}-Muster",
   "pattern.typeMismatch": "Der Platz {0} verlangt {1}, eingestellt ist {2} — so fällt der Punkt aus dem Muster, auch wenn die Rolle stimmt.",

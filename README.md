@@ -593,6 +593,7 @@ imported, and that both language files carry the same keys.
 ## Changelog
 
 ### **WORK IN PROGRESS**
+* For **“Information”** the pattern field now shows **“✓ 24 points”** instead of “24/31 filled”. That pattern takes any number of points, so the total grew with every tick and sounded as if something were missing. Where there is no maximum, none is shown; all other patterns keep “x/y filled”.
 * A node without an object of its own now carries **“VIR”** in the tree instead of a dot, styled like DEV, CHA and FOL; the tooltip says “not a real folder”. Since the badges have the same width, the dot stood out among all the FOLs like an error — yet such nodes behave like folders. The name comes from ioBroker itself: the web adapter calls such a level `type: "virtual"`.
 * A folder’s **“Devices”** card sorted differently from the tree beside it: on the robot vacuum it read `1, 10, 2, 3 …`, while the tree listed the same folders as `1, 2 … 9, 10`. It now sorts like the tree.
 * **“Ask” for SetOption59 took an old answer for a new one.** If `stat.RESULT` still held a `{"SetOption59":"ON"}` from days ago, the card reported “enabled · just asked” after asking — even when the device was off and did not answer at all. Only what arrives after sending counts now, as it long has when asking for the command list; if no answer comes, “No answer …” is shown and nothing is recorded. “Ask” is also always there now, even when enabled — before, the button disappeared exactly then, and an old value could not be re-checked.

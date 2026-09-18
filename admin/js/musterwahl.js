@@ -211,7 +211,14 @@ export function baueMusterwahl(e, haupt, pflichtFehlt) {
       }
     } else {
       var g = r[0].states.filter(function (x) { return x.id; }).length;
-      mark = tr('pattern.slotsTaken', g, r[0].states.length);
+      /* Ein Platz, der mehrfach vergeben wird (`multiple`, bei `info` das
+         ACTUAL), bekommt je Punkt einen Eintrag — die Gesamtzahl wuchs mit
+         jedem Haken, und „24/31“ klang, als fehlten sieben. Wo es keine
+         Hoechstzahl gibt, steht auch keine: nur die Zahl der Punkte
+         (Ricardo, 19.09.2026). Betrifft info, mediaPlayer, weatherForecast. */
+      var mehrfach = r[0].states.some(function (x) { return x.multiple; });
+      mark = mehrfach ? tr('pattern.pointsTaken', g)
+        : tr('pattern.slotsTaken', g, r[0].states.length);
       /* Hier stand frueher „(Rollen werden angepasst)" hinter der
          Belegung. Der Vermerk erschien an jeder Zeile ausser der gerade
          gewaehlten — an einem Fensterkontakt also an sieben von acht.

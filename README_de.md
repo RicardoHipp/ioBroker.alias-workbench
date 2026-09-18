@@ -613,6 +613,7 @@ beide Sprachdateien dieselben Schlüssel tragen.
 ## Änderungen
 
 ### **WORK IN PROGRESS**
+* Das Musterfeld zeigt bei **„Information“** jetzt **„✓ 24 Punkte“** statt „24/31 belegt“. Dieses Muster nimmt beliebig viele Punkte auf, die Gesamtzahl wuchs mit jedem Haken und klang, als fehle etwas. Wo es keine Höchstzahl gibt, steht keine; bei allen anderen Mustern bleibt „x/y belegt“.
 * Ein Knoten ohne eigenes Objekt trägt im Baum jetzt **„VIR“** statt eines Punkts, gestaltet wie DEV, CHA und FOL; der Tooltip sagt „kein echter Ordner“. Seit die Kästchen gleich breit sind, fiel der Punkt zwischen lauter FOL auf wie ein Fehler — dabei verhalten sich solche Knoten wie Ordner. Der Name kommt von ioBroker selbst: der web-Adapter nennt so eine Stufe `type: "virtual"`.
 * Die Karte **„Geräte“** eines Ordners sortierte anders als der Baum daneben: am Saugroboter stand `1, 10, 2, 3 …`, links im Baum dieselben Ordner `1, 2 … 9, 10`. Sie sortiert jetzt wie der Baum.
 * **„nachfragen“ bei SetOption59 nahm eine alte Antwort für eine neue.** Stand in `stat.RESULT` noch ein `{"SetOption59":"ON"}` von vorgestern, meldete die Karte nach dem Nachfragen „eingeschaltet · gerade eben gefragt“ — auch wenn das Gerät aus war und gar nicht antwortete. Gewertet wird jetzt nur, was nach dem Senden kam, wie beim Abfragen der Befehle schon lange; bleibt die Antwort aus, steht „Keine Antwort …“ da, und gemerkt wird nichts. Dazu steht „nachfragen“ jetzt immer da, auch bei „eingeschaltet“ — vorher verschwand der Knopf genau dann, und ein alter Wert ließ sich nicht nachprüfen.

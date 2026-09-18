@@ -322,6 +322,7 @@
   "pattern.required": "REQUIRED — missing",
   "pattern.search": "type to search …",
   "pattern.slotName": "This point sits in slot \"{0}\" of the {1} pattern. Slot names come from the type-detector and are the same everywhere — they are not translated, because the alias datapoint is named exactly that.",
+  "pattern.pointsTaken": "✓ {0} points",
   "pattern.slotsTaken": "✓ {0}/{1} filled",
   "pattern.toSlot": " → slot {0} in the {1} pattern",
   "pattern.typeMismatch": "Slot {0} requires {1}, but {2} is set — the state drops out of the pattern even though the role is right.",
