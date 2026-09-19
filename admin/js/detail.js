@@ -637,9 +637,7 @@ export function detailZeile(e, s, idx) {
       hin.appendChild(document.createTextNode(tr('pattern.fitsOn')));
       hin.appendChild(el('b', null, String(treffer.role)));
       hin.appendChild(document.createTextNode(tr('pattern.toSlot', treffer.name, musterName(e.want) || e.want)));
-      if (besetztVon) {
-        hin.appendChild(document.createTextNode(tr('pattern.slotHeldBy', besetztVon)));
-      } else if (erlaubt.length) {
+      if (!besetztVon && erlaubt.length) {
         hin.appendChild(document.createTextNode(
           tr('pattern.expectsType', erlaubt.join(tr('pattern.typeOr')))));
       }
@@ -656,6 +654,11 @@ export function detailZeile(e, s, idx) {
     /* Passt der Typ nicht zum Platz, faellt der Punkt aus dem Muster -
        lautlos, denn die Rolle stimmt ja. Genau das ist am 11.09.2026
        an einem Tasmota-Stromzaehler passiert (I33). */
+    /* Gelb wie die Typ-Warnung: in beiden Faellen bekommt die Zeile keinen
+       Platz. Als grauer Nachsatz ging es unter (Ricardo, 19.09.2026). */
+    if (besetztVon) {
+      rb.appendChild(el('div', 'aside w', tr('pattern.slotHeldBy', treffer.name, besetztVon)));
+    }
     if (treffer && !besetztVon && s.typ && erlaubt.length && erlaubt.indexOf(s.typ) === -1) {
       rb.appendChild(el('div', 'aside w',
         tr('pattern.typeMismatch', treffer.name, erlaubt.join(tr('pattern.typeOr')), s.typ)));

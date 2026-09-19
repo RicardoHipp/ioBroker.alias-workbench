@@ -324,7 +324,7 @@
   "pattern.noMatch": "no pattern matches \"{0}\"",
   "pattern.offMissing": "The {0} pattern does not apply right now: {1} is missing. That is why no row has a slot.",
   "pattern.offCandidate": "{0} fits {1} but is not ticked.",
-  "pattern.slotHeldBy": " — {0} already holds it. Pick a free place under “Place in pattern” above.",
+  "pattern.slotHeldBy": "{1} already holds {0} — this row gets no place that way. Pick a free place under “Place in pattern” above.",
   "pattern.tickIt": "tick it",
   "pattern.offCandidateType": "{0} fits {1} by its role, but is not ticked and has type {2} instead of {3}.",
   "pattern.tickItType": "tick it, {0}",
