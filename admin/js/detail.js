@@ -249,6 +249,114 @@ export function detailZeile(e, s, idx) {
     zeigeBestand(r, felder);
   }
 
+  /* Welcher Platz ist schon vergeben, und von welcher Zeile? Das steht
+     als Vermerk am Gruppenkopf der Rollenliste. */
+  var belegtVon = {};
+  /* Eigener Platz direkt aus dem Befund — ueber `belegtVon` allein fand
+     ihn nur die LETZTE Zeile eines mehrfach vergebenen Platzes (ACTUAL
+     bei `info`), alle anderen standen auf „kein Platz“. */
+  var eigenerPlatz = null;
+  if (e.want) {
+    var fundR = erkenneEntwurf(e, e.want);
+    if (fundR.length) {
+      fundR[0].states.forEach(function (x) {
+        if (!x.id) { return; }
+        var nx = x.id.slice(e.kanal.length + 1);
+        belegtVon[x.name] = nx;
+        if (nx === s.n) { eigenerPlatz = x.name; }
+      });
+    }
+  }
+  /* --- Platz im Muster ---
+
+     Umgekehrt zur Rolle: erst den Platz waehlen, und die Werkbank traegt
+     ein, was das Muster dafuer vorgibt — Rolle, Typ, Einheit, Werteliste.
+     Wer eine Zeile auf SET setzen wollte, musste bisher wissen, dass SET
+     `switch` heisst (Ricardo, 19.09.2026). Datenpunkt und Name bleiben;
+     dieselbe Vorgabe nimmt der Klick auf einen freien Platz unten, nur
+     dass der eine neue Zeile anlegt. */
+  var platzBox = null;
+  var mPl = e.want && musterVon(e.want);
+  if (mPl) {
+    var meinPlatz = eigenerPlatz;
+    var pb = el('div');
+    var selP = el('select', 'tx');
+    selP.style.width = '240px';
+    var oKein = opt('', tr('detail.slotNone'));
+    if (meinPlatz) { oKein.disabled = true; }
+    selP.appendChild(oKein);
+    var gesehen = {};
+    mPl.states.forEach(function (st) {
+      if (gesehen[st.name]) { return; }
+      gesehen[st.name] = 1;
+      var fremd = belegtVon[st.name] && belegtVon[st.name] !== s.n && !st.multiple;
+      var txt = st.name + (st.required ? '  ·  ' + tr('detail.slotRequired') : '') +
+        (fremd ? '  ·  ' + tr('roles.slotTaken', belegtVon[st.name]) : '');
+      var o = opt(st.name, txt);
+      if (fremd) { o.disabled = true; }
+      selP.appendChild(o);
+    });
+    /* Gewaehlt, aber nicht bekommen (etwa weil die Schreibrichtung nicht
+       passt): die Wahl bleibt im Feld stehen, darunter steht warum. */
+    var gewuenscht = !meinPlatz && s.platzWahl && gesehen[s.platzWahl] ? s.platzWahl : '';
+    selP.value = meinPlatz || gewuenscht;
+    selP.addEventListener('click', function (ev) { ev.stopPropagation(); });
+    selP.addEventListener('change', function () {
+      var st = null;
+      mPl.states.forEach(function (x) { if (!st && x.name === selP.value) { st = x; } });
+      if (!st) { return; }
+      s.platzWahl = st.name;
+      s.role = rolleVonPlatz(st);
+      var ty = Array.isArray(st.type) ? st.type[0] : st.type;
+      if (ty) { s.typ = ty; }
+      if (st.defaultUnit) { s.unit = st.defaultUnit; }
+      /* Ohne Werteliste bleibt so ein Platz leer, egal wie gut Rolle und
+         Typ passen — wie beim Klick auf einen freien Platz. */
+      if (st.statesDefined && !s.states) { s.states = st.defaultStates || { 0: 'None' }; }
+      neu();
+    });
+    pb.appendChild(selP);
+    /* Neben dem Namen ist kein Platz fuer einen Satz darunter — er steht
+       als Tooltip am Feld. */
+    selP.title = tr('detail.slotHint');
+    /* Gewaehlt, aber nicht bekommen — warum?
+
+       Die Schreibrichtung ist es fast nie: traegt ein Punkt genau die
+       Vorgaberolle des Platzes, prueft der type-detector `read`/`write`
+       gar nicht (ChannelDetector: „When the default role is assigned …
+       we can be a bit more laxe"). Und das Feld setzt immer die
+       Vorgaberolle. Der erste Hinweis an dieser Stelle behauptete
+       deshalb etwas Falsches (Ricardo, 19.09.2026: an tele.SENSOR mit
+       Schreibziel blieb ELECTRIC_POWER vergeben, ohne Hinweis — zu
+       Recht). Der haeufige Grund ist ein anderer: das Muster greift als
+       Ganzes nicht, weil ein Pflichtplatz fehlt — dann vergibt der
+       Detektor gar keinen Platz, auch diesen nicht. */
+    /* Greift das Muster als Ganzes nicht, steht das in der Legende ueber
+       der Liste — hier waere es an der falschen Zeile. */
+    if (gewuenscht && Object.keys(belegtVon).length > 0) {
+      pb.appendChild(el('div', 'aside w', tr('detail.slotNotGiven', gewuenscht)));
+    }
+    platzBox = pb;
+  }
+
+  /* Der Platz steht rechts neben dem Namen, mit seiner Bezeichnung links
+     daneben wie eine Zeilenbeschriftung: man waehlt ihn am Anfang, und
+     weiter unten musste man ihn suchen (Ricardo, 19.09.2026). */
+  function mitPlatz(inhalt) {
+    if (!platzBox) { return inhalt; }
+    var w = el('div', 'fields');
+    w.style.alignItems = 'flex-start';
+    w.appendChild(inhalt);
+    var pf = el('div');
+    pf.style.display = 'flex';
+    pf.style.gap = '8px';
+    pf.style.alignItems = 'flex-start';
+    pf.appendChild(el('div', 'k', tr('detail.slot')));
+    pf.appendChild(platzBox);
+    w.appendChild(pf);
+    return w;
+  }
+
   /* --- Name, nur bei selbst angelegten --- */
   if (s.manuell) {
     var iN = el('input', 'tx w');
@@ -261,9 +369,9 @@ export function detailZeile(e, s, idx) {
       s.n = iN.value.trim().toUpperCase().replace(/\s+/g, '_');
       neu();
     });
-    zeile(tr('detail.name'), iN);
+    zeile(tr('detail.name'), mitPlatz(iN));
   } else if (s.urId) {
-    zeile(tr('detail.objectId'), s.urId);
+    zeile(tr('detail.objectId'), mitPlatz(el('div', null, s.urId)));
   } else {
     /* Der letzte Teil ist ein Feld: der Name bestimmt nur die Kennung,
        nicht was der Punkt tut — das macht die Rolle. Wer `cmnd_POWER`
@@ -280,7 +388,7 @@ export function detailZeile(e, s, idx) {
     var iNa = el('input', 'tx');
     iNa.type = 'text';
     iNa.value = s.n;
-    iNa.style.width = '420px';
+    iNa.style.width = '260px';
     iNa.style.maxWidth = '100%';
     iNa.style.fontFamily = 'var(--mono)';
     var nameFelder = el('div', 'fields');
@@ -311,7 +419,7 @@ export function detailZeile(e, s, idx) {
       s.n = neuN;
       neu();
     });
-    zeile(tr('detail.name'), nameStapel);
+    zeile(tr('detail.name'), mitPlatz(nameStapel));
   }
 
   /* --- Quelle lesen + JSON-Feld --- */
@@ -465,92 +573,6 @@ export function detailZeile(e, s, idx) {
 
   /* --- Rolle, mit Begründung --- */
   var rb = el('div');
-  /* Welcher Platz ist schon vergeben, und von welcher Zeile? Das steht
-     als Vermerk am Gruppenkopf der Rollenliste. */
-  var belegtVon = {};
-  /* Eigener Platz direkt aus dem Befund — ueber `belegtVon` allein fand
-     ihn nur die LETZTE Zeile eines mehrfach vergebenen Platzes (ACTUAL
-     bei `info`), alle anderen standen auf „kein Platz“. */
-  var eigenerPlatz = null;
-  if (e.want) {
-    var fundR = erkenneEntwurf(e, e.want);
-    if (fundR.length) {
-      fundR[0].states.forEach(function (x) {
-        if (!x.id) { return; }
-        var nx = x.id.slice(e.kanal.length + 1);
-        belegtVon[x.name] = nx;
-        if (nx === s.n) { eigenerPlatz = x.name; }
-      });
-    }
-  }
-  /* --- Platz im Muster ---
-
-     Umgekehrt zur Rolle: erst den Platz waehlen, und die Werkbank traegt
-     ein, was das Muster dafuer vorgibt — Rolle, Typ, Einheit, Werteliste.
-     Wer eine Zeile auf SET setzen wollte, musste bisher wissen, dass SET
-     `switch` heisst (Ricardo, 19.09.2026). Datenpunkt und Name bleiben;
-     dieselbe Vorgabe nimmt der Klick auf einen freien Platz unten, nur
-     dass der eine neue Zeile anlegt. */
-  var mPl = e.want && musterVon(e.want);
-  if (mPl) {
-    var meinPlatz = eigenerPlatz;
-    var pb = el('div');
-    var selP = el('select', 'tx');
-    selP.style.width = '300px';
-    var oKein = opt('', tr('detail.slotNone'));
-    if (meinPlatz) { oKein.disabled = true; }
-    selP.appendChild(oKein);
-    var gesehen = {};
-    mPl.states.forEach(function (st) {
-      if (gesehen[st.name]) { return; }
-      gesehen[st.name] = 1;
-      var fremd = belegtVon[st.name] && belegtVon[st.name] !== s.n && !st.multiple;
-      var txt = st.name + (st.required ? '  ·  ' + tr('detail.slotRequired') : '') +
-        (fremd ? '  ·  ' + tr('roles.slotTaken', belegtVon[st.name]) : '');
-      var o = opt(st.name, txt);
-      if (fremd) { o.disabled = true; }
-      selP.appendChild(o);
-    });
-    /* Gewaehlt, aber nicht bekommen (etwa weil die Schreibrichtung nicht
-       passt): die Wahl bleibt im Feld stehen, darunter steht warum. */
-    var gewuenscht = !meinPlatz && s.platzWahl && gesehen[s.platzWahl] ? s.platzWahl : '';
-    selP.value = meinPlatz || gewuenscht;
-    selP.addEventListener('click', function (ev) { ev.stopPropagation(); });
-    selP.addEventListener('change', function () {
-      var st = null;
-      mPl.states.forEach(function (x) { if (!st && x.name === selP.value) { st = x; } });
-      if (!st) { return; }
-      s.platzWahl = st.name;
-      s.role = rolleVonPlatz(st);
-      var ty = Array.isArray(st.type) ? st.type[0] : st.type;
-      if (ty) { s.typ = ty; }
-      if (st.defaultUnit) { s.unit = st.defaultUnit; }
-      /* Ohne Werteliste bleibt so ein Platz leer, egal wie gut Rolle und
-         Typ passen — wie beim Klick auf einen freien Platz. */
-      if (st.statesDefined && !s.states) { s.states = st.defaultStates || { 0: 'None' }; }
-      neu();
-    });
-    pb.appendChild(selP);
-    pb.appendChild(el('div', 'sugg', tr('detail.slotHint')));
-    /* Gewaehlt, aber nicht bekommen — warum?
-
-       Die Schreibrichtung ist es fast nie: traegt ein Punkt genau die
-       Vorgaberolle des Platzes, prueft der type-detector `read`/`write`
-       gar nicht (ChannelDetector: „When the default role is assigned …
-       we can be a bit more laxe"). Und das Feld setzt immer die
-       Vorgaberolle. Der erste Hinweis an dieser Stelle behauptete
-       deshalb etwas Falsches (Ricardo, 19.09.2026: an tele.SENSOR mit
-       Schreibziel blieb ELECTRIC_POWER vergeben, ohne Hinweis — zu
-       Recht). Der haeufige Grund ist ein anderer: das Muster greift als
-       Ganzes nicht, weil ein Pflichtplatz fehlt — dann vergibt der
-       Detektor gar keinen Platz, auch diesen nicht. */
-    /* Greift das Muster als Ganzes nicht, steht das in der Legende ueber
-       der Liste — hier waere es an der falschen Zeile. */
-    if (gewuenscht && Object.keys(belegtVon).length > 0) {
-      pb.appendChild(el('div', 'aside w', tr('detail.slotNotGiven', gewuenscht)));
-    }
-    zeile(tr('detail.slot'), pb);
-  }
 
   rb.appendChild(rollenFeld({
     wert: s.role,
