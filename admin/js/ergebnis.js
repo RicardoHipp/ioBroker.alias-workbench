@@ -358,6 +358,15 @@ var warumAuf = false;
       if (!sprungZiel) {
         var vermerkt = S.objects[S.current] && S.objects[S.current].native && S.objects[S.current].native.quelle;
         if (vermerkt) { sub.appendChild(el('span', 'chip warn', tr('result.sourceGone', vermerkt))); }
+        /* Der Knopf bleibt sichtbar, aber gesperrt: verschwaende er, suchte
+           man ihn; klickbar sprang er frueher irgendwohin (D10). */
+        var wohin = vermerkt || (insLeere[0] && insLeere[0].srcR) || '';
+        if (wohin) {
+          sprung = el('button', 'btn schmal sprungknopf', tr('result.toSource') + '  →');
+          sprung.disabled = true;
+          sprung.title = tr('result.sourceGone', wohin);
+          namensZeile.appendChild(sprung);
+        }
       }
     } else {
       sprungZiel = aliasFuer(S.current);

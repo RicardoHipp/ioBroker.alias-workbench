@@ -406,7 +406,11 @@ export function quelleVon(aliasId) {
   kindZustaende(aliasId).forEach(function (id) {
     var qq = aliasQuellen(S.objects[id]);
     [qq.read, qq.write].forEach(function (x) {
-      if (!x) { return; }
+      /* Nur Quellen, die es gibt. Zeigt jeder Punkt ins Leere, fand der
+         Rueckfall darunter („eine Ebene hoeher") den naechsten VORHANDENEN
+         Ordner - und „zur Quelle" sprang auf `0_userdata.0.wbfake` mit 31
+         fremden Geraeten statt auf die verschwundene Quelle (D10). */
+      if (!x || !S.objects[x]) { return; }
       var t = String(x).split('.');
       t.pop();
       var eltern = t.join('.');
