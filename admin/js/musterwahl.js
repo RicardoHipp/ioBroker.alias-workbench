@@ -38,6 +38,7 @@ function hakenNachMuster(e) {
   /* Wie beim Aufbau: der Schalter jedes weiteren Kanals kommt mit, damit
      „als ein Geraet" keinen Ausgang heimlich verliert. */
   (e.kanalGeraete || []).forEach(function (k) {
+    if (k.typ === 'info') { return; }   /* Wartungskanal: kein Ausgang */
     (k.pflicht || []).forEach(function (pid) {
       var kurz = pid.slice(S.current.length + 1).replace(/\./g, '_');
       e.states.forEach(function (st) { if (st.n === kurz) { st.on = true; } });

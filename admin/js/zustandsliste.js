@@ -105,8 +105,16 @@ export function berechnePlaetze(e, haupt) {
        stillschweigend weg. Ein Alias, dem heimlich ein Licht fehlt, ist
        schlimmer als einer mit einem Punkt zu viel. Also kommen die
        Pflichtpunkte der anderen Kanaele mit dazu; dass sie keinen Platz
-       finden, steht als Hinweis darueber. */
+       finden, steht als Hinweis darueber.
+
+       Nur Kanaele mit einer Funktion. Ein Kanal, den der Detektor bloss
+       als `info` erkennt — der Wartungskanal 0 bei Homematic —, hat
+       keinen Ausgang, der verloren gehen koennte; bei `info` ist aber
+       JEDER Punkt Pflicht, und so kamen AES_KEY, DEVICE_IN_BOOTLOADER,
+       DUTYCYCLE und RSSI_DEVICE angehakt in jeden HM-Aktor ohne Vorlage
+       (Ricardo, 19.09.2026, an hm-rpc.2.LEQ0605614). */
     (e.kanalGeraete || []).forEach(function (k) {
+      if (k.typ === 'info') { return; }
       (k.pflicht || []).forEach(function (pid) {
         var kurz = pid.slice(S.current.length + 1).replace(/\./g, '_');
         e.states.forEach(function (st) { if (st.n === kurz) { st.on = true; } });
@@ -197,6 +205,7 @@ export function baueListe(host, e, pl, rateKnopf, musterBlock) {
        keinen Platz hat? Genau die, die eben dazugekommen sind. */
     var ohnePlatz = 0;
     e.kanalGeraete.forEach(function (k) {
+      if (k.typ === 'info') { return; }   /* wie die Vorbelegung oben */
       (k.pflicht || []).forEach(function (pid) {
         var kurz = pid.slice(S.current.length + 1).replace(/\./g, '_');
         e.states.forEach(function (st) {
