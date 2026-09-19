@@ -101,7 +101,7 @@
   "detail.slotHint": "Sets role, type, unit and value list as the pattern prescribes for this place. Datapoint and name stay.",
   "detail.role": "Role",
   "detail.sameAsRead": "— same as read —",
-  "detail.separateHint": "separate — the switch shows the state, not the command",
+  "detail.separateHint": "Reads from somewhere else than it writes to: what is shown is what the device reports back — not the command sent last.",
   "detail.sourceGone": "source does not exist",
   "detail.stateSays": "state says {0}",
   "detail.takeFromAlias": "Take this one value back from the stored alias",

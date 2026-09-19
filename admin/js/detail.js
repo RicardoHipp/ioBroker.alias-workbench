@@ -553,10 +553,14 @@ export function detailZeile(e, s, idx) {
   wf.appendChild(lW);
   /* Der Hinweis gilt nur, wenn die beiden Quellen wirklich
      auseinandergehen - bei gleicher Quelle ist nichts getrennt. */
+  /* Unter die Kennung, nicht daneben: seit die Auswahl 420 px breit ist,
+     brach der Satz um und schob sich mit einer Luecke zwischen Auswahl und
+     Kennung (Ricardo, 19.09.2026). */
+  var wStapel = mitVollId(wf, s.srcW, zielMarke(s, 'w'));
   if (s.srcW && s.srcW !== s.srcR) {
-    wf.appendChild(el('div', 'sugg', tr('detail.separateHint')));
+    wStapel.appendChild(el('div', 'sugg', tr('detail.separateHint')));
   }
-  zeigeBeide(zeile(tr('detail.writesTo'), mitVollId(wf, s.srcW, zielMarke(s, 'w'))), ['srcW']);
+  zeigeBeide(zeile(tr('detail.writesTo'), wStapel), ['srcW']);
 
   if (s.srcW) {
     var wb = el('div');

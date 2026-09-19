@@ -101,7 +101,7 @@
   "detail.slotHint": "Setzt Rolle, Typ, Einheit und Werteliste so, wie das Muster sie für diesen Platz vorgibt. Datenpunkt und Name bleiben.",
   "detail.role": "Rolle",
   "detail.sameAsRead": "— dieselbe wie lesen —",
-  "detail.separateHint": "getrennt — der Schalter zeigt den Zustand, nicht den Befehl",
+  "detail.separateHint": "Liest woanders, als es schreibt: angezeigt wird, was das Gerät zurückmeldet — nicht der zuletzt gesendete Befehl.",
   "detail.sourceGone": "Quelle existiert nicht",
   "detail.stateSays": "Zustand sagt {0}",
   "detail.takeFromAlias": "Diesen einen Wert aus dem gespeicherten Alias zurückholen",
