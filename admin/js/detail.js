@@ -302,7 +302,11 @@ export function detailZeile(e, s, idx) {
   var qf = el('div', 'fields');
 
   var selR = el('select', 'tx');
-  selR.style.width = '260px';
+  /* 420 statt 260 px: gekuerzt wird hinten, und dort steht, was den
+     Punkt unterscheidet — `…3D_Drucker.` ohne `cmnd.POWER` sagte nichts
+     (Ricardo, 19.09.2026). `maxWidth` haelt es in schmalen Fenstern. */
+  selR.style.width = '420px';
+  selR.style.maxWidth = '100%';
   selR.appendChild(opt('', quellen.length ? tr('detail.pickOne') : tr('detail.noSource')));
   quellenIn(selR, quellen);
   if (s.srcR && quellen.indexOf(s.srcR) === -1) { selR.appendChild(opt(s.srcR, s.srcR + '   ' + tr('detail.elsewhere'))); }
@@ -329,7 +333,6 @@ export function detailZeile(e, s, idx) {
     neu();
   });
   var lR = el('label', 'fld');
-  lR.appendChild(el('span', null, tr('detail.datapoint')));
   lR.appendChild(selR);
   qf.appendChild(lR);
 
@@ -377,7 +380,8 @@ export function detailZeile(e, s, idx) {
   /* --- Quelle schreiben --- */
   var wf = el('div', 'fields');
   var selW = el('select', 'tx');
-  selW.style.width = '260px';
+  selW.style.width = '420px';
+  selW.style.maxWidth = '100%';
   /* Leer heisst „schreibt nicht" - und muss auch so heissen. Frueher
      stand hier „dieselbe wie lesen", also das Gegenteil dessen, was
      passierte (Ricardo, 25.08.2026). Wer wirklich auf die Lesequelle
@@ -401,7 +405,6 @@ export function detailZeile(e, s, idx) {
     neu();
   });
   var lW = el('label', 'fld');
-  lW.appendChild(el('span', null, tr('detail.datapoint')));
   lW.appendChild(selW);
   wf.appendChild(lW);
   /* Der Hinweis gilt nur, wenn die beiden Quellen wirklich
@@ -445,11 +448,18 @@ export function detailZeile(e, s, idx) {
   /* Welcher Platz ist schon vergeben, und von welcher Zeile? Das steht
      als Vermerk am Gruppenkopf der Rollenliste. */
   var belegtVon = {};
+  /* Eigener Platz direkt aus dem Befund — ueber `belegtVon` allein fand
+     ihn nur die LETZTE Zeile eines mehrfach vergebenen Platzes (ACTUAL
+     bei `info`), alle anderen standen auf „kein Platz“. */
+  var eigenerPlatz = null;
   if (e.want) {
     var fundR = erkenneEntwurf(e, e.want);
     if (fundR.length) {
       fundR[0].states.forEach(function (x) {
-        if (x.id) { belegtVon[x.name] = x.id.slice(e.kanal.length + 1); }
+        if (!x.id) { return; }
+        var nx = x.id.slice(e.kanal.length + 1);
+        belegtVon[x.name] = nx;
+        if (nx === s.n) { eigenerPlatz = x.name; }
       });
     }
   }
@@ -463,8 +473,7 @@ export function detailZeile(e, s, idx) {
      dass der eine neue Zeile anlegt. */
   var mPl = e.want && musterVon(e.want);
   if (mPl) {
-    var meinPlatz = null;
-    Object.keys(belegtVon).forEach(function (pn) { if (belegtVon[pn] === s.n) { meinPlatz = pn; } });
+    var meinPlatz = eigenerPlatz;
     var pb = el('div');
     var selP = el('select', 'tx');
     selP.style.width = '300px';
