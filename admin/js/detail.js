@@ -616,10 +616,16 @@ export function detailZeile(e, s, idx) {
         hin.appendChild(document.createTextNode(
           tr('pattern.expectsType', erlaubt.join(tr('pattern.typeOr')))));
       }
-    } else {
+    } else if (!eigenerPlatz) {
       hin.textContent = tr('pattern.noPlaceLong', musterName(e.want) || e.want);
     }
-    rb.appendChild(hin);
+    /* Findet die Rollenliste nichts, hat die Zeile aber doch einen Platz,
+       steht hier nichts: das sagt schon „Platz im Muster“ oben. Der Fall
+       ist der Auffangplatz ACTUAL bei `info` — er verlangt keine Rolle und
+       steht deshalb in keiner Rollenliste. Hier stand vorher „kein Platz im
+       Information-Muster … Alexa & Co. zählen ihn separat“, direkt unter
+       einem Feld, das ACTUAL zeigte (Ricardo, 19.09.2026). */
+    if (hin.childNodes.length) { rb.appendChild(hin); }
     /* Passt der Typ nicht zum Platz, faellt der Punkt aus dem Muster -
        lautlos, denn die Rolle stimmt ja. Genau das ist am 11.09.2026
        an einem Tasmota-Stromzaehler passiert (I33). */
