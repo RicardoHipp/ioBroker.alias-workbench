@@ -324,6 +324,7 @@
   "pattern.noMatch": "kein Muster passt zu „{0}“",
   "pattern.offMissing": "Das {0}-Muster greift gerade nicht: {1} fehlt. Deshalb hat keine Zeile einen Platz.",
   "pattern.offCandidate": "{0} passt auf {1}, ist aber nicht angehakt.",
+  "pattern.slotHeldBy": " — den hat schon {0}. Oben unter „Platz im Muster“ einen freien Platz wählen.",
   "pattern.tickIt": "anhaken",
   "pattern.offCandidateType": "{0} passt mit seiner Rolle auf {1}, ist aber nicht angehakt und hat den Typ {2} statt {3}.",
   "pattern.tickItType": "anhaken, {0}",

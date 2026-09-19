@@ -625,11 +625,21 @@ export function detailZeile(e, s, idx) {
     var treffer = platzFuerRolle(e.want, s.role, s.typ);
     var erlaubt = typenFuerRolle(e.want, s.role);
     var hin = el('div', 'sugg');
+    /* Hat den Platz schon eine ANDERE Zeile, hilft weder der Typ noch die
+       Rolle — es gibt ihn nur einmal. Am KeinJson-Testgeraet hielt
+       `cmnd_POWER` SET, und unter `stat_POWER` (Rolle `switch` von
+       mqtt-client, Typ string) stand „SET verlangt boolean … so faellt der
+       Punkt aus dem Muster" — als muesste man nur den Typ stellen. Richtig
+       waere ACTUAL gewesen (Ricardo, 19.09.2026). */
+    var besetztVon = treffer && !treffer.multiple && belegtVon[treffer.name] &&
+      belegtVon[treffer.name] !== s.n ? belegtVon[treffer.name] : null;
     if (treffer) {
       hin.appendChild(document.createTextNode(tr('pattern.fitsOn')));
       hin.appendChild(el('b', null, String(treffer.role)));
       hin.appendChild(document.createTextNode(tr('pattern.toSlot', treffer.name, musterName(e.want) || e.want)));
-      if (erlaubt.length) {
+      if (besetztVon) {
+        hin.appendChild(document.createTextNode(tr('pattern.slotHeldBy', besetztVon)));
+      } else if (erlaubt.length) {
         hin.appendChild(document.createTextNode(
           tr('pattern.expectsType', erlaubt.join(tr('pattern.typeOr')))));
       }
@@ -646,7 +656,7 @@ export function detailZeile(e, s, idx) {
     /* Passt der Typ nicht zum Platz, faellt der Punkt aus dem Muster -
        lautlos, denn die Rolle stimmt ja. Genau das ist am 11.09.2026
        an einem Tasmota-Stromzaehler passiert (I33). */
-    if (treffer && s.typ && erlaubt.length && erlaubt.indexOf(s.typ) === -1) {
+    if (treffer && !besetztVon && s.typ && erlaubt.length && erlaubt.indexOf(s.typ) === -1) {
       rb.appendChild(el('div', 'aside w',
         tr('pattern.typeMismatch', treffer.name, erlaubt.join(tr('pattern.typeOr')), s.typ)));
     }
