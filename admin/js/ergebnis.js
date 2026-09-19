@@ -518,7 +518,13 @@ var warumAuf = false;
   /* Der Vorlagenkasten: welche Vorlage gegriffen hat, warum, ihre
      Wahl und Knoepfe. Nimmt die Musterwahl bei sich auf; ohne Kasten
      bleibt sie im Kopf - bis die Leiste sie sich holt. */
-  function baueVorlagenkasten(host, head, e, istQuelle, musterBlock) {
+  /* Zurueck kommt, was noch keinen Platz hat: der Musterblock (ohne
+     Kasten) und der Knopf fuer die Leiste ueber der Liste. Im Kasten
+     sitzt seit 19.09.2026 „Freie Plaetze vorschlagen"; der Knopf, der
+     den ganzen Bestand des Geraets laedt, wandert dafuer in die Leiste -
+     er aendert die Liste, nicht die Erkennung (Ricardo). */
+  function baueVorlagenkasten(host, head, e, istQuelle, musterBlock, rateKnopf) {
+    var leistenKnopf = rateKnopf;
     if (e.vorschlag || istQuelle) {
       var sg = el('div', 'suggestbox');
       if (!e.vorschlag) {
@@ -769,7 +775,6 @@ var warumAuf = false;
          der nur die vorgeschlagenen Zeilen ein- und ausblendet. Deshalb
          steht das Geraet im Namen und der Rest im Hinweis. */
       bRoh.title = e.roh ? tr('tpl.showProposalHelp') : tr('tpl.showAllPointsHelp');
-      if (!e.vorschlag) { bRoh.disabled = true; }
       bRoh.addEventListener('click', function () {
         var rohJetzt = !e.roh;
         /* Dieselben zwei Schritte wie in `waehle`: die Vorlage, aus der der
@@ -864,8 +869,12 @@ var warumAuf = false;
           knoepfe.appendChild(bTpl);
         }
       }
-      knoepfe.appendChild(bRoh);
-      acts.appendChild(knoepfe);
+      if (rateKnopf) { knoepfe.appendChild(rateKnopf); }
+      if (knoepfe.childNodes.length) { acts.appendChild(knoepfe); }
+      /* Ohne Vorlagenvorschlag gibt es keinen Bestand, zu dem er
+         umschalten koennte - dann steht er gar nicht erst da, statt
+         ausgegraut in der Leiste. */
+      leistenKnopf = e.vorschlag ? bRoh : null;
       sg.appendChild(acts);
       host.appendChild(sg);
     }
@@ -874,7 +883,7 @@ var warumAuf = false;
     if (musterBlock) {
       head.appendChild(musterBlock);
     }
-    return musterBlock;
+    return { musterBlock: musterBlock, leistenKnopf: leistenKnopf };
   }
 
   /* Die Karte „Gehoert nicht zum <Muster>" stand hier bis zum
@@ -1076,7 +1085,9 @@ var warumAuf = false;
 
     var istQuelle = baueZielleiste(host, e);
 
-    musterBlock = baueVorlagenkasten(host, head, e, istQuelle, musterBlock);
+    var kasten = baueVorlagenkasten(host, head, e, istQuelle, musterBlock, rateKnopf);
+    musterBlock = kasten.musterBlock;
+    rateKnopf = kasten.leistenKnopf;
 
     /* Gleich unter die Erkennung: was hier fehlt, entscheidet mit
        darueber, ob eine Vorlage ueberhaupt greift. */

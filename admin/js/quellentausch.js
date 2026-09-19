@@ -505,7 +505,28 @@ function zeichneTausch() {
      zum Entfernen an und opfert seinen Schalter, statt den Knoten
      darueber zu nehmen (Ricardos Frage, 12.09.2026). */
   var eltern = S.tauschNeu.split('.').slice(0, -1).join('.');
-  if (eltern.split('.').length > 2 && S.tauschNeu !== alt) {
+  /* Nur eine Hilfestellung - lieber zu selten als zu oft (Ricardo,
+     19.09.2026). Deshalb zwei Bedingungen, die beide halten muessen:
+
+     1. Die Wahl ist ein Blatt: alle Datenpunkte darunter haengen direkt
+        an ihr, es gibt keine Unterordner. Das trifft `…Licht.tele`,
+        `…stat`, `…cmnd` und den Homematic-Kanal `1` - genau die Faelle,
+        in denen die Ebene darueber das Geraet ist. Ein Geraet mit
+        Unterordnern ist selbst schon die richtige Ebene; darueber liegt
+        ein Ordner voller anderer Geraete, und der findet fast immer
+        irgendwo passende Namen. Gemessen 19.09.2026: ueber `PC_Jonas`
+        fand `mqtt-client.0.SmartHome` 7 von 7 - beim 3D-Drucker, am
+        Bastelzimmer_Licht und am RGB-Deckenlicht (W24).
+     2. Die bisherige Quelle liegt nicht darunter. Sonst zaehlt die Ebene
+        darueber deren eigene Punkte mit: `mqtt.Steckdose` gegen das
+        Nachbargeraet `mqtt.Stumm` ergab „7 von 7, hier nur 2", und die 7
+        waren die der alten Steckdose (Lauf vom 19.09.2026). */
+  var pre = S.tauschNeu + '.';
+  var istBlatt = kindZustaende(S.tauschNeu).every(function (id) {
+    return id.indexOf(pre) === 0 && id.slice(pre.length).indexOf('.') === -1;
+  });
+  var altDarunter = !!alt && (alt === eltern || alt.indexOf(eltern + '.') === 0);
+  if (eltern.split('.').length > 2 && S.tauschNeu !== alt && istBlatt && !altDarunter) {
     var trefferHier = plan.filter(function (z) { return z.neuR; }).length;
     var planOben = tauschPlan(kanal, eltern);
     var trefferOben = planOben.filter(function (z) { return z.neuR; }).length;
@@ -765,11 +786,4 @@ export function tauscheAus() {
       if (--offen === 0) { weiter(); }
     });
   });
-}
-
-/* Der Knopf gilt fuer dasselbe wie Verlegen und Entfernen: einen Alias,
-   den es gibt. */
-export function tauschKnopf(zeigen) {
-  var b = $('#btn-swap');
-  if (b) { b.hidden = !zeigen; }
 }

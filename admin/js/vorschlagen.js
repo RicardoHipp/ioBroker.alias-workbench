@@ -2,7 +2,7 @@
 
    Setzt nur Rollen im Entwurf; entscheiden laesst es den Detektor. */
 
-import { musterVon, erkenneEntwurf } from './erkennung.js';
+import { musterVon, erkenneEntwurf, rolleTrifft } from './erkennung.js';
 
 /* ================== Plaetze raten ==================
 
@@ -109,6 +109,22 @@ function rateLage(e) {
       zeileBelegt[x.id.slice(e.kanal.length + 1)] = true;
     });
   }
+  /* Greift das Muster noch nicht, liefert der Detektor gar nichts - und
+     dann sah alles frei aus, auch ein MODE, das eben bestaetigt worden
+     war. Der zweite Vorschlag bog genau diese Zeile wieder um und legte
+     dieselbe Quelle obendrein auf WORKING_MODE (U24, 19.09.2026). Also
+     zaehlt jede angehakte Zeile, die schon den Namen eines Platzes traegt
+     und dessen Rolle erfuellt, als belegt - vermutet oder entschieden.
+     Wo das Muster greift, sagt der Detektor dasselbe; hier kommt nichts
+     dazu. */
+  mu.states.forEach(function (pl) {
+    if (!pl.name || platzBelegt[pl.name]) { return; }
+    e.states.forEach(function (st) {
+      if (!st.on || st.n !== pl.name || !rolleTrifft(pl.role, st.role)) { return; }
+      platzBelegt[pl.name] = true;
+      zeileBelegt[st.n] = true;
+    });
+  });
   var namenDa = {};
   e.states.forEach(function (st) { namenDa[st.n] = true; });
 

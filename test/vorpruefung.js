@@ -659,9 +659,30 @@ describe('Die Feldpfade', () => {
         expect(feldAusFormel('JSON.parse(val).POWER === "ON"')).to.equal('');
         expect(feldAusFormel('val * 10')).to.equal('');
         expect(feldAusFormel('')).to.equal('');
-        /* Ein Punkt im Schluessel selbst ist im Pfadformat nicht
-           eindeutig - lieber „eigene Formel" als ein falscher Pfad. */
-        expect(feldAusFormel("JSON.parse(val)?.['a.b']?.c ?? null")).to.equal('');
+    });
+
+    /* Seit X12 (19.09.2026): ein Schluessel mit Punkt steht im Pfad in
+       Klammern - Frigate hat `cpu_usages["frigate.full_system"]`. Die
+       gewoehnlichen Pfade oben bleiben dabei zeichengleich. */
+    it('halten einen Punkt im Schluessel zusammen', () => {
+        const mitPunkt = JSON.stringify({ cpu_usages: { 'frigate.full_system': { cpu: '10.6' } } });
+        const pfad = "cpu_usages['frigate.full_system'].cpu";
+        expect(feldFormel(pfad))
+            .to.equal("JSON.parse(val)?.cpu_usages?.['frigate.full_system']?.cpu ?? null");
+        expect(new Function('val', `return ${feldFormel(pfad)}`)(mitPunkt)).to.equal('10.6');
+        expect(feldAusFormel(feldFormel(pfad))).to.equal(pfad);
+        expect(feldAusFormel("JSON.parse(val)?.['a.b']?.c ?? null")).to.equal("['a.b'].c");
+    });
+
+    it('zerlegen und bauen Pfade verlustfrei', () => {
+        const { pfadAus, pfadTeile } = new Function(
+            code + '; return { pfadAus, pfadTeile };')();
+        [
+            ['ENERGY', 'Power'], ['service', 'storage', '/dev/shm', 'free'],
+            ['cpu_usages', 'frigate.full_system', 'cpu'], ['a.b'], ["it's.x", 'y'],
+        ].forEach(t => expect(pfadTeile(pfadAus(t)), t.join('|')).to.deep.equal(t));
+        expect(pfadAus(['ENERGY', 'Power'])).to.equal('ENERGY.Power');
+        expect(pfadAus(['service', 'storage', '/dev/shm', 'free'])).to.equal('service.storage./dev/shm.free');
     });
 });
 

@@ -1,6 +1,6 @@
 {
   "id": "hm-rollladen",
-  "version": 3,
+  "version": 4,
   "rang": 40,
   "name": {
     "de": "Homematic Rollladenaktor",
@@ -42,9 +42,10 @@
       "name": "STOP",
       "rolle": "button.stop",
       "typ": "boolean",
+      "lesen": "1.STOP",
       "schreiben": "1.STOP",
       "optional": true,
-      "hinweis": "Nur schreiben - ein Tastendruck hat keinen Zustand zum Lesen."
+      "hinweis": "Liest und schreibt 1.STOP. Der Alias-Punkt bekommt trotzdem read: false - das kommt aus der Rolle button.stop -, und vis, Alexa und matter zeichnen einen Knopf. Mit der Lesequelle sieht der Alias auch einen Druck von aussen."
     },
     {
       "name": "DIRECTION",

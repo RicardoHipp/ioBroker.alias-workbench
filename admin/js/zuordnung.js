@@ -4,7 +4,7 @@
 import { S } from './zustand.js';
 import { el } from './basis.js';
 import { tr, txt } from './sprache.js';
-import { enums, enumsUnbekannt } from './enums.js';
+import { enums, enumsUnbekannt, beiEnumsGeladen } from './enums.js';
 import {
   enumListe,
   enumsVon,
@@ -238,6 +238,15 @@ export function enumZeile(host, e) {
     ex.title = tr('enums.clear');
     ex.setAttribute('aria-label', tr('enums.clear'));
     ex.hidden = !ei.value;
+    /* Aufzaehlungen nicht geladen: dann wird Raum und Funktion nicht
+       geschrieben, also laesst sich hier auch nichts waehlen. Vorher
+       stand das nur im Trockenlauf, und die Felder sahen aus wie immer
+       (P8, 19.09.2026). */
+    if (enumsUnbekannt()) {
+      ei.disabled = true;
+      ex.disabled = true;
+      ei.title = tr('enums.unknown');
+    }
     ex.addEventListener('mousedown', function (ev) {
       ev.preventDefault();
       e[spec.feld] = '';
@@ -397,7 +406,16 @@ export function enumZeile(host, e) {
   });
   if (enumAngebot) { ebar.appendChild(enumAngebot); }
   host.appendChild(ebar);
+  if (enumsUnbekannt()) {
+    var eh = el('div', 'aside w', tr('enums.notLoadedField'));
+    eh.style.margin = '4px 0 8px';
+    host.appendChild(eh);
+  }
 }
+
+/* Klappt ein Nachversuch, verschwindet der Hinweis von selbst - sonst
+   stuende er bis zum naechsten Klick da, obwohl alles wieder geht. */
+beiEnumsGeladen(function () { if (S.current) { zeichneErgebnis(); } });
 
 /* Welcher Raum, welche Funktion - und woher.
 

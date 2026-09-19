@@ -12,7 +12,7 @@ import { funktionsAuswahl, kennungZuFunktion } from './aufzaehlungen.js';
 import { musterVon, platzFuerRolle, typenFuerRolle } from './erkennung.js';
 import { musterZeile, musterName } from './musternamen.js';
 import { ladeVorlagen, aendereVorlagen, setzeMeta, pruefeVorlage, wendeAn, hinweisTaugt, INSTANZ_ID } from './vorlagen.js';
-import { kindZustaende, hatPunkt, feldAusFormel } from './werte.js';
+import { kindZustaende, hatPunkt, feldAusFormel, pfadTeile, pfadAus } from './werte.js';
 import { opt } from './entwurf.js';
 import { zeichneErgebnis } from './ergebnis.js';
 import { delKnopf } from './schreiben.js';
@@ -996,7 +996,12 @@ function vPruefeEingelesen(o) {
   if (!o || typeof o !== 'object' || Array.isArray(o)) { return tr('tv.badNotObject'); }
   if (!o.id || typeof o.id !== 'string') { return tr('tv.badNoId'); }
   if (!Array.isArray(o.zustaende) || !o.zustaende.length) { return tr('tv.badNoStates'); }
-  var schlecht = o.zustaende.filter(function (z) { return !z || !z.name || !z.lesen; });
+  /* Lese- ODER Schreibpfad, wie beim Speichern und Anwenden. Eine Zeile
+     nur mit `schreiben` (ein Befehl ohne Rueckmeldung, frueher auch der
+     STOP am Rollladen) ist gueltig; bis 19.09.2026 wies das Einlesen sie
+     ab, und die Werkbank gab Dateien aus, die sie selbst nicht wieder
+     annahm (I7). */
+  var schlecht = o.zustaende.filter(function (z) { return !z || !z.name || !(z.lesen || z.schreiben); });
   if (schlecht.length) { return tr('tv.badState', schlecht.length); }
 
   if (o.name !== undefined &&
@@ -1304,6 +1309,16 @@ export function vorlagenVorbereiten(e) {
     if (quelle && s.ausVorlage) {
       (quelle.zustaende || []).forEach(function (z) { if (z.name === s.ausVorlage) { zv = z; } });
     }
+    /* Steht der Punkt in der Erkennung der Vorlage, muss er da sein -
+       auch wenn seine Zeile optional ist. `hm-rollladen` fuehrt STOP als
+       optionale Zeile, verlangt `1.STOP` aber in der Erkennung: nur er
+       trennt den Rollladen vom Dimmer. Vorgehakt wurde bis 19.09.2026 nur
+       nach `optional`, und wer die Vorlage aktualisierte, ohne selbst
+       nachzuhaken, speicherte eine, die schon bei LEVEL allein greift -
+       im Probelauf 23 Geraete statt der Rolllaeden (I20). */
+    var erfQ = (quelle && quelle.erkennung && quelle.erkennung.erforderlich) || [];
+    var inErkennung = !!(zv && ((zv.lesen && erfQ.indexOf(zv.lesen) > -1) ||
+                                (zv.schreiben && erfQ.indexOf(zv.schreiben) > -1)));
     zeilen.push({
       s: s,
       name: s.n,
@@ -1320,7 +1335,11 @@ export function vorlagenVorbereiten(e) {
          einer Vorlage kam, erbt deren Einstufung. Von Hand ergaenzte
          Punkte bleiben freiwillig — jeder Pflichtpunkt macht die
          Vorlage genauer und zugleich sproeder. */
-      pflicht: r.abs ? false : (zv ? !zv.optional : !!w)
+      pflicht: r.abs ? false : (zv ? (!zv.optional || inErkennung) : !!w),
+      /* Die Zeile bleibt, was sie in der Vorlage war: optional fuer den
+         Alias, Pflicht nur fuer die Erkennung. Der Haken „muss da sein"
+         legt sonst beides zusammen fest. */
+      optionalBleibt: !!(zv && zv.optional && inErkennung)
     });
   });
 
@@ -1328,7 +1347,7 @@ export function vorlagenVorbereiten(e) {
   zeilen.forEach(function (z) {
     var f = feldAusFormel(z.s.f);
     if (!f || z.lesenAbs) { return; }
-    var oben = f.split('.')[0];
+    var oben = pfadAus([pfadTeile(f)[0]]);
     var da = false;
     inhalte.forEach(function (x) { if (x.punkt === z.lesenRoh && x.feld === oben) { da = true; } });
     if (!da) { inhalte.push({ punkt: z.lesenRoh, feld: oben, an: false }); }
@@ -1410,6 +1429,15 @@ export function baueVorlage(z) {
   z.inhalte.forEach(function (x) { if (x.an) { inh[x.punkt] = x.feld; } });
   if (Object.keys(inh).length) { v.erkennung.inhalt = inh; }
   if (k.namenshinweis) { v.erkennung.namenshinweis = k.namenshinweis; }
+  /* Was die Erkennung der Ursprungsvorlage sonst traegt - der Hinweis,
+     warum ein Punkt Pflicht ist, etwa - bleibt erhalten. Der Dialog
+     zeigt es nicht, also darf er es auch nicht verlieren (I20). */
+  if (k.modus === 'update' && k.quelle && k.quelle.erkennung) {
+    Object.keys(k.quelle.erkennung).forEach(function (feld) {
+      if (['erforderlich', 'verboten', 'inhalt', 'namenshinweis'].indexOf(feld) > -1) { return; }
+      v.erkennung[feld] = k.quelle.erkennung[feld];
+    });
+  }
 
   if (k.mehrfach && k.instanz) {
     v.mehrfach = { platzhalter: '%N%' };
@@ -1432,7 +1460,7 @@ export function baueVorlage(z) {
     if (r.schreibenRoh) { zu.schreiben = zPfad(r, k, true, z.zeilen); }
     if (f) { zu.feld = f; } else if (s.f) { zu.leseformel = s.f; }
     if (s.fw && r.schreibenRoh) { zu.schreibformel = s.fw; }
-    if (!r.pflicht) { zu.optional = true; }
+    if (!r.pflicht || r.optionalBleibt) { zu.optional = true; }
     if (r.aus) { zu.vorgabeAus = true; }
     if (s.caption) { zu.beschriftung = s.caption; }
     if (s.dec !== undefined && s.dec !== '') { zu.nachkommastellen = Number(s.dec); }

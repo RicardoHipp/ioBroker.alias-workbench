@@ -549,7 +549,9 @@ export function wendeAn(v, kanal, gruende, instanz, auchOhneTreffer) {
       e.states.push({
         n: z.name, on: !z.vorgabeAus, role: z.rolle || '', typ: z.typ || '',
         unit: z.einheit || '', wr: true,
-        srcR: '', srcW: ziel0,
+        /* Ein Knopf liest aus seinem Schreibziel mit (19.09.2026): der
+           Alias sieht jeden Druck, `read: false` kommt aus der Rolle. */
+        srcR: /^button/.test(String(z.rolle || '')) ? ziel0 : '', srcW: ziel0,
         f: '', fw: z.schreibformel ? auf(z.schreibformel) : '',
         caption: z.beschriftung || '',
         dec: z.nachkommastellen === undefined ? undefined : String(z.nachkommastellen),

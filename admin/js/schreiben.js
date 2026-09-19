@@ -11,7 +11,7 @@ import { enumsVon } from './aufzaehlungen.js';
 import './katalog.js';
 import { holeZweig, indexNeu , nachziehenErledigt } from './objekte.js';
 import { zeichneBaum } from './baum.js';
-import './werte.js';
+import { knopfZeile } from './werte.js';
 import { ausgangName, vorschlag } from './vorlagen.js';
 import {
   waehle,
@@ -290,15 +290,14 @@ export function baueObjekte(e) {
     if (s.f)  { alias.read = s.f; }
     if (s.fw && s.srcW) { alias.write = s.fw; }
 
-    /* Ein Taster meldet nichts — dann sagt der Alias-Punkt das auch.
-       Sonst malen vis, Alexa und matter einen Kippschalter, der ewig auf
-       „aus" steht, statt eines Knopfes. */
-    var istTaster = taster(s);
+    /* Ein Knopf traegt `read: false` - sonst malen vis, Alexa und matter
+       einen Kippschalter statt eines Knopfes. Entschieden wird an der
+       Rolle, nicht an der Lesequelle (`knopfZeile`, 19.09.2026). */
     var common = {
       name: s.caption || s.n,
       role: s.role,
       type: s.typ || 'mixed',
-      read: !istTaster,
+      read: !knopfZeile(s),
       write: !!s.srcW,
       alias: alias
     };
@@ -364,17 +363,17 @@ export function verwaiste(e) {
 }
 
 /* Was dem Schreiben im Weg steht. */
-/* Ein Taster: keine Lesequelle, ein Schreibziel, und das Ziel sagt
-   selbst, dass es nichts zu melden hat (`common.read === false`).
+/* Ein Taster: keine Lesequelle, ein Schreibziel, Rolle `button…`.
 
-   Nicht ueber die Rolle entschieden: `button.stop` ist Konvention, aber
-   nur der Adapter weiss wirklich, ob am Punkt etwas abzulesen ist. An
-   `hm-rpc.2.NEQ1795694.1.STOP` steht `read: false` — hingeschrieben von
-   hm-rpc, nicht von uns. */
+   Bis 19.09.2026 entschied hier `common.read === false` am Ziel. Das
+   Feld setzt aber jeder Adapter anders (hm-rpc an `BOOST_MODE`, einem
+   Schalter); die Rollenliste von ioBroker legt den Knopf ueber Rolle und
+   Schreiben fest, und so jetzt auch die Werkbank (`knopfZeile`). */
 export function taster(s) {
-  if (!s || s.srcR || !s.srcW) { return false; }
-  var o = S.objects[s.srcW];
-  return !!(o && o.common && o.common.read === false);
+  /* Seit 19.09.2026 an der Rolle wie `read: false` selbst. Die Zeile ohne
+     Lesequelle ist beim Knopf erlaubt, aber nicht mehr die Vorgabe - neu
+     angelegte Knoepfe lesen aus ihrem Schreibziel mit. */
+  return !!(s && !s.srcR && knopfZeile(s));
 }
 
 export function pruefeSchreiben(e) {
@@ -1337,7 +1336,6 @@ export function zeigeVerlegen(altVorgabe, zielVorgabe) {
      (T25, 18.09.2026). Verlegt wird ohnehin alles unter dem Pfad; ein
      fehlender Kanal fehlt danach am neuen Ort genauso. */
   if (!alt || alt.indexOf('alias.') !== 0 || !knotenDa(alt)) { return; }
-  S.verlegeZiel = alt;
 
   var vorbelegt = (typeof zielVorgabe === 'string' && zielVorgabe &&
                    zielVorgabe.indexOf('alias.') === 0) ? zielVorgabe : alt;
@@ -1725,7 +1723,6 @@ export function verlegeAlias(alt, neu) {
           leereOrdnerRaeumen(alt, function () {
             S.current = neu;
             S.entwurf = null;
-            S.verlegeZiel = null;
             melden(fehler, neu);
           });
         }

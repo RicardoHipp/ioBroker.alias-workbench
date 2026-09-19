@@ -9,7 +9,7 @@ import { txt, tr } from './sprache.js';
 import './enums.js';
 import { zusatzName, setzeModus, zeichneBaum, merkeKlappstand } from './baum.js';
 import { kindZustaende, aliasQuellen, holeWerte,
-  mitVorspann, schreibQuelle, zeileAusAlias
+  mitVorspann, schreibQuelle, zeileAusAlias, istTaster as istTasterObjekt
 } from './werte.js';
 import { erkenneEntwurf } from './erkennung.js';
 import { vorschlag , pruefeVorlage, zeigeAbozahl, setzeInstanz } from './vorlagen.js';
@@ -89,9 +89,7 @@ export function baueEntwurf(kanal) {
        QUELLE direkt auf 30 gesetzt — der Alias zeigte 30. `read: false`
        sperrt das Lesen also nicht, es sagt nur, dass von allein nichts
        kommt. Wer den Wert setzt, will ihn auch sehen. */
-    var nat = o.native || {};
-    var istTaster = (c.read === false && !!c.write) &&
-      (nat.TYPE === 'ACTION' || /^button/.test(String(c.role || '')));
+    var istTaster = istTasterObjekt(o);
     e.states.push({
       /* Bei einer Quelle wird aus stat.POWER der Zustand stat_POWER —
          ein Punkt im Namen wuerde sonst eine Unterebene im Alias
@@ -110,7 +108,12 @@ export function baueEntwurf(kanal) {
          dann „keine Rolle" und „nichts erkannt". Typ und Einheit hat sie
          von jeher uebernommen; die Rolle auszunehmen war nicht zu
          begruenden. Ueberschreiben laesst sie sich weiterhin. */
-      role: c.role || '',
+      /* Ein Tastendruck laut Geraetebeschreibung bekommt die Knopfrolle,
+         wenn der Adapter ihm keine gegeben hat - an ihr haengt `read:
+         false` am Alias (`knopfZeile`). hm-rpc gibt `OLD_LEVEL`
+         `value.dimmer` und `INSTALL_TEST` `indicator`; die uebrigen
+         (PRESS_SHORT, STOP, RAMP_STOP) tragen schon `button…`. */
+      role: (istTaster && !/^button/.test(String(c.role || ''))) ? 'button' : (c.role || ''),
       typ: c.type || '',
       unit: c.unit || '',
       /* Ohne die Werteliste bleibt jeder Platz mit statesDefined leer —
@@ -150,8 +153,13 @@ export function baueEntwurf(kanal) {
          Schalters, der ewig auf „aus" steht. Kann der Punkt auch nicht
          schreiben, bleibt er, wie er ist: dann ist die fehlende Meldung
          wirklich ein Mangel, und die Marke sagt es. */
-      srcR: istAlias ? ((c.read === false && q.einfach) ? '' : (q.read || ''))
-                     : (istTaster ? '' : id),
+      /* Seit 19.09.2026 bekommt auch der Taster seine Lesequelle: der
+         Alias sieht dann jeden Druck, auch einen von aussen. Zum Knopf
+         wird er trotzdem - `read: false` haengt jetzt an der Rolle
+         (`knopfZeile` in werte.js), nicht mehr an der leeren Lesequelle.
+         Was oben ueber `read: false` an der Quelle steht, ist damit
+         Geschichte: gemessen liest ein solcher Alias tadellos. */
+      srcR: istAlias ? (q.read || '') : id,
       /* Steht in `common.alias.id` ein einzelner Text, gilt er fuer Lesen
          UND Schreiben - dann ist die Schreibquelle dieselbe wie die
          Lesequelle. Hier stand frueher eine leere Zeichenkette, gedacht
@@ -1233,11 +1241,17 @@ var GERAETE_VERGLEICH = new Intl.Collator(undefined, { numeric: true, sensitivit
    `aliasFuer` lief zweimal ueber alle Kennungen — und wird je
    Neuzeichnen mehrfach gerufen. Die Karte entsteht bei der ersten Frage
    nach einem Indexwechsel und beantwortet alle weiteren aus dem
-   Gedaechtnis. Erkannt wird der Wechsel an Laenge und erster Kennung;
-   `indexNeu()` sortiert ohnehin bei jeder Aenderung neu. */
-var alsQuelleKarte = null, alsQuelleStand = '';
+   Gedaechtnis.
+
+   Erkannt wurde der Wechsel bis 19.09.2026 an Laenge und erster Kennung.
+   Das reicht nicht: Verlegen loescht acht Objekte und legt acht neue an,
+   die Zahl bleibt gleich, und ein Quellentausch aendert nur `alias.id`.
+   Die Karte zeigte danach auf den geloeschten Alias, an der Quelle stand
+   „wird neu angelegt", und ein Klick haette einen zweiten Alias erzeugt
+   (T22). Jetzt zaehlt `S.objektStand` jede Aenderung an den Objekten. */
+var alsQuelleKarte = null, alsQuelleStand = -1;
 function alsQuelleKarten() {
-  var stand = S.keysSorted.length + '|' + (S.keysSorted[0] || '');
+  var stand = S.objektStand;
   if (alsQuelleKarte && alsQuelleStand === stand) { return alsQuelleKarte; }
   var fest = {}, zweig = {};
   mitVorspann('alias.').forEach(function (id) {

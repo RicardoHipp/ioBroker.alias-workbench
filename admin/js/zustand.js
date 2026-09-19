@@ -14,6 +14,11 @@ export var S = {
   objects: {},
   keysSorted: [],
   kleinIndex: {},
+  /* Zaehlt jede Aenderung an S.objects. Wer sich etwas aus den Objekten
+     merkt (die Karte Quelle -> Alias in entwurf.js), vergleicht hiermit
+     statt mit der Zahl der Schluessel — beim Verlegen verschwinden genau
+     so viele, wie dazukommen (T22). */
+  objektStand: 0,
   /* Alias-Kanal -> Zahl der Punkte, deren Quelle es nicht (mehr) gibt.
      Einmal beim Laden gerechnet; der Baum schlaegt nur nach. */
   aliasKaputt: {},
@@ -44,7 +49,6 @@ export var S = {
   loeschListe: [],
   loeschZiel: null,
   loeschAlleAusgaenge: false,
-  verlegeZiel: null,
   /* Einmal registrierter Schliesser fuer die Quellenauswahl am
      Sprungknopf - siehe ergebnis.js. */
   sprungZuhoerer: false,

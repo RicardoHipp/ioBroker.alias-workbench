@@ -2,7 +2,7 @@
    Muster (passt / n von m belegt) und der Knopf, der freie Plaetze
    vorschlaegt. Gebaut wird beides hier, eingehaengt woanders: der Block
    je nach Ansicht im Vorlagenkasten oder in der Leiste ueber der Liste,
-   der Knopf immer in der Leiste.
+   der Knopf mit ihm (seit 19.09.2026; vorher immer in der Leiste).
 
    Herausgeloest aus zeichneErgebnis - der Abschnitt hing an `e`, dem
    Erkennungsergebnis und sonst an nichts. */
@@ -10,7 +10,7 @@
 import { S } from './zustand.js';
 import { D, el, $ } from './basis.js';
 import { tr, sprachtext } from './sprache.js';
-import { VORSCHAU, musterVon, erkenneEntwurf, platzFuerRolle, typenFuerRolle, typKonflikte } from './erkennung.js';
+import { VORSCHAU, musterVon, erkenneEntwurf, platzFuerRolle, typenFuerRolle, typKonflikte, fehlendePflicht } from './erkennung.js';
 import { anMusterAnpassen } from './vorlagen.js';
 import { ratePlaetze, rateAnzahl } from './vorschlagen.js';
 import { zeichneErgebnis, entwurfAngefasst, knopfFrisch } from './ergebnis.js';
@@ -34,6 +34,16 @@ function hakenNachMuster(e) {
   if (e.vorlage) { return; }
   if (S.current && S.current.indexOf('alias.') === 0) { return; }
   if (e.ziel && kindZustaende(e.ziel).length > 0) { return; }
+  /* Greift das neue Muster gar nicht — auch nicht mit allen Zeilen an —,
+     gibt es nichts, dem die Haken folgen koennten. Vorher fielen dann
+     alle bis auf die geaenderten: an der Klimaanlage verschwanden mit
+     dem Wechsel auf airCondition (MODE noch nicht da) ausgerechnet
+     Sollwert und Schalter, und nach dem Raten fehlte der Sollwert, den
+     das Muster verlangt (U13, 19.09.2026). Die Haken bleiben also, wie
+     sie sind; das Raten kann darauf aufbauen. */
+  var probe = JSON.parse(JSON.stringify({ kanal: e.kanal, states: e.states }));
+  probe.states.forEach(function (s) { s.on = true; });
+  if (!erkenneEntwurf(probe, e.want).length) { return; }
   nurWasInsMusterPasst(e, true);
   /* Wie beim Aufbau: der Schalter jedes weiteren Kanals kommt mit, damit
      „als ein Geraet" keinen Ausgang heimlich verliert. */
@@ -44,6 +54,39 @@ function hakenNachMuster(e) {
       e.states.forEach(function (st) { if (st.n === kurz) { st.on = true; } });
     });
   });
+}
+
+/* Die Meldung, wenn der Vorschlag nichts belegt hat - Begruendung dazu
+   in `baueMusterwahl`. Auf Modulebene, seit auch die Legende vorschlagen
+   kann (19.09.2026). */
+function plaetzeText(frei) {
+  var kurz = frei.slice(0, 6).join(', ');
+  return frei.length > 6 ? tr('guess.slotsMore', kurz, frei.length - 6) : kurz;
+}
+function meldungZu(p) {
+  if (p.anzahl > 0) { return null; }
+  var satz = p.grund === 'voll' ? tr('guess.noneFull')
+    : p.grund === 'vergeben' ? tr('guess.noneUsed', plaetzeText(p.frei))
+    : p.grund === 'keinTreffer' ? tr('guess.noneFit', plaetzeText(p.frei))
+    : null;
+  /* Der Zusatz zur Handentscheidung (U15): Steht ein Platz nur deshalb
+     leer, weil die Zeile dazu von Hand entschieden ist, muss genau das
+     dastehen - sonst sieht es aus wie ein Fehler des Ratens. */
+  /* Mit Namen und in der richtigen Zahl — „1 Zeilen sind …" sagte weder
+     richtig Deutsch noch welche (Ricardo, 19.09.2026). */
+  if (satz && p.handWeg) {
+    var hn = (p.handNamen || []).slice(0, 4).join(', ') +
+      ((p.handNamen || []).length > 4 ? ' …' : '');
+    satz += '  ' + (p.handWeg === 1 ? tr('guess.noneHandOne', hn) : tr('guess.noneHand', p.handWeg, hn));
+  }
+  return satz;
+}
+
+/* Vorschlagen und die Meldung dazu in einem Schritt. Gebraucht vom
+   Knopf, vom Pfeil hinter „… wuerde evtl. besser passen" und von der
+   orangen Legende, wenn das Muster erst nach dem Vorschlag greift. */
+export function rateUndMelde(e) {
+  e.rateMeldung = meldungZu(ratePlaetze(e));
 }
 
 export function baueMusterwahl(e, haupt, pflichtFehlt) {
@@ -79,9 +122,13 @@ export function baueMusterwahl(e, haupt, pflichtFehlt) {
      als `thermostat` erkannt, man wechselt also gar nichts, und ohne
      Knopf bliebe es dabei.
 
-     Er wird hier gebaut, weil er zum Muster gehoert - haengt aber unten
-     in der Leiste ueber der Zustandsliste. Neben dem Musterfeld stand er
-     am Rand; die Liste, die er veraendert, faengt darunter an. */
+     Er wird hier gebaut, weil er zum Muster gehoert. Seit 19.09.2026
+     haengt er im blauen Vorlagenkasten, gleich hinter dem Musterfeld -
+     dort, wo die Erkennung steht, zu der er gehoert. Vorher stand er in
+     der Leiste ueber der Liste, und den Knopf, der den ganzen Bestand
+     des Geraets laedt, fand man im Kasten; beide standen am jeweils
+     falschen Ort (Ricardo). Nur im Aliasmodus, wo es keinen Kasten gibt,
+     bleibt er in der Leiste. */
   /* Der Trockenlauf, der beides beantwortet: ob der Knopf etwas
      anzubieten haette, und - wenn nicht - warum nicht. Frueher lief er
      zweimal (einmal fuer `rateMoeglich`, einmal fuer den Klick); einmal
@@ -96,28 +143,6 @@ export function baueMusterwahl(e, haupt, pflichtFehlt) {
      Gezeigt wird sie, solange keine Vermutung offen ist: dann fuehrt die
      blaue Leiste das Wort, und zwei Meldungen uebereinander widersprechen
      sich nur. */
-  function plaetzeText(frei) {
-    var kurz = frei.slice(0, 6).join(', ');
-    return frei.length > 6 ? tr('guess.slotsMore', kurz, frei.length - 6) : kurz;
-  }
-  function meldungZu(p) {
-    if (p.anzahl > 0) { return null; }
-    var satz = p.grund === 'voll' ? tr('guess.noneFull')
-      : p.grund === 'vergeben' ? tr('guess.noneUsed', plaetzeText(p.frei))
-      : p.grund === 'keinTreffer' ? tr('guess.noneFit', plaetzeText(p.frei))
-      : null;
-    /* Der Zusatz zur Handentscheidung (U15): Steht ein Platz nur deshalb
-       leer, weil die Zeile dazu von Hand entschieden ist, muss genau das
-       dastehen - sonst sieht es aus wie ein Fehler des Ratens. */
-    /* Mit Namen und in der richtigen Zahl — „1 Zeilen sind …" sagte weder
-       richtig Deutsch noch welche (Ricardo, 19.09.2026). */
-    if (satz && p.handWeg) {
-      var hn = (p.handNamen || []).slice(0, 4).join(', ') +
-        ((p.handNamen || []).length > 4 ? ' …' : '');
-      satz += '  ' + (p.handWeg === 1 ? tr('guess.noneHandOne', hn) : tr('guess.noneHand', p.handWeg, hn));
-    }
-    return satz;
-  }
   /* Ungefragt gezeigt wird sie nur, wo sie etwas erklaert: dass kein
      Knopf dasteht, obwohl Plaetze frei sind. Der Fall „alle Plaetze
      besetzt" bleibt stumm - er sagt „alles gut, nichts zu tun", und das
@@ -167,7 +192,7 @@ export function baueMusterwahl(e, haupt, pflichtFehlt) {
       tr('guess.button'));
     rateKnopf.title = beilaeufig ? tr('guess.tplHint') : tr('guess.hint');
     var rateLos = function () {
-      e.rateMeldung = meldungZu(ratePlaetze(e));
+      rateUndMelde(e);
       entwurfAngefasst();
       S.openRow = null;
       zeichneErgebnis();
@@ -214,8 +239,15 @@ export function baueMusterwahl(e, haupt, pflichtFehlt) {
     }
     var r = erkenneEntwurf(pruefE, m), mark;
     if (!r.length) {
-      var fehlend = musterVon(m).states.filter(function (x) { return x.required; })
-        .map(function (x) { return x.name; });
+      /* Genannt wird, was wirklich fehlt — nicht jeder Pflichtplatz. An
+         der Klimaanlage stand „✕ MODE fehlt" neben einem bestaetigten
+         MODE; gefehlt hat der Sollwert (U13, 19.09.2026). Findet die
+         Grobpruefung nichts, bleibt die alte Auskunft. */
+      var fehlend = fehlendePflicht(pruefE.states, m);
+      if (!fehlend.length) {
+        fehlend = musterVon(m).states.filter(function (x) { return x.required; })
+          .map(function (x) { return x.name; });
+      }
       /* Ein Pflichtplatz kann auch deshalb leer sein, weil die Zeile
          dafuer im falschen Datentyp steht - die Rolle stimmt, der Typ
          nicht, und der Punkt faellt aus dem Muster. „SET fehlt" ist dann
@@ -520,7 +552,7 @@ export function baueMusterwahl(e, haupt, pflichtFehlt) {
            Rollen, die das Auswaehlen setzt - genau wie in `mWaehlen`. */
         if (e.vorschlag && !e.roh) { anMusterAnpassen(e, bestes); } else { e.want = bestes; }
         hakenNachMuster(e);
-        e.rateMeldung = meldungZu(ratePlaetze(e));
+        rateUndMelde(e);
         entwurfAngefasst();
         S.openRow = null;
         zeichneErgebnis();

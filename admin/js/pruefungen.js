@@ -116,8 +116,7 @@ export function pruefungZielKann(e) {
   if (!treffer.length) { return { s: 'ok', t: tr('check.targetCan'), d: tr('check.targetCanFine') }; }
   var text = treffer.map(function (x) {
     if (x.art === 'formelBlind') { return tr('check.targetVoidFormula', x.n, x.typ); }
-    if (x.art === 'nichtSchreibbar') { return tr('check.targetNoWrite', x.n); }
-    return tr('check.targetNoRead', x.n);
+    return tr('check.targetNoWrite', x.n);
   }).join(', ');
   return { s: 'warn', t: tr('check.targetCan'), d: text };
 }

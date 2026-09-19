@@ -42,7 +42,7 @@ export function jsonVon(id) {
 }
 
 export function feldWert(obj, pfad) {
-  var t = pfad.split('.');
+  var t = pfadTeile(pfad);
   var x = obj;
   for (var i = 0; i < t.length; i++) {
     if (x === null || x === undefined || typeof x !== 'object') { return undefined; }
@@ -171,7 +171,11 @@ export function zeileAusAlias(o, zeilenname) {
        aber als Lesequelle gilt sie nicht: sonst zeigte „Alias bearbeiten"
        eine Quelle, die „Alias anlegen" nie eingetragen hat, und beim
        naechsten Aktualisieren kippte `read` still auf `true` zurueck. */
-    srcR: (c.read === false && q.einfach) ? '' : (q.read || ''),
+    /* Seit 19.09.2026 auch beim Taster: `read: false` am Alias haengt an
+       der Rolle, nicht an einer fehlenden Lesequelle (`knopfZeile`). Ein
+       alter Taster-Alias mit einfacher `alias.id` liest also aus seinem
+       Schreibziel - genau das, was ioBroker mit ihm ohnehin tut. */
+    srcR: q.read || '',
     srcW: schreibQuelle(o),
     f: (typeof a.read === 'string') ? a.read : '',
     fw: (typeof a.write === 'string') ? a.write : '',
@@ -375,6 +379,49 @@ var FELDTEIL = "\\??\\.(?:[A-Za-z_$][\\w$]*|\\[(?:'(?:[^'\\\\]|\\\\.)*'|\"(?:[^\
 var FELDPFAD = new RegExp('^JSON\\.parse\\(val\\)((?:' + FELDTEIL + ')+)(?:\\s*\\?\\?\\s*null)?$');
 var FELDSTUECK = new RegExp(FELDTEIL, 'g');
 
+/* Der Feldpfad als Text und zurueck (X12, 19.09.2026).
+
+   Gewoehnlich sind die Stuecke durch Punkte getrennt: `ENERGY.Power`,
+   `service.storage./dev/shm.free`. Das bleibt zeichengleich - so stehen
+   die Pfade in gespeicherten Vorlagen, und die sollen weiter gelten.
+   Nur ein Schluessel, der SELBST einen Punkt enthaelt, steht in Klammern
+   ohne Punkt davor: `cpu_usages['frigate.full_system'].cpu`. Vorher
+   wurde er an jedem Punkt zerteilt, die Formel suchte
+   `?.frigate?.full_system` und ergab null. Frigate hat so einen
+   Schluessel in `stats`. Ein Stueck, das mit `[` anfaengt, kommt aus
+   demselben Grund in Klammern. */
+export function pfadAus(teile) {
+  var raus = '';
+  teile.forEach(function (t, n) {
+    t = String(t);
+    if (t.indexOf('.') > -1 || t.charAt(0) === '[') {
+      raus += "['" + t.replace(/\\/g, '\\\\').replace(/'/g, "\\'") + "']";
+    } else {
+      raus += (n ? '.' : '') + t;
+    }
+  });
+  return raus;
+}
+
+export function pfadTeile(pfad) {
+  var s = String(pfad || ''), teile = [], i = 0;
+  while (i < s.length) {
+    if (s.charAt(i) === '.') { i++; continue; }
+    if (s.slice(i, i + 2) === "['") {
+      var j = i + 2, t = '';
+      while (j < s.length && !(s.charAt(j) === "'" && s.charAt(j + 1) === ']')) {
+        if (s.charAt(j) === '\\' && j + 1 < s.length) { j++; }
+        t += s.charAt(j); j++;
+      }
+      teile.push(t); i = j + 2; continue;
+    }
+    var k = i;
+    while (k < s.length && s.charAt(k) !== '.' && s.slice(k, k + 2) !== "['") { k++; }
+    teile.push(s.slice(i, k)); i = k;
+  }
+  return teile;
+}
+
 export function feldAusFormel(f) {
   var m = FELDPFAD.exec(f || '');
   if (!m) { return ''; }
@@ -386,21 +433,19 @@ export function feldAusFormel(f) {
     if (s.charAt(0) === '[') {
       /* Nur die Fluchtzeichen zurueckdrehen, die feldSegment setzt. */
       s = s.slice(2, -2).replace(/\\(.)/g, '$1');
-      /* Ein Punkt im Schluessel selbst laesst sich im Pfadformat von
-         `jsonFelder` nicht wieder auseinanderhalten — dann lieber
-         „eigene Formel" zeigen als einen Pfad, der nicht zurueckfuehrt. */
-      if (s.indexOf('.') > -1) { return ''; }
     }
     teile.push(s);
   }
-  return teile.join('.');
+  /* Ein Punkt im Schluessel selbst kommt seit X12 in Klammern zurueck
+     (`pfadAus`); vorher hiess das hier „eigene Formel". */
+  return pfadAus(teile);
 }
 
 /* Der abgesicherte Zugriff auf ein JSON-Feld. An einer Stelle, damit die
    Vorlagen-Abkuerzung und die Feldauswahl im Detail dasselbe bauen. */
 export function feldFormel(feld) {
   if (!feld) { return ''; }
-  return 'JSON.parse(val)' + String(feld).split('.').map(feldSegment).join('') + ' ?? null';
+  return 'JSON.parse(val)' + pfadTeile(feld).map(feldSegment).join('') + ' ?? null';
 }
 
 /* ---- Feldpfade: Ende ---- */
@@ -412,17 +457,48 @@ export function jsonFelder(id) {
   try { o = JSON.parse(st.val); } catch { return null; }
   if (!o || typeof o !== 'object') { return null; }
   var raus = [];
-  (function geh(x, pfad, tiefe) {
+  (function geh(x, weg, tiefe) {
     if (tiefe > 3) { return; }
     Object.keys(x).forEach(function (k) {
-      var p = pfad ? pfad + '.' + k : k;
-      if (x[k] && typeof x[k] === 'object' && !Array.isArray(x[k])) { geh(x[k], p, tiefe + 1); }
-      else { raus.push(p); }
+      var w = weg.concat([k]);
+      if (x[k] && typeof x[k] === 'object' && !Array.isArray(x[k])) { geh(x[k], w, tiefe + 1); }
+      else { raus.push(pfadAus(w)); }
     });
-  })(o, '', 0);
+  })(o, [], 0);
   return raus;
 }
 
+
+/* Ist das Objekt ein Taster - ein Punkt ohne Zustand?
+
+   `read: false` allein reicht nicht (siehe `zielKann`). Dazu muss er
+   schreibbar sein und sich als Tastendruck ausweisen: Homematic ueber
+   `native.TYPE: ACTION`, alle anderen ueber eine Rolle `button…`. Die
+   eine Stelle fuer diese Frage - der Entwurf fragt sie auch. */
+export function istTaster(o) {
+  var c = (o && o.common) || {};
+  var nat = (o && o.native) || {};
+  return c.read === false && !!c.write &&
+    (nat.TYPE === 'ACTION' || /^button/.test(String(c.role || '')));
+}
+
+/* Wird der Alias-Datenpunkt ein Knopf?
+
+   Die eine Regel fuer `common.read` am Alias (Ricardo, 19.09.2026): Rolle
+   `button…` UND ein Schreibziel -> Knopf, `read: false`. Alles andere
+   `read: true`. So steht es in der Rollenliste von ioBroker: „Buttons
+   (booleans, write-only) … common.write=true, common.read=false"; der
+   Tastensensor (`button.press`, `button.long` ohne Schreiben) liest.
+
+   Nicht aus der Quelle abgeleitet: deren `read` setzt jeder Adapter
+   anders. hm-rpc schreibt `read: false` an `BOOST_MODE`, einen Schalter,
+   der seinen Zustand meldet - uebernommen, zeichneten vis, Alexa und
+   matter den Boost als Knopf. Und nicht aus einer fehlenden Lesequelle:
+   gemessen am Testsystem liest ein Alias mit `read: false` trotzdem aus
+   seiner Lesequelle, jeder Druck kommt an. */
+export function knopfZeile(s) {
+  return !!(s && s.srcW && /^button/.test(String(s.role || '')));
+}
 
 /* ---- Was das Ziel kann ---------------------------------------------
 
@@ -440,8 +516,15 @@ export function jsonFelder(id) {
                     Schreibvorgang trotzdem durch — gemessen —, der Adapter
                     dahinter reicht ihn aber nicht ans Geraet weiter.
                     Ein stiller Blindgaenger.
-     `meldetNichts` Die Lesequelle traegt `read: false`. Ein Tastendruck
-                    hat keinen Zustand; gelesen wird dort nie etwas.
+   Bis 19.09.2026 stand an dritter Stelle `meldetNichts`: jede Lesequelle
+   mit `read: false` bekam die Marke „aendert sich nie". Gemessen am
+   Produktivsystem traf das 1371 Punkte, 620 davon keine Taster, und 76
+   dieser 620 hatten ihren Wert in den letzten 30 Tagen geaendert -
+   `BOOST_MODE` an den Heizungen etwa. hm-rpc setzt `read: false`, sobald
+   der Wert nicht *abfragbar* ist (OPERATIONS ohne Bit 1); gemeldet wird er
+   trotzdem. Aus dem Feld allein laesst sich nicht ablesen, ob ein Punkt
+   lebt, und wer der Marke folgte, nahm eine funktionierende Lesequelle
+   heraus (Ricardo).
 
    Gibt eine Liste zurueck, nicht ein Urteil — wer sie anzeigt, entscheidet
    ueber die Schaerfe. */
@@ -463,10 +546,5 @@ export function zielKann(s) {
     }
   }
 
-  if (s.srcR) {
-    var r = S.objects[s.srcR];
-    var rc = (r && r.common) || null;
-    if (rc && rc.read === false) { raus.push({ art: 'meldetNichts', punkt: s.srcR }); }
-  }
   return raus;
 }

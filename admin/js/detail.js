@@ -4,7 +4,7 @@ import { S } from './zustand.js';
 import { socket } from './verbindung.js';
 import { el } from './basis.js';
 import { tr } from './sprache.js';
-import { wertVon, jsonFelder, feldAusFormel, feldFormel, feldWert, jsonVon, zielKann } from './werte.js';
+import { wertVon, jsonFelder, feldAusFormel, feldFormel, feldWert, jsonVon, zielKann, knopfZeile } from './werte.js';
 import { musterVon, erkenneEntwurf, platzFuerRolle, typenFuerRolle, rolleVonPlatz } from './erkennung.js';
 import { musterName } from './musternamen.js';
 import { rollenFeld } from './rollenwahl.js';
@@ -106,9 +106,7 @@ export function detailZeile(e, s, idx) {
     if (!o || !o.common) { return null; }
     var c = o.common;
 
-    var maengel = zielKann(s).filter(function (x) {
-      return seite === 'w' ? x.art !== 'meldetNichts' : x.art === 'meldetNichts';
-    });
+    var maengel = seite === 'w' ? zielKann(s) : [];
 
     var text, hinweis;
     if (seite === 'w') {
@@ -120,9 +118,13 @@ export function detailZeile(e, s, idx) {
               : (bl ? tr('detail.targetTypeVoid', c.type) : tr('detail.targetTypeHint', c.type));
       if (nw) { text = c.type + ' \u00b7 ' + tr('detail.notWritable'); }
     } else {
-      if (!maengel.length) { return null; }
-      text = tr('detail.reportsNothing');
-      hinweis = tr('detail.targetNoRead');
+      /* Nur noch der Knopf, und ruhig: kein Mangel, eine Auskunft -
+         was `read: false` am Alias bewirkt und warum die Lesequelle
+         trotzdem da ist. Die Marke „aendert sich nie" an jeder Quelle
+         mit `read: false` ist seit 19.09.2026 weg (siehe `zielKann`). */
+      if (!knopfZeile(s)) { return null; }
+      text = tr('detail.readIsButton');
+      hinweis = tr('detail.readIsButtonHint');
     }
 
     var m = el('span', 'chip ' + (maengel.length ? 'warn' : 'mut'), text);
@@ -443,7 +445,9 @@ export function detailZeile(e, s, idx) {
   if (s.srcR && quellen.indexOf(s.srcR) === -1) { selR.appendChild(opt(s.srcR, s.srcR + '   ' + tr('detail.elsewhere'))); }
   selR.appendChild(opt('__frei__', tr('detail.otherObject')));
   selR.value = s.srcR || '';
-  if (!s.srcR) { selR.className += ' miss'; }
+  /* Ein Knopf darf ohne Lesequelle sein - dann ist das leere Feld kein
+     Fehler und wird nicht rot (Ricardo, 19.09.2026). */
+  if (!s.srcR && !knopfZeile(s)) { selR.className += ' miss'; }
   selR.addEventListener('click', function (ev) { ev.stopPropagation(); });
   selR.addEventListener('change', function () {
     if (selR.value === '__frei__') { s.frei = true; s.srcR = ''; }
@@ -574,7 +578,9 @@ export function detailZeile(e, s, idx) {
   if (platzDef && platzDef.write === false && s.srcW) {
     wStapel.appendChild(el('div', 'aside w', tr('detail.readOnlySlotWrites', platzDef.name)));
   }
-  if (s.srcW && s.srcW !== s.srcR) {
+  /* Nur, wo wirklich woanders gelesen wird - ohne Lesequelle liest die
+     Zeile nirgends, und der Satz stimmte nicht. */
+  if (s.srcR && s.srcW && s.srcW !== s.srcR) {
     wStapel.appendChild(el('div', 'sugg', tr('detail.separateHint')));
   }
   zeigeBeide(zeile(tr('detail.writesTo'), wStapel), ['srcW']);
@@ -730,48 +736,56 @@ export function detailZeile(e, s, idx) {
 
   /* --- Rohwert und Ergebnis --- */
   var a = wertVon(s);
-  zeile(tr('detail.rawValue'), a.roh === undefined ? tr('detail.rawNothing')
-    : (typeof a.roh === 'object' ? JSON.stringify(a.roh) : String(a.roh)), 'raw');
-
-  if (s.srcR && !S.objects[s.srcR]) {
-    var wbox = el('div');
-    wbox.appendChild(el('span', 'chip bad', tr('detail.sourceGone')));
-    zeile(tr('detail.attention'), wbox);
+  /* Ein Knopf ohne Lesequelle hat nichts anzuzeigen - das ist gewollt
+     und kein „liefert nichts" in Rot. */
+  if (!s.srcR && knopfZeile(s)) {
+    zeile(tr('detail.yields'), el('span', 'chip mut', tr('detail.buttonNoRead')));
+    a = null;
   }
+  if (a) {
+    zeile(tr('detail.rawValue'), a.roh === undefined ? tr('detail.rawNothing')
+      : (typeof a.roh === 'object' ? JSON.stringify(a.roh) : String(a.roh)), 'raw');
 
-  var box = el('div');
-  var rv = el('span', 'res', a.ok
-    ? (typeof a.val === 'object' ? JSON.stringify(a.val) : String(a.val)) + (s.unit ? ' ' + s.unit : '')
-    : a.txt);
-  if (!a.ok) { rv.style.color = 'var(--bad)'; }
-  box.appendChild(rv);
-  box.appendChild(document.createTextNode('  '));
-  if (a.ok) {
-    var t = typeof a.val;
-    var passt = !s.typ || s.typ === t || s.typ === 'mixed';
-    box.appendChild(el('span', 'chip ' + (passt ? 'ok' : 'warn'),
-      (passt ? '✓ ' : '≠ ') + (t === 'number' ? tr('detail.typeNumber') : t)));
-    if (a.gewandelt) {
-      box.appendChild(document.createTextNode('  '));
-      box.appendChild(el('span', 'chip mut', tr('detail.converted')));
+    if (s.srcR && !S.objects[s.srcR]) {
+      var wbox = el('div');
+      wbox.appendChild(el('span', 'chip bad', tr('detail.sourceGone')));
+      zeile(tr('detail.attention'), wbox);
     }
-    if (!passt) {
-      box.appendChild(document.createTextNode('  '));
-      box.appendChild(el('span', 'chip warn', tr('detail.expects', s.typ)));
+
+    var box = el('div');
+    var rv = el('span', 'res', a.ok
+      ? (typeof a.val === 'object' ? JSON.stringify(a.val) : String(a.val)) + (s.unit ? ' ' + s.unit : '')
+      : a.txt);
+    if (!a.ok) { rv.style.color = 'var(--bad)'; }
+    box.appendChild(rv);
+    box.appendChild(document.createTextNode('  '));
+    if (a.ok) {
+      var t = typeof a.val;
+      var passt = !s.typ || s.typ === t || s.typ === 'mixed';
+      box.appendChild(el('span', 'chip ' + (passt ? 'ok' : 'warn'),
+        (passt ? '✓ ' : '≠ ') + (t === 'number' ? tr('detail.typeNumber') : t)));
+      if (a.gewandelt) {
+        box.appendChild(document.createTextNode('  '));
+        box.appendChild(el('span', 'chip mut', tr('detail.converted')));
+      }
+      if (!passt) {
+        box.appendChild(document.createTextNode('  '));
+        box.appendChild(el('span', 'chip warn', tr('detail.expects', s.typ)));
+      }
+      var ist = s.urId ? S.werte[s.urId] : null;
+      if (ist && ist.val !== undefined && ist.val !== null) {
+        var gleich = String(ist.val) === String(a.val);
+        box.appendChild(document.createTextNode('  '));
+        box.appendChild(el('span', 'chip ' + (gleich ? 'ok' : 'warn'),
+          gleich ? tr('detail.matchesState') : tr('detail.stateSays', String(ist.val))));
+      }
+    } else if (a.fehler) {
+      box.appendChild(el('span', 'chip bad', tr('detail.formulaBroken')));
+    } else {
+      box.appendChild(el('span', 'chip bad', tr('detail.yieldsNothing')));
     }
-    var ist = s.urId ? S.werte[s.urId] : null;
-    if (ist && ist.val !== undefined && ist.val !== null) {
-      var gleich = String(ist.val) === String(a.val);
-      box.appendChild(document.createTextNode('  '));
-      box.appendChild(el('span', 'chip ' + (gleich ? 'ok' : 'warn'),
-        gleich ? tr('detail.matchesState') : tr('detail.stateSays', String(ist.val))));
-    }
-  } else if (a.fehler) {
-    box.appendChild(el('span', 'chip bad', tr('detail.formulaBroken')));
-  } else {
-    box.appendChild(el('span', 'chip bad', tr('detail.yieldsNothing')));
+    zeile(tr('detail.yields'), box);
   }
-  zeile(tr('detail.yields'), box);
 
   if (s.manuell) {
     var db = el('div');

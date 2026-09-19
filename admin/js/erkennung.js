@@ -32,6 +32,11 @@ import { D } from './basis.js';
 export function ausdruckText(r) {
   if (!r) { return ''; }
   if (r.source !== undefined) { return r.source; }
+  /* Ein Objekt ohne `source` ist kein Ausdruck. `ignoreRole` kommt im
+     Browser als leeres `{}` an; `String({})` gab „[object Object]", und
+     das ist eine Zeichenklasse, die jede Rolle mit einem „e" trifft —
+     jeder Sollwert der Klimaanlage galt als ausgenommen (19.09.2026). */
+  if (typeof r === 'object') { return ''; }
   var q = String(r);
   var m = /^\/(.*)\/[a-z]*$/.exec(q);
   return m ? m[1] : q;
@@ -307,6 +312,46 @@ export function typKonflikte(states, musterName) {
     if (!platz) { return; }
     raus.push({ n: s.n, typ: s.typ, erwartet: moegliche, platz: platz.name,
                 pflicht: !!platz.required });
+  });
+  return raus;
+}
+
+/* Welche Pflicht eines Musters der Entwurf wirklich nicht erfuellt.
+
+   Bis 19.09.2026 nannte das Musterfeld schlicht alle `required`-Plaetze:
+   an der Klimaanlage stand „✕ MODE fehlt", obwohl MODE angehakt und
+   bestaetigt war — gefehlt hat der Sollwert. Der steht im Muster nicht
+   als `required`, sondern als Gruppe (`requiredOneOf: 'setpoint'`):
+   einer aus SET und den beiden Doppel-Sollwerten muss da sein, und die
+   Gruppe kam in der Auskunft gar nicht vor (U13).
+
+   Geprueft wird grob, wie der Detektor: angehakte Zeile mit passender
+   Rolle, schreibbar wo der Platz es verlangt, im zugelassenen Typ.
+   Zurueck kommen Namen — eine Gruppe als „SET / SET_HEAT / …". Findet
+   die Grobpruefung nichts, gibt sie [] zurueck, und der Aufrufer faellt
+   auf die alte Auskunft zurueck. */
+export function fehlendePflicht(states, musterName) {
+  var mu = musterName && musterVon(musterName);
+  if (!mu) { return []; }
+  function erfuellt(pl) {
+    return (states || []).some(function (s) {
+      if (!s.on || !s.role || !rolleTrifft(pl.role, s.role)) { return false; }
+      if (pl.ignoreRole && rolleTrifft(pl.ignoreRole, s.role)) { return false; }
+      if (pl.write === true && !(s.wr || s.srcW)) { return false; }
+      return typPasstZuPlatz(pl, s.typ);
+    });
+  }
+  var raus = [], gruppen = {};
+  mu.states.forEach(function (pl) {
+    if (pl.required && !erfuellt(pl)) { raus.push(pl.name); }
+    if (pl.requiredOneOf) {
+      var g = gruppen[pl.requiredOneOf] = gruppen[pl.requiredOneOf] || { namen: [], da: false };
+      if (g.namen.indexOf(pl.name) === -1) { g.namen.push(pl.name); }
+      if (erfuellt(pl)) { g.da = true; }
+    }
+  });
+  Object.keys(gruppen).forEach(function (k) {
+    if (!gruppen[k].da) { raus.push(gruppen[k].namen.join(' / ')); }
   });
   return raus;
 }

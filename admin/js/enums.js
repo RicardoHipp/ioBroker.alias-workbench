@@ -32,6 +32,11 @@ export function enumsUnbekannt() { return unbekannt; }
 var versuch = 0;
 var wiederTimer = null;
 
+/* Wer wissen will, wann ein Nachversuch geklappt hat - die Felder fuer
+   Raum und Funktion zeichnen sich dann neu (P8). */
+var geladenHoerer = [];
+export function beiEnumsGeladen(fn) { geladenHoerer.push(fn); }
+
 export function ladeEnums(danach) {
   if (wiederTimer) { clearTimeout(wiederTimer); wiederTimer = null; }
   socket.emit('getObjectView', 'system', 'enum',
@@ -59,8 +64,10 @@ export function ladeEnums(danach) {
         if (r.value && r.id) { frisch[r.id] = r.value; }
       });
       enums = frisch;
+      var warUnbekannt = unbekannt;
       unbekannt = false;
       versuch = 0;
+      if (warUnbekannt) { geladenHoerer.forEach(function (fn) { fn(); }); }
       if (typeof danach === 'function') { danach(null); }
     });
 }

@@ -170,6 +170,7 @@ export function horcheAufObjekte() {
 
     var gabEs = S.objects[id] !== undefined;
     if (obj) { S.objects[id] = obj; } else { delete S.objects[id]; }
+    S.objektStand++;
     if (gabEs !== (S.objects[id] !== undefined)) { nachziehBaum = true; }
 
     var betrifft = S.current && (id === S.current || id.indexOf(S.current + '.') === 0);
@@ -214,6 +215,7 @@ export function horcheAufObjekte() {
 export function uebernimmObjekt(id, o) {
   var gabEs = S.objects[id] !== undefined;
   if (o) { S.objects[id] = o; } else { delete S.objects[id]; }
+  S.objektStand++;
   return gabEs !== (S.objects[id] !== undefined);
 }
 
@@ -250,6 +252,7 @@ export function kaputteAliaseNeu() {
 }
 
 export function indexNeu() {
+  S.objektStand++;
   S.keysSorted = Object.keys(S.objects).sort();
   S.kleinIndex = {};
   kaputteAliaseNeu();

@@ -9,7 +9,7 @@
 import { S } from './zustand.js';
 import { el, $ } from './basis.js';
 import { tr } from './sprache.js';
-import { erkenneEntwurf, musterVon, rolleVonPlatz, typKonflikte, plaetzeFuerRolle, typPasstZuPlatz } from './erkennung.js';
+import { erkenneEntwurf, musterVon, rolleVonPlatz, typKonflikte, plaetzeFuerRolle, typPasstZuPlatz, fehlendePflicht } from './erkennung.js';
 import { kindZustaende, wertVon, fmt } from './werte.js';
 import { steuerKanaele, vorlagenAbweichung, bestandsAbweichung, waehle, quelleHier, quellenVerteilung } from './entwurf.js';
 import { musterName } from './musternamen.js';
@@ -18,6 +18,7 @@ import { rateAnzahl, rateZurueck, rateZurueckEine, rateBehalten } from './vorsch
 import { mqttEinzeln } from './mqtt.js';
 import { zeichneErgebnis, entwurfAngefasst } from './ergebnis.js';
 import { taster } from './schreiben.js';
+import { rateUndMelde } from './musterwahl.js';
 
 export function berechnePlaetze(e, haupt) {
   /* --- welcher Punkt sitzt auf welchem Platz --- */
@@ -267,7 +268,10 @@ export function baueListe(host, e, pl, rateKnopf, musterBlock) {
   bar.appendChild(document.createTextNode(tr('list.ofDatapoints')));
   bar.appendChild(el('span', 'sp2'));
   /* Mittig zwischen der Zahl und den drei Filtern - zwischen zwei
-     Dehnfugen steht er von selbst in der Mitte. */
+     Dehnfugen steht er von selbst in der Mitte. An einer Quelle ist das
+     seit 19.09.2026 „Alle Datenpunkte des Geraets laden" (aus dem
+     Vorlagenkasten hierher getauscht), im Aliasmodus weiter „Freie
+     Plaetze vorschlagen" - dort gibt es keinen Kasten. */
   if (rateKnopf) { bar.appendChild(rateKnopf); rateKnopf = null; }
   bar.appendChild(el('span', 'sp2'));
   /* Die vier Auswahlknoepfe nur an einer Quelle. Am fertigen Alias sind
@@ -666,24 +670,62 @@ export function baueListe(host, e, pl, rateKnopf, musterBlock) {
   var belegteSlots = {};
   Object.keys(platzVon).forEach(function (n) { belegteSlots[platzVon[n]] = 1; });
   var muster = e.want && musterVon(e.want);
-  var freie = muster ? muster.states.filter(function (st) {
-    return !belegteSlots[st.name] && !st.multiple;
-  }) : [];
+  /* Ein Platzname, ein Eintrag (E6, 19.09.2026).
+
+     Manche Muster fuehren denselben Platz mehrfach - als Alternativen,
+     von denen der Detektor genau eine nimmt („one of the following“ im
+     type-detector). Mediaplayer: COVER als `media.cover` und als
+     Auffangnetz `media.cover.…` ohne Standardrolle; Warnung: START als
+     `date.start` und `date`; Klimaanlage, Luftreiniger, Ventilator:
+     SWING als `level.mode.swing` oder `switch.mode.swing`; Saugroboter:
+     BATTERY zweimal gleich. Einzeln gezeigt stand COVER zweimal da, die
+     zweite Zeile mit dem rohen Ausdruck statt einer Rolle, und jeder
+     Klick darauf legte einen Punkt ohne Rolle an. Jetzt steht der Platz
+     einmal da, mit der ersten Alternative, die eine Rolle hat; die
+     anderen Rollen stehen daneben. */
+  var platzGruppen = [], gruppeVon = {};
+  (muster ? muster.states : []).forEach(function (st) {
+    if (!st.name || st.multiple) { return; }
+    var g = gruppeVon[st.name];
+    if (!g) { g = gruppeVon[st.name] = { st: st, rollen: [] }; platzGruppen.push(g); }
+    else if (!rolleVonPlatz(g.st) && rolleVonPlatz(st)) { g.st = st; }
+    if (st.required) { g.pflicht = true; }
+    var r0 = rolleVonPlatz(st);
+    if (r0 && g.rollen.indexOf(r0) === -1) { g.rollen.push(r0); }
+  });
+  /* Belegt ist ein Platz auch, wenn es seine Zeile schon gibt - unter
+     seinem Namen oder aus ihm angelegt -, selbst wenn der Detektor sie
+     (noch) nicht einordnet. Greift das Muster gar nicht, ordnet er keine
+     ein, und die Liste bot jeden Platz weiter an: ein zweiter Klick legte
+     eine zweite Zeile gleichen Namens an, die der Alias nicht haben kann
+     (gemessen am Mediaplayer ohne STATE, 19.09.2026). */
+  var zeileDa = {};
+  e.states.forEach(function (s0) {
+    if (s0.n) { zeileDa[s0.n] = 1; }
+    if (s0.ausPlatz) { zeileDa[s0.ausPlatz] = 1; }
+  });
+  var freie = platzGruppen.filter(function (g) {
+    return !belegteSlots[g.st.name] && !zeileDa[g.st.name];
+  });
 
   if (freie.length) {
     var fk = el('div', 'freikopf');
     fk.appendChild(el('span', null, tr('pattern.freeSlots', musterName(e.want) || e.want)));
-    fk.appendChild(el('span', 'cnt2', tr('list.countOf', freie.length, muster.states.length)));
+    fk.appendChild(el('span', 'cnt2', tr('list.countOf', freie.length, platzGruppen.length)));
     card.appendChild(fk);
 
-    freie.forEach(function (st) {
-      var fr = el('div', 'freirow' + (st.required ? ' pflicht' : ''));
+    freie.forEach(function (g) {
+      var st = g.st;
+      var rolle = rolleVonPlatz(st);
+      var andere = g.rollen.filter(function (r0) { return r0 !== rolle; });
+      var fr = el('div', 'freirow' + (g.pflicht ? ' pflicht' : ''));
       fr.tabIndex = 0;
       fr.setAttribute('role', 'button');
-      fr.appendChild(el('span', 'mk3', st.required ? '✕' : '+'));
+      fr.appendChild(el('span', 'mk3', g.pflicht ? '✕' : '+'));
       fr.appendChild(el('span', 'sn2', st.name));
-      fr.appendChild(el('span', 'rl2', rolleVonPlatz(st) || String(st.role || '')));
-      fr.appendChild(el('span', 'rx2', st.required ? tr('pattern.required') : String(st.role || '')));
+      fr.appendChild(el('span', 'rl2', rolle || String(st.role || '')));
+      fr.appendChild(el('span', 'rx2', g.pflicht ? tr('pattern.required')
+        : (andere.length ? tr('pattern.orRole', andere.join(', ')) : String(st.role || ''))));
 
       var nimm = function () {
         e.states.push({
@@ -790,7 +832,23 @@ export function baueListe(host, e, pl, rateKnopf, musterBlock) {
     });
   }
 
-  if (ohnePlatzZahl || fehlt.length) {
+  /* Was wirklich fehlt, samt der Gruppen (`requiredOneOf`): an der
+     Klimaanlage ist das der Sollwert, nicht MODE (U13). Die Kandidaten
+     oben kennen nur `required`; der Text nimmt die genauere Liste. */
+  var fehltNamen = (muL && !kipptAnTyp && !Object.keys(platzVon).length)
+    ? fehlendePflicht(e.states, e.want) : [];
+  if (!fehltNamen.length) { fehltNamen = fehlt.map(function (f) { return f.platz; }); }
+
+  /* Greift das Muster erst nach dem Vorschlag, sagt die Legende das und
+     bietet den Knopf gleich hier an. Sonst liest man „greift gerade
+     nicht" und haelt das Muster fuer falsch gewaehlt, obwohl ein Klick
+     fehlt (Ricardo, 19.09.2026). Die Aussicht hat die Musterwahl schon
+     berechnet. */
+  var ausR = e.rateAussicht;
+  var greiftNachRaten = !!(fehltNamen.length && ausR && ausR.want === e.want &&
+    ausR.selbst && ausR.selbst.passt && !rateAnzahl(e));
+
+  if (ohnePlatzZahl || fehltNamen.length) {
     var mn = musterName(e.want) || e.want || '?';
     var lg = el('div', 'legendenzeile');
     /* Steht die ganze Liste ohne Platz da, weil EINE Zeile im falschen
@@ -806,9 +864,22 @@ export function baueListe(host, e, pl, rateKnopf, musterBlock) {
     lg.appendChild(document.createTextNode(kipptAnTyp
       ? tr('pattern.noPlaceBecauseType', mn, kipptAnTyp.platz,
           kipptAnTyp.erwartet.join(tr('pattern.typeOr')), kipptAnTyp.typ)
-      : (fehlt.length
-          ? tr('pattern.offMissing', mn, fehlt.map(function (f) { return f.platz; }).join(', '))
+      : (fehltNamen.length
+          ? tr('pattern.offMissing', mn, fehltNamen.join(', '))
           : tr('pattern.noPlaceLegend', mn))));
+    if (greiftNachRaten && !kipptAnTyp) {
+      lg.appendChild(document.createTextNode(' ' + tr('pattern.offGuess', tr('guess.button'))));
+      var bR = el('button', 'btn schmal', tr('guess.button'));
+      bR.type = 'button';
+      bR.title = tr('guess.hint');
+      bR.style.marginLeft = '6px';
+      bR.addEventListener('click', function (ev) {
+        ev.stopPropagation();
+        rateUndMelde(e);
+        entwurfAngefasst(); S.openRow = null; zeichneErgebnis();
+      });
+      lg.appendChild(bR);
+    }
     var mitKandidat = fehlt.filter(function (f) { return f.aus.length; })[0];
     if (mitKandidat) {
       var kand = mitKandidat.aus[0];
