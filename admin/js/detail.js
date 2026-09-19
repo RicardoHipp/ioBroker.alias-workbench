@@ -265,7 +265,37 @@ export function detailZeile(e, s, idx) {
   } else if (s.urId) {
     zeile(tr('detail.objectId'), s.urId);
   } else {
-    zeile(tr('detail.willBecome'), (e.ziel || e.kanal) + '.' + s.n);
+    /* Der letzte Teil ist ein Feld: der Name bestimmt nur die Kennung,
+       nicht was der Punkt tut — das macht die Rolle. Wer `cmnd_POWER`
+       lieber `POWER` oder `SET` nennen will, konnte das bisher nirgends
+       (Ricardo, 19.09.2026). Nur hier, beim Neuanlegen: an einem
+       bestehenden Punkt (`urId`, oben) haengen Skripte und vis am Namen.
+
+       Bereinigt wie die Zielkennung (zielleiste.js), aber ohne Punkt —
+       ein Punkt machte aus dem Namen einen Unterordner. Gross- und
+       Kleinschreibung bleiben, wie sie getippt wurden. */
+    var nameBox = el('div', 'fields');
+    nameBox.appendChild(el('span', 'leise', (e.ziel || e.kanal) + '.'));
+    var iNa = el('input', 'tx');
+    iNa.type = 'text';
+    iNa.value = s.n;
+    iNa.style.width = '200px';
+    iNa.style.fontFamily = 'var(--mono)';
+    iNa.addEventListener('click', function (ev) { ev.stopPropagation(); });
+    iNa.addEventListener('change', function () {
+      var neuN = iNa.value.trim().replace(/\s+/g, '_').replace(/[^\w\-äöüÄÖÜß]/g, '_');
+      if (!neuN) { iNa.value = s.n; return; }
+      if (neuN !== s.n && e.states.some(function (x) { return x !== s && x.n === neuN; })) {
+        iNa.value = s.n;
+        iNa.title = tr('detail.nameTaken', neuN);
+        iNa.classList.add('miss');
+        return;
+      }
+      s.n = neuN;
+      neu();
+    });
+    nameBox.appendChild(iNa);
+    zeile(tr('detail.willBecome'), nameBox);
   }
 
   /* --- Quelle lesen + JSON-Feld --- */

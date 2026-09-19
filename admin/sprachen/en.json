@@ -78,6 +78,7 @@
   "detail.formulaTooSlow": "This formula took {0} ms and is no longer executed. Reloading the tab gives it one more try.",
   "detail.jsonField": "Field in the JSON",
   "detail.matchesState": "✓ matches the state",
+  "detail.nameTaken": "Another row already has the name {0}.",
   "detail.name": "Name",
   "detail.namePlaceholder": "e.g. UNREACH",
   "detail.noSource": "— no source known —",

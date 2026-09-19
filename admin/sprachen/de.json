@@ -78,6 +78,7 @@
   "detail.formulaTooSlow": "Diese Formel hat {0} ms gebraucht und wird nicht mehr ausgeführt. Nach dem Neuladen des Reiters wird sie einmal neu versucht.",
   "detail.jsonField": "Feld im JSON",
   "detail.matchesState": "✓ deckt sich mit dem Zustand",
+  "detail.nameTaken": "Den Namen {0} trägt schon eine andere Zeile.",
   "detail.name": "Name",
   "detail.namePlaceholder": "z. B. UNREACH",
   "detail.noSource": "— keine Quelle bekannt —",
