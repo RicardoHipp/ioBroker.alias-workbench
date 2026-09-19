@@ -120,6 +120,20 @@ function vArbeitsstand() {
   return vorlageMitId(vGewaehlt);
 }
 
+/* Den Namen einer Vorlage in einer Sprache setzen.
+
+   Das Einlesen nimmt eine Datei auch ohne `name` an (die Liste zeigt dann
+   die Kennung). Die Namensfelder schrieben aber blind in `x.name.de` —
+   ohne `name` warf das, `vAendern` brach ab, und die Eingabe ging
+   verloren: den fehlenden Namen konnte man nie nachtragen (Ricardo,
+   19.09.2026). Ein Name als blosser Text wird wie bisher zu beiden
+   Sprachen. */
+function setzeName(x, sprache, w) {
+  if (typeof x.name === 'string') { x.name = { de: x.name, en: x.name }; }
+  if (!x.name || typeof x.name !== 'object' || Array.isArray(x.name)) { x.name = {}; }
+  x.name[sprache] = w;
+}
+
 function vAendern(feld, wert) {
   if (!vEinlesen && !vEntwurf) {
     var o = vorlageMitId(vGewaehlt);
@@ -269,9 +283,9 @@ export function zeichneVorlagenBlatt(host) {
   }
 
   kb.appendChild(feld(tr('tpls.nameDe'), textIn(v.name, 'de'),
-    function (x, w) { if (typeof x.name === 'string') { x.name = { de: x.name, en: x.name }; } x.name.de = w; }, '140px'));
+    function (x, w) { setzeName(x, 'de', w); }, '140px'));
   kb.appendChild(feld(tr('tpls.nameEn'), textIn(v.name, 'en'),
-    function (x, w) { if (typeof x.name === 'string') { x.name = { de: x.name, en: x.name }; } x.name.en = w; }, '140px'));
+    function (x, w) { setzeName(x, 'en', w); }, '140px'));
   kb.appendChild(feld(tr('tpls.rank'), v.rang || 0,
     function (x, w) { x.rang = Number(w) || 0; }, '60px'));
   var rh = el('span', 'hint', eigen ? tr('tv.rankOwn') : tr('tv.rankPackage'));

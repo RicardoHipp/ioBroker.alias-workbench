@@ -478,10 +478,18 @@ function zeichneTausch() {
   });
 
   var go = $('#btn-swap-go');
-  if (!S.tauschNeu) { if (go) { go.disabled = true; } return; }
+  /* Der Knopf bleibt ueber das Neuzeichnen hinweg dasselbe Element.
+     Wer ihn sperrt, setzt deshalb auch den Grund — sonst traegt er den
+     des vorher gewaehlten Geraets weiter („Erst entscheiden — LOWBAT,
+     UNREACH, WORKING …" an der bisherigen Quelle; Lauf vom 19.09.2026,
+     W10). */
+  if (!S.tauschNeu) {
+    if (go) { go.disabled = true; go.title = tr('swap.pickFirst'); }
+    return;
+  }
   if (S.tauschNeu === alt) {
     body.appendChild(el('div', 'aside w', tr('swap.same')));
-    if (go) { go.disabled = true; }
+    if (go) { go.disabled = true; go.title = tr('swap.same'); }
     return;
   }
 
@@ -754,6 +762,31 @@ export function tauscheAus() {
     holeZweig(neu, function () { waehle(kanal); zeichneErgebnis(); });
   };
 
+  /* Der Kanal kommt zuletzt, und nur, wenn alles davor durchging.
+
+     Er traegt `native.quelle`, und daraus liest der Dialog beim naechsten
+     Oeffnen, was „heute" die Quelle ist (`alteQuelle`). Bis 19.09.2026
+     ging er zusammen mit den Punkten hinaus, jeder fuer sich. Scheiterte
+     ein Punkt, stand der Kanal trotzdem auf dem neuen Geraet: nach
+     „Schliessen" nannte der Dialog ABC2 als heutige Quelle, obwohl SET
+     noch aus ABC1 las, und ABC2 galt als „dieselbe Quelle wie bisher" —
+     der Tausch liess sich nicht mehr zu Ende bringen (Lauf vom
+     19.09.2026, W21). Jetzt bleibt der Kanal auf der alten Quelle, bis
+     alle Punkte umgeschrieben und alle angehakten geloescht sind; ein
+     neuer Tausch auf dasselbe Geraet holt dann nach, was fehlte. */
+  var kanalArbeit = arbeit.filter(function (a) { return a.id === kanal; });
+  arbeit = arbeit.filter(function (a) { return a.id !== kanal; });
+
+  var kanalZuletzt = function () {
+    if (fehler.length || !kanalArbeit.length) { return fertig(); }
+    var a = kanalArbeit[0];
+    socket.emit('setObject', a.id, a.obj, function (err) {
+      if (err) { fehler.push(a.id + ': ' + err); }
+      else { S.objects[a.id] = a.obj; }
+      fertig();
+    });
+  };
+
   var weiter = function () {
     /* Schlug beim Umschreiben etwas fehl, wird nichts geloescht.
 
@@ -766,13 +799,13 @@ export function tauscheAus() {
        umgeschriebenen Punkte stoeren dabei nicht - sie stehen ja bereits
        richtig (12.09.2026). */
     if (fehler.length) { return fertig(); }
-    if (!loeschen.length) { return fertig(); }
+    if (!loeschen.length) { return kanalZuletzt(); }
     var offen2 = loeschen.length;
     loeschen.forEach(function (id) {
       socket.emit('delObject', id, function (err) {
         if (err) { fehler.push(id + ': ' + err); }
         else { delete S.objects[id]; }
-        if (--offen2 === 0) { indexNeu(); fertig(); }
+        if (--offen2 === 0) { indexNeu(); kanalZuletzt(); }
       });
     });
   };

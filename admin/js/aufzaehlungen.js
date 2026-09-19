@@ -238,15 +238,31 @@ export function raumVorschlag(e) {
     }
   }
 
-  /* 4. Aus dem Geraetenamen: „HK_Bastelzimmer" -> Bastelzimmer.
-     Von hinten, weil der Raum am Ende steht, und stueckweise, weil
-     „Max_Spielzimmer" aus zwei Teilen besteht. */
+  /* 4. Aus dem Geraetenamen: „HK_Bastelzimmer" -> Bastelzimmer. */
   var name = zusatzName(e.kanal) || (quelle ? zusatzName(quelle) : '') || '';
-  if (name) {
-    var nt = String(name).split(/[_ .]+/);
-    for (var k = 0; k < nt.length; k++) {
-      var rest = nt.slice(k).join('_');
-      var nr = suche(rest);
+  if (name) { return raumAusNamen(name, suche); }
+  return '';
+}
+
+/* Einen Raum im Geraetenamen finden.
+
+   Probiert wird jedes zusammenhaengende Wortstueck: laengere vor
+   kuerzeren, damit „Jonas_Schlafzimmer" vor „Schlafzimmer" gewinnt, und
+   bei gleicher Laenge das weiter hinten stehende zuerst.
+
+   Bis 19.09.2026 kamen nur Stuecke in Frage, die bis zum Ende reichen.
+   An „Heizung_Badezimmer INT0000001" hing dann immer der Anhang mit dran,
+   „Badezimmer" allein wurde nie probiert — vier Heizgruppen am
+   Testsystem und alle sieben am Produktivsystem blieben ohne Raum (Lauf
+   vom 19.09.2026, N5). Ein Raum mitten im Namen ist die Regel, nicht die
+   Ausnahme („Kueche_Licht", „Wohnzimmer_Decke_Links"); und es bleibt ein
+   Vorschlag, sichtbar markiert und vor dem Schreiben zu aendern (Ricardo,
+   19.09.2026). */
+export function raumAusNamen(name, suche) {
+  var nt = String(name).split(/[_ .]+/).filter(function (x) { return x; });
+  for (var laenge = nt.length; laenge >= 1; laenge--) {
+    for (var start = nt.length - laenge; start >= 0; start--) {
+      var nr = suche(nt.slice(start, start + laenge).join('_'));
       if (nr) { return nr; }
     }
   }

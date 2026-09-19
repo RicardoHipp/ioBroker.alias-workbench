@@ -127,7 +127,14 @@ function baueBaum() {
 
 function zaehleZustaende(k, eltern) {
   k._eltern = eltern || null;
-  var n = (k.art === 'state') ? 1 : 0;
+  /* Ein `state` mit eigenen Kindern ist ein Behaelter und zaehlt sich
+     selbst nicht mit — die Zahl am Knoten nennt, was DARUNTER liegt, wie
+     rechts die Liste. Vorher stand an `0_userdata.0.Bastelzimmer` eine 7,
+     waehrend rechts „6 Zustaende" und sechs Zeilen standen (Ricardo,
+     20.09.2026; Lauf vom 19.09.2026, B1). Ein Blatt zaehlt weiter sich
+     selbst, sonst zaehlte kein Elternknoten mehr etwas. */
+  var hatKinder = Object.keys(k.kinder).length > 0;
+  var n = (k.art === 'state' && !hatKinder) ? 1 : 0;
   var tiefe = -1;
   Object.keys(k.kinder).forEach(function (name) {
     var kind = k.kinder[name];

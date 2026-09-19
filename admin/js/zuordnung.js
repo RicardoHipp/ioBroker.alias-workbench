@@ -279,7 +279,7 @@ export function enumZeile(host, e) {
     if (spec.art === 'rooms' && e.zuletzt === 'raum' && e.ziel && !aliasFuer(e.kanal)) {
       var ro2 = enumAlsOrdner(e.raum);
       if (ro2 && e.zielOrdner !== 'alias.0.' + ro2) {
-        var oz = el('div', 'uebernahme' +
+        var oz = el('div', 'uebernahme raumangebot' +
           (angebotFrisch('raum:' + ro2) ? ' frisch' : ''));
         oz.appendChild(el('span', 'zq', tr('enums.alsoFolder', ro2)));
         var ob = el('button', 'btn mini wichtig', tr('target.yes'));
@@ -350,15 +350,7 @@ export function enumZeile(host, e) {
                     : (x.anzahl ? tr('enums.members', x.anzahl) : tr('enums.unused'))));
         z.addEventListener('mousedown', function (ev) {
           ev.preventDefault();
-          e[spec.feld] = x.id;
-          e[spec.her] = 'hand';
-          if (spec.art === 'rooms') { e.zuletzt = 'raum'; }
-          /* Das Icon jetzt holen, nicht erst beim Schreiben: dort ist
-             kein Warten mehr moeglich, der Objektbau laeuft synchron. */
-          if (x.vorlage && x.vorlage.icon) { holeIkon(spec.art, x.vorlage.icon); }
-          entwurfAngefasst();
-          zu();
-          zeichneErgebnis();
+          nimm(x);
         });
         el2.appendChild(z);
       });
@@ -374,6 +366,23 @@ export function enumZeile(host, e) {
       }
       el2.hidden = false;
     };
+
+    /* Einen Eintrag der Liste uebernehmen — fuer Mausklick und Enter
+       dieselbe Stelle. Bis 19.09.2026 waren es zwei, und der Enter-Weg
+       vergass zweierlei: `e.zuletzt`, an dem das Angebot „Den Alias auch
+       unter … ablegen?“ haengt, und das Bild einer neuen Aufzaehlung aus
+       den Vorlagen des Admin (Lauf vom 19.09.2026, S3). */
+    function nimm(x) {
+      e[spec.feld] = x.id;
+      e[spec.her] = 'hand';
+      if (spec.art === 'rooms') { e.zuletzt = 'raum'; }
+      /* Das Icon jetzt holen, nicht erst beim Schreiben: dort ist
+         kein Warten mehr moeglich, der Objektbau laeuft synchron. */
+      if (x.vorlage && x.vorlage.icon) { holeIkon(spec.art, x.vorlage.icon); }
+      entwurfAngefasst();
+      zu();
+      zeichneErgebnis();
+    }
 
     ei.addEventListener('focus', function () { ei.value = ''; mMark = -1; malen(); });
     ei.addEventListener('input', function () { mMark = -1; malen(); });
@@ -396,11 +405,7 @@ export function enumZeile(host, e) {
       }
       if (ev.key === 'Enter' && !el2.hidden && mListe.length) {
         ev.preventDefault();
-        e[spec.feld] = mListe[mMark >= 0 ? mMark : 0].id;
-        e[spec.her] = 'hand';
-        entwurfAngefasst();
-        zu();
-        zeichneErgebnis();
+        nimm(mListe[mMark >= 0 ? mMark : 0]);
       }
     });
   });

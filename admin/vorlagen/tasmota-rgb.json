@@ -1,6 +1,6 @@
 {
   "id": "tasmota-rgb",
-  "version": 5,
+  "version": 6,
   "rang": 25,
   "name": {
     "de": "Tasmota-Farblampe",
@@ -202,11 +202,15 @@
           "feld": "Info2.IPAddress"
         },
         {
+          "punkt": "tele.INFO2",
+          "feld": "IPAddress"
+        },
+        {
           "punkt": "stat.STATUS5",
           "feld": "StatusNET.IPAddress"
         }
       ],
-      "hinweis": "Drei Wege, weil keiner allein reicht. tele.STATE steht zuerst, weil es alle paar Minuten frisch kommt und einem Adresswechsel folgt - allerdings fuehrt es die IP erst ab neuerer Firmware mit (gemessen: 12.5.0 nein, 15.5.0 ja). tele.INFO2 schickt eine Tasmota beim Start und laesst es retained stehen; das steht auch bei alter Firmware da, ist aber ein Standbild vom letzten Boot. stat.STATUS5 entsteht, wenn jemand den Status abfragt."
+      "hinweis": "Drei Wege, weil keiner allein reicht. tele.STATE steht zuerst, weil es alle paar Minuten frisch kommt und einem Adresswechsel folgt - allerdings fuehrt es die IP erst ab neuerer Firmware mit (gemessen: 12.5.0 nein, 15.5.0 ja). tele.INFO2 schickt eine Tasmota beim Start und laesst es retained stehen; das steht auch bei alter Firmware da, ist aber ein Standbild vom letzten Boot. stat.STATUS5 entsteht, wenn jemand den Status abfragt. Aeltere Firmware schreibt die Felder in tele.INFO2 ohne die Huelle Info2 - deshalb derselbe Punkt zweimal, einmal mit und einmal ohne (gemessen 20.09.2026 am Badlicht: {WebServerMode, Hostname, IPAddress})."
     }
   ],
   "nebenwirkungen": [

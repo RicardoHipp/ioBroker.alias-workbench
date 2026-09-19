@@ -1061,8 +1061,15 @@ export function zeichneLoeschen() {
      sie zwar mit Typ, aber der Hinweistext sprach nur von „Datenpunkten
      darunter", und die Zahl oben sagt nur, wie viele Zeilen es sind.
      Wer sie zaehlt, weiss nicht, dass er drei Geraete mitnimmt. */
+  /* Nur was wirklich UNTER dem Ziel liegt. Mit dem Haken „Alle N
+     Ausgaenge" stehen auch die Geschwister in der Loeschliste; die hat
+     der Nutzer ausdruecklich gewaehlt, und der Haken nennt sie schon.
+     Bis 20.09.2026 zaehlten sie hier mit — die Warnung sprach von
+     „darunter", und weil der Name um die Laenge des Ziels gekuerzt
+     wurde, blieb von `…ZWEIKANAL.Licht_Esstisch` nur „isch" (Lauf vom
+     19.09.2026, G37). */
   var kanaeleDrunter = alle.filter(function (id) {
-    if (id === ziel) { return false; }
+    if (id.indexOf(ziel + '.') !== 0) { return false; }
     var o = S.objects[id];
     return o && (o.type === 'channel' || o.type === 'device');
   });

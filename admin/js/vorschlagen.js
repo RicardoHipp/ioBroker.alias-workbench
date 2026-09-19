@@ -94,6 +94,42 @@ function kernWoerter(name) {
 /* Der nicht veraendernde Vorbau des Ratens: was ist frei, was kaeme in
    Frage? Geteilt zwischen dem Raten selbst und der Frage, ob der Knopf
    ueberhaupt etwas anzubieten haette. */
+/* Widerspricht die Einheit des Punkts dem Platz?
+
+   Ein Punkt in Sekunden ist keine Temperatur, einer in Prozent kein
+   Verbrauch. Bis 19.09.2026 gab die Einheit beim Raten nur Pluspunkte,
+   nie einen Ausschluss: am Geschirrspueler landete die Startverzoegerung
+   („0 seconds") auf der Ist-Temperatur und die Energieprognose (65 %) auf
+   dem Verbrauch — und weil das Thermostat damit auf mehr belegte Plaetze
+   kam als die Steckdose, empfahl der Hinweis „Thermostat wuerde evtl.
+   besser passen" (Lauf vom 19.09.2026, U33). Hinweis, Knopf und Legende
+   raten ueber dieselbe Funktion, die Regel gilt also fuer alle drei.
+
+   Nur ein Widerspruch schliesst aus: ohne Einheit am Punkt, oder bei
+   einem Platz, dessen Rolle hier nicht steht, bleibt alles wie bisher.
+   Die Reihenfolge zaehlt — `power.consumption` vor `power`. */
+var EINHEIT_ZU_ROLLE = [
+  [/color\.temperature/, ['k', 'mired']],
+  [/temperature/, ['°c', '°f', 'k', 'c']],
+  [/humidity/, ['%', '%rh', 'rh']],
+  [/power\.consumption|energy/, ['wh', 'kwh', 'mwh']],
+  [/\bpower\b/, ['w', 'kw', 'mw', 'va', 'kva', 'var', 'kvar']],
+  [/voltage/, ['v', 'mv', 'kv']],
+  [/current/, ['a', 'ma']],
+  [/illuminance|brightness/, ['lx', 'lux']],
+  [/pressure/, ['hpa', 'mbar', 'bar', 'pa', 'kpa']]
+];
+export function einheitPasst(rolle, einheit) {
+  var u = String(einheit || '').trim().toLowerCase();
+  if (!u || !rolle) { return true; }
+  for (var i = 0; i < EINHEIT_ZU_ROLLE.length; i++) {
+    if (EINHEIT_ZU_ROLLE[i][0].test(rolle)) {
+      return EINHEIT_ZU_ROLLE[i][1].indexOf(u) > -1;
+    }
+  }
+  return true;
+}
+
 function rateLage(e) {
   var mu = musterVon(e.want);
   if (!mu) { return { grund: 'keinMuster', frei: [], handWeg: 0 }; }
@@ -278,6 +314,7 @@ export function ratePlaetze(e, trocken) {
     /* Was unmoeglich ist, kommt gar nicht erst in die Bewertung. */
     if (pl.write === true && !st.srcW && !partnerVon[st.n]) { return -1; }
     if (!typPasst(pl, st)) { return -1; }
+    if (!einheitPasst(pl.defaultRole, st.unit)) { return -1; }
 
     var w = kernWoerter(st.n);
     var wSet = {};

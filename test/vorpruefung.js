@@ -922,3 +922,241 @@ describe('Der Rueckfall auf die naechstbeste Vorlage', () => {
         expect(r.uebergangen).to.be.empty;
     });
 });
+
+describe('Werte der Vorlage uebernehmen', () => {
+    /* Aus entwurf.js herausgeschnitten wie die Feldpfade: die beiden
+       Funktionen haengen nur aneinander, nicht am Browser. */
+    const quelle = fs.readFileSync(path.join(jsDir, 'entwurf.js'), 'utf8');
+    const anfang = quelle.indexOf('export function vorlagenAbweichung');
+    const start2 = quelle.indexOf('export function vorlageAnwenden');
+    // Ende der Funktion: die erste Zeile, die nur aus `}` besteht.
+    const schluss = /\r?\n\}\r?\n/.exec(quelle.slice(start2));
+    const ende = start2 + schluss.index + schluss[0].length;
+    expect(anfang, 'vorlagenAbweichung in entwurf.js').to.be.above(-1);
+    expect(start2, 'vorlageAnwenden in entwurf.js').to.be.above(anfang);
+    const code = quelle.slice(anfang, ende).split('export function').join('function');
+    const { vorlageAnwenden } = new Function(code + '; return { vorlageAnwenden };')();
+
+    const zeile = (states, vorlagenStates) => ({
+        n: 'DIRECTION', role: 'indicator.direction', typ: 'number', unit: '',
+        f: '', fw: '', srcR: 'x.1.DIRECTION', srcW: '', states,
+        vorlagenWert: { role: 'indicator.direction', typ: 'number', unit: '',
+            f: '', fw: '', srcR: 'x.1.DIRECTION', srcW: '', states: vorlagenStates },
+    });
+
+    it('behaelt die Werteliste, wenn die Vorlage keine hat (G10)', () => {
+        const s = zeile({ 0: 'NONE', 1: 'UP', 2: 'DOWN' }, undefined);
+        vorlageAnwenden({ states: [s] });
+        expect(s.states).to.deep.equal({ 0: 'NONE', 1: 'UP', 2: 'DOWN' });
+        expect(s.geaendert).to.equal(undefined);
+    });
+
+    it('uebernimmt die Werteliste, wenn die Vorlage eine mitbringt', () => {
+        const s = zeile({ 0: 'NONE' }, { 0: 'Stopp', 1: 'Auf', 2: 'Ab' });
+        vorlageAnwenden({ states: [s] });
+        expect(s.states).to.deep.equal({ 0: 'Stopp', 1: 'Auf', 2: 'Ab' });
+    });
+});
+
+describe('Der Quellentausch schreibt den Kanal zuletzt', () => {
+    /* tauscheAus aus quellentausch.js, mit Attrappen fuer Socket und DOM.
+       Geprueft wird die Reihenfolge und was bei einem Fehler unterbleibt
+       (Lauf vom 19.09.2026, W21). */
+    const quelle = fs.readFileSync(path.join(jsDir, 'quellentausch.js'), 'utf8');
+    const start = quelle.indexOf('export function tauscheAus');
+    expect(start, 'tauscheAus in quellentausch.js').to.be.above(-1);
+    const schluss = /\r?\n\}\r?\n/.exec(quelle.slice(start));
+    const code = quelle.slice(start, start + schluss.index + schluss[0].length).replace('export function', 'function');
+
+    const lauf = ablehnen => {
+        const gesendet = [];
+        const S = {
+            tauschZiel: 'alias.0.x', tauschNeu: 'neu', tauschPlan: [], objects: {},
+            tauschWeg: { 'alias.0.x.LOWBAT': true },
+        };
+        const knopf = { disabled: false, textContent: '', hidden: false };
+        const body = { textContent: '', appendChild() {} };
+        const $ = sel => (sel === '#btn-swap-go' ? knopf : body);
+        const socket = {
+            emit(ev, id, obj, cb) {
+                if (typeof obj === 'function') { cb = obj; }
+                gesendet.push(ev + ' ' + id);
+                cb(ev === 'setObject' && id === ablehnen ? 'abgelehnt' : null);
+            },
+        };
+        const tauschObjekte = () => [
+            { id: 'alias.0.x', obj: { native: { quelle: 'neu' } } },
+            { id: 'alias.0.x.SET', obj: {} },
+            { id: 'alias.0.x.WORKING', obj: {} },
+        ];
+        const leer = () => {};
+        const tauscheAus = new Function('S', '$', 'tr', 'el', 'socket', 'tauschObjekte',
+            'holeZweig', 'waehle', 'zeichneErgebnis', 'indexNeu',
+            code + '; return tauscheAus;')(S, $, x => x, () => ({}), socket, tauschObjekte,
+            leer, leer, leer, leer);
+        tauscheAus();
+        return gesendet;
+    };
+
+    it('schreibt erst die Punkte, loescht, und den Kanal ganz am Ende', () => {
+        const g = lauf(null);
+        expect(g[g.length - 1]).to.equal('setObject alias.0.x');
+        expect(g.indexOf('delObject alias.0.x.LOWBAT')).to.be.below(g.length - 1);
+        expect(g.filter(x => x === 'setObject alias.0.x')).to.have.length(1);
+    });
+
+    it('laesst den Kanal auf der alten Quelle, wenn ein Punkt scheitert', () => {
+        const g = lauf('alias.0.x.SET');
+        expect(g).to.not.include('setObject alias.0.x');
+        expect(g.filter(x => x.startsWith('delObject'))).to.be.empty;
+    });
+});
+
+describe('Der Name einer Vorlage im Vorlagenblatt', () => {
+    /* setzeName aus vorlagenblatt.js. Eine eingelesene Vorlage ohne
+       `name` liess sich nie benennen: das Feld schrieb in x.name.de und
+       warf (19.09.2026). */
+    const quelle = fs.readFileSync(path.join(jsDir, 'vorlagenblatt.js'), 'utf8');
+    const start = quelle.indexOf('function setzeName');
+    expect(start, 'setzeName in vorlagenblatt.js').to.be.above(-1);
+    const schluss = /\r?\n\}\r?\n/.exec(quelle.slice(start));
+    const setzeName = new Function(quelle.slice(start, start + schluss.index + schluss[0].length) +
+        '; return setzeName;')();
+
+    it('legt einen fehlenden Namen an', () => {
+        const x = { id: 'ohne-name' };
+        setzeName(x, 'de', 'Steckdose Keller');
+        setzeName(x, 'en', 'Basement socket');
+        expect(x.name).to.deep.equal({ de: 'Steckdose Keller', en: 'Basement socket' });
+    });
+
+    it('macht aus einem Text beide Sprachen und aendert dann eine', () => {
+        const x = { name: 'Lampe' };
+        setzeName(x, 'en', 'Lamp');
+        expect(x.name).to.deep.equal({ de: 'Lampe', en: 'Lamp' });
+    });
+
+    it('laesst die andere Sprache eines Sprachobjekts stehen', () => {
+        const x = { name: { de: 'Rollladen', en: 'Blind' } };
+        setzeName(x, 'de', 'Rollo');
+        expect(x.name).to.deep.equal({ de: 'Rollo', en: 'Blind' });
+    });
+});
+
+describe('Das Raum- und Funktionsfeld', () => {
+    /* Mausklick und Enter uebernehmen einen Eintrag an derselben Stelle.
+       Bis 19.09.2026 hatte Enter eine eigene Kopie, die `e.zuletzt` und
+       das Bild einer neuen Aufzaehlung vergass (S3). Ohne Browser laesst
+       sich das Feld nicht bedienen; geprueft wird, dass es nur noch
+       einen Weg gibt. */
+    const quelle = fs.readFileSync(path.join(jsDir, 'zuordnung.js'), 'utf8');
+
+    it('uebernimmt per Maus und per Enter ueber dieselbe Funktion', () => {
+        expect(quelle).to.match(/function nimm\(x\)/);
+        expect(quelle).to.match(/mousedown[\s\S]{0,120}nimm\(x\)/);
+        expect(quelle).to.match(/'Enter'[\s\S]{0,160}nimm\(mListe\[/);
+    });
+
+    it('setzt zuletzt und holt das Bild nur in nimm', () => {
+        const nimm = quelle.slice(quelle.indexOf('function nimm(x)'));
+        const rumpf = nimm.slice(0, nimm.indexOf('\n    }'));
+        expect(rumpf).to.include("e.zuletzt = 'raum'");
+        expect(rumpf).to.include('holeIkon(');
+        expect(quelle.split("e.zuletzt = 'raum'").length - 1,
+            'nur nimm und der Weg fuer einen frei getippten neuen Eintrag').to.equal(2);
+    });
+});
+
+describe('Der Raum aus dem Geraetenamen', () => {
+    /* raumAusNamen aus aufzaehlungen.js, mit einer Raumliste wie am
+       Testsystem. Bis 19.09.2026 kamen nur Stuecke bis zum Namensende in
+       Frage, und „Heizung_Badezimmer INT0000001" blieb ohne Raum (N5). */
+    const quelle = fs.readFileSync(path.join(jsDir, 'aufzaehlungen.js'), 'utf8');
+    const start = quelle.indexOf('export function raumAusNamen');
+    expect(start, 'raumAusNamen in aufzaehlungen.js').to.be.above(-1);
+    const schluss = /\r?\n\}\r?\n/.exec(quelle.slice(start));
+    const raumAusNamen = new Function(quelle.slice(start, start + schluss.index + schluss[0].length)
+        .replace('export function', 'function') + '; return raumAusNamen;')();
+    const raeume = ['Badezimmer', 'Schlafzimmer', 'Jonas_Schlafzimmer', 'Jonas_Spielzimmer',
+        'Wohnküche', 'Bastelzimmer', 'Kueche', 'Wohnzimmer'];
+    const suche = w => (raeume.find(r => r.toLowerCase() === String(w).toLowerCase()) || '');
+
+    it('findet den Raum vor einer angehaengten Kennung', () => {
+        expect(raumAusNamen('Heizung_Badezimmer INT0000001', suche)).to.equal('Badezimmer');
+        expect(raumAusNamen('Heizung_Wohnküche INT0000007', suche)).to.equal('Wohnküche');
+    });
+
+    it('nimmt das laengere Stueck vor dem kuerzeren', () => {
+        expect(raumAusNamen('Heizung_Jonas_Schlafzimmer INT0000002', suche)).to.equal('Jonas_Schlafzimmer');
+        expect(raumAusNamen('Heizung_Jonas_Spielzimmer INT0000005', suche)).to.equal('Jonas_Spielzimmer');
+    });
+
+    it('findet den Raum auch mitten im Namen', () => {
+        expect(raumAusNamen('Kueche_Licht', suche)).to.equal('Kueche');
+        expect(raumAusNamen('Wohnzimmer_Decke_Links', suche)).to.equal('Wohnzimmer');
+    });
+
+    it('bleibt bei den bisherigen Namen gleich', () => {
+        expect(raumAusNamen('HK_Bastelzimmer', suche)).to.equal('Bastelzimmer');
+        expect(raumAusNamen('Wand_Jonas_Schlafzimmer', suche)).to.equal('Jonas_Schlafzimmer');
+        expect(raumAusNamen('Badezimmer', suche)).to.equal('Badezimmer');
+        expect(raumAusNamen('Steckdose_Drucker', suche)).to.equal('');
+    });
+});
+
+describe('Die Einheit beim Raten freier Plaetze', () => {
+    /* einheitPasst aus vorschlagen.js. Am Geschirrspueler landete die
+       Startverzoegerung (0 seconds) auf der Ist-Temperatur und die
+       Energieprognose (65 %) auf dem Verbrauch (19.09.2026, U33). */
+    const quelle = fs.readFileSync(path.join(jsDir, 'vorschlagen.js'), 'utf8');
+    const anfang = quelle.indexOf('var EINHEIT_ZU_ROLLE');
+    const start = quelle.indexOf('export function einheitPasst');
+    expect(anfang, 'EINHEIT_ZU_ROLLE in vorschlagen.js').to.be.above(-1);
+    const schluss = /\r?\n\}\r?\n/.exec(quelle.slice(start));
+    const einheitPasst = new Function(quelle.slice(anfang, start + schluss.index + schluss[0].length)
+        .replace('export function', 'function') + '; return einheitPasst;')();
+
+    it('schliesst widersprechende Einheiten aus', () => {
+        expect(einheitPasst('value.temperature', 'seconds')).to.equal(false);
+        expect(einheitPasst('value.power.consumption', '%')).to.equal(false);
+        expect(einheitPasst('value.humidity', '°C')).to.equal(false);
+    });
+
+    it('laesst passende Einheiten durch', () => {
+        expect(einheitPasst('value.temperature', '°C')).to.equal(true);
+        expect(einheitPasst('level.temperature', '°C')).to.equal(true);
+        expect(einheitPasst('value.humidity', '%')).to.equal(true);
+        expect(einheitPasst('value.power.consumption', 'kWh')).to.equal(true);
+        expect(einheitPasst('value.power', 'W')).to.equal(true);
+        expect(einheitPasst('value.voltage', 'V')).to.equal(true);
+        expect(einheitPasst('level.color.temperature', 'K')).to.equal(true);
+    });
+
+    it('aendert nichts ohne Einheit oder bei unbekannter Rolle', () => {
+        expect(einheitPasst('value.temperature', '')).to.equal(true);
+        expect(einheitPasst('value.temperature', undefined)).to.equal(true);
+        expect(einheitPasst('level.mode.fan', '%')).to.equal(true);
+        expect(einheitPasst('switch.power', '')).to.equal(true);
+    });
+});
+
+describe('Die Warnung im Loeschdialog', () => {
+    /* „eigenstaendige Kanaele darunter" zaehlt nur, was unter dem Ziel
+       liegt, nicht die per Haken mitgewaehlten Geschwister (G37). */
+    const quelle = fs.readFileSync(path.join(jsDir, 'schreiben.js'), 'utf8');
+    it('zaehlt nur Kanaele unterhalb des Ziels', () => {
+        const start = quelle.indexOf('var kanaeleDrunter');
+        expect(start).to.be.above(-1);
+        expect(quelle.slice(start, start + 200)).to.include("id.indexOf(ziel + '.') !== 0");
+    });
+});
+
+describe('Der Tauschknopf nennt seinen eigenen Sperrgrund', () => {
+    /* Bei „dieselbe Quelle“ und „noch nichts gewaehlt“ blieb der Tooltip
+       des vorher gewaehlten Geraets stehen (W10). */
+    const quelle = fs.readFileSync(path.join(jsDir, 'quellentausch.js'), 'utf8');
+    it('setzt den Tooltip in beiden Sperrfaellen', () => {
+        expect(quelle).to.include("go.disabled = true; go.title = tr('swap.pickFirst');");
+        expect(quelle).to.include("go.disabled = true; go.title = tr('swap.same');");
+    });
+});

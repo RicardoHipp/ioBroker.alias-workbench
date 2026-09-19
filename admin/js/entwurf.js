@@ -1535,7 +1535,15 @@ export function vorlageAnwenden(e) {
     var anders = vorlagenAbweichung(s).length > 0;
     s.role = v.role; s.typ = v.typ; s.unit = v.unit;
     s.f = v.f; s.fw = v.fw; s.srcR = v.srcR; s.srcW = v.srcW;
-    s.states = v.states;
+    /* Die Werteliste nur, wenn die Vorlage selbst eine mitbringt. Sagt sie
+       nichts dazu, gilt der Bestand — dieselbe Regel wie bei Rolle und Typ
+       in `bestandVorrang`. Vorher stand hier `s.states = v.states`, und an
+       einer Vorlagenzeile ohne Werteliste hiess das `undefined`: am
+       Rollladen verlor DIRECTION {0: NONE, 1: UP, 2: DOWN}, ohne dass
+       Zaehler oder Marke es zeigten — `vorlagenAbweichung` vergleicht die
+       Werteliste nicht, und die Werkbank hat kein Feld dafuer (Lauf vom
+       19.09.2026, G10). */
+    if (v.states !== undefined) { s.states = v.states; }
     /* caption bleibt: der Anzeigename gehoert dem Nutzer. */
     if (anders) { s.geaendert = true; }
   });

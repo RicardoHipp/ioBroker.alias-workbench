@@ -48,9 +48,24 @@ export function mqttEinstellung(id) {
      publish: true }` galt als sendefaehig, obwohl die Instanz diesen
      Punkt nicht bedient. Fehlt das Feld, gilt der Eintrag als an — so
      legt der Admin es an, wenn man die Verknuepfung setzt. */
+  var aus = null;
   Object.keys(cu).forEach(function (x) {
-    if (!k && /^mqtt/.test(x) && cu[x] && cu[x].enabled !== false) { k = x; }
+    if (!/^mqtt/.test(x) || !cu[x]) { return; }
+    if (cu[x].enabled !== false) { if (!k) { k = x; } }
+    else if (!aus) { aus = x; }
   });
+  /* Eine abgeschaltete Verknuepfung ist eine Auskunft, kein Nichtwissen.
+
+     Steht das Thema zusaetzlich in `native` — bei mqtt-client der
+     Normalfall —, fiel der Punkt vorher in den Zweig darunter und galt
+     als „Thema da, Senden unbekannt"; die Karte zeigte dafuer gruen
+     „angelegt, sendet", obwohl die Instanz ihn nicht bedient (Ricardo,
+     20.09.2026; Lauf vom 19.09.2026, H13). Wer den Schalter ausdruecklich
+     auf aus gestellt hat, bekommt das jetzt gesagt. */
+  if (!k && aus) {
+    return { instanz: aus, topic: cu[aus].topic || (o.native || {}).topic || '',
+             publish: false, abgeschaltet: true, roh: cu[aus] };
+  }
   if (!k) {
     /* Manche Objekte tragen das Thema nur in native — ioBroker.mqtt und
        sonoff tun das. Fuer sie ist `publish` schlicht UNBEKANNT, nicht
@@ -261,16 +276,20 @@ export function mqttLage(kanal) {
   var g = mqttGeraet(kanal);
   if (!g) { return null; }
   var b = tasmotaBefehle(kanal);
-  var fehlen = [], stumm = [], da = [];
+  var fehlen = [], stumm = [], da = [], unklar = [];
   if (b) {
     b.befehle.forEach(function (x) {
       var id = hatPunkt(kanal, 'cmnd.' + x.name);
       if (!id) { fehlen.push(x); return; }
       var m = mqttEinstellung(id);
-      /* `publish === null` heisst unbekannt (Thema nur in `native`) —
-         so ein Punkt kommt zu den vorhandenen, nicht zu den stummen.
-         „Senden erlauben" haette an ihm ohnehin nichts zu schreiben. */
-      if (m && m.publish === false) { stumm.push({ name: x.name, id: id }); } else { da.push(x.name); }
+      /* `publish === null` heisst unbekannt (Thema nur in `native`, ohne
+         Verknuepfung — ioBroker.mqtt und sonoff). Frueher kam so ein
+         Punkt zu den vorhandenen und stand gruen als „angelegt, sendet"
+         da; behauptet ist damit mehr, als die Werkbank weiss. Er steht
+         jetzt eigens (Ricardo, 20.09.2026). */
+      if (m && m.publish === false) { stumm.push({ name: x.name, id: id }); }
+      else if (m && m.publish === null) { unklar.push(x.name); }
+      else { da.push(x.name); }
     });
   }
   /* Auch cmnd-Punkte, die es schon gibt, ohne dass sie im Zustand
@@ -283,8 +302,9 @@ export function mqttLage(kanal) {
     if (da.indexOf(name) > -1) { return; }
     var m = mqttEinstellung(id);
     if (m && m.publish === false) { stumm.push({ name: name, id: id }); }
+    else if (m && m.publish === null && unklar.indexOf(name) === -1) { unklar.push(name); }
   });
-  return { geraet: g, befehle: b, fehlen: fehlen, stumm: stumm, da: da,
+  return { geraet: g, befehle: b, fehlen: fehlen, stumm: stumm, da: da, unklar: unklar,
            sofort: sofortRueckmeldung(kanal) };
 }
 
@@ -346,7 +366,11 @@ export function mqttKarte(host, kanal) {
        sah die Zahlen, aber nicht, welcher Befehl welcher Fall ist. */
     var zustand = {};
     l.fehlen.forEach(function (x) { zustand[x.name] = 'fehlt'; });
-    l.stumm.forEach(function (x) { zustand[x.name] = 'stumm'; });
+    l.stumm.forEach(function (x) {
+      var m = mqttEinstellung(x.id);
+      zustand[x.name] = (m && m.abgeschaltet) ? 'aus' : 'stumm';
+    });
+    (l.unklar || []).forEach(function (n) { zustand[n] = 'unklar'; });
     l.da.forEach(function (n) { zustand[n] = 'da'; });
 
     var reihen = l.befehle.befehle.map(function (x) { return x.name; });
@@ -379,6 +403,8 @@ export function mqttKarte(host, kanal) {
       var c = el('span', 'mchip');
       if (z === 'fehlt') { c.appendChild(el('span', 'chip warn', tr('mq.stMissing'))); }
       else if (z === 'stumm') { c.appendChild(el('span', 'chip bad', tr('mq.stMute'))); }
+      else if (z === 'aus') { c.appendChild(el('span', 'chip bad', tr('mq.stOff'))); }
+      else if (z === 'unklar') { c.appendChild(el('span', 'chip mut', tr('mq.stUnknown'))); }
       else { c.appendChild(el('span', 'chip ok', tr('mq.stFine'))); }
       r.appendChild(c);
 
@@ -389,7 +415,7 @@ export function mqttKarte(host, kanal) {
         var bn = el('button', 'btn schmal', tr('mq.rowCreate'));
         bn.addEventListener('click', function () { mqttEinzeln(kanal, n, 'neu', bn); });
         h.appendChild(bn);
-      } else if (z === 'stumm') {
+      } else if (z === 'stumm' || z === 'aus') {
         var bs2 = el('button', 'btn schmal', tr('mq.rowAllow'));
         bs2.addEventListener('click', function () { mqttEinzeln(kanal, n, 'frei', bs2); });
         h.appendChild(bs2);
@@ -782,7 +808,7 @@ function mqttPunktBauen(kanal, name, was) {
     if (!alt0) { return null; }
     obj = JSON.parse(JSON.stringify(alt0));
     var cu0 = obj.common.custom || {};
-    Object.keys(cu0).forEach(function (i) { if (/^mqtt/.test(i) && cu0[i]) { cu0[i].publish = true; } });
+    Object.keys(cu0).forEach(function (i) { if (/^mqtt/.test(i) && cu0[i]) { cu0[i].publish = true; cu0[i].enabled = true; } });
     obj.common.custom = cu0;
   } else {
     var w0 = befehlsWissen(name) || {};
@@ -816,7 +842,7 @@ export function mqttEinzeln(kanal, name, was, knopf) {
     if (!alt) { return; }
     obj = JSON.parse(JSON.stringify(alt));
     var cu = obj.common.custom || {};
-    Object.keys(cu).forEach(function (i) { if (/^mqtt/.test(i) && cu[i]) { cu[i].publish = true; } });
+    Object.keys(cu).forEach(function (i) { if (/^mqtt/.test(i) && cu[i]) { cu[i].publish = true; cu[i].enabled = true; } });
     obj.common.custom = cu;
   } else {
     var w = befehlsWissen(name) || {};
@@ -1006,7 +1032,7 @@ function mqttZuSchreiben() {
     if (!alt) { return; }
     var kopie = JSON.parse(JSON.stringify(alt));
     var cu = kopie.common.custom || {};
-    Object.keys(cu).forEach(function (i) { if (/^mqtt/.test(i) && cu[i]) { cu[i].publish = true; } });
+    Object.keys(cu).forEach(function (i) { if (/^mqtt/.test(i) && cu[i]) { cu[i].publish = true; cu[i].enabled = true; } });
     kopie.common.custom = cu;
     raus.push({ id: x.id, obj: kopie, neu: false });
   });

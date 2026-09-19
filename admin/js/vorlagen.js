@@ -515,16 +515,35 @@ export function wendeAn(v, kanal, gruende, instanz, auchOhneTreffer) {
       });
     }
 
-    var quelle = null, feld = null, leseformel = null, gescheitert = [];
+    /* `gruende` sagt, WARUM ein Weg nicht ging — es gibt drei Faelle, und
+       sie verlangen dreierlei Handgriffe: der Punkt fehlt ganz, der Punkt
+       liefert kein JSON, oder das Feld darin fehlt. Bis 20.09.2026 stand
+       fuer alle drei derselbe Satz („tele_SENSOR: tele.SENSOR ·
+       SML.Total_Summe fehlt"), auch wenn es den Punkt gar nicht gab
+       (Ricardo, 20.09.2026; Lauf vom 19.09.2026, C45). */
+    var quelle = null, feld = null, leseformel = null, gescheitert = [], gruende = [];
     for (var wi = 0; wi < wege.length; wi++) {
       var w = wege[wi];
       var id0 = finde(w.punkt);
       var wo = auf(w.punkt) + (w.feld ? ' · ' + auf(w.feld) : '');
-      if (!id0) { gescheitert.push(wo); continue; }
+      if (!id0) {
+        gescheitert.push(wo);
+        gruende.push(tr('tpl.whyNoPoint', auf(w.punkt)));
+        continue;
+      }
       if (w.feld) {
         var f0 = auf(w.feld);
         var j0 = jsonVon(id0);
-        if (!j0 || feldWert(j0, f0) === undefined) { gescheitert.push(wo); continue; }
+        if (!j0) {
+          gescheitert.push(wo);
+          gruende.push(tr('tpl.whyNoJson', auf(w.punkt)));
+          continue;
+        }
+        if (feldWert(j0, f0) === undefined) {
+          gescheitert.push(wo);
+          gruende.push(tr('tpl.whyNoField', auf(w.punkt), f0));
+          continue;
+        }
       }
       quelle = id0; feld = w.feld; leseformel = w.leseformel;
       break;
@@ -566,7 +585,9 @@ export function wendeAn(v, kanal, gruende, instanz, auchOhneTreffer) {
          einen Stelle und die Vorlage hatte an zwei geschaut. */
       e.uebersprungen.push(gescheitert.length > 1
         ? tr('tpl.skippedNowhere', z.name, gescheitert.join(tr('tpl.nor')))
-        : tr('tpl.skippedSource', z.name, gescheitert[0] || auf(z.lesen)));
+        : (gruende.length
+          ? tr('tpl.skippedWhy', z.name, gruende[0])
+          : tr('tpl.skippedSource', z.name, gescheitert[0] || auf(z.lesen))));
       /* Eine Pflichtzeile, die ihre Quelle nicht findet, heisst: die
          Vorlage passt zu diesem Geraet nicht. Die Erkennung sieht das
          nicht — sie prueft, ob die genannten *Punkte* da sind, nicht ob
