@@ -352,7 +352,13 @@ export function baueListe(host, e, pl, rateKnopf, musterBlock) {
     rl.appendChild(bWeg);
     card.appendChild(rl);
   }
-  if (e.rateMeldung) {
+  /* Greift das Muster gar nicht, erklaert die orange Legende ueber der
+     Liste, was fehlt und welche Zeile hilft. Die Meldung des Vorschlagens
+     („Kein uebriger Datenpunkt passt dazu …") stand dann direkt darueber
+     und widersprach ihr — sie laesst Zeilen, an denen jemand etwas
+     eingestellt hat, absichtlich in Ruhe (Ricardo, 19.09.2026). */
+  var musterGreift = !e.want || Object.keys(pl.platzVon || {}).length > 0;
+  if (e.rateMeldung && musterGreift) {
     var rm = el('div', 'aside');
     rm.style.margin = '8px 15px';
     rm.textContent = e.rateMeldung;

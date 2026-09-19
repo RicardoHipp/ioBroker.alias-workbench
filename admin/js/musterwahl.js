@@ -108,7 +108,13 @@ export function baueMusterwahl(e, haupt, pflichtFehlt) {
     /* Der Zusatz zur Handentscheidung (U15): Steht ein Platz nur deshalb
        leer, weil die Zeile dazu von Hand entschieden ist, muss genau das
        dastehen - sonst sieht es aus wie ein Fehler des Ratens. */
-    if (satz && p.handWeg) { satz += '  ' + tr('guess.noneHand', p.handWeg); }
+    /* Mit Namen und in der richtigen Zahl — „1 Zeilen sind …" sagte weder
+       richtig Deutsch noch welche (Ricardo, 19.09.2026). */
+    if (satz && p.handWeg) {
+      var hn = (p.handNamen || []).slice(0, 4).join(', ') +
+        ((p.handNamen || []).length > 4 ? ' …' : '');
+      satz += '  ' + (p.handWeg === 1 ? tr('guess.noneHandOne', hn) : tr('guess.noneHand', p.handWeg, hn));
+    }
     return satz;
   }
   /* Ungefragt gezeigt wird sie nur, wo sie etwas erklaert: dass kein

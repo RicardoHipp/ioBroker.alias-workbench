@@ -161,19 +161,19 @@ function rateLage(e) {
      dann haette derselbe Quellpunkt aber zwei Plaetze, und die achte
      Pruefung („Kein Punkt doppelt") meldete es zu Recht. Also bleibt der
      Platz frei. Die Meldung unter der Leiste sagt, dass und warum. */
-  var handWeg = 0;
+  var handWeg = 0, handNamen = [];
   var freieZeilen = e.states.filter(function (st) {
     if (!st.n || !st.srcR || zeileBelegt[st.n]) { return false; }
     if (quelleBelegt[st.srcR]) { return false; }
     if (st.srcW && quelleBelegt[st.srcW]) { return false; }
-    if (st.geaendert) { handWeg++; return false; }
+    if (st.geaendert) { handWeg++; handNamen.push(st.n); return false; }
     return true;
   });
   if (!freieZeilen.length) {
-    return { grund: 'vergeben', frei: freiNamen, handWeg: handWeg };
+    return { grund: 'vergeben', frei: freiNamen, handWeg: handWeg, handNamen: handNamen };
   }
   return { grund: null, mu: mu, namenDa: namenDa, freiePlaetze: freiePlaetze,
-           freieZeilen: freieZeilen, frei: freiNamen, handWeg: handWeg };
+           freieZeilen: freieZeilen, frei: freiNamen, handWeg: handWeg, handNamen: handNamen };
 }
 
 /* Der Rateschritt - mit `trocken` rechnet er nur, ohne den Entwurf
@@ -196,7 +196,7 @@ function rateLage(e) {
 export function ratePlaetze(e, trocken) {
   var lage = rateLage(e);
   if (lage.grund) {
-    return { anzahl: 0, grund: lage.grund, frei: lage.frei, handWeg: lage.handWeg };
+    return { anzahl: 0, grund: lage.grund, frei: lage.frei, handWeg: lage.handWeg, handNamen: lage.handNamen };
   }
   var namenDa = lage.namenDa;
   var freiePlaetze = lage.freiePlaetze, freieZeilen = lage.freieZeilen;
@@ -388,7 +388,7 @@ export function ratePlaetze(e, trocken) {
     }
   });
   return { anzahl: gesetzt, grund: gesetzt ? null : 'keinTreffer',
-           frei: lage.frei, handWeg: lage.handWeg };
+           frei: lage.frei, handWeg: lage.handWeg, handNamen: lage.handNamen };
 }
 
 /* Eine einzelne Vermutung zuruecknehmen. */
