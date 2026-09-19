@@ -70,7 +70,7 @@
   "detail.display": "Display",
   "detail.elsewhere": "(elsewhere)",
   "detail.expects": "expects {0}",
-  "detail.formula": "Formula",
+  "detail.formula": "Read formula",
   "detail.formulaBroken": "formula is faulty",
   "detail.formulaHint": "\"ON\"/\"OFF\" → boolean is done by the alias itself, no formula needed.",
   "detail.formulaPlaceholder": "empty = take the value unchanged",

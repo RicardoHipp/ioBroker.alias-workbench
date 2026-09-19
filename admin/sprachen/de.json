@@ -70,7 +70,7 @@
   "detail.display": "Anzeige",
   "detail.elsewhere": "(anderswo)",
   "detail.expects": "erwartet {0}",
-  "detail.formula": "Formel",
+  "detail.formula": "Leseformel",
   "detail.formulaBroken": "Formel fehlerhaft",
   "detail.formulaHint": "\"ON\"/\"OFF\" → boolean macht der Alias von selbst, dafür braucht es keine Formel.",
   "detail.formulaPlaceholder": "leer = Wert unverändert übernehmen",

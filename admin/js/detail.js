@@ -393,6 +393,26 @@ export function detailZeile(e, s, idx) {
     zeile('Objekt-ID', iFrei);
   }
 
+  /* --- Leseformel ---
+
+     Direkt unter „liest aus“, wie die Schreibformel unter „schreibt auf“:
+     jede Formel steht bei der Quelle, fuer die sie rechnet (Ricardo,
+     19.09.2026). */
+  var fb = el('div');
+  var iF = el('input', 'tx w');
+  iF.type = 'text';
+  iF.value = s.f || '';
+  iF.placeholder = tr('detail.formulaPlaceholder');
+  iF.addEventListener('click', function (ev) { ev.stopPropagation(); });
+  iF.addEventListener('change', function () { s.f = iF.value.trim(); neu(); });
+  fb.appendChild(iF);
+  /* Der Hinweis gilt nur fuer Schaltpunkte. Bei einem Spannungswert
+     stand er auch — und ergab dort keinen Sinn. */
+  if ((s.typ || '') === 'boolean') {
+    fb.appendChild(el('div', 'sugg', tr('detail.formulaHint')));
+  }
+  zeigeBeide(zeile(tr('detail.formula'), fb), ['f']);
+
   /* --- Quelle schreiben --- */
   var wf = el('div', 'fields');
   var selW = el('select', 'tx');
@@ -429,22 +449,6 @@ export function detailZeile(e, s, idx) {
     wf.appendChild(el('div', 'sugg', tr('detail.separateHint')));
   }
   zeigeBeide(zeile(tr('detail.writesTo'), mitVollId(wf, s.srcW, zielMarke(s, 'w'))), ['srcW']);
-
-  /* --- Leseformel --- */
-  var fb = el('div');
-  var iF = el('input', 'tx w');
-  iF.type = 'text';
-  iF.value = s.f || '';
-  iF.placeholder = tr('detail.formulaPlaceholder');
-  iF.addEventListener('click', function (ev) { ev.stopPropagation(); });
-  iF.addEventListener('change', function () { s.f = iF.value.trim(); neu(); });
-  fb.appendChild(iF);
-  /* Der Hinweis gilt nur fuer Schaltpunkte. Bei einem Spannungswert
-     stand er auch — und ergab dort keinen Sinn. */
-  if ((s.typ || '') === 'boolean') {
-    fb.appendChild(el('div', 'sugg', tr('detail.formulaHint')));
-  }
-  zeigeBeide(zeile(tr('detail.formula'), fb), ['f']);
 
   if (s.srcW) {
     var wb = el('div');
