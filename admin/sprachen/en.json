@@ -114,7 +114,6 @@
   "detail.tplWantsEmpty": "The template leaves this field empty.",
   "detail.type": "Type",
   "detail.unit": "Unit",
-  "detail.willBecome": "will become",
   "detail.writeFormula": "Write formula",
   "detail.writeFormulaHint": "converts the other way: what the device should receive when switched.",
   "detail.writeFormulaPlaceholder": "e.g. val ? \"ON\" : \"OFF\"",

@@ -114,7 +114,6 @@
   "detail.tplWantsEmpty": "Die Vorlage lässt dieses Feld leer.",
   "detail.type": "Typ",
   "detail.unit": "Einheit",
-  "detail.willBecome": "entsteht als",
   "detail.writeFormula": "Schreibformel",
   "detail.writeFormulaHint": "rechnet in die andere Richtung: was das Gerät beim Schalten empfangen soll.",
   "detail.writeFormulaPlaceholder": "z. B. val ? \"ON\" : \"OFF\"",

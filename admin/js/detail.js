@@ -274,28 +274,44 @@ export function detailZeile(e, s, idx) {
        Bereinigt wie die Zielkennung (zielleiste.js), aber ohne Punkt —
        ein Punkt machte aus dem Namen einen Unterordner. Gross- und
        Kleinschreibung bleiben, wie sie getippt wurden. */
-    var nameBox = el('div', 'fields');
-    nameBox.appendChild(el('span', 'leise', (e.ziel || e.kanal) + '.'));
+    /* Aufgebaut wie „liest aus": oben das Feld, darunter klein die
+       volle Kennung, die daraus entsteht (Ricardo, 19.09.2026). */
+    var vorspann = (e.ziel || e.kanal) + '.';
     var iNa = el('input', 'tx');
     iNa.type = 'text';
     iNa.value = s.n;
-    iNa.style.width = '200px';
+    iNa.style.width = '420px';
+    iNa.style.maxWidth = '100%';
     iNa.style.fontFamily = 'var(--mono)';
+    var nameFelder = el('div', 'fields');
+    nameFelder.appendChild(iNa);
+    var nameStapel = mitVollId(nameFelder, vorspann + s.n);
+    var nameVoll = nameStapel.querySelector('.vollid');
+    var bereinigt = function (v) {
+      return v.trim().replace(/\s+/g, '_').replace(/[^\w\-äöüÄÖÜß]/g, '_');
+    };
     iNa.addEventListener('click', function (ev) { ev.stopPropagation(); });
+    /* Beim Tippen zieht die Kennung darunter mit — man sieht, was
+       entsteht, bevor man das Feld verlaesst. */
+    iNa.addEventListener('input', function () {
+      var v = bereinigt(iNa.value) || s.n;
+      nameVoll.textContent = vorspann + v;
+      nameVoll.title = vorspann + v;
+    });
     iNa.addEventListener('change', function () {
-      var neuN = iNa.value.trim().replace(/\s+/g, '_').replace(/[^\w\-äöüÄÖÜß]/g, '_');
+      var neuN = bereinigt(iNa.value);
       if (!neuN) { iNa.value = s.n; return; }
       if (neuN !== s.n && e.states.some(function (x) { return x !== s && x.n === neuN; })) {
         iNa.value = s.n;
         iNa.title = tr('detail.nameTaken', neuN);
         iNa.classList.add('miss');
+        nameVoll.textContent = vorspann + s.n;
         return;
       }
       s.n = neuN;
       neu();
     });
-    nameBox.appendChild(iNa);
-    zeile(tr('detail.willBecome'), nameBox);
+    zeile(tr('detail.name'), nameStapel);
   }
 
   /* --- Quelle lesen + JSON-Feld --- */
