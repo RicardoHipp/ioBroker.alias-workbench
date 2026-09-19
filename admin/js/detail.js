@@ -313,6 +313,13 @@ export function detailZeile(e, s, idx) {
       /* Ohne Werteliste bleibt so ein Platz leer, egal wie gut Rolle und
          Typ passen — wie beim Klick auf einen freien Platz. */
       if (st.statesDefined && !s.states) { s.states = st.defaultStates || { 0: 'None' }; }
+      /* Ein Platz, den das Muster nur lesen laesst (ELECTRIC_POWER,
+         ACTUAL …), bekommt kein Schreibziel. mqtt-client legt jeden Punkt
+         beschreibbar an, und die Werkbank trug deshalb die Quelle auch
+         bei „schreibt auf" ein — am 3D-Drucker schrieb die Leistung auf
+         `tele.SENSOR` (Ricardo, 19.09.2026). Weggenommen wird nur, nie
+         geraten: ein fehlendes Schreibziel bei SET setzt das Feld nicht. */
+      if (st.write === false) { s.srcW = ''; s.wr = false; }
       neu();
     });
     pb.appendChild(selP);
@@ -557,6 +564,16 @@ export function detailZeile(e, s, idx) {
      brach der Satz um und schob sich mit einer Luecke zwischen Auswahl und
      Kennung (Ricardo, 19.09.2026). */
   var wStapel = mitVollId(wf, s.srcW, zielMarke(s, 'w'));
+  /* Nur-lesen-Platz mit Schreibziel: der Detektor sieht es bei der
+     Vorgaberolle nicht so streng, gemeint ist es aber so — ein Messwert,
+     den jemand setzt, geht ans Geraet. */
+  var platzDef = null;
+  if (mPl && eigenerPlatz) {
+    mPl.states.forEach(function (x) { if (!platzDef && x.name === eigenerPlatz) { platzDef = x; } });
+  }
+  if (platzDef && platzDef.write === false && s.srcW) {
+    wStapel.appendChild(el('div', 'aside w', tr('detail.readOnlySlotWrites', platzDef.name)));
+  }
   if (s.srcW && s.srcW !== s.srcR) {
     wStapel.appendChild(el('div', 'sugg', tr('detail.separateHint')));
   }

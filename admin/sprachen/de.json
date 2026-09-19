@@ -91,6 +91,7 @@
   "detail.pickOne": "— bitte wählen —",
   "detail.rawNothing": "— Quelle liefert nichts —",
   "detail.rawValue": "Rohwert",
+  "detail.readOnlySlotWrites": "{0} ist im Muster nur zum Lesen da — „schreibt auf“ sollte „— nicht schreiben —“ sein, sonst geht ein geschriebener Wert ans Gerät.",
   "detail.readsFrom": "liest aus",
   "detail.removePoint": "Diesen Punkt entfernen",
   "detail.reportsNothing": "ändert sich nie",

@@ -91,6 +91,7 @@
   "detail.pickOne": "— please choose —",
   "detail.rawNothing": "— the source delivers nothing —",
   "detail.rawValue": "Raw value",
+  "detail.readOnlySlotWrites": "{0} is read-only in the pattern — “writes to” should be “— do not write —”, otherwise a written value goes to the device.",
   "detail.readsFrom": "reads from",
   "detail.removePoint": "Remove this point",
   "detail.reportsNothing": "never changes",
