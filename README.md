@@ -592,7 +592,7 @@ imported, and that both language files carry the same keys.
 
 ## Changelog
 
-### **WORK IN PROGRESS**
+### 0.10.0 (2026-09-20)
 **Detection and patterns**
 * Picking another pattern re-ticks the rows and leaves them alone while the new pattern does not apply yet.
 * Guessing gives every datapoint one slot only, and a contradicting unit rules a slot out — a start delay in seconds does not become an actual temperature.

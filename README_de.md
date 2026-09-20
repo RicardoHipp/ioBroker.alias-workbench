@@ -612,7 +612,7 @@ beide Sprachdateien dieselben Schlüssel tragen.
 
 ## Änderungen
 
-### **WORK IN PROGRESS**
+### 0.10.0 (2026-09-20)
 **Erkennung und Muster**
 * Ein anderes Muster zu wählen setzt die Haken neu und lässt sie stehen, solange das neue Muster noch nicht greift.
 * Beim Vorschlagen bekommt jeder Datenpunkt nur einen Platz, und eine widersprechende Einheit schließt einen Platz aus — eine Startverzögerung in Sekunden wird keine Ist-Temperatur.
