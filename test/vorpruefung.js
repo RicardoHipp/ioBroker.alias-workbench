@@ -1160,3 +1160,26 @@ describe('Der Tauschknopf nennt seinen eigenen Sperrgrund', () => {
         expect(quelle).to.include("go.disabled = true; go.title = tr('swap.same');");
     });
 });
+
+describe('Der Typ eines Sendepunktes', () => {
+    /* Alle drei Wege, die einen cmnd-Punkt anlegen, muessen `punktTyp`
+       nehmen: der Einzelknopf, der stille Einzelweg des Trockenlaufs und
+       der Sammeldialog (`mqttZuSchreiben`). Im Sammeldialog stand
+       `w.typ || 'mixed'`, und `POWER` (typ boolean UND schreibformel)
+       entstand als boolean — die Formel war damit wirkungslos
+       (H18, 20.09.2026). */
+    const quelle = fs.readFileSync(path.join(jsDir, 'mqtt.js'), 'utf8');
+    it('entsteht auf allen drei Wegen aus punktTyp', () => {
+        const treffer = quelle.match(/type: punktTyp\(w0?\)/g) || [];
+        expect(treffer.length).to.equal(3);
+    });
+    it('wird nirgends mehr roh aus dem Befehlswissen genommen', () => {
+        expect(quelle).to.not.include("type: w.typ || 'mixed'");
+        expect(quelle).to.not.include("type: w0.typ || 'mixed'");
+    });
+    it('ist mixed, sobald eine Schreibformel im Spiel ist', () => {
+        const fn = quelle.match(/function punktTyp\(w\) \{[\s\S]*?\}/);
+        expect(fn).to.not.equal(null);
+        expect(fn[0]).to.include("w.schreibformel ? 'mixed'");
+    });
+});

@@ -1014,10 +1014,18 @@ function mqttZuSchreiben() {
     if (!mqttAuswahl['neu:' + x.name]) { return; }
     var w = befehlsWissen(x.name) || {};
     var thema = mqttThema(l.geraet, 'cmnd', x.name);
+    /* Derselbe Typ wie auf dem Einzelweg — `punktTyp`, nicht `w.typ`.
+
+       Die Regel „Schreibformel heisst mixed" stand seit dem 15.09.2026 in
+       `punktTyp` und wurde in `mqttPunktBauen` benutzt; hier blieb die
+       alte Fassung stehen. Wer den Sammeldialog nahm, bekam `POWER`,
+       `Fade` und `LedTable` als `boolean` statt `mixed` — der
+       js-controller rechnete den Formelwert auf den Zieltyp zurueck, und
+       auf der Leitung stand `true` statt `ON` (H18, gemessen 20.09.2026). */
     var common = {
       name: x.name,
       role: w.rolle || 'state',
-      type: w.typ || 'mixed',
+      type: punktTyp(w),
       read: true, write: true,
       desc: tr('mq.createdBy'),
       custom: mqttCustom(l.geraet, thema)

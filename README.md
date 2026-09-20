@@ -631,6 +631,7 @@ imported, and that both language files carry the same keys.
 **Tasmota and MQTT**
 * The IP is found on older firmware too (`tele.INFO2` in both forms).
 * The card no longer claims a switched-off point sends; “allow sending” switches the link back on as well.
+* Creating several send points at once yields the same objects as creating them one by one — `POWER`, `Fade` and `LedTable` as `mixed`, so the write formula takes effect.
 * A HomeMatic actuator without a template no longer drags maintenance points along.
 
 **Display**

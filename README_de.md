@@ -651,6 +651,7 @@ beide Sprachdateien dieselben Schlüssel tragen.
 **Tasmota und MQTT**
 * Die IP wird auch bei älterer Firmware gefunden (`tele.INFO2` in beiden Formen).
 * Die Karte behauptet nicht mehr, ein abgeschalteter Punkt sende; „senden erlauben“ schaltet die Verknüpfung gleich mit ein.
+* Mehrere Sendepunkte auf einmal anzulegen ergibt dieselben Objekte wie einzeln — `POWER`, `Fade` und `LedTable` als `mixed`, damit die Schreibformel wirkt.
 * Ein HomeMatic-Aktor ohne Vorlage bringt keinen Wartungskram mehr mit.
 
 **Anzeige**
