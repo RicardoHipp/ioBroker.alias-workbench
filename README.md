@@ -598,6 +598,8 @@ imported, and that both language files carry the same keys.
 * Guessing gives every datapoint one slot only, and a contradicting unit rules a slot out — a start delay in seconds does not become an actual temperature.
 * The pattern field names what is really missing, groups included (“SET / SET_HEATING / SET_COOLING”). The legend says why a pattern does not apply and offers the matching button.
 * The hint “might fit better” only suggests patterns that apply afterwards.
+* For “Information” the field reads “✓ 24 points” instead of “24/31 filled” — that pattern takes any number of points.
+* The message “No remaining datapoint fits” no longer sits above the orange legend and names the rows decided by hand.
 
 **Free slots**
 * A slot can be created once, and every slot is listed once.
@@ -633,6 +635,8 @@ imported, and that both language files carry the same keys.
 * The card no longer claims a switched-off point sends; “allow sending” switches the link back on as well.
 * Creating several send points at once yields the same objects as creating them one by one — `POWER`, `Fade` and `LedTable` as `mixed`, so the write formula takes effect.
 * A HomeMatic actuator without a template no longer drags maintenance points along.
+* “Ask” for SetOption59 only counts what arrived after sending; if no answer comes, “No answer …” is shown and the button stays for a re-check.
+* The “MQTT device” card opens again on devices without a row from `tele/…`.
 
 **Display**
 * The number on a tree node counts what lies below it.

@@ -618,6 +618,8 @@ beide Sprachdateien dieselben Schlüssel tragen.
 * Beim Vorschlagen bekommt jeder Datenpunkt nur einen Platz, und eine widersprechende Einheit schließt einen Platz aus — eine Startverzögerung in Sekunden wird keine Ist-Temperatur.
 * Das Musterfeld nennt, was wirklich fehlt, auch als Gruppe („SET / SET_HEATING / SET_COOLING“). Die Legende sagt, warum ein Muster nicht greift, und bietet den passenden Knopf gleich an.
 * Der Hinweis „… würde evtl. besser passen“ empfiehlt nur noch Muster, die danach auch greifen.
+* Bei „Information“ steht „✓ 24 Punkte“ statt „24/31 belegt“ — dieses Muster nimmt beliebig viele Punkte auf.
+* Die Meldung „Kein übriger Datenpunkt passt“ steht nicht mehr über der orangen Legende und nennt die von Hand entschiedenen Zeilen beim Namen.
 
 **Freie Plätze**
 * Ein Platz lässt sich nur einmal anlegen, und jeder Platz steht nur einmal in der Liste.
@@ -653,6 +655,8 @@ beide Sprachdateien dieselben Schlüssel tragen.
 * Die Karte behauptet nicht mehr, ein abgeschalteter Punkt sende; „senden erlauben“ schaltet die Verknüpfung gleich mit ein.
 * Mehrere Sendepunkte auf einmal anzulegen ergibt dieselben Objekte wie einzeln — `POWER`, `Fade` und `LedTable` als `mixed`, damit die Schreibformel wirkt.
 * Ein HomeMatic-Aktor ohne Vorlage bringt keinen Wartungskram mehr mit.
+* „nachfragen“ bei SetOption59 wertet nur, was nach dem Senden kam; bleibt die Antwort aus, steht „Keine Antwort …“ da, und der Knopf bleibt zum Nachprüfen stehen.
+* Die Karte „MQTT-Gerät“ klappt auch an Geräten ohne Zeile aus `tele/…` wieder auf.
 
 **Anzeige**
 * Die Zahl am Baumknoten zählt, was darunter liegt.
