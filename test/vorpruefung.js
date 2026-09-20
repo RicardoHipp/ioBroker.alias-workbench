@@ -1183,3 +1183,30 @@ describe('Der Typ eines Sendepunktes', () => {
         expect(fn[0]).to.include("w.schreibformel ? 'mixed'");
     });
 });
+
+describe('Die Versionsnummer', () => {
+    /* @iobroker/testing vergleicht package.json und io-package.json, aber
+       nicht das Lockfile. Das stand deshalb von 0.9.0 bis 0.9.12 auf der
+       alten Nummer: die Releases fassten nur package.json, io-package.json
+       und die READMEs an (gefunden 20.09.2026 vor dem Tag von 0.10.0).
+       Aufgefallen waere es erst jemandem, der ins Lockfile schaut. */
+    const p = liesJson(path.join(wurzel, 'package.json'));
+    const io = liesJson(path.join(wurzel, 'io-package.json'));
+    const lock = liesJson(path.join(wurzel, 'package-lock.json'));
+
+    it('steht in package.json und io-package.json gleich', () => {
+        expect(io.common.version, 'io-package.json').to.equal(p.version);
+    });
+
+    it('steht auch im Lockfile, an beiden Stellen', () => {
+        expect(lock.version, 'package-lock.json .version').to.equal(p.version);
+        expect(lock.packages[''].version, 'package-lock.json .packages[""].version').to.equal(p.version);
+    });
+
+    it('hat einen Changelog-Eintrag in beiden READMEs', () => {
+        ['README.md', 'README_de.md'].forEach(datei => {
+            const t = fs.readFileSync(path.join(wurzel, datei), 'utf8');
+            expect(t, datei).to.include(`### ${p.version} (`);
+        });
+    });
+});
