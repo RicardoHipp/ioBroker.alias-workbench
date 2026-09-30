@@ -14,6 +14,10 @@ export var S = {
   objects: {},
   keysSorted: [],
   kleinIndex: {},
+  /* Je Knoten die Punkte des Geraets samt relativem Namen — bei
+     zerlegten MQTT-Geraeten aus mehreren Zweigen zusammengetragen.
+     Verfaellt zusammen mit `kleinIndex`. */
+  geraeteIndex: {},
   /* Zaehlt jede Aenderung an S.objects. Wer sich etwas aus den Objekten
      merkt (die Karte Quelle -> Alias in entwurf.js), vergleicht hiermit
      statt mit der Zahl der Schluessel — beim Verlegen verschwinden genau

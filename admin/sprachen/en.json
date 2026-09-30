@@ -307,6 +307,8 @@
   "mq.rowCreate": "create",
   "mq.rowWorking": "…",
   "mq.selectedOf": "{0} of {1} selected",
+  "mq.split": "from {0} branches",
+  "mq.splitHint": "This device does not sit under one node but is spread over {0} branches — that is how the MQTT adapter stores it when the device's FullTopic is \"%prefix%/%topic%/\" (Tasmota's factory setting). The workbench treats the branches as one device; points are created below their device, not beside it.",
   "mq.stFine": "present, sends",
   "mq.stMissing": "point missing",
   "mq.stMute": "cannot send",

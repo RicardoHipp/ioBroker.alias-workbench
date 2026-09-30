@@ -307,6 +307,8 @@
   "mq.rowCreate": "anlegen",
   "mq.rowWorking": "…",
   "mq.selectedOf": "{0} von {1} ausgewählt",
+  "mq.split": "aus {0} Zweigen",
+  "mq.splitHint": "Dieses Gerät liegt nicht unter einem Knoten, sondern verteilt auf {0} Zweige — so legt der MQTT-Adapter es ab, wenn am Gerät das FullTopic „%prefix%/%topic%/\" steht (Tasmotas Werkseinstellung). Die Werkbank fasst die Zweige zusammen; Punkte werden unter ihrem Gerät angelegt, nicht neben ihm.",
   "mq.stFine": "angelegt, sendet",
   "mq.stMissing": "Punkt fehlt",
   "mq.stMute": "kann nicht senden",

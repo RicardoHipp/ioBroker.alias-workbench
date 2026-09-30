@@ -8,7 +8,7 @@ import { $ } from './basis.js';
 import { txt, tr } from './sprache.js';
 import './enums.js';
 import { zusatzName, setzeModus, zeichneBaum, merkeKlappstand } from './baum.js';
-import { kindZustaende, aliasQuellen, holeWerte,
+import { kindZustaende, geraetePunkte, aliasQuellen, holeWerte,
   mitVorspann, schreibQuelle, zeileAusAlias, istTaster as istTasterObjekt
 } from './werte.js';
 import { erkenneEntwurf } from './erkennung.js';
@@ -72,9 +72,15 @@ function beschriftungAus(name, zeilenname) {
 export function baueEntwurf(kanal) {
   var istAlias = (kanal.indexOf('alias.') === 0);
   var e = { kanal: kanal, states: [], want: null, wantAuto: null, alleMuster: false };
-  kindZustaende(kanal).forEach(function (id) {
+  /* Ueber `geraetePunkte`, nicht ueber den Pfad: bei einem zerlegten
+     MQTT-Geraet liegen die Punkte in Geschwisterzweigen, und ihr
+     relativer Name kommt von dort. Sonst hiesse die Zeile
+     `tele_Weihnachten_aussen_STATE` statt `tele_STATE`, und derselbe
+     Tasmota ergaebe je nach FullTopic einen anderen Alias. */
+  geraetePunkte(kanal).forEach(function (p) {
+    var id = p.id;
     var o = S.objects[id], c = o.common || {}, a = c.alias || {}, q = aliasQuellen(o);
-    var kurzName = id.slice(kanal.length + 1);
+    var kurzName = p.rel;
     /* Ein Knopfdruck hat keinen Zustand — sonst hat auch ein
        nur-schreibender Punkt einen.
 

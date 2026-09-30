@@ -6,7 +6,7 @@
 
 import { S } from './zustand.js';
 import { D, $, el } from './basis.js';
-import { hatPunkt, jsonVon, feldWert, kindZustaende, feldFormel } from './werte.js';
+import { hatPunkt, jsonVon, feldWert, geraetePunkte, feldFormel } from './werte.js';
 import { eigenerKanalName, merkeHakenVorgabe, kennungtauglich } from './entwurf.js';
 import { tasmotaBefehle } from './mqtt.js';
 import { socket } from './verbindung.js';
@@ -170,7 +170,7 @@ export function instanzenVon(v, kanal) {
   var erf = (v.erkennung || {}).erforderlich || [];
   var mitPh = erf.filter(function (e) { return e.indexOf(ph) > -1; });
 
-  var kurzNamen = kindZustaende(kanal).map(function (id) { return id.slice(kanal.length + 1); });
+  var kurzNamen = geraetePunkte(kanal).map(function (p) { return p.rel; });
 
   /* Die Nummern der Ausgaenge muessen nicht als eigene Objekte
      dastehen. Eine Tasmota meldet POWER1..POWER4 in tele/STATE, lange

@@ -8,7 +8,7 @@ import { S } from './zustand.js';
 import { socket } from './verbindung.js';
 import { $, el, klappZeichen } from './basis.js';
 import { tr } from './sprache.js';
-import { hatPunkt, jsonVon, kindZustaende } from './werte.js';
+import { hatPunkt, jsonVon, geraetePunkte, punktKennung, istZerlegt } from './werte.js';
 import './entwurf.js';
 import { zeichneErgebnis } from './ergebnis.js';
 import { holeZweig, holeObjekt, uebernimmObjekt } from './objekte.js';
@@ -85,17 +85,24 @@ export function mqttEinstellung(id) {
    dem Bestand abgelesen — auch die Reihenfolge von Praefix und Thema,
    denn FullTopic ist frei einstellbar. */
 export function mqttGeraet(kanal) {
-  var kinder = kindZustaende(kanal);
-  if (!kinder.length) { return null; }
+  var punkte = geraetePunkte(kanal);
+  if (!punkte.length) { return null; }
   var fund = null;
-  kinder.forEach(function (id) {
+  punkte.forEach(function (pt) {
     if (fund) { return; }
+    var id = pt.id;
     var e = mqttEinstellung(id);
     if (!e || !e.topic) { return; }
-    var rel = id.slice(kanal.length + 1).split('.');
+    /* Der relative Name kommt aus `geraetePunkte` und traegt das Praefix
+       in beiden Bauformen an erster Stelle — bei „Geraet zuerst" steht es
+       so im Pfad, bei „Praefix zuerst" setzt es die Zusammenfassung
+       davor. Die frueher hier stehende Liste `stat|tele|cmnd` faellt
+       damit weg: welches Stueck das Praefix ist, hat `geraetePunkte`
+       schon am Thema abgelesen, und wer seine Praefixe umbenannt hat,
+       wird jetzt ebenfalls erkannt. */
+    var rel = pt.rel.split('.');
     if (rel.length < 2) { return; }
-    var praefix = rel[0];                     /* stat | tele | cmnd */
-    if (!/^(stat|tele|cmnd)$/i.test(praefix)) { return; }
+    var praefix = rel[0];
     var teile = e.topic.split('/');
     var pi = -1;
     teile.forEach(function (t, i) { if (t.toLowerCase() === praefix.toLowerCase()) { pi = i; } });
@@ -294,8 +301,8 @@ export function mqttLage(kanal) {
   }
   /* Auch cmnd-Punkte, die es schon gibt, ohne dass sie im Zustand
      auftauchen — Status etwa. Stumm sind sie genauso. */
-  kindZustaende(kanal).forEach(function (id) {
-    var rel = id.slice(kanal.length + 1);
+  geraetePunkte(kanal).forEach(function (pt) {
+    var id = pt.id, rel = pt.rel;
     if (rel.indexOf('cmnd.') !== 0) { return; }
     var name = rel.slice(5);
     if (stumm.some(function (x) { return x.name === name; })) { return; }
@@ -306,6 +313,15 @@ export function mqttLage(kanal) {
   });
   return { geraet: g, befehle: b, fehlen: fehlen, stumm: stumm, da: da, unklar: unklar,
            sofort: sofortRueckmeldung(kanal) };
+}
+
+/* Ueber wie viele Zweige ist dieses Geraet verteilt? `0`, wenn es an
+   einem Stueck liegt. */
+function zerlegtZweige(kanal) {
+  if (!istZerlegt(kanal)) { return 0; }
+  var zweige = {};
+  geraetePunkte(kanal).forEach(function (p) { zweige[p.rel.split('.')[0]] = 1; });
+  return Object.keys(zweige).length;
 }
 
 export function mqttKarte(host, kanal) {
@@ -331,6 +347,12 @@ export function mqttKarte(host, kanal) {
   th.style.fontFamily = 'var(--mono)';
   th.style.fontSize = '11px';
   ch.appendChild(th);
+  /* Ein zerlegtes Geraet sieht im Baum nicht wie eines aus. Wer hier
+     Punkte anlegt, soll wissen, dass die Werkbank mehrere Zweige
+     zusammengefasst hat — sonst sucht er sie hinterher am falschen
+     Ort. */
+  var zweigZahl = zerlegtZweige(kanal);
+  if (zweigZahl) { ch.appendChild(el('span', 'chip mut', tr('mq.split', zweigZahl))); }
   if (l.fehlen.length) { ch.appendChild(el('span', 'chip warn', tr('mq.missing', l.fehlen.length))); }
   if (l.stumm.length) { ch.appendChild(el('span', 'chip bad', tr('mq.mute', l.stumm.length))); }
   /* Nur warnen, wo es jemanden trifft: Ohne eine Zeile, die aus tele
@@ -357,6 +379,13 @@ export function mqttKarte(host, kanal) {
   einl.style.marginBottom = '9px';
   einl.textContent = tr('mq.intro');
   b.appendChild(einl);
+
+  if (zweigZahl) {
+    var zh = el('div', 'hint');
+    zh.style.marginBottom = '9px';
+    zh.textContent = tr('mq.splitHint', zweigZahl);
+    b.appendChild(zh);
+  }
 
   if (l.befehle) {
     b.appendChild(el('div', 'hint', tr('mq.commandsFrom', l.befehle.woher)));
@@ -623,7 +652,7 @@ function so59(kanal, knopf, wert) {
      naechsten Nachzieher, Sekunden spaeter (Ricardo, 25.08.2026). */
   zeichneErgebnis();
   var thema = mqttThema(g, 'cmnd', 'SetOption59');
-  var id = hatPunkt(kanal, 'cmnd.SetOption59') || (kanal + '.cmnd.SetOption59');
+  var id = hatPunkt(kanal, 'cmnd.SetOption59') || punktKennung(kanal, 'cmnd.SetOption59');
   var obj = {
     type: 'state',
     common: { name: 'SetOption59', type: 'mixed', read: true, write: true, role: 'text',
@@ -667,7 +696,7 @@ function mqttFragen(kanal, _knopf) {
   delete mqttAbfrage[kanal];
   zeichneErgebnis();
   var thema = mqttThema(g, 'cmnd', 'Status');
-  var id = kanal + '.cmnd.Status';
+  var id = punktKennung(kanal, 'cmnd.Status');
   var vorhanden = hatPunkt(kanal, 'cmnd.Status');
   if (vorhanden) { id = vorhanden; }
 
@@ -813,7 +842,7 @@ function mqttPunktBauen(kanal, name, was) {
   } else {
     var w0 = befehlsWissen(name) || {};
     var thema0 = mqttThema(g, 'cmnd', name);
-    id = kanal + '.cmnd.' + name;
+    id = punktKennung(kanal, 'cmnd.' + name);
     var common0 = {
       name: name,
       role: w0.rolle || 'state',
@@ -847,7 +876,7 @@ export function mqttEinzeln(kanal, name, was, knopf) {
   } else {
     var w = befehlsWissen(name) || {};
     var thema = mqttThema(g, 'cmnd', name);
-    id = kanal + '.cmnd.' + name;
+    id = punktKennung(kanal, 'cmnd.' + name);
     var common = {
       name: name,
       role: w.rolle || 'state',
@@ -1032,7 +1061,7 @@ function mqttZuSchreiben() {
     };
     if (w.einheit) { common.unit = w.einheit; }
     if (w.werteliste) { common.states = w.werteliste; }
-    raus.push({ id: kanal + '.cmnd.' + x.name, obj: { type: 'state', common: common, native: { topic: thema } }, neu: true });
+    raus.push({ id: punktKennung(kanal, 'cmnd.' + x.name), obj: { type: 'state', common: common, native: { topic: thema } }, neu: true });
   });
   l.stumm.forEach(function (x) {
     if (!mqttAuswahl['fix:' + x.name]) { return; }

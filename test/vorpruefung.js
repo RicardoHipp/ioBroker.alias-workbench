@@ -1210,3 +1210,175 @@ describe('Die Versionsnummer', () => {
         });
     });
 });
+
+/* Tasmotas `FullTopic` bestimmt, ob ein Geraet im Objektbaum unter einem
+   Knoten liegt oder auf zwei bis drei Praefixzweige verteilt ist. Die
+   zweite Form ist die Werkseinstellung, und bis zum 30.09.2026 kam die
+   Werkbank damit nicht zurecht: am Geraeteknoten fand `mqttGeraet()`
+   nichts, am Knoten darueber erschien eine leere Karte, und ein dort
+   angelegter Sendepunkt bekam die Kennung `…SmartHome_Test.cmnd.POWER` —
+   ohne Geraeteebene. Ein zweites Geraet am selben Praefix haette sie
+   ueberschrieben, samt Thema.
+
+   Gemessen am umgestellten Weihnachtsgeraet; die Faelle hier bilden es
+   nach. */
+describe('Die Punkte eines Geraets', () => {
+    const quelle = fs.readFileSync(path.join(jsDir, 'werte.js'), 'utf8');
+    const anfang = quelle.indexOf('/* ---- Geraetepunkte: Anfang');
+    const ende = quelle.indexOf('/* ---- Geraetepunkte: Ende');
+    expect(anfang, 'Anfangsmarke in werte.js').to.be.above(-1);
+    expect(ende, 'Endmarke in werte.js').to.be.above(anfang);
+    const code = quelle.slice(anfang, ende).split('export function').join('function');
+
+    /* Ein Bestand aus Paaren Kennung -> Thema. `null` heisst: kein
+       Thema, wie es jeder Nicht-MQTT-Adapter liefert. */
+    function baue(paare) {
+        const S = { objects: {}, keysSorted: [], kleinIndex: {}, geraeteIndex: {} };
+        Object.keys(paare).forEach(id => {
+            S.objects[id] = {
+                type: 'state',
+                common: paare[id] ? { custom: { 'mqtt-client.0': { topic: paare[id] } } } : {},
+                native: {},
+            };
+        });
+        S.keysSorted = Object.keys(S.objects).sort();
+        const mitVorspann = pre => S.keysSorted.filter(k => k.indexOf(pre) === 0);
+        const kindZustaende = kanal => mitVorspann(`${kanal}.`);
+        const ZEILEN_VERGLEICH = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+        return new Function(
+            'S', 'mitVorspann', 'kindZustaende', 'ZEILEN_VERGLEICH',
+            `${code}; return { geraetePunkte, istZerlegt, punktKennung };`,
+        )(S, mitVorspann, kindZustaende, ZEILEN_VERGLEICH);
+    }
+
+    const geraetZuerst = {
+        'mqtt-client.0.Haus.Lampe.tele.STATE': 'Haus/Lampe/tele/STATE',
+        'mqtt-client.0.Haus.Lampe.tele.LWT': 'Haus/Lampe/tele/LWT',
+        'mqtt-client.0.Haus.Lampe.stat.POWER': 'Haus/Lampe/stat/POWER',
+        'mqtt-client.0.Haus.Lampe.cmnd.POWER': 'Haus/Lampe/cmnd/POWER',
+    };
+    const praefixZuerst = {
+        'mqtt-client.0.Haus.tele.Lampe.STATE': 'Haus/tele/Lampe/STATE',
+        'mqtt-client.0.Haus.tele.Lampe.LWT': 'Haus/tele/Lampe/LWT',
+        'mqtt-client.0.Haus.stat.Lampe.POWER': 'Haus/stat/Lampe/POWER',
+        'mqtt-client.0.Haus.cmnd.Lampe.POWER': 'Haus/cmnd/Lampe/POWER',
+    };
+
+    it('heissen bei "Geraet zuerst" wie der Pfad', () => {
+        const { geraetePunkte, istZerlegt } = baue(geraetZuerst);
+        const rel = geraetePunkte('mqtt-client.0.Haus.Lampe').map(p => p.rel).sort();
+        expect(rel).to.deep.equal(['cmnd.POWER', 'stat.POWER', 'tele.LWT', 'tele.STATE']);
+        expect(istZerlegt('mqtt-client.0.Haus.Lampe')).to.equal(false);
+    });
+
+    /* Der Kern: dieselben relativen Namen wie oben, obwohl die Punkte in
+       drei Zweigen liegen. Nur deshalb greifen die Geraetevorlagen
+       unveraendert - sie adressieren `cmnd.POWER`, nicht die Kennung. */
+    it('heissen bei "Praefix zuerst" genauso', () => {
+        const { geraetePunkte, istZerlegt } = baue(praefixZuerst);
+        const punkte = geraetePunkte('mqtt-client.0.Haus.tele.Lampe');
+        expect(punkte.map(p => p.rel).sort()).to.deep.equal(
+            ['cmnd.POWER', 'stat.POWER', 'tele.LWT', 'tele.STATE']);
+        expect(istZerlegt('mqtt-client.0.Haus.tele.Lampe')).to.equal(true);
+        /* Die Kennungen kommen wirklich aus den Nachbarzweigen. */
+        expect(punkte.map(p => p.id)).to.include('mqtt-client.0.Haus.cmnd.Lampe.POWER');
+    });
+
+    /* Ein frisch eingebundenes Geraet hat nur `tele`: `stat` entsteht
+       beim ersten Schalten, `cmnd` legt erst die Werkbank an. Dann gibt
+       es keinen Nachbarzweig, der das Praefix belegt - hier entscheidet
+       die Werksliste. */
+    it('werden auch erkannt, wenn erst ein Zweig da ist', () => {
+        const { geraetePunkte, istZerlegt } = baue({
+            'mqtt-client.0.Haus.tele.Lampe.STATE': 'Haus/tele/Lampe/STATE',
+            'mqtt-client.0.Haus.tele.Lampe.LWT': 'Haus/tele/Lampe/LWT',
+        });
+        expect(istZerlegt('mqtt-client.0.Haus.tele.Lampe')).to.equal(true);
+        expect(geraetePunkte('mqtt-client.0.Haus.tele.Lampe').map(p => p.rel).sort())
+            .to.deep.equal(['tele.LWT', 'tele.STATE']);
+    });
+
+    /* Ohne Thema wird nichts zusammengefasst. Sonst saehen zwei
+       Homematic-Geraete mit je einem Kanal `1` genauso aus wie zwei
+       Praefixzweige desselben Geraets - und die Werkbank haette die
+       Punkte zweier verschiedener Geraete in einen Entwurf geworfen. */
+    it('bleiben getrennt, wo kein Thema am Punkt steht', () => {
+        const { geraetePunkte, istZerlegt } = baue({
+            'hm-rpc.0.ABC123.1.STATE': null,
+            'hm-rpc.0.ABC123.1.LEVEL': null,
+            'hm-rpc.0.DEF456.1.STATE': null,
+        });
+        expect(istZerlegt('hm-rpc.0.ABC123.1')).to.equal(false);
+        expect(geraetePunkte('hm-rpc.0.ABC123.1').map(p => p.rel).sort())
+            .to.deep.equal(['LEVEL', 'STATE']);
+    });
+
+    /* Ein festes Praefix vor dem FullTopic und ein verschachtelter
+       Geraetepfad kommen beide vor (sonoff zaehlt sie eigens auf). Das
+       Praefix sitzt dann mehrere Ebenen ueber dem Geraet. */
+    it('finden das Praefix auch mehrere Ebenen ueber dem Geraet', () => {
+        const { geraetePunkte, istZerlegt } = baue({
+            'mqtt.0.tele.haus.og.lampe.STATE': 'tele/haus/og/lampe/STATE',
+            'mqtt.0.stat.haus.og.lampe.POWER': 'stat/haus/og/lampe/POWER',
+        });
+        expect(istZerlegt('mqtt.0.tele.haus.og.lampe')).to.equal(true);
+        expect(geraetePunkte('mqtt.0.tele.haus.og.lampe').map(p => p.rel).sort())
+            .to.deep.equal(['stat.POWER', 'tele.STATE']);
+    });
+
+    /* Am 30.09.2026 am Testsystem gemessen und dabei aufgefallen: das
+       umgestellte Geraet lag noch als Leiche unter seiner alten
+       Themenwurzel. `…SmartHome.tele.Lampe` und `…SmartHome_Test.tele.Lampe`
+       enden gleich, also hielt die Suche die beiden WURZELN fuer
+       Praefixzweige — Ergebnis war der Basispfad `tele/Lampe` und ein
+       Sendepunkt namens `mqtt-client.0.cmnd.tele.Lampe.POWER`. Den
+       Vorrang haben jetzt die Werksnamen. */
+    it('lassen sich von einer Leiche unter der alten Wurzel nicht taeuschen', () => {
+        const { geraetePunkte, istZerlegt, punktKennung } = baue({
+            'mqtt-client.0.SmartHome.tele.Lampe.STATE': 'SmartHome/tele/Lampe/STATE',
+            'mqtt-client.0.SmartHome.tele.Lampe.LWT': 'SmartHome/tele/Lampe/LWT',
+            'mqtt-client.0.SmartHome_Test.tele.Lampe.STATE': 'SmartHome_Test/tele/Lampe/STATE',
+            'mqtt-client.0.SmartHome_Test.tele.Lampe.LWT': 'SmartHome_Test/tele/Lampe/LWT',
+        });
+        const knoten = 'mqtt-client.0.SmartHome_Test.tele.Lampe';
+        expect(istZerlegt(knoten)).to.equal(true);
+        /* Nur die eigene Wurzel, nicht die alte dazu. */
+        expect(geraetePunkte(knoten).map(p => p.rel).sort())
+            .to.deep.equal(['tele.LWT', 'tele.STATE']);
+        expect(punktKennung(knoten, 'cmnd.POWER'))
+            .to.equal('mqtt-client.0.SmartHome_Test.cmnd.Lampe.POWER');
+    });
+
+    /* Tasmota laesst die Praefixe umbenennen (Prefix1-3). Dann hilft die
+       Werksliste nicht, und der Bau des Baums muss entscheiden — aber
+       erst, wenn dieselben Zweige noch ein zweites Geraet tragen. */
+    it('erkennen umbenannte Praefixe, sobald zwei Geraete sie teilen', () => {
+        const zwei = {
+            'mqtt.0.s.lampe.POWER': 's/lampe/POWER',
+            'mqtt.0.t.lampe.STATE': 't/lampe/STATE',
+            'mqtt.0.s.tuer.POWER': 's/tuer/POWER',
+            'mqtt.0.t.tuer.STATE': 't/tuer/STATE',
+        };
+        expect(baue(zwei).istZerlegt('mqtt.0.t.lampe')).to.equal(true);
+        expect(baue(zwei).geraetePunkte('mqtt.0.t.lampe').map(p => p.rel).sort())
+            .to.deep.equal(['s.POWER', 't.STATE']);
+
+        /* Mit nur einem Geraet darunter bleibt es bei der Trennung —
+           zwei Zweige mit einem gemeinsamen Namen koennen ebenso gut
+           zwei Kopien desselben Geraets sein. */
+        const eins = {
+            'mqtt.0.s.lampe.POWER': 's/lampe/POWER',
+            'mqtt.0.t.lampe.STATE': 't/lampe/STATE',
+        };
+        expect(baue(eins).istZerlegt('mqtt.0.t.lampe')).to.equal(false);
+    });
+
+    /* Und der Punkt, an dem es teuer wurde: wohin ein Sendepunkt kommt,
+       den es noch nicht gibt. */
+    it('sagen, wohin ein neuer Sendepunkt gehoert', () => {
+        expect(baue(geraetZuerst).punktKennung('mqtt-client.0.Haus.Lampe', 'cmnd.Dimmer'))
+            .to.equal('mqtt-client.0.Haus.Lampe.cmnd.Dimmer');
+        expect(baue(praefixZuerst).punktKennung('mqtt-client.0.Haus.tele.Lampe', 'cmnd.Dimmer'))
+            .to.equal('mqtt-client.0.Haus.cmnd.Lampe.Dimmer');
+    });
+});

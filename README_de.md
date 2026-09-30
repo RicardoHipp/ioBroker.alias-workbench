@@ -612,6 +612,11 @@ beide Sprachdateien dieselben Schlüssel tragen.
 
 ## Änderungen
 
+### **WORK IN PROGRESS**
+**MQTT**
+* Eine Tasmota mit dem werkseitigen FullTopic `%prefix%/%topic%/` gilt jetzt als ein Gerät. Die MQTT-Adapter bilden das Thema eins zu eins auf den Objektpfad ab, ein solches Gerät liegt deshalb verteilt auf `tele.<Name>`, `stat.<Name>` und `cmnd.<Name>`, ohne einen Knoten, der es zusammenhält — die MQTT-Karte erschien gar nicht, und ein eine Ebene höher angelegter Sendepunkt hätte sich mit dem nächsten Gerät am selben Präfix dieselbe Kennung geteilt. Beide Bauformen ergeben jetzt dieselben relativen Namen, die mitgelieferten Vorlagen greifen also unverändert, und die Karte sagt, aus wie vielen Zweigen sie zusammengefasst hat.
+* Umbenannte Tasmota-Präfixe (`Prefix1-3`) werden ebenfalls erkannt, sobald zwei Geräte sie teilen.
+
 ### 0.10.0 (2026-09-20)
 **Erkennung und Muster**
 * Ein anderes Muster zu wählen setzt die Haken neu und lässt sie stehen, solange das neue Muster noch nicht greift.

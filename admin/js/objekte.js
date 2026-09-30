@@ -41,6 +41,7 @@ export function ladeObjekte(danach) {
       if (--offen === 0) {
         S.keysSorted = Object.keys(S.objects).sort();
         S.kleinIndex = {};
+        S.geraeteIndex = {};
         kaputteAliaseNeu();
         ladeEnums();
         /* Erst die Einstellungen, dann die Vorlagen - sonst holt die
@@ -255,6 +256,7 @@ export function indexNeu() {
   S.objektStand++;
   S.keysSorted = Object.keys(S.objects).sort();
   S.kleinIndex = {};
+  S.geraeteIndex = {};
   kaputteAliaseNeu();
   zeigeObjektzahl();
 }

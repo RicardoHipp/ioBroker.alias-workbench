@@ -592,6 +592,11 @@ imported, and that both language files carry the same keys.
 
 ## Changelog
 
+### **WORK IN PROGRESS**
+**MQTT**
+* A Tasmota using the factory FullTopic `%prefix%/%topic%/` is now treated as one device. The MQTT adapters map the topic straight onto the object path, so such a device is spread over `tele.<name>`, `stat.<name>` and `cmnd.<name>` with no node holding it together — the MQTT card did not appear, and a send point created one level up would have been shared with the next device on the same prefix. Both layouts now yield the same relative names, so the shipped templates apply unchanged, and the card says how many branches were joined.
+* Renamed Tasmota prefixes (`Prefix1-3`) are recognised as well, as long as two devices share them.
+
 ### 0.10.0 (2026-09-20)
 **Detection and patterns**
 * Picking another pattern re-ticks the rows and leaves them alone while the new pattern does not apply yet.
