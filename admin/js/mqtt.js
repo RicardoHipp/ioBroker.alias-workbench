@@ -81,28 +81,36 @@ export function mqttEinstellung(id) {
            roh: cu[k] };
 }
 
+/* ---- mqttGeraet: Anfang (test/vorpruefung.js schneidet hier) ----
+
 /* Ist der Kanal ein MQTT-Geraet, und wie heisst sein Thema? Alles aus
    dem Bestand abgelesen — auch die Reihenfolge von Praefix und Thema,
    denn FullTopic ist frei einstellbar. */
 export function mqttGeraet(kanal) {
   var punkte = geraetePunkte(kanal);
   if (!punkte.length) { return null; }
+  /* Welches erste Stueck taugt als Praefix?
+
+     Bei einem zerlegten Geraet hat `geraetePunkte` das schon am Thema
+     entschieden — dort gilt jedes. Bei der gewohnten Bauform ist der
+     relative Name einfach der Pfad, und ein Geraet unter einem Geraet
+     saehe von hier aus wie ein Praefix aus: `…Wohnkueche.Ambilight`
+     traegt `Ambilight.tele.LWT` des Untergeraets, und ohne diese
+     Unterscheidung kam als Basispfad `SmartHome/Wohnkueche/Ambilight/tele`
+     heraus (gemessen 30.09.2026 am Produktivbestand, 1 von 30 Geraeten).
+     Wer seine Praefixe umbenannt hat, wird ueber die Zusammenfassung
+     erkannt, nicht hier. */
+  var zerlegt = istZerlegt(kanal);
   var fund = null;
   punkte.forEach(function (pt) {
     if (fund) { return; }
     var id = pt.id;
     var e = mqttEinstellung(id);
     if (!e || !e.topic) { return; }
-    /* Der relative Name kommt aus `geraetePunkte` und traegt das Praefix
-       in beiden Bauformen an erster Stelle — bei „Geraet zuerst" steht es
-       so im Pfad, bei „Praefix zuerst" setzt es die Zusammenfassung
-       davor. Die frueher hier stehende Liste `stat|tele|cmnd` faellt
-       damit weg: welches Stueck das Praefix ist, hat `geraetePunkte`
-       schon am Thema abgelesen, und wer seine Praefixe umbenannt hat,
-       wird jetzt ebenfalls erkannt. */
     var rel = pt.rel.split('.');
     if (rel.length < 2) { return; }
     var praefix = rel[0];
+    if (!zerlegt && !/^(stat|tele|cmnd)$/i.test(praefix)) { return; }
     var teile = e.topic.split('/');
     var pi = -1;
     teile.forEach(function (t, i) { if (t.toLowerCase() === praefix.toLowerCase()) { pi = i; } });
@@ -120,6 +128,8 @@ export function mqttGeraet(kanal) {
   });
   return fund;
 }
+
+/* ---- mqttGeraet: Ende ---- */
 
 /* Das Thema fuer einen bestimmten Punkt bauen, mit der abgelesenen
    Reihenfolge. */

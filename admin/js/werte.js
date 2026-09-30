@@ -232,6 +232,15 @@ function zerlegtesGeraet(kanal) {
     var praefix = teile[p];
     var geraetPfad = teile.slice(p + 1);
     var eltern = teile.slice(0, p).join('.');
+    /* Ein Werksname im Geraetepfad heisst: hier ist etwas verrutscht.
+       Wer im Baum den Praefixknoten selbst anklickt
+       (`…Bastelzimmer_Licht.tele`), bekaeme sonst `geraetPfad = ['tele']`
+       und als „Zweige" alle Geraete des Raums — `3D_Drucker`,
+       `Bastelzimmer_Licht`, `Steckdosenleiste_Drucker` sehen von dort aus
+       aus wie Praefixe. Der Entwurf haette dann die Punkte eines halben
+       Zimmers in einem Geraet. Ein Geraet heisst nicht cmnd, stat oder
+       tele. */
+    if (geraetPfad.some(function (x) { return TASMOTA_PRAEFIX.test(x); })) { continue; }
     if (!themaPasst(eigene, praefix, geraetPfad)) { continue; }
     var zweige = zweigePunkte(eltern, geraetPfad);
     var namen = Object.keys(zweige).filter(function (x) {

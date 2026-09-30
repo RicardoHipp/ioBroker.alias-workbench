@@ -1373,6 +1373,23 @@ describe('Die Punkte eines Geraets', () => {
         expect(baue(eins).istZerlegt('mqtt.0.t.lampe')).to.equal(false);
     });
 
+    /* Der Praefixknoten selbst ist anklickbar. Von `…Lampe.tele` aus
+       sehen alle Geraete des Raums wie Praefixzweige aus - ohne Schutz
+       waeren die Punkte eines halben Zimmers in einem Entwurf gelandet.
+       Ein Geraet heisst nicht cmnd, stat oder tele. */
+    it('fassen nichts zusammen, wenn man den Praefixknoten anklickt', () => {
+        const raum = {
+            'mqtt-client.0.Haus.Lampe.tele.STATE': 'Haus/Lampe/tele/STATE',
+            'mqtt-client.0.Haus.Lampe.stat.POWER': 'Haus/Lampe/stat/POWER',
+            'mqtt-client.0.Haus.Drucker.tele.STATE': 'Haus/Drucker/tele/STATE',
+            'mqtt-client.0.Haus.Drucker.stat.POWER': 'Haus/Drucker/stat/POWER',
+        };
+        const { geraetePunkte, istZerlegt } = baue(raum);
+        expect(istZerlegt('mqtt-client.0.Haus.Lampe.tele')).to.equal(false);
+        expect(geraetePunkte('mqtt-client.0.Haus.Lampe.tele').map(p => p.rel))
+            .to.deep.equal(['STATE']);
+    });
+
     /* Und der Punkt, an dem es teuer wurde: wohin ein Sendepunkt kommt,
        den es noch nicht gibt. */
     it('sagen, wohin ein neuer Sendepunkt gehoert', () => {
@@ -1380,5 +1397,84 @@ describe('Die Punkte eines Geraets', () => {
             .to.equal('mqtt-client.0.Haus.Lampe.cmnd.Dimmer');
         expect(baue(praefixZuerst).punktKennung('mqtt-client.0.Haus.tele.Lampe', 'cmnd.Dimmer'))
             .to.equal('mqtt-client.0.Haus.cmnd.Lampe.Dimmer');
+    });
+});
+
+/* Ein Geraet unter einem Geraet sieht von oben aus wie ein Praefix.
+
+   Am 30.09.2026 am Produktivbestand gemessen: unter
+   `…Wohnkueche.Ambilight` lag ein Punkt eines zweiten Geraets,
+   `Ambilight.Ambilight.tele.LWT`. Alphabetisch steht er vor `cmnd.POWER`,
+   und ohne die Werksliste nahm `mqttGeraet` ihn als ersten Fund — heraus
+   kam der Basispfad `SmartHome/Wohnkueche/Ambilight/tele` und ein
+   Sendethema `…/cmnd/tele/POWER`, das kein Geraet abhoert. Ricardo hat
+   das Geraet danach aufgeraeumt; die Form entsteht aber jederzeit neu,
+   sobald eine retained-Nachricht mit falschem Thema hereinkommt, und
+   ioBroker loescht ein Objekt nie von allein.
+
+   Bei einem zerlegten Geraet gilt die Liste nicht: dort hat
+   `geraetePunkte` das Praefix schon am Thema belegt, und nur so werden
+   umbenannte `Prefix1-3` erkannt. */
+describe('Der Basispfad eines MQTT-Geraets', () => {
+    const wQuelle = fs.readFileSync(path.join(jsDir, 'werte.js'), 'utf8');
+    const wCode = wQuelle
+        .slice(wQuelle.indexOf('/* ---- Geraetepunkte: Anfang'), wQuelle.indexOf('/* ---- Geraetepunkte: Ende'))
+        .split('export function').join('function');
+    const mQuelle = fs.readFileSync(path.join(jsDir, 'mqtt.js'), 'utf8');
+    const mAnfang = mQuelle.indexOf('/* ---- mqttGeraet: Anfang');
+    const mEnde = mQuelle.indexOf('/* ---- mqttGeraet: Ende');
+    expect(mAnfang, 'Anfangsmarke in mqtt.js').to.be.above(-1);
+    expect(mEnde, 'Endmarke in mqtt.js').to.be.above(mAnfang);
+    const mCode = mQuelle.slice(mAnfang, mEnde).split('export function').join('function');
+
+    function baueGeraet(paare) {
+        const S = { objects: {}, keysSorted: [], kleinIndex: {}, geraeteIndex: {} };
+        Object.keys(paare).forEach(id => {
+            S.objects[id] = {
+                type: 'state',
+                common: { custom: { 'mqtt-client.0': { topic: paare[id] } } },
+                native: { topic: paare[id] },
+            };
+        });
+        S.keysSorted = Object.keys(S.objects).sort();
+        const mitVorspann = pre => S.keysSorted.filter(k => k.indexOf(pre) === 0);
+        const kindZustaende = kanal => mitVorspann(`${kanal}.`);
+        const ZEILEN_VERGLEICH = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+        const { geraetePunkte, istZerlegt } = new Function(
+            'S', 'mitVorspann', 'kindZustaende', 'ZEILEN_VERGLEICH',
+            `${wCode}; return { geraetePunkte, istZerlegt };`,
+        )(S, mitVorspann, kindZustaende, ZEILEN_VERGLEICH);
+        const mqttEinstellung = id => ({ instanz: 'mqtt-client.0', topic: paare[id], publish: true });
+        return new Function(
+            'geraetePunkte', 'istZerlegt', 'mqttEinstellung',
+            `${mCode}; return mqttGeraet;`,
+        )(geraetePunkte, istZerlegt, mqttEinstellung);
+    }
+
+    it('uebergeht ein Geraet, das unter dem Geraet liegt', () => {
+        const mqttGeraet = baueGeraet({
+            'mqtt-client.0.Haus.Ambilight.tele.STATE': 'Haus/Ambilight/tele/STATE',
+            'mqtt-client.0.Haus.Ambilight.tele.LWT': 'Haus/Ambilight/tele/LWT',
+            'mqtt-client.0.Haus.Ambilight.cmnd.POWER': 'Haus/Ambilight/cmnd/POWER',
+            /* Der Fremdling: alphabetisch vor cmnd, eine Ebene tiefer. */
+            'mqtt-client.0.Haus.Ambilight.Ambilight.tele.LWT': 'Haus/Ambilight/Ambilight/tele/LWT',
+        });
+        const g = mqttGeraet('mqtt-client.0.Haus.Ambilight');
+        expect(g.basis).to.equal('Haus/Ambilight');
+        const t = g.vorlage.slice();
+        t[g.praefixIndex] = 'cmnd';
+        expect(`${t.join('/')}/POWER`).to.equal('Haus/Ambilight/cmnd/POWER');
+    });
+
+    it('nimmt beim zerlegten Geraet trotzdem den richtigen Basispfad', () => {
+        const mqttGeraet = baueGeraet({
+            'mqtt-client.0.Haus.tele.Lampe.STATE': 'Haus/tele/Lampe/STATE',
+            'mqtt-client.0.Haus.stat.Lampe.POWER': 'Haus/stat/Lampe/POWER',
+        });
+        const g = mqttGeraet('mqtt-client.0.Haus.tele.Lampe');
+        expect(g.basis).to.equal('Haus/Lampe');
+        const t = g.vorlage.slice();
+        t[g.praefixIndex] = 'cmnd';
+        expect(`${t.join('/')}/POWER`).to.equal('Haus/cmnd/Lampe/POWER');
     });
 });
