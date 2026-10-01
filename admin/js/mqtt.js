@@ -200,17 +200,54 @@ export function telegesteuert(e) {
   });
 }
 
-/* Wie oft meldet das Geraet von sich aus? Steht in tele/STATE.
+/* Wie oft meldet das Geraet von sich aus?
 
-   Ohne diese Zahl stand im Hinweis "minutenlang" — das unterstellt die
-   Tasmota-Vorgabe von 300 Sekunden. An Ricardos Leiste sind es zehn
-   (gemessen 16.09.2026: tele/STATE im Zehnsekundentakt). Wer eine Zahl
-   nennt, soll die richtige nennen. */
-export function telePeriode(kanal) {
-  var id = hatPunkt(kanal, 'tele.STATE');
+   Gesucht wurde das frueher in `tele/STATE` — da steht es nicht.
+   Nachgemessen am 30.09.2026 ueber den ganzen Bestand: von 36 Geraeten,
+   die `tele/STATE` veroeffentlichen, trug **kein einziges** ein Feld
+   `TelePeriod` darin; in `stat/STATUS11` (StatusSTS) steht es ebenso
+   wenig. Diese Funktion gab also an allen 42 Geraeten `null` zurueck,
+   und der Hinweis zu SetOption59 nannte nie eine Zahl, obwohl genau
+   dafuer gebaut.
+
+   Zu holen ist die Zahl wie SetOption59: eine leere Nutzlast an
+   `cmnd/TelePeriod` ist eine Abfrage, die Antwort steht in
+   `stat/RESULT` als `{"TelePeriod":10}`. Direkt am Geraet gegengeprueft
+   (`cm?cmnd=TelePeriod` → `{"TelePeriod":10}`).
+
+   `merken` wie bei `sofortRueckmeldung`: nur die Abfrage schreibt den
+   Wert fort, der Zeichenpfad liest bloss. */
+export function telePeriode(kanal, merken) {
+  var id = hatPunkt(kanal, 'stat.RESULT');
   var j = id ? jsonVon(id) : null;
-  var n = j && Number(j.TelePeriod);
-  return (n && isFinite(n)) ? n : null;
+  var n = j ? Number(j.TelePeriod) : NaN;
+  if (j && j.TelePeriod !== undefined && isFinite(n) && n > 0) {
+    if (merken) { merkeTakt(kanal, n); }
+    return n;
+  }
+  var g = gemerkterTakt(kanal);
+  return g ? g.wert : null;
+}
+
+/* Gemerkt wird am Abfragepunkt selbst — dort, wo gefragt wurde. Kein
+   eigenes Objekt, und beim Aufraeumen verschwindet es mit. Dieselbe
+   Bauart wie `gemerktesSo59`. */
+export function gemerkterTakt(kanal) {
+  var id = hatPunkt(kanal, 'cmnd.TelePeriod');
+  var n = id && S.objects[id] && S.objects[id].native;
+  if (!n || n.takt === undefined) { return null; }
+  return { wert: n.takt, zeit: n.taktZeit || 0 };
+}
+
+function merkeTakt(kanal, wert) {
+  var id = hatPunkt(kanal, 'cmnd.TelePeriod');
+  if (!id || !S.objects[id]) { return; }
+  var n = S.objects[id].native || (S.objects[id].native = {});
+  if (n.takt === wert) { return; }
+  n.takt = wert;
+  n.taktZeit = neueZeit();
+  var kopie = JSON.parse(JSON.stringify(S.objects[id]));
+  socket.emit('setObject', id, kopie, function () {});
 }
 
 /* Meldet das Geraet Aenderungen sofort? Das haengt an SetOption59.
@@ -496,8 +533,8 @@ export function mqttKarte(host, kanal) {
      Antwort auf den letzten Befehl enthaelt und nicht den ganzen
      Zustand. Steht die Liste vollstaendig da, gibt es den Knopf nicht —
      er koennte nichts hinzufuegen. */
-  var luecke = !l.befehle || l.befehle.woher === 'stat.RESULT';
-  if (luecke) {
+  var fehlt = abfrageLohnt(kanal, l);
+  if (fehlt.length) {
     var kasten = el('div');
     kasten.style.marginTop = '11px';
     kasten.style.paddingTop = '10px';
@@ -508,10 +545,19 @@ export function mqttKarte(host, kanal) {
     if (abfrageLaeuft[kanal]) { bf.disabled = true; }
     bf.addEventListener('click', function () { mqttFragen(kanal, bf); });
     kasten.appendChild(bf);
+    /* Sagen, was die Abfrage holen wuerde — sonst steht da ein Knopf
+       an einem Geraet, dessen Befehlsliste vollstaendig ist, und
+       niemand weiss, wofuer. */
     var warum = el('div', 'hint');
     warum.style.marginTop = '6px';
-    warum.textContent = (l.befehle ? tr('mq.onlyResult') : tr('mq.neverReported')) +
-      '  ' + tr('mq.askHint');
+    var teile = [];
+    if (fehlt.indexOf('befehle') > -1) {
+      teile.push(l.befehle ? tr('mq.onlyResult') : tr('mq.neverReported'));
+    }
+    if (fehlt.indexOf('ip') > -1) { teile.push(tr('mq.missingIp')); }
+    if (fehlt.indexOf('takt') > -1) { teile.push(tr('mq.missingPeriod')); }
+    teile.push(tr('mq.askHint'));
+    warum.textContent = teile.join('  ');
     kasten.appendChild(warum);
     if (mqttAbfrage[kanal] !== undefined) {
       var ah = el('div', 'hint');
@@ -744,7 +790,30 @@ function mqttFragen(kanal, _knopf) {
             var qid = hatPunkt(kanal, q);
             if (qid && S.werte[qid]) { vorTs[q] = S.werte[qid].ts || 0; }
           });
+          /* `Status 5` genauso zweimal wie `Status 11`, und nicht im
+             selben Zug: beim ersten Mal legt der mqtt-client nur das
+             Antwortobjekt `stat/STATUS5` an und wirft den Wert weg.
+
+             Am 01.10.2026 am Broker mitgeschnitten (`mosquitto_sub` auf
+             `SmartHome_Test/#`): `cmnd/Status 5` ging hinaus,
+             `stat/STATUS5` mit der IP kam zurueck — und in ioBroker
+             stand hinterher ein Objekt ohne Wert. Eine zweite Abfrage
+             17 Sekunden spaeter trug ihn ein. Dasselbe erklaert die
+             INFO-Punkte, die am Testsystem seit jeher leer stehen: die
+             kommen nur beim Geraetestart, ein zweites Mal gibt es
+             nicht. */
           socket.emit('setState', id, { val: '5', ack: false }, function () {});
+          setTimeout(function () {
+            socket.emit('setState', id, { val: '5', ack: false }, function () {});
+          }, 2500);
+          /* Den Telemetrietakt gleich mitfragen. Er steht in keiner der
+             Meldungen, die das Geraet von sich aus schickt (gemessen an
+             36 Geraeten: kein `TelePeriod` in `tele/STATE`, keines in
+             `StatusSTS`) — nur eine leere Nutzlast an
+             `cmnd/TelePeriod` holt ihn, Antwort in `stat/RESULT`.
+             Zuletzt gesendet, damit seine Antwort dort auch stehen
+             bleibt und nicht von einer spaeteren ueberschrieben wird. */
+          frageTakt(kanal, g);
           socket.emit('setState', id, { val: '11', ack: false }, function () {
             setTimeout(function () {
               /* Kam eine Antwort? Nur dann hat die Abfrage etwas
@@ -763,6 +832,13 @@ function mqttFragen(kanal, _knopf) {
                 var jetzt = (qid && S.werte[qid]) ? (S.werte[qid].ts || 0) : 0;
                 var frisch = bb && jetzt > (vorTs[bb.woher] || 0);
                 mqttAbfrage[kanal] = (frisch && bb.befehle.length) ? bb.befehle.length : 0;
+                /* Den Takt nur werten, wenn `stat/RESULT` nach dem
+                   Senden frisch geworden ist — sonst stuende ein
+                   liegengebliebenes `{"TelePeriod":…}` von vorgestern
+                   als frische Antwort da (dieselbe Regel wie H15). */
+                var rid3 = hatPunkt(kanal, 'stat.RESULT');
+                var rjetzt = (rid3 && S.werte[rid3]) ? (S.werte[rid3].ts || 0) : 0;
+                if (rjetzt > (vorTs['stat.RESULT'] || 0)) { telePeriode(kanal, true); }
                 zeichneErgebnis();
               });
             }, 5000);
@@ -771,6 +847,62 @@ function mqttFragen(kanal, _knopf) {
       });
     }, 2000);
   });
+}
+
+/* Leere Nutzlast an `cmnd/TelePeriod` — eine Abfrage, sie aendert
+   nichts. Der Punkt wird dabei angelegt, denn an ihm haengt auch der
+   gemerkte Wert. */
+function frageTakt(kanal, g) {
+  var thema = mqttThema(g, 'cmnd', 'TelePeriod');
+  var id = hatPunkt(kanal, 'cmnd.TelePeriod') || punktKennung(kanal, 'cmnd.TelePeriod');
+  var alt = S.objects[id];
+  var obj = {
+    type: 'state',
+    common: { name: 'TelePeriod', type: 'mixed', read: true, write: true, role: 'level',
+              unit: 's', desc: tr('mq.createdBy'), custom: mqttCustom(g, thema) },
+    /* Einen schon gemerkten Takt nicht wegwerfen, nur weil erneut
+       gefragt wird. */
+    native: { topic: thema, takt: alt && alt.native ? alt.native.takt : undefined,
+              taktZeit: alt && alt.native ? alt.native.taktZeit : undefined }
+  };
+  socket.emit('setObject', id, obj, function (err) {
+    if (err) { return; }
+    uebernimmObjekt(id, obj);
+    /* Zweimal, aus demselben Grund wie bei `Status 5`: existiert
+       `stat/RESULT` noch nicht, legt der mqtt-client es beim ersten Mal
+       nur an und verwirft den Wert. An einem eingefahrenen Geraet ist
+       der Punkt laengst da und das zweite Mal ist folgenlos. */
+    setTimeout(function () { socket.emit('setState', id, { val: '', ack: false }, function () {}); }, 300);
+    setTimeout(function () { socket.emit('setState', id, { val: '', ack: false }, function () {}); }, 3300);
+  });
+}
+
+/* Hat das Geraet seine IP schon irgendwo hinterlegt? Dieselben Quellen,
+   die die Tasmota-Vorlagen der Reihe nach durchgehen. */
+export function hatAdresse(kanal) {
+  var s5 = jsonVon(hatPunkt(kanal, 'stat.STATUS5') || '');
+  if (s5 && s5.StatusNET && s5.StatusNET.IPAddress) { return true; }
+  var i2 = jsonVon(hatPunkt(kanal, 'tele.INFO2') || '');
+  if (i2 && (i2.IPAddress || (i2.Info2 && i2.Info2.IPAddress))) { return true; }
+  return false;
+}
+
+/* Was koennte eine Abfrage noch holen?
+
+   Frueher haftete der Knopf allein an der Befehlsliste — stand die
+   vollstaendig da, gab es ihn nicht. Genau dann fehlen aber oft die
+   beiden anderen Angaben, und es gibt keinen Weg mehr, sie zu holen:
+   die IP steht nur in `tele/INFO2` (kommt einmal beim Start) oder in
+   `stat/STATUS5` (nur auf Abruf), der Takt ueberhaupt nur auf Abruf.
+   Gemessen am 30.09.2026 an Ricardos Ambilight: Befehlsliste komplett,
+   kein Knopf, IP seit Monaten unbekannt — und wer sie per HTTP holen
+   wollte, brauchte dafuer die IP. */
+export function abfrageLohnt(kanal, l) {
+  var raus = [];
+  if (!l || !l.befehle || l.befehle.woher === 'stat.RESULT') { raus.push('befehle'); }
+  if (!hatAdresse(kanal)) { raus.push('ip'); }
+  if (telePeriode(kanal) === null) { raus.push('takt'); }
+  return raus;
 }
 
 function mqttCustom(g, thema) {

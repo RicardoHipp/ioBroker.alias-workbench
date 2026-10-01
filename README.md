@@ -594,6 +594,9 @@ imported, and that both language files carry the same keys.
 
 ### **WORK IN PROGRESS**
 **MQTT**
+* "Ask the device" now also fetches the device IP and the telemetry period, and the button appears whenever one of the three is missing — not only when the command list is incomplete. Neither is reported by the device on its own: the IP only in `tele/INFO2` (sent once at boot) or `stat/STATUS5` (on request), the period only on request. Previously a device with a complete command list offered no button at all, so there was no way to get either.
+* The telemetry period was read from `tele/STATE`, where Tasmota does not put it — measured across 36 devices, not one carried the field. It is now asked for and remembered, so the SetOption59 hint names the real number instead of leaving it out.
+* `Status 5` is now requested twice, like `Status 11`: on first contact the MQTT adapter only creates the answer object and discards the value. Captured on the broker — the answer was published, the value never arrived.
 * A Tasmota using the factory FullTopic `%prefix%/%topic%/` is now treated as one device. The MQTT adapters map the topic straight onto the object path, so such a device is spread over `tele.<name>`, `stat.<name>` and `cmnd.<name>` with no node holding it together — the MQTT card did not appear, and a send point created one level up would have been shared with the next device on the same prefix. Both layouts now yield the same relative names, so the shipped templates apply unchanged, and the card says how many branches were joined.
 * Renamed Tasmota prefixes (`Prefix1-3`) are recognised as well, as long as two devices share them.
 
