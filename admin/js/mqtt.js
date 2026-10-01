@@ -192,6 +192,88 @@ export function befehlsWissen(name) {
    der Karte und die Pruefung meldete "alle in Ordnung", als waere etwas
    geprueft worden. Beides ist jetzt an diese Frage gebunden
    (Ricardo, 16.09.2026). */
+/* ---- Erreichbarkeit: Anfang (test/vorpruefung.js schneidet hier) ----
+
+   Meldet sich das Geraet noch? Drei Antworten, nicht zwei.
+
+   `Offline` schreibt der **Broker**, in dem Moment, in dem er die
+   Verbindung verliert (Keepalive abgelaufen, Stecker raus) — das ist
+   eine Tatsache. `Online` schreibt das **Geraet selbst**, einmal beim
+   Verbinden, und die Nachricht bleibt danach als retained beim Broker
+   stehen. Sie kann beliebig alt sein: ein Geraet, das ein Jahr
+   durchlaeuft, wiederholt sie nie.
+
+   Deshalb ist „Online" nur eine Behauptung und wird gegen die
+   Telemetrie geprueft. Gemessen am 30.09.2026 an Ricardos Bestand:
+   `SmartHome.Waschkueche.tasmota` steht auf `Online`, zuletzt geaendert
+   am 29.05.2022, hat kein einziges `tele/STATE` und antwortet auf
+   seiner letzten bekannten IP nicht. Eine zweiwertige Anzeige haette
+   das gruen gemeldet.
+
+   Umgekehrt wird nur als offline gewertet, was ausdruecklich offline
+   sagt. OpenBeken, ESPHome und Zigbee2MQTT benutzen andere Woerter; ein
+   unbekanntes Wort heisst „weiss ich nicht", nicht „weg". Eine falsch
+   gelesene Auskunft ist schlimmer als keine. */
+export function lwtWert(roh) {
+  var w = String(roh === null || roh === undefined ? '' : roh).trim().toLowerCase();
+  if (w === 'offline' || w === 'false' || w === '0' || w === 'disconnected') { return false; }
+  if (w === 'online' || w === 'true' || w === '1' || w === 'connected') { return true; }
+  return null;
+}
+
+/* Woher die Auskunft kommt: das LWT-Thema des Geraets, sonst ein Punkt
+   mit der ioBroker-Rolle `indicator.reachable` — so legt ioBroker.sonoff
+   seinen `alive`-Punkt an, und so halten es Adapter, die sich an die
+   Konvention halten. Nach der Rolle suchen, nicht nach dem Namen: der
+   heisst je Adapter anders. */
+export function erreichbarkeitsQuelle(kanal) {
+  var lwt = null, rolle = null;
+  geraetePunkte(kanal).forEach(function (p) {
+    if (!lwt && /(^|\.)LWT$/i.test(p.rel)) { lwt = p; return; }
+    var o = S.objects[p.id];
+    if (!rolle && o && o.common && o.common.role === 'indicator.reachable') { rolle = p; }
+  });
+  if (lwt) { return { punkt: lwt, art: 'lwt' }; }
+  if (rolle) { return { punkt: rolle, art: 'rolle' }; }
+  return null;
+}
+
+/* Wann kam zuletzt eine Meldung, die das Geraet von sich aus schickt?
+   `STATE` und `SENSOR` — nicht `stat/...`, das kommt nur auf Befehl,
+   und nicht das LWT selbst, das ja gerade geprueft wird. */
+function letzteTelemetrie(kanal) {
+  var neuste = 0;
+  geraetePunkte(kanal).forEach(function (p) {
+    if (!/(^|\.)(STATE|SENSOR)$/i.test(p.rel)) { return; }
+    var w = S.werte[p.id];
+    if (w && w.ts && w.ts > neuste) { neuste = w.ts; }
+  });
+  return neuste;
+}
+
+/* → { stand: 'offline' | 'da' | 'still' | null, id, seit, takt }
+
+   `null` heisst: keine Auskunft, und dann wird auch keine behauptet. */
+export function geraetErreichbar(kanal, jetztMs) {
+  var q = erreichbarkeitsQuelle(kanal);
+  if (!q) { return null; }
+  var w = S.werte[q.punkt.id];
+  if (!w) { return null; }
+  var ja = lwtWert(w.val);
+  if (ja === null) { return null; }
+  var seit = w.lc || w.ts || 0;
+  if (!ja) { return { stand: 'offline', id: q.punkt.id, seit: seit, takt: null }; }
+  /* Ein Adapter, der die Erreichbarkeit selbst pflegt, braucht keine
+     Gegenprobe — er hat sie schon gemacht. */
+  if (q.art === 'rolle') { return { stand: 'da', id: q.punkt.id, seit: seit, takt: null }; }
+  var takt = telePeriode(kanal) || 300;
+  var neuste = letzteTelemetrie(kanal);
+  var jetzt = jetztMs || new Date().getTime();
+  var still = !neuste || (jetzt - neuste) > takt * 3000;
+  return { stand: still ? 'still' : 'da', id: q.punkt.id, seit: still ? (neuste || seit) : seit, takt: takt };
+}
+/* ---- Erreichbarkeit: Ende ---- */
+
 export function telegesteuert(e) {
   if (!e || !e.states) { return []; }
   return e.states.filter(function (x) {
@@ -400,6 +482,15 @@ export function mqttKarte(host, kanal) {
      Ort. */
   var zweigZahl = zerlegtZweige(kanal);
   if (zweigZahl) { ch.appendChild(el('span', 'chip mut', tr('mq.split', zweigZahl))); }
+  /* Erreichbarkeit nur, wenn es etwas zu sagen gibt. Kein gruener Chip
+     fuer den Normalfall: die Kopfzeile traegt schon drei, ein vierter,
+     der fast immer dasteht, macht die anderen unsichtbar. */
+  var err = geraetErreichbar(kanal);
+  if (err && err.stand === 'offline') {
+    ch.appendChild(el('span', 'chip bad', tr('mq.offline')));
+  } else if (err && err.stand === 'still') {
+    ch.appendChild(el('span', 'chip warn', tr('mq.silent')));
+  }
   if (l.fehlen.length) { ch.appendChild(el('span', 'chip warn', tr('mq.missing', l.fehlen.length))); }
   if (l.stumm.length) { ch.appendChild(el('span', 'chip bad', tr('mq.mute', l.stumm.length))); }
   /* Nur warnen, wo es jemanden trifft: Ohne eine Zeile, die aus tele
@@ -557,6 +648,10 @@ export function mqttKarte(host, kanal) {
     if (fehlt.indexOf('ip') > -1) { teile.push(tr('mq.missingIp')); }
     if (fehlt.indexOf('takt') > -1) { teile.push(tr('mq.missingPeriod')); }
     teile.push(tr('mq.askHint'));
+    /* Wer hier klickt, wartet sonst auf eine Antwort, die nicht kommen
+       kann. Gesperrt wird trotzdem nichts — das Geraet kann seit einer
+       Sekunde wieder da sein. */
+    if (err && err.stand !== 'da') { teile.push(tr('mq.askOffline')); }
     warum.textContent = teile.join('  ');
     kasten.appendChild(warum);
     if (mqttAbfrage[kanal] !== undefined) {
@@ -644,6 +739,10 @@ function so59Kasten(b, kanal, l, telZ) {
   /* Woher der Befund stammt, gehoert dazu — sonst weiss niemand, ob er
      von eben ist oder von vorgestern. */
   var alter = (l.sofort === null) ? '' : so59Alter(kanal);
+  /* Dieselbe Warnung wie am Abfrageknopf: auch SetOption59 wartet auf
+     eine Antwort aus `stat/RESULT`. */
+  var errS = geraetErreichbar(kanal);
+  if (errS && errS.stand !== 'da') { hinweis += '  ' + tr('mq.askOffline'); }
   sk.appendChild(el('div', 'hint', hinweis + (alter ? '  ·  ' + alter : '')));
   b.appendChild(sk);
 }

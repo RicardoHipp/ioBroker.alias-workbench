@@ -594,6 +594,7 @@ imported, and that both language files carry the same keys.
 
 ### **WORK IN PROGRESS**
 **MQTT**
+* The card now says whether the device is reporting: a red "offline" chip when the broker published the last will, a yellow "not reporting" chip when the device claims to be online but no telemetry has arrived within three telemetry periods, and nothing at all when there is no information. Only an explicit offline counts as offline — other firmwares use other words, and an unknown one means "do not know", not "gone". A retained "Online" can be years old: a device that runs for a year never repeats it.
 * "Ask the device" now also fetches the device IP and the telemetry period, and the button appears whenever one of the three is missing — not only when the command list is incomplete. Neither is reported by the device on its own: the IP only in `tele/INFO2` (sent once at boot) or `stat/STATUS5` (on request), the period only on request. Previously a device with a complete command list offered no button at all, so there was no way to get either.
 * The telemetry period was read from `tele/STATE`, where Tasmota does not put it — measured across 36 devices, not one carried the field. It is now asked for and remembered, so the SetOption59 hint names the real number instead of leaving it out.
 * `Status 5` is now requested twice, like `Status 11`: on first contact the MQTT adapter only creates the answer object and discards the value. Captured on the broker — the answer was published, the value never arrived.

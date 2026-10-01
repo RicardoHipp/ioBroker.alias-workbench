@@ -1478,3 +1478,113 @@ describe('Der Basispfad eines MQTT-Geraets', () => {
         expect(`${t.join('/')}/POWER`).to.equal('Haus/cmnd/Lampe/POWER');
     });
 });
+
+/* Die Erreichbarkeit ist dreiwertig, nicht zweiwertig.
+
+   `Offline` kommt vom Broker in dem Moment, in dem er das Geraet
+   verliert — eine Tatsache. `Online` schreibt das Geraet selbst, einmal
+   beim Verbinden, und bleibt danach als retained stehen; es kann
+   beliebig alt sein. Gemessen am 30.09.2026 an Ricardos Bestand:
+   `Waschkueche.tasmota` steht auf `Online`, zuletzt geaendert am
+   29.05.2022, ohne ein einziges tele/STATE, und antwortet auf seiner
+   letzten bekannten IP nicht. Eine zweiwertige Anzeige meldet das
+   gruen. */
+describe('Ob ein Geraet sich meldet', () => {
+    const quelle = fs.readFileSync(path.join(jsDir, 'mqtt.js'), 'utf8');
+    const anfang = quelle.indexOf('/* ---- Erreichbarkeit: Anfang');
+    const ende = quelle.indexOf('/* ---- Erreichbarkeit: Ende');
+    expect(anfang, 'Anfangsmarke in mqtt.js').to.be.above(-1);
+    expect(ende, 'Endmarke in mqtt.js').to.be.above(anfang);
+    const code = quelle.slice(anfang, ende).split('export function').join('function');
+
+    const JETZT = 1_700_000_000_000;
+
+    /* punkte: { rel: { val, ts, rolle } } — `val` undefined heisst: Objekt
+       da, aber kein Wert, wie bei einem nie gefuellten Punkt. */
+    function baue(punkte, takt) {
+        const S = { objects: {}, werte: {} };
+        const liste = [];
+        Object.keys(punkte).forEach(rel => {
+            const id = `mqtt-client.0.Haus.Lampe.${rel}`;
+            const p = punkte[rel];
+            S.objects[id] = { type: 'state', common: p.rolle ? { role: p.rolle } : {}, native: {} };
+            if (p.val !== undefined) {
+                S.werte[id] = { val: p.val, ts: p.ts || JETZT, lc: p.ts || JETZT };
+            }
+            liste.push({ id, rel });
+        });
+        const geraetePunkte = () => liste;
+        const telePeriode = () => takt || null;
+        return new Function(
+            'S', 'geraetePunkte', 'telePeriode',
+            `${code}; return { geraetErreichbar, lwtWert, erreichbarkeitsQuelle };`,
+        )(S, geraetePunkte, telePeriode);
+    }
+
+    it('liest nur als offline, was ausdruecklich offline sagt', () => {
+        const { lwtWert } = baue({});
+        expect(lwtWert('Offline')).to.equal(false);
+        expect(lwtWert('offline')).to.equal(false);
+        expect(lwtWert('0')).to.equal(false);
+        expect(lwtWert('Online')).to.equal(true);
+        expect(lwtWert('1')).to.equal(true);
+        /* Ein Schaltzustand ist kein Verbindungszustand. */
+        expect(lwtWert('ON')).to.equal(null);
+        expect(lwtWert('')).to.equal(null);
+        expect(lwtWert(undefined)).to.equal(null);
+    });
+
+    it('meldet offline, wenn der Broker es sagt', () => {
+        const { geraetErreichbar } = baue({
+            'tele.LWT': { val: 'Offline' },
+            'tele.STATE': { val: '{}', ts: JETZT - 1000 },
+        }, 10);
+        expect(geraetErreichbar('x', JETZT).stand).to.equal('offline');
+    });
+
+    it('meldet erreichbar nur mit frischer Telemetrie', () => {
+        const frisch = baue({
+            'tele.LWT': { val: 'Online', ts: JETZT - 40 * 86400000 },
+            'tele.STATE': { val: '{}', ts: JETZT - 5000 },
+        }, 10);
+        /* Das LWT ist 40 Tage alt und trotzdem in Ordnung: es wird nur
+           beim Verbinden geschrieben. Entscheidend ist die Telemetrie. */
+        expect(frisch.geraetErreichbar('x', JETZT).stand).to.equal('da');
+    });
+
+    it('meldet "meldet sich nicht" bei altem Online ohne Telemetrie', () => {
+        /* Der Waschkuechen-Fall. */
+        const { geraetErreichbar } = baue({
+            'tele.LWT': { val: 'Online', ts: JETZT - 1500 * 86400000 },
+        }, null);
+        const e = geraetErreichbar('x', JETZT);
+        expect(e.stand).to.equal('still');
+    });
+
+    it('meldet "meldet sich nicht", wenn die Telemetrie zu alt ist', () => {
+        const { geraetErreichbar } = baue({
+            'tele.LWT': { val: 'Online' },
+            /* Takt 10 s, letzte Meldung vor einer Stunde. */
+            'tele.STATE': { val: '{}', ts: JETZT - 3600000 },
+        }, 10);
+        expect(geraetErreichbar('x', JETZT).stand).to.equal('still');
+    });
+
+    it('behauptet nichts ohne Auskunft', () => {
+        expect(baue({ 'tele.STATE': { val: '{}' } }, 10).geraetErreichbar('x', JETZT)).to.equal(null);
+        /* LWT-Objekt da, aber nie ein Wert angekommen. */
+        expect(baue({ 'tele.LWT': {} }, 10).geraetErreichbar('x', JETZT)).to.equal(null);
+        /* Unbekanntes Wort. */
+        expect(baue({ 'tele.LWT': { val: 'vielleicht' } }, 10).geraetErreichbar('x', JETZT)).to.equal(null);
+    });
+
+    it('nimmt indicator.reachable ohne Gegenprobe', () => {
+        /* So legt ioBroker.sonoff seinen alive-Punkt an - der Adapter
+           pflegt ihn selbst, da braucht es keine Telemetriepruefung. */
+        const { geraetErreichbar, erreichbarkeitsQuelle } = baue({
+            alive: { val: true, ts: JETZT - 99 * 86400000, rolle: 'indicator.reachable' },
+        }, null);
+        expect(erreichbarkeitsQuelle('x').art).to.equal('rolle');
+        expect(geraetErreichbar('x', JETZT).stand).to.equal('da');
+    });
+});
