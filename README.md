@@ -593,6 +593,10 @@ imported, and that both language files carry the same keys.
 ## Changelog
 
 ### **WORK IN PROGRESS**
+**Value list and thermostats**
+* The detail row now has a **value list** field (`common.states`). Until now it could only be inherited from a template — not seen, not created, not changed, although the workbench wrote it all along. Where the source carries one and the draft does not, a button offers to take it over, and "yields" shows the text for the value instead of the bare number. Both deviation comparisons include it; against the existing object in both directions, so a list can no longer disappear silently.
+* **Fixed**: the HmIP radiator and heating-group templates read the valve opening from `1.VALVE_STATE`. On HmIP that is a state code 0-8 (ADAPTION_DONE, TOO_TIGHT, ERROR_POSITION, …), not a percentage — a thermostat reporting code 4 showed "4 %". They now read `1.LEVEL`, which the radiator template already required for detection anyway.
+
 **MQTT**
 * The card now says whether the device is reporting: a red "offline" chip when the broker published the last will, a yellow "not reporting" chip when the device claims to be online but no telemetry has arrived within three telemetry periods, and nothing at all when there is no information. Only an explicit offline counts as offline — other firmwares use other words, and an unknown one means "do not know", not "gone". A retained "Online" can be years old: a device that runs for a year never repeats it.
 * "Ask the device" now also fetches the device IP and the telemetry period, and the button appears whenever one of the three is missing — not only when the command list is incomplete. Neither is reported by the device on its own: the IP only in `tele/INFO2` (sent once at boot) or `stat/STATUS5` (on request), the period only on request. Previously a device with a complete command list offered no button at all, so there was no way to get either.

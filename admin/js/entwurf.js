@@ -9,7 +9,7 @@ import { txt, tr } from './sprache.js';
 import './enums.js';
 import { zusatzName, setzeModus, zeichneBaum, merkeKlappstand } from './baum.js';
 import { kindZustaende, geraetePunkte, aliasQuellen, holeWerte,
-  mitVorspann, schreibQuelle, zeileAusAlias, istTaster as istTasterObjekt
+  mitVorspann, schreibQuelle, zeileAusAlias, statesText, statesGleich, istTaster as istTasterObjekt
 } from './werte.js';
 import { erkenneEntwurf } from './erkennung.js';
 import { vorschlag , pruefeVorlage, zeigeAbozahl, setzeInstanz } from './vorlagen.js';
@@ -1506,6 +1506,14 @@ export function bestandsAbweichung(s, aliasId) {
     var jetzt = s[k] || '';
     if (jetzt !== ist[k]) { raus.push({ feld: k, jetzt: jetzt, bestand: ist[k] }); }
   });
+  /* Die Werteliste getrennt — Objektvergleich, siehe
+     `vorlagenAbweichung`. Hier gilt sie in beide Richtungen: eine am
+     Bestand vorhandene, im Entwurf fehlende Liste ist genauso eine
+     Abweichung wie umgekehrt. Sonst verschwaende sie beim Schreiben
+     stillschweigend — der Fehler aus G10. */
+  if (!statesGleich(s.states, ist.states)) {
+    raus.push({ feld: 'states', jetzt: statesText(s.states), bestand: statesText(ist.states) });
+  }
   return raus;
 }
 
@@ -1523,6 +1531,13 @@ export function vorlagenAbweichung(s) {
     var alt = s[p[0]] || '', neu = v[p[0]] || '';
     if (alt !== neu) { raus.push({ feld: p[0], jetzt: alt, vorlage: neu }); }
   });
+  /* Die Werteliste getrennt: sie ist ein Objekt, `!==` wuerde bei jeder
+     Zeile anschlagen. Und nur, wenn die Vorlage ueberhaupt eine nennt —
+     sagt sie nichts dazu, gilt der Bestand, dieselbe Regel wie in
+     `vorlageAnwenden`. */
+  if (v.states && !statesGleich(s.states, v.states)) {
+    raus.push({ feld: 'states', jetzt: statesText(s.states), vorlage: statesText(v.states) });
+  }
   return raus;
 }
 

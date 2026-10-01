@@ -4,7 +4,8 @@ import { S } from './zustand.js';
 import { socket } from './verbindung.js';
 import { el } from './basis.js';
 import { tr } from './sprache.js';
-import { wertVon, jsonFelder, feldAusFormel, feldFormel, feldWert, jsonVon, zielKann, knopfZeile } from './werte.js';
+import { wertVon, jsonFelder, feldAusFormel, feldFormel, feldWert, jsonVon, zielKann, knopfZeile,
+  statesText, textStates } from './werte.js';
 import { musterVon, erkenneEntwurf, platzFuerRolle, typenFuerRolle, rolleVonPlatz } from './erkennung.js';
 import { musterName } from './musternamen.js';
 import { rollenFeld } from './rollenwahl.js';
@@ -734,6 +735,58 @@ export function detailZeile(e, s, idx) {
 
   zeigeBeide(zeile(tr('detail.display'), af), ['typ', 'unit']);
 
+  /* --- Werteliste (common.states) ---
+
+     Was eine Zahl bedeutet, steht bei vielen Adaptern am Datenpunkt:
+     `VALVE_STATE` eines HmIP-Thermostats traegt 0=STATE_NOT_AVAILABLE
+     bis 8=ERROR_POSITION, ein Fensterkontakt 0=CLOSED/1=OPEN. Der Admin
+     macht daraus eine Auswahlliste, vis und Alexa zeigen den Text, und
+     der type-detector verlangt sie fuer manche Plaetze ueberhaupt
+     (EFFECT etwa).
+
+     Bis zum 01.10.2026 gab es hier kein Feld dafuer: man konnte eine
+     Werteliste weder sehen noch anlegen noch aendern — erben ja, sonst
+     nichts. Am 19.09.2026 loeschte „Werte der Vorlage uebernehmen"
+     deshalb unbemerkt eine vorhandene (G10); eingebaut wurde damals nur
+     die Sperre dagegen. Geschrieben hat `schreiben.js` sie die ganze
+     Zeit (`common.states`), nur sehen konnte sie niemand. */
+  var taW = el('textarea', 'tx');
+  taW.rows = 3;
+  taW.style.width = '100%';
+  taW.style.fontFamily = 'var(--mono)';
+  taW.style.fontSize = '11.5px';
+  taW.value = statesText(s.states);
+  taW.placeholder = tr('detail.statesPlaceholder');
+  taW.addEventListener('click', function (ev) { ev.stopPropagation(); });
+  taW.addEventListener('input', function () {
+    var neueListe = textStates(taW.value);
+    s.states = neueListe;
+    s.geaendert = true;
+    rateBehalten(s);
+  });
+  taW.addEventListener('change', function () { neu(); });
+  var wbox2 = el('div');
+  wbox2.appendChild(taW);
+  var whint = el('div', 'sugg');
+  whint.textContent = tr('detail.statesHint');
+  wbox2.appendChild(whint);
+  /* Die Quelle hat eine, der Entwurf nicht — dann anbieten, sie zu
+     uebernehmen. Genau der Fall, der am Thermostat niemandem auffiel. */
+  var qListe = s.srcR && S.objects[s.srcR] && S.objects[s.srcR].common
+    ? S.objects[s.srcR].common.states : null;
+  if (qListe && Object.keys(qListe).length && !s.states) {
+    var bW = el('button', 'btn schmal', tr('detail.statesFromSource', Object.keys(qListe).length));
+    bW.addEventListener('click', function (ev) {
+      ev.stopPropagation();
+      s.states = JSON.parse(JSON.stringify(qListe));
+      s.geaendert = true;
+      rateBehalten(s);
+      neu();
+    });
+    wbox2.appendChild(bW);
+  }
+  zeigeBeide(zeile(tr('detail.states'), wbox2), ['states']);
+
   /* --- Rohwert und Ergebnis --- */
   var a = wertVon(s);
   /* Ein Knopf ohne Lesequelle hat nichts anzuzeigen - das ist gewollt
@@ -758,6 +811,14 @@ export function detailZeile(e, s, idx) {
       : a.txt);
     if (!a.ok) { rv.style.color = 'var(--bad)'; }
     box.appendChild(rv);
+    /* Der Text zur Zahl, wenn eine Werteliste dasteht. Genau das fehlte
+       am Thermostat: dort stand „4 %", gemeint war ADAPTION_DONE — mit
+       dem Text waere sofort zu sehen gewesen, dass die Quelle nicht der
+       Oeffnungsgrad ist (Ricardo, 01.10.2026). */
+    if (a.ok && s.states && s.states[String(a.val)] !== undefined) {
+      box.appendChild(document.createTextNode('  '));
+      box.appendChild(el('span', 'chip ok', '= ' + s.states[String(a.val)]));
+    }
     box.appendChild(document.createTextNode('  '));
     if (a.ok) {
       var t = typeof a.val;

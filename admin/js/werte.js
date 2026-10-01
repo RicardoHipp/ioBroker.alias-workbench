@@ -104,6 +104,49 @@ export function direkteZustaende(kanal) {
   return kindZustaende(kanal).filter(function (k) { return k.slice(pre.length).indexOf('.') === -1; });
 }
 
+/* ---- Werteliste: Anfang (test/vorpruefung.js schneidet hier) ----
+
+   `common.states` ist eine Karte Wert → Text: `{"0":"CLOSED","1":"OPEN"}`.
+   In der Oberflaeche steht sie als eine Zeile je Eintrag, `wert = text`,
+   weil neun Eintraege (HmIP-Ventilzustand) in kein einzeiliges Feld
+   passen.
+
+   Beim Lesen wird grosszuegig verfahren, beim Schreiben streng: ein `=`
+   trennt, Leerraum aussen faellt weg, leere Zeilen werden uebergangen.
+   Ein Schluessel ohne Text ist keiner — sonst entstuende `{"0":""}`, und
+   der Admin zeigte ein leeres Auswahlfeld. */
+export function statesText(states) {
+  if (!states || typeof states !== 'object') { return ''; }
+  return Object.keys(states).map(function (k) { return k + ' = ' + states[k]; }).join('\n');
+}
+
+export function textStates(text) {
+  var raus = {};
+  var leer = true;
+  String(text === null || text === undefined ? '' : text).split('\n').forEach(function (z) {
+    var i = z.indexOf('=');
+    if (i < 0) { return; }
+    var k = z.slice(0, i).trim();
+    var t = z.slice(i + 1).trim();
+    if (!k || !t) { return; }
+    raus[k] = t;
+    leer = false;
+  });
+  /* Nichts drin heisst: keine Werteliste. `undefined`, nicht `{}` —
+     ein leeres Objekt wuerde geschrieben und ergaebe am Alias eine
+     Auswahlliste ohne Eintraege. */
+  return leer ? undefined : raus;
+}
+
+/* Zwei Wertelisten vergleichen — fuer die Abweichungsanzeige. */
+export function statesGleich(a, b) {
+  var ka = a ? Object.keys(a) : [];
+  var kb = b ? Object.keys(b) : [];
+  if (ka.length !== kb.length) { return false; }
+  return ka.every(function (k) { return String(a[k]) === String(b ? b[k] : undefined); });
+}
+/* ---- Werteliste: Ende ---- */
+
 /* ---- Geraetepunkte: Anfang (test/vorpruefung.js schneidet hier) ----
 
 /* ================== Ein Geraet, auch wenn es in Zweigen liegt ==================

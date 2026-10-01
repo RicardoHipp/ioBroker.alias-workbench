@@ -1,6 +1,6 @@
 {
   "id": "hm-heizgruppe",
-  "version": 3,
+  "version": 4,
   "rang": 46,
   "name": {
     "de": "HmIP Heizgruppe",
@@ -45,8 +45,8 @@
       "rolle": "value.valve",
       "typ": "number",
       "einheit": "%",
-      "lesen": "1.VALVE_STATE",
-      "hinweis": "Die Ventilstellung der Heizkoerper in dieser Gruppe."
+      "lesen": "1.LEVEL",
+      "hinweis": "Die Ventilstellung der Heizkoerper in dieser Gruppe, 0 bis 100 Prozent. NICHT 1.VALVE_STATE — siehe hm-heizkoerper: das ist bei HmIP ein Zustandscode 0-8, kein Oeffnungsgrad. An allen sieben Gruppen von Ricardo nachgemessen (01.10.2026): 1.LEVEL traegt max 100 und die Einheit Prozent, 1.VALVE_STATE ist ENUM."
     },
     {
       "name": "MODE",

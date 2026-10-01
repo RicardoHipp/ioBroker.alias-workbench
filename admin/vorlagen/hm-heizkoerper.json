@@ -1,6 +1,6 @@
 {
   "id": "hm-heizkoerper",
-  "version": 3,
+  "version": 4,
   "rang": 42,
   "name": {
     "de": "HmIP Heizkörperthermostat",
@@ -41,8 +41,8 @@
       "rolle": "value.valve",
       "typ": "number",
       "einheit": "%",
-      "lesen": "1.VALVE_STATE",
-      "hinweis": "Wie weit das Ventil offen steht. VALVE_STATE ist der gemeldete Istwert; 1.LEVEL daneben laesst sich auch schreiben, gehoert aber der Regelung und nicht dem Nutzer."
+      "lesen": "1.LEVEL",
+      "hinweis": "Wie weit das Ventil offen steht, 0 bis 100 Prozent. NICHT 1.VALVE_STATE: das heisst bei HmIP zwar so, ist aber ein Zustandscode 0-8 (STATE_NOT_AVAILABLE, ADAPTION_DONE, TOO_TIGHT, ERROR_POSITION, …) und hat mit dem Oeffnungsgrad nichts zu tun. Bis zum 01.10.2026 stand hier VALVE_STATE, und der Platz zeigte deshalb eine Codenummer mit einem Prozentzeichen dahinter: am HK_Badezimmer eine 4, also ADAPTION_DONE, angezeigt als 4 Prozent. Aufgefallen ist es nie, weil die Zahl plausibel aussieht. Die Erkennung dieser Vorlage verlangt 1.LEVEL ohnehin schon."
     },
     {
       "name": "MODE",

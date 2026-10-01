@@ -935,7 +935,13 @@ describe('Werte der Vorlage uebernehmen', () => {
     expect(anfang, 'vorlagenAbweichung in entwurf.js').to.be.above(-1);
     expect(start2, 'vorlageAnwenden in entwurf.js').to.be.above(anfang);
     const code = quelle.slice(anfang, ende).split('export function').join('function');
-    const { vorlageAnwenden } = new Function(code + '; return { vorlageAnwenden };')();
+    /* Die Werteliste-Helfer stehen in werte.js und werden hier
+       importiert - fuer den Ausschnitt muessen sie mitkommen. */
+    const wQuelle = fs.readFileSync(path.join(jsDir, 'werte.js'), 'utf8');
+    const wCode = wQuelle
+        .slice(wQuelle.indexOf('/* ---- Werteliste: Anfang'), wQuelle.indexOf('/* ---- Werteliste: Ende'))
+        .split('export function').join('function');
+    const { vorlageAnwenden } = new Function(`${wCode}\n${code}; return { vorlageAnwenden };`)();
 
     const zeile = (states, vorlagenStates) => ({
         n: 'DIRECTION', role: 'indicator.direction', typ: 'number', unit: '',
@@ -1586,5 +1592,62 @@ describe('Ob ein Geraet sich meldet', () => {
         }, null);
         expect(erreichbarkeitsQuelle('x').art).to.equal('rolle');
         expect(geraetErreichbar('x', JETZT).stand).to.equal('da');
+    });
+});
+
+/* Die Werteliste (common.states) uebersetzt Zahlen in Text:
+   `{"0":"CLOSED","1":"OPEN"}`. In der Oberflaeche steht sie als eine
+   Zeile je Eintrag, weil neun Eintraege - der Ventilzustand eines
+   HmIP-Thermostats - in kein einzeiliges Feld passen. */
+describe('Die Werteliste', () => {
+    const quelle = fs.readFileSync(path.join(jsDir, 'werte.js'), 'utf8');
+    const anfang = quelle.indexOf('/* ---- Werteliste: Anfang');
+    const ende = quelle.indexOf('/* ---- Werteliste: Ende');
+    expect(anfang, 'Anfangsmarke in werte.js').to.be.above(-1);
+    expect(ende, 'Endmarke in werte.js').to.be.above(anfang);
+    const { statesText, textStates, statesGleich } = new Function(
+        `${quelle.slice(anfang, ende).split('export function').join('function')}
+         ; return { statesText, textStates, statesGleich };`,
+    )();
+
+    const ventil = { 0: 'STATE_NOT_AVAILABLE', 4: 'ADAPTION_DONE', 5: 'TOO_TIGHT' };
+
+    it('schreibt je Eintrag eine Zeile', () => {
+        expect(statesText(ventil)).to.equal(
+            '0 = STATE_NOT_AVAILABLE\n4 = ADAPTION_DONE\n5 = TOO_TIGHT');
+        expect(statesText(undefined)).to.equal('');
+        expect(statesText(null)).to.equal('');
+    });
+
+    it('liest sie wieder ein, auch mit krummem Leerraum', () => {
+        expect(textStates('0 = STATE_NOT_AVAILABLE\n4=ADAPTION_DONE\n   5   =   TOO_TIGHT  '))
+            .to.deep.equal(ventil);
+    });
+
+    it('macht aus nichts keine leere Liste', () => {
+        /* `{}` wuerde geschrieben und ergaebe am Alias ein leeres
+           Auswahlfeld - deshalb undefined. */
+        expect(textStates('')).to.equal(undefined);
+        expect(textStates('\n\n   \n')).to.equal(undefined);
+        /* Eine Zeile ohne `=` ist kein Eintrag, ein Schluessel ohne Text
+           auch nicht. */
+        expect(textStates('nur Text')).to.equal(undefined);
+        expect(textStates('0 = ')).to.equal(undefined);
+    });
+
+    it('ueberlebt den Weg hin und zurueck', () => {
+        expect(textStates(statesText(ventil))).to.deep.equal(ventil);
+        /* Auch mit Textschluesseln, wie homeconnect sie vergibt. */
+        const hc = { 'BSH.Common.EnumType.EventPresentState.Present': 'Present' };
+        expect(textStates(statesText(hc))).to.deep.equal(hc);
+    });
+
+    it('vergleicht zwei Listen', () => {
+        expect(statesGleich(ventil, { 0: 'STATE_NOT_AVAILABLE', 4: 'ADAPTION_DONE', 5: 'TOO_TIGHT' })).to.equal(true);
+        expect(statesGleich(ventil, { 0: 'STATE_NOT_AVAILABLE', 4: 'ADAPTION_DONE' })).to.equal(false);
+        expect(statesGleich(ventil, { 0: 'STATE_NOT_AVAILABLE', 4: 'anders', 5: 'TOO_TIGHT' })).to.equal(false);
+        expect(statesGleich(undefined, undefined)).to.equal(true);
+        expect(statesGleich(ventil, undefined)).to.equal(false);
+        expect(statesGleich(undefined, ventil)).to.equal(false);
     });
 });

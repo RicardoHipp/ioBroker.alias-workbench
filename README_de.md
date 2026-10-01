@@ -613,6 +613,10 @@ beide Sprachdateien dieselben Schlüssel tragen.
 ## Änderungen
 
 ### **WORK IN PROGRESS**
+**Werteliste und Thermostate**
+* Die Detailzeile hat jetzt ein Feld **Werteliste** (`common.states`). Bisher ließ sie sich nur von einer Vorlage erben — nicht ansehen, nicht anlegen, nicht ändern, obwohl die Werkbank sie die ganze Zeit mitgeschrieben hat. Hat die Quelle eine und der Entwurf nicht, bietet ein Knopf die Übernahme an, und bei „ergibt“ steht der Text zum Wert statt der nackten Zahl. Beide Abweichungsvergleiche nehmen sie mit; gegen den Bestand in beide Richtungen, damit eine vorhandene Liste nicht mehr stillschweigend verschwinden kann.
+* **Behoben**: Die HmIP-Vorlagen für Heizkörperthermostat und Heizgruppe lasen die Ventilstellung aus `1.VALVE_STATE`. Das ist bei HmIP ein Zustandscode 0–8 (ADAPTION_DONE, TOO_TIGHT, ERROR_POSITION, …) und kein Prozentwert — ein Thermostat mit Code 4 zeigte „4 %“. Sie lesen jetzt `1.LEVEL`, das die Heizkörpervorlage zur Erkennung ohnehin schon verlangt.
+
 **MQTT**
 * Die Karte sagt jetzt, ob sich das Gerät meldet: ein roter Chip „offline", wenn der Broker das Testament veröffentlicht hat, ein gelber „meldet sich nicht", wenn das Gerät sich als online ausgibt, aber seit drei Telemetrietakten nichts geschickt hat, und gar nichts, wenn es keine Auskunft gibt. Als offline gilt nur, was ausdrücklich offline sagt — andere Firmwares benutzen andere Wörter, und ein unbekanntes heißt „weiß ich nicht", nicht „weg". Ein retained gemerktes „Online" kann Jahre alt sein: ein Gerät, das ein Jahr durchläuft, wiederholt es nie.
 * „Beim Gerät nachfragen" holt jetzt auch die IP-Adresse und den Telemetrietakt, und der Knopf erscheint, sobald eines der drei fehlt — nicht mehr nur bei unvollständiger Befehlsliste. Von sich aus nennt das Gerät beides nirgends: die IP nur in `tele/INFO2` (kommt einmal beim Start) oder in `stat/STATUS5` (nur auf Abruf), den Takt überhaupt nur auf Abruf. Bisher gab es an einem Gerät mit vollständiger Befehlsliste gar keinen Knopf und damit keinen Weg, an beides zu kommen.
