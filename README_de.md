@@ -614,6 +614,7 @@ beide Sprachdateien dieselben Schlüssel tragen.
 
 ### **WORK IN PROGRESS**
 **Werteliste und Thermostate**
+* Das Feld **Gerätetyp** im Vorlagenblatt ist jetzt ein Suchfeld mit eigener Liste statt eines Klappmenüs mit 52 Einträgen. Tippen sucht über beide Namen — `socket` und „Steckdose“ finden dasselbe —, so wie es die Musterwahl beim Alias seit jeher kann. Ein Klappmenü lässt sich nicht durchsuchen, und weil die Beschriftung mit dem deutschen Namen beginnt, fand die Tipp-Navigation des Browsers den Rohnamen nie.
 * Die Detailzeile hat jetzt ein Feld **Werteliste** (`common.states`). Bisher ließ sie sich nur von einer Vorlage erben — nicht ansehen, nicht anlegen, nicht ändern, obwohl die Werkbank sie die ganze Zeit mitgeschrieben hat. Hat die Quelle eine und der Entwurf nicht, bietet ein Knopf die Übernahme an, und bei „ergibt“ steht der Text zum Wert statt der nackten Zahl. Beide Abweichungsvergleiche nehmen sie mit; gegen den Bestand in beide Richtungen, damit eine vorhandene Liste nicht mehr stillschweigend verschwinden kann.
 * **Behoben**: Die HmIP-Vorlagen für Heizkörperthermostat und Heizgruppe lasen die Ventilstellung aus `1.VALVE_STATE`. Das ist bei HmIP ein Zustandscode 0–8 (ADAPTION_DONE, TOO_TIGHT, ERROR_POSITION, …) und kein Prozentwert — ein Thermostat mit Code 4 zeigte „4 %“. Sie lesen jetzt `1.LEVEL`, das die Heizkörpervorlage zur Erkennung ohnehin schon verlangt.
 

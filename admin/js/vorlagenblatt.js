@@ -145,6 +145,124 @@ function vAendern(feld, wert) {
   zeichneErgebnis();
 }
 
+/* Das Feld „Geraetetyp" — ein Suchfeld mit eigener Liste, nicht mehr ein
+   <select> mit 52 Eintraegen (C33).
+
+   Ein <select> laesst sich nicht durchsuchen. Die Beschriftung beginnt
+   mit dem deutschen Namen („Steckdose · socket"), also fand die
+   Tipp-Navigation des Browsers den Rohnamen nicht: wer `socket` tippte,
+   landete nirgends. Die Musterwahl beim Alias kann beides seit jeher;
+   hier nicht, und das war der Unterschied, ueber den Ricardo am
+   20.09.2026 gestolpert ist.
+
+   Dieselbe Bauart wie `musterwahl.js`: Eingabefeld plus eigene Liste,
+   kein <datalist> — dessen Fenster malt das Betriebssystem, und in
+   eingebetteten Ansichten landet es neben dem Fenster. Ohne Bewertung
+   allerdings: hier wird eine Vorlage bearbeitet, es gibt kein Geraet,
+   gegen das sich etwas bewerten liesse. */
+function geraetetypFeld(v, eigen) {
+  var alle = (D ? Object.keys(D.patterns).sort() : []).map(function (m) {
+    /* Der Wert ist der TYP, nicht der Musterschluessel — und beschriftet
+       wird ebenfalls nach dem Typ. Fuer die drei Muster, die anders
+       heissen als ihr Typ (`blinds`, `mediaPlayer`, `levelSlider`),
+       kennt der Admin zum Schluessel keinen Beinamen, und im Feld stand
+       am Rollladen deshalb „blinds" statt „Jalousien · blind" (I37,
+       15.09.2026). */
+    return D.patterns[m].type || m;
+  }).filter(function (t, n, arr) { return arr.indexOf(t) === n; });
+
+  var wrap = el('div', 'feldwrap');
+  var feldEin = el('input', 'tx musterwahl');
+  feldEin.type = 'text';
+  feldEin.setAttribute('autocomplete', 'off');
+  feldEin.disabled = !eigen;
+  feldEin.value = v.geraetetyp ? musterZeile(v.geraetetyp) : '';
+  feldEin.placeholder = tr('tpls.noType');
+  wrap.appendChild(feldEin);
+  var liste = el('div', 'vorschlaege musterliste');
+  liste.hidden = true;
+  wrap.appendChild(liste);
+
+  var markiert = -1;
+  var treffer = [];
+
+  var setzen = function (typ) {
+    liste.hidden = true;
+    feldEin.value = typ ? musterZeile(typ) : '';
+    vAendern(function (x, w) { x.geraetetyp = w || undefined; }, typ);
+  };
+
+  var malen = function () {
+    /* Beim Aufklappen steht der gewaehlte Typ im Feld — das ist kein
+       Suchtext, sonst saehe man nur den einen Eintrag und muesste erst
+       loeschen, um wechseln zu koennen. */
+    var roh = String(feldEin.value || '').trim();
+    var such = (roh && roh !== musterZeile(v.geraetetyp)) ? roh.toLowerCase() : '';
+    treffer = such
+      ? alle.filter(function (t) {
+        /* Ueber Rohnamen UND Beinamen: „steckdose" findet socket,
+           „socket" auch. */
+        return t.toLowerCase().indexOf(such) > -1
+          || String(musterName(t) || '').toLowerCase().indexOf(such) > -1;
+      })
+      : alle.slice();
+
+    liste.textContent = '';
+    /* „kein Typ" gehoert dazu — eine Vorlage ohne Geraetetyp ist
+       erlaubt, und ohne diesen Eintrag kaeme man nicht mehr zurueck. */
+    if (!such) {
+      var z0 = el('div', 'vz' + (v.geraetetyp ? '' : ' gewaehlt'));
+      z0.appendChild(el('span', null, tr('tpls.noType')));
+      z0.addEventListener('mousedown', function (ev) { ev.preventDefault(); setzen(''); });
+      liste.appendChild(z0);
+    }
+    if (!treffer.length) {
+      var leer = el('div', 'vz zurueck');
+      leer.appendChild(el('span', null, tr('pattern.noMatch', feldEin.value)));
+      liste.appendChild(leer);
+    }
+    treffer.forEach(function (t, n) {
+      var z = el('div', 'vz' + (n === markiert ? ' an' : '') + (t === v.geraetetyp ? ' gewaehlt' : ''));
+      z.appendChild(el('span', null, musterZeile(t)));
+      /* mousedown statt click: sonst greift der Fokusverlust zuerst und
+         die Liste ist weg, bevor der Klick ankommt. */
+      z.addEventListener('mousedown', function (ev) { ev.preventDefault(); setzen(t); });
+      liste.appendChild(z);
+    });
+    liste.hidden = false;
+  };
+
+  feldEin.addEventListener('focus', function () { markiert = -1; malen(); });
+  feldEin.addEventListener('input', function () { markiert = -1; malen(); });
+  feldEin.addEventListener('blur', function () {
+    /* Was im Feld steht, ist nur Suchtext — gespeichert wird beim
+       Klicken. Beim Verlassen also den gewaehlten Typ zurueckschreiben,
+       sonst bliebe ein halbgetippter Rest stehen. */
+    setTimeout(function () {
+      liste.hidden = true;
+      feldEin.value = v.geraetetyp ? musterZeile(v.geraetetyp) : '';
+    }, 150);
+  });
+  feldEin.addEventListener('keydown', function (ev) {
+    if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') {
+      ev.preventDefault();
+      if (liste.hidden) { malen(); return; }
+      markiert += (ev.key === 'ArrowDown' ? 1 : -1);
+      if (markiert < 0) { markiert = treffer.length - 1; }
+      if (markiert >= treffer.length) { markiert = 0; }
+      malen();
+    } else if (ev.key === 'Enter') {
+      ev.preventDefault();
+      if (treffer[markiert]) { setzen(treffer[markiert]); }
+      else if (treffer.length === 1) { setzen(treffer[0]); }
+    } else if (ev.key === 'Escape') {
+      liste.hidden = true;
+      feldEin.value = v.geraetetyp ? musterZeile(v.geraetetyp) : '';
+    }
+  });
+  return wrap;
+}
+
 export function zeichneVorlagenBlatt(host) {
   /* Die Knoepfe unten gehoeren zum Geraet, nicht zur Vorlage. In dieser
      Sicht waeren sie sonst noch auf das Geraet scharf, das vor dem
@@ -294,31 +412,7 @@ export function zeichneVorlagenBlatt(host) {
 
   var lt = el('label', 'feld');
   lt.appendChild(el('span', 'feldlabel', tr('tpls.deviceType')));
-  var st = el('select', 'tx');
-  st.disabled = !eigen;
-  st.appendChild(opt('', tr('tpls.noType')));
-  /* Wie im Speichern-Dialog: der Wert ist der Typ, nicht der
-     Musterschluessel. musterwahl.js loest es seit laengerem so. */
-  (D ? Object.keys(D.patterns).sort() : []).forEach(function (m) {
-    var typ = D.patterns[m].type || m;
-    /* Beschriftet wird nach dem TYP, nicht nach dem Musterschluessel.
-
-       Der Wert stand seit dem 11.09.2026 richtig da, die Beschriftung
-       nicht: `musterZeile(m)` schlug den Schluessel nach, und fuer die
-       drei Muster, die anders heissen als ihr Typ (`blinds`,
-       `mediaPlayer`, `levelSlider`), kennt der Admin keinen Beinamen.
-       Im Feld stand am Rollladen deshalb „blinds" statt „Jalousien ·
-       blind" - der Musterschluessel, den der Nutzer nirgends sonst
-       sieht. Die Musterwahl (musterwahl.js) geht seit jeher ueber den
-       Typ. Gefunden produktiv am 15.09.2026 (I37). */
-    var o = opt(typ, musterZeile(typ));
-    if (typ === v.geraetetyp) { o.selected = true; }
-    st.appendChild(o);
-  });
-  st.addEventListener('change', function () {
-    vAendern(function (x, w) { x.geraetetyp = w || undefined; }, st.value);
-  });
-  lt.appendChild(st);
+  lt.appendChild(geraetetypFeld(v, eigen));
   kb.appendChild(lt);
 
   /* Wozu das Geraet zaehlt.
