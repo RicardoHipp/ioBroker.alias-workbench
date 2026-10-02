@@ -553,7 +553,7 @@ export function zeichneVorlagenBlatt(host) {
        und dort „Vorgabe / muss da sein", fuer genau dieselbe Sache. */
     var mm = el('span', 'rx');
     if (!z.vorgabeAus) { mm.appendChild(el('span', 'chip mut', tr('tpls.colDefault'))); }
-    if (istPflichtpunkt(v, z)) { mm.appendChild(el('span', 'chip ok', tr('tpls.colRequired'))); }
+    if (istPflichtpunkt(z)) { mm.appendChild(el('span', 'chip ok', tr('tpls.colRequired'))); }
     r.appendChild(mm);
     r.appendChild(el('span', 'ca2', auf ? '\u25be' : '\u25b8'));
     r.addEventListener('click', function () {
@@ -805,9 +805,28 @@ function anzeigeBlock(hole, setze, platzhalter) {
 
 /* Zaehlt dieser Datenpunkt fuer die Erkennung? Nicht aus optional
    abgelesen, sondern aus der Pflichtliste — die ist die Wahrheit. */
-function istPflichtpunkt(v, z) {
-  var erf = (v.erkennung || {}).erforderlich || [];
-  return !!z.lesen && erf.indexOf(z.lesen) > -1;
+/* Ist diese Zeile Pflicht? Das steht an der Zeile selbst (`optional`),
+   nicht in der Erkennungsliste.
+
+   Bis zum 02.10.2026 las diese Funktion `erkennung.erforderlich` — also
+   die Frage „muss das Geraet diesen Punkt haben, damit die Vorlage
+   ueberhaupt greift". Das ist eine andere Frage als „darf diese Zeile
+   beim Anwenden fehlen", und beide Antworten gehen in den Vorlagen
+   weit auseinander: an der HmIP-Heizgruppe sind SET, ACTUAL, HUMIDITY
+   und VALVE Pflicht, in der Erkennungsliste steht aber nur
+   `1.SET_POINT_TEMPERATURE` — also stand eine Marke statt vier
+   (Ricardo, 02.10.2026). Nachgezaehlt wichen **16 von 17** Vorlagen ab.
+
+   Teils ist das Absicht: `tasmota-lampe` schreibt eigens, `stat.POWER`
+   stehe bewusst nicht in der Erkennungsliste, weil der mqtt-Adapter den
+   Punkt erst beim ersten Schalten anlegt — gelesen wird ersatzweise aus
+   `tele.STATE`. Pflicht ist die Zeile trotzdem, und ueber den Hauptweg
+   war das nie zu sehen.
+
+   Die Erkennungsbedingungen stehen eigens im Kasten „Erkennung" darueber,
+   samt Zaehler; sie brauchen diese Marke nicht. */
+function istPflichtpunkt(z) {
+  return !z.optional;
 }
 
 /* lesenSonst darf ein Punktname, ein Objekt oder eine Liste sein — alle
@@ -1003,27 +1022,20 @@ function vZeilenDetail(z, nr, eigen) {
   zeile2.appendChild(haken(tr('tpls.colDefault'), !z.vorgabeAus,
     function (zz, an) { if (an) { delete zz.vorgabeAus; } else { zz.vorgabeAus = true; } }));
 
-  /* Ein Pflichtpunkt ist zweierlei in einem: er darf beim Anwenden
-     nicht fehlen (optional) und er entscheidet ueber die Erkennung
-     (erforderlich). Der Haken haelt beides zusammen — sonst koennten
-     Liste und Zeile Verschiedenes behaupten. */
-  zeile2.appendChild(haken(tr('tpls.colRequired'), istPflichtpunkt(v, z), function (zz, an) {
-    var w = vArbeitsstand();
-    w.erkennung = w.erkennung || {};
-    var liste = (w.erkennung.erforderlich || []).slice();
-    var pfad = zz.lesen;
-    var i = liste.indexOf(pfad);
-    if (an) {
-      delete zz.optional;
-      if (pfad && i === -1) { liste.push(pfad); }
-      if (zz.schreiben && liste.indexOf(zz.schreiben) === -1) { liste.push(zz.schreiben); }
-    } else {
-      zz.optional = true;
-      if (i > -1) { liste.splice(i, 1); }
-      var j = zz.schreiben ? liste.indexOf(zz.schreiben) : -1;
-      if (j > -1) { liste.splice(j, 1); }
-    }
-    w.erkennung.erforderlich = liste;
+  /* Der Haken setzt nur noch `optional` an der Zeile — also genau das,
+     was er behauptet.
+
+     Vorher schrieb er zusaetzlich in `erkennung.erforderlich`, „damit
+     Liste und Zeile nicht Verschiedenes behaupten". Das sind aber zwei
+     verschiedene Fragen: ob ein Geraet einen Punkt haben muss, damit die
+     Vorlage ueberhaupt greift, und ob eine Zeile beim Anwenden fehlen
+     darf. Wer hier hakte, verengte unbemerkt die Erkennung — bei
+     `tasmota-lampe` haette das Anhaken von SET die Vorlage an
+     `stat.POWER` gebunden, das es an einem frisch eingebundenen Geraet
+     noch gar nicht gibt. Die Erkennungsliste wird im Kasten „Erkennung"
+     darueber gepflegt, mit eigenem Feld. */
+  zeile2.appendChild(haken(tr('tpls.colRequired'), istPflichtpunkt(z), function (zz, an) {
+    if (an) { delete zz.optional; } else { zz.optional = true; }
   }));
 
   zeile2.appendChild(haken(tr('tpls.absolute'), !!z.absolut,
