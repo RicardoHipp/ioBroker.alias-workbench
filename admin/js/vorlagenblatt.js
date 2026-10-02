@@ -512,14 +512,22 @@ export function zeichneVorlagenBlatt(host) {
   var zh = el('div', 'ch');
   zh.appendChild(el('span', 'typ', tr('tpls.states')));
   zh.appendChild(el('span', 'chip mut', tr('tpls.statesCount', (v.zustaende || []).length)));
-  if (eigen) {
-    zh.appendChild(el('span', 'luecke'));
-    zh.appendChild(el('span', 'hint', tr('tv.clickRow')));
-  }
+  /* Aufklappen geht bei allen Vorlagen, auch bei den mitgelieferten —
+     dort nur zum Ansehen.
+
+     Vorher war die Zeilenansicht an `eigen` gebunden: wer sehen wollte,
+     welche Ersatzquellen oder Formeln eine mitgelieferte Vorlage fuehrt,
+     musste erst „Eigene Kopie zum Bearbeiten" druecken und hatte danach
+     eine Kopie im Bestand, die er gar nicht wollte. Aufgefallen beim
+     Beheben von H9: der vierte Leseweg fuer die IP liess sich in der
+     Vorlagendatei ergaenzen, im Reiter aber nur ueber diesen Umweg
+     nachsehen (Ricardo, 20.09.2026). */
+  zh.appendChild(el('span', 'luecke'));
+  zh.appendChild(el('span', 'hint', eigen ? tr('tv.clickRow') : tr('tv.clickRowRead')));
   zk.appendChild(zh);
   (v.zustaende || []).forEach(function (z, nr) {
     var auf = (vOffeneZeile === nr);
-    var r = el('div', 'slot' + (eigen ? ' vklick' : '') + (auf ? ' offen' : ''));
+    var r = el('div', 'slot vklick' + (auf ? ' offen' : ''));
     r.style.gridTemplateColumns = '1fr 1.1fr 1.2fr 90px 15px';
     r.appendChild(el('span', 'sn', z.name));
     r.appendChild(el('span', 'rx', z.rolle || '\u2014'));
@@ -530,6 +538,15 @@ export function zeichneVorlagenBlatt(host) {
        Statusmarke - als Chip las er sich wie \u201eVorgabe" daneben. */
     if (z.schreiben) { pw.appendChild(el('span', 'leise', ' \u2192 ' + z.schreiben)); }
     if (z.absolut) { pw.appendChild(el('span', 'chip warn', tr('tpls.absolute'))); }
+    /* Dass eine Zeile Ersatzwege hat, stand hier nicht \u2014 man sah nur den
+       ersten (\u201eIP \u00b7 text \u00b7 tele.STATE \u00b7 IPAddress") und haette nie
+       vermutet, dass drei weitere dahinterliegen. Die Zahl ist die
+       Auskunft, die den Unterschied macht; welche es sind, steht
+       aufgeklappt (Ricardo, 20.09.2026). */
+    var ersatzZahl = ersatzListe(z).length;
+    if (ersatzZahl) {
+      pw.appendChild(el('span', 'chip mut', tr('tpls.fallbacks', ersatzZahl)));
+    }
     r.appendChild(pw);
     /* Dieselben zwei Angaben wie im Speichern-Dialog, gleiche Richtung
        und dieselben Woerter — vorher stand hier „Pflicht/freiwillig"
@@ -538,15 +555,13 @@ export function zeichneVorlagenBlatt(host) {
     if (!z.vorgabeAus) { mm.appendChild(el('span', 'chip mut', tr('tpls.colDefault'))); }
     if (istPflichtpunkt(v, z)) { mm.appendChild(el('span', 'chip ok', tr('tpls.colRequired'))); }
     r.appendChild(mm);
-    r.appendChild(el('span', 'ca2', eigen ? (auf ? '\u25be' : '\u25b8') : ''));
-    if (eigen) {
-      r.addEventListener('click', function () {
-        vOffeneZeile = auf ? null : nr;
-        zeichneErgebnis();
-      });
-    }
+    r.appendChild(el('span', 'ca2', auf ? '\u25be' : '\u25b8'));
+    r.addEventListener('click', function () {
+      vOffeneZeile = auf ? null : nr;
+      zeichneErgebnis();
+    });
     zk.appendChild(r);
-    if (eigen && auf) { zk.appendChild(vZeilenDetail(z, nr)); }
+    if (auf) { zk.appendChild(vZeilenDetail(z, nr, eigen)); }
   });
 
   if (eigen) {
@@ -814,7 +829,7 @@ function schreibeErsatz(z, liste) {
   z.lesenSonst = (liste.length === 1) ? liste[0] : liste;
 }
 
-function vZeilenDetail(z, nr) {
+function vZeilenDetail(z, nr, eigen) {
   var v = vArbeitsstand();
   var d = el('div', 'detail');
 
@@ -1023,6 +1038,21 @@ function vZeilenDetail(z, nr) {
   var hw = el('div', 'sugg');
   hw.textContent = tr('tv.flagsHelp');
   dtZeile(d, '', hw);
+
+  /* Eine mitgelieferte Vorlage wird angesehen, nicht geaendert.
+
+     Gesperrt wird am fertigen Block, nicht an jedem der rund dreissig
+     Felder einzeln: so kann keines vergessen werden, wenn spaeter eines
+     dazukommt. Ohne Eingabemoeglichkeit feuert auch kein `change`, also
+     entsteht gar kein Arbeitsstand — wer nur nachsieht, hat hinterher
+     keine ungewollte Kopie im Bestand. */
+  if (!eigen) {
+    Array.prototype.forEach.call(d.querySelectorAll('input, select, textarea, button'),
+      function (x) { x.disabled = true; });
+    var ro = el('div', 'hint');
+    ro.textContent = tr('tv.readOnlyRow');
+    d.insertBefore(ro, d.firstChild);
+  }
   return d;
 }
 
