@@ -310,19 +310,27 @@ function zerlegtesGeraet(kanal) {
     if (!gewaehlt && TASMOTA_PRAEFIX.test(k.praefix)) { gewaehlt = k; }
   });
 
-  /* Erst wenn kein Werksname dabei ist, entscheidet der Bau des Baums —
-     fuer alle, die ihre Praefixe umbenannt haben. Dann aber streng: es
-     muessen mindestens zwei Zweige sein, UND dieselben Zweige muessen
-     noch ein zweites Geraet tragen. Zwei Zweige mit nur einem
-     gemeinsamen Geraet darunter sind genauso gut zwei Kopien desselben
-     Geraets an verschiedenen Themenwurzeln — und die duerfen wir nicht
-     zusammenwerfen. */
-  if (!gewaehlt) {
-    kandidaten.forEach(function (k) {
-      if (gewaehlt || k.namen.length < 2) { return; }
-      if (nochEinGeraet(k.eltern, k.namen, k.geraetPfad)) { gewaehlt = k; }
-    });
-  }
+  /* Und sonst gar nichts.
+
+     Hier stand bis zum 02.10.2026 ein struktureller Rueckfall: zwei
+     Zweige mit demselben Geraetepfad darunter, die noch ein zweites
+     Geraet teilen, galten auch ohne Werksnamen als Praefixe. Gedacht war
+     er fuer umbenannte `Prefix1-3`.
+
+     Am Produktivbestand gemessen hat er 50 Knoten falsch zusammengefasst
+     — durchweg Victron und Wechselrichter, keine einzige Tasmota:
+     `…system.0.Ac.Grid.L1` hat zwei eigene Punkte (Current, Power), der
+     Entwurf bekam **achtzehn**, naemlich die L1-Phase von Grid, Genset,
+     Consumption, PvOnGrid und allen uebrigen in einem Geraet. `Grid`
+     galt als Praefix, weil die Nachbarzweige ebenfalls ein `L1` fuehren
+     und das Thema dazu passt.
+
+     Die Regel laesst sich nicht so verschaerfen, dass sie Victron
+     aussperrt und umbenannte Tasmota-Praefixe einlaesst — beide sehen im
+     Baum gleich aus. Also entscheidet nur, was belegt ist: die
+     Werksnamen. Wer seine Praefixe umbenannt hat, bekommt die
+     Zusammenfassung nicht; das ist derselbe Stand wie vorher und nimmt
+     niemandem etwas weg, der sie schon hatte. */
   if (!gewaehlt) { return null; }
 
   var raus = [];
@@ -333,26 +341,6 @@ function zerlegtesGeraet(kanal) {
   return { punkte: raus, eltern: gewaehlt.eltern, geraetPfad: gewaehlt.geraetPfad };
 }
 
-/* Tragen dieselben Zweige noch einen anderen Geraetepfad? Das ist der
-   Beleg dafuer, dass sie Praefixe sind und nicht Themenwurzeln. */
-function nochEinGeraet(eltern, namen, geraetPfad) {
-  var hier = geraetPfad.join('.');
-  var pfade = {};
-  namen.forEach(function (x) {
-    var pre = eltern + '.' + x + '.';
-    mitVorspann(pre).forEach(function (k) {
-      if (!S.objects[k] || S.objects[k].type !== 'state') { return; }
-      var rest = k.slice(pre.length).split('.');
-      if (rest.length < 2) { return; }
-      var pfad = rest.slice(0, rest.length - 1).join('.');
-      if (pfad === hier) { return; }
-      (pfade[pfad] = pfade[pfad] || {})[x] = 1;
-    });
-  });
-  return Object.keys(pfade).some(function (pfad) {
-    return Object.keys(pfade[pfad]).length >= 2;
-  });
-}
 
 /* Punkte und Bauform in einem, je Knoten einmal gerechnet. */
 function geraeteBild(kanal) {

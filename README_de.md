@@ -628,7 +628,7 @@ beide Sprachdateien dieselben Schlüssel tragen.
 * Der Telemetrietakt wurde aus `tele/STATE` gelesen, wo Tasmota ihn nicht hinschreibt — über 36 Geräte nachgezählt, kein einziges trug das Feld. Er wird jetzt abgefragt und gemerkt, damit der SetOption59-Hinweis die wirkliche Zahl nennt statt sie wegzulassen.
 * `Status 5` wird jetzt zweimal gefragt, wie `Status 11`: beim Erstkontakt legt der MQTT-Adapter nur das Antwortobjekt an und verwirft den Wert. Am Broker mitgeschnitten — die Antwort wurde veröffentlicht, der Wert kam nie an.
 * Eine Tasmota mit dem werkseitigen FullTopic `%prefix%/%topic%/` gilt jetzt als ein Gerät. Die MQTT-Adapter bilden das Thema eins zu eins auf den Objektpfad ab, ein solches Gerät liegt deshalb verteilt auf `tele.<Name>`, `stat.<Name>` und `cmnd.<Name>`, ohne einen Knoten, der es zusammenhält — die MQTT-Karte erschien gar nicht, und ein eine Ebene höher angelegter Sendepunkt hätte sich mit dem nächsten Gerät am selben Präfix dieselbe Kennung geteilt. Beide Bauformen ergeben jetzt dieselben relativen Namen, die mitgelieferten Vorlagen greifen also unverändert, und die Karte sagt, aus wie vielen Zweigen sie zusammengefasst hat.
-* Umbenannte Tasmota-Präfixe (`Prefix1-3`) werden ebenfalls erkannt, sobald zwei Geräte sie teilen.
+* Als Präfix zählen nur die Werksnamen `cmnd`/`stat`/`tele`. Ein struktureller Rückfall für umbenannte hat an einer echten Anlage Fremdes zusammengeworfen — die L1-Phasen von acht verschiedenen Stromquellen landeten in einem Gerät —, und Victron-Daten und ein umbenanntes Tasmota sind im Objektbaum nicht zu unterscheiden.
 
 ### 0.10.0 (2026-09-20)
 **Erkennung und Muster**

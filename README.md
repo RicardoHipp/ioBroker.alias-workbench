@@ -608,7 +608,7 @@ imported, and that both language files carry the same keys.
 * The telemetry period was read from `tele/STATE`, where Tasmota does not put it — measured across 36 devices, not one carried the field. It is now asked for and remembered, so the SetOption59 hint names the real number instead of leaving it out.
 * `Status 5` is now requested twice, like `Status 11`: on first contact the MQTT adapter only creates the answer object and discards the value. Captured on the broker — the answer was published, the value never arrived.
 * A Tasmota using the factory FullTopic `%prefix%/%topic%/` is now treated as one device. The MQTT adapters map the topic straight onto the object path, so such a device is spread over `tele.<name>`, `stat.<name>` and `cmnd.<name>` with no node holding it together — the MQTT card did not appear, and a send point created one level up would have been shared with the next device on the same prefix. Both layouts now yield the same relative names, so the shipped templates apply unchanged, and the card says how many branches were joined.
-* Renamed Tasmota prefixes (`Prefix1-3`) are recognised as well, as long as two devices share them.
+* Only the factory prefixes `cmnd`/`stat`/`tele` count as a prefix. A structural fallback for renamed ones turned out to merge unrelated nodes — measured against a live installation it joined the L1 phases of eight different AC sources into one device — and Victron data and a renamed Tasmota are indistinguishable in the object tree.
 
 ### 0.10.0 (2026-09-20)
 **Detection and patterns**

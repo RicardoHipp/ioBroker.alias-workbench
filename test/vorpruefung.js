@@ -1355,28 +1355,48 @@ describe('Die Punkte eines Geraets', () => {
             .to.equal('mqtt-client.0.SmartHome_Test.cmnd.Lampe.POWER');
     });
 
-    /* Tasmota laesst die Praefixe umbenennen (Prefix1-3). Dann hilft die
-       Werksliste nicht, und der Bau des Baums muss entscheiden — aber
-       erst, wenn dieselben Zweige noch ein zweites Geraet tragen. */
-    it('erkennen umbenannte Praefixe, sobald zwei Geraete sie teilen', () => {
-        const zwei = {
+    /* Nur die Werksnamen cmnd/stat/tele zaehlen als Praefix.
+
+       Bis zum 02.10.2026 entschied hilfsweise der Bau des Baums: zwei
+       Zweige mit demselben Geraetepfad darunter, die noch ein zweites
+       Geraet teilen, galten auch ohne Werksnamen als Praefixe — gedacht
+       fuer umbenannte `Prefix1-3`. Am Produktivbestand hat die Regel
+       **50 Knoten falsch zusammengefasst**, durchweg Victron und
+       Wechselrichter: `…system.0.Ac.Grid.L1` hat zwei eigene Punkte, der
+       Entwurf bekam achtzehn — die L1-Phase von Grid, Genset,
+       Consumption, PvOnGrid und allen uebrigen in einem Geraet.
+
+       Victron und ein umbenanntes Tasmota sehen im Baum gleich aus; die
+       Regel laesst sich nicht so verschaerfen, dass sie das eine
+       aussperrt und das andere einlaesst. Also entscheidet nur, was
+       belegt ist. */
+    it('fassen umbenannte Praefixe nicht zusammen', () => {
+        const umbenannt = {
             'mqtt.0.s.lampe.POWER': 's/lampe/POWER',
             'mqtt.0.t.lampe.STATE': 't/lampe/STATE',
             'mqtt.0.s.tuer.POWER': 's/tuer/POWER',
             'mqtt.0.t.tuer.STATE': 't/tuer/STATE',
         };
-        expect(baue(zwei).istZerlegt('mqtt.0.t.lampe')).to.equal(true);
-        expect(baue(zwei).geraetePunkte('mqtt.0.t.lampe').map(p => p.rel).sort())
-            .to.deep.equal(['s.POWER', 't.STATE']);
+        expect(baue(umbenannt).istZerlegt('mqtt.0.t.lampe')).to.equal(false);
+    });
 
-        /* Mit nur einem Geraet darunter bleibt es bei der Trennung —
-           zwei Zweige mit einem gemeinsamen Namen koennen ebenso gut
-           zwei Kopien desselben Geraets sein. */
-        const eins = {
-            'mqtt.0.s.lampe.POWER': 's/lampe/POWER',
-            'mqtt.0.t.lampe.STATE': 't/lampe/STATE',
-        };
-        expect(baue(eins).istZerlegt('mqtt.0.t.lampe')).to.equal(false);
+    /* Der Fall, der die Regel gekostet hat: Victron legt unter
+       `…/Ac/<Quelle>/<Phase>/<Wert>` ab. Von `Ac.Grid.L1` aus sieht
+       `Grid` wie ein Praefix aus, weil Genset, Consumption und die
+       uebrigen ebenfalls ein `L1` fuehren. */
+    it('werfen die Phasen einer Victron-Anlage nicht zusammen', () => {
+        const victron = {};
+        ['Grid', 'Genset', 'Consumption', 'PvOnGrid'].forEach(q => {
+            ['L1', 'L2'].forEach(ph => {
+                ['Current', 'Power'].forEach(wert => {
+                    victron[`mqtt.1.N.xy.system.0.Ac.${q}.${ph}.${wert}`] = `N/xy/system/0/Ac/${q}/${ph}/${wert}`;
+                });
+            });
+        });
+        const { geraetePunkte, istZerlegt } = baue(victron);
+        expect(istZerlegt('mqtt.1.N.xy.system.0.Ac.Grid.L1')).to.equal(false);
+        expect(geraetePunkte('mqtt.1.N.xy.system.0.Ac.Grid.L1').map(p => p.rel).sort())
+            .to.deep.equal(['Current', 'Power']);
     });
 
     /* Der Praefixknoten selbst ist anklickbar. Von `…Lampe.tele` aus
