@@ -1,5 +1,6 @@
-import { holeText } from './basis.js';
-import { txt, alleTexte } from './sprache.js';
+import { el, holeText } from './basis.js';
+import { leseAblage, ergaenzeAblage, stempelAus } from './ablage.js';
+import { tr, txt, alleTexte } from './sprache.js';
 import { einst } from './einstellungen.js';
 import './enums.js';
 
@@ -12,9 +13,11 @@ import './enums.js';
    aus dem Bundle, in dem sie ohnehin liegen. Wir laufen in derselben
    Herkunft wie der Admin, `fetch` genuegt.
 
-   Der Weg fuehrt ueber drei Vite-Eigenheiten: die Bundles tragen Hashes
-   im Namen, der Chunk heisst „Enums", und die Listen stehen darin als
-   JSON.parse mit Backticks. Bricht eine davon, bleiben die Listen leer
+   Der Weg haengt am Bauwerkzeug des Admin, und das wechselt: bis 7.8.23
+   lagen die Listen als JSON.parse mit Rueckstrichen in einem „Enums"-
+   Chunk, seit 8.0.x als gewoehnliches JavaScript in einem Riesenmodul.
+   Beide Bauarten werden gelesen, das Ergebnis liegt danach im
+   Dateibereich. Bricht trotzdem etwas, bleiben die Listen leer
    und das Feld zeigt nur den Bestand - wie vorher. Kein Fehler, keine
    Meldung, nur weniger Auswahl. Deshalb faengt hier alles ab, was
    schiefgehen kann, ohne ein Wort zu verlieren. */
@@ -123,47 +126,239 @@ function ordneListenZu(text) {
   return enumVorlagen.rooms.length && enumVorlagen.functions.length;
 }
 
+/* ---------------- Die zweite Bauart: alles in einem Riesenmodul ----------------
+
+   Admin 8.0.14 hat sein Bündel auf „Module Federation" umgestellt. Der
+   Inhalt ist derselbe geblieben — gemessen am 07.10.2026: dieselben 58
+   Räume und 62 Funktionen, Kennung für Kennung identisch, dieselben 120
+   Bilder —, aber er steckt jetzt in **einer** Datei von 7,9 MB statt in
+   vielen kleinen. Zwei Dinge haben uns daran gehindert, ihn zu finden:
+
+   * Die Zeile `if (t.length > 3000000) return false;` übersprang genau
+     diese Datei. Unter 7.8.23 lag der Katalog in einem Bündel von
+     2 843 653 Bytes — fünf Prozent unter der Grenze. Es hat nie sicher
+     funktioniert, es ist bloß nie angestoßen.
+   * Die Listen stehen nicht mehr als JSON-Text in Rückstrichen, sondern
+     als gewöhnliches JavaScript: Schlüssel ohne Anführungszeichen,
+     Zeichenketten in Rückstrichen. `JSON.parse` greift da nicht.
+
+   Darum liest die Werkbank jetzt beide Bauarten. Und weil 7,9 MB bei
+   jedem Öffnen des Reiters unzumutbar wären, wird das Ergebnis im
+   Dateibereich des Adapters abgelegt und erst wieder geholt, wenn der
+   Admin seine Bündel neu schreibt. */
+
+/* Eine Liste der Form `[{_id:`x`,name:{…},icon:`y.svg`}]`.
+
+   Kein `eval` und kein `new Function`: beides hieße, fremden Text
+   auszuführen, und der Gewinn wäre keiner. Die Einträge haben eine feste
+   Form, und in Namen kommen keine Rückstriche vor. */
+function eintraegeAus(roh) {
+  var raus = [];
+  var re = /\{_id:`([^`]*)`,name:\{([\s\S]*?)\},icon:`([^`]*)`\}/g, m;
+  while ((m = re.exec(roh))) {
+    var name = {}, p = /(?:([A-Za-z0-9_$]+)|"([^"]+)"):`([^`]*)`/g, n;
+    while ((n = p.exec(m[2]))) { name[n[1] || n[2]] = n[3]; }
+    raus.push({ _id: m[1], name: name, icon: m[3].replace(/\.svg$/, '') });
+  }
+  return raus;
+}
+
+/* Von `pos` an die eckige Klammer ausbalancieren. */
+function klammerAb(text, pos) {
+  var tiefe = 0;
+  for (var j = pos; j < text.length; j += 1) {
+    if (text[j] === '[') { tiefe += 1; }
+    else if (text[j] === ']') { tiefe -= 1; if (!tiefe) { return text.slice(pos, j + 1); } }
+  }
+  return null;
+}
+
+/* Die Bildkarte zu einer Liste: `{Anteroom:`PHN2…`, "Alarm Systems":`…`}`.
+
+   Gesucht wird über einen Bildnamen aus der Liste selbst — der
+   Variablenname wechselt bei jedem Bau des Admin, der Name „Storeroom"
+   nicht. Rückwärts bis zur öffnenden Klammer zu laufen ist hier sicher:
+   base64 enthält keine geschweiften Klammern. */
+function ikonKarte(text, probe) {
+  var stelle = text.indexOf(probe + ':`');
+  if (stelle === -1) { stelle = text.indexOf('"' + probe + '":`'); }
+  if (stelle === -1) { return null; }
+  var auf = text.lastIndexOf('{', stelle);
+  if (auf === -1) { return null; }
+  var tiefe = 0, zu = -1;
+  for (var j = auf; j < text.length; j += 1) {
+    if (text[j] === '{') { tiefe += 1; }
+    else if (text[j] === '}') { tiefe -= 1; if (!tiefe) { zu = j; break; } }
+  }
+  if (zu === -1) { return null; }
+  var roh = text.slice(auf, zu + 1), karte = {};
+  var re = /(?:([A-Za-z0-9_$]+)|"([^"]+)"):`([A-Za-z0-9+/=]{40,})`/g, m;
+  while ((m = re.exec(roh))) { karte[m[1] || m[2]] = m[3]; }
+  return Object.keys(karte).length ? karte : null;
+}
+
+/* Beide Listen und beide Bildkarten aus dem Riesenmodul. */
+function ausRiesenmodul(text) {
+  var gefunden = { rooms: null, functions: null };
+  var pos = 0;
+  for (;;) {
+    var i = text.indexOf('[{_id:`', pos);
+    if (i === -1) { break; }
+    pos = i + 7;
+    var roh = klammerAb(text, i);
+    if (!roh) { continue; }
+    var liste = eintraegeAus(roh);
+    if (liste.length < 20) { continue; }
+    if (!gefunden.rooms && istListe(liste, RAUM_MARKE)) { gefunden.rooms = liste; }
+    else if (!gefunden.functions && istListe(liste, FUNK_MARKE)) { gefunden.functions = liste; }
+    if (gefunden.rooms && gefunden.functions) { break; }
+  }
+  if (!gefunden.rooms || !gefunden.functions) { return null; }
+  return {
+    rooms: gefunden.rooms,
+    functions: gefunden.functions,
+    ikonen: {
+      rooms: ikonKarte(text, gefunden.rooms[0].icon) || {},
+      functions: ikonKarte(text, gefunden.functions[0].icon) || {}
+    }
+  };
+}
+
+/* ---------------- Der Hinweis, solange geholt wird ----------------
+
+   7,9 MB dauern beim ersten Mal ein paar Sekunden. Ohne ein Wort dazu
+   wirkt das wie ein Hänger. Danach nie wieder, bis der Admin sich
+   ändert — und auch das gehört in den Hinweis, sonst fragt man sich
+   beim nächsten Mal, warum es plötzlich schnell geht. */
+function laedtAn() {
+  if (document.getElementById('katalog-laedt')) { return; }
+  var k = el('div', 'katalog-laedt');
+  k.id = 'katalog-laedt';
+  k.appendChild(el('div', 'kl-kopf', tr('catalog.loadingTitle')));
+  k.appendChild(el('div', 'kl-text', tr('catalog.loadingText')));
+  document.body.appendChild(k);
+}
+
+function laedtAus() {
+  var k = document.getElementById('katalog-laedt');
+  if (k && k.parentNode) { k.parentNode.removeChild(k); }
+}
+
+/* Was aus der Ablage oder frisch kam, in die Arbeitsvariablen. */
+function uebernehmen(satz) {
+  enumVorlagen.rooms = satz.rooms || [];
+  enumVorlagen.functions = satz.functions || [];
+  if (satz.ikonDateien) {
+    enumIkonen.rooms = satz.ikonDateien.rooms || {};
+    enumIkonen.functions = satz.ikonDateien.functions || {};
+  }
+  /* Fertige Bilder gleich in den Vorrat — bei der zweiten Bauart liegen
+     sie im selben Modul und müssen nicht einzeln nachgeholt werden. */
+  ['rooms', 'functions'].forEach(function (art) {
+    var karte = (satz.ikonen && satz.ikonen[art]) || {};
+    Object.keys(karte).forEach(function (name) {
+      ikonCache[art + ':' + name] = 'data:image/svg+xml;base64,' + karte[name];
+    });
+  });
+}
+
 export function ladeEnumVorlagen(nachher) {
   if (vorlagenGeholt || !einst('vorlagenVomAdmin')) { return; }
   vorlagenGeholt = true;
-  holeText('/index.html').then(function (html) {
-    return sucheEnumChunk(html.match(/assets\/[A-Za-z0-9_\-.]+\.js/g) || [], {}, 0);
-  }).then(function (chunk) {
-    if (!chunk) { throw new Error('kein Enums-Chunk'); }
-    return holeText('/assets/' + chunk);
-  }).then(function (src) {
-    enumIkonen.functions = ikonMap(src, 'devices');
-    enumIkonen.rooms = ikonMap(src, 'rooms');
-    if (ordneListenZu(src)) { return; }
 
-    /* Fehlt eine, liegt sie in einer der Dateien, die der Chunk nennt.
-       Kurze Namen zuerst: die Listen stecken in kleinen Bausteinen, das
-       Riesenbuendel des Geraetemanagers waere sonst der erste Griff. */
-    var dateien = (src.match(/[A-Za-z0-9_.-]+-[A-Za-z0-9_-]{8}\.js/g) || [])
-      .filter(function (x, i, a) { return a.indexOf(x) === i; })
-      .sort(function (a, b) { return a.length - b.length; })
-      .slice(0, 60);
+  var stempel = null;
 
-    return dateien.reduce(function (kette, f) {
-      return kette.then(function (fertig) {
-        if (fertig) { return true; }
-        return holeText('/assets/' + f).then(function (t) {
-          /* Ein Buendel von mehreren Megabyte durchsucht man nicht -
-             die Listen stehen nie darin, das Durchsuchen kostet nur. */
-          if (t.length > 3000000) { return false; }
-          return ordneListenZu(t);
-        })['catch'](function () { return false; });
+  function abschluss() {
+    laedtAus();
+    if (!enumVorlagen.rooms.length || !enumVorlagen.functions.length) {
+      katalogFehlt = true;
+    }
+    /* Der Aufrufer entscheidet, ob und was neu zu zeichnen ist -
+       dieses Modul kennt die Oberflaeche nicht. */
+    if (typeof nachher === 'function') { nachher(); }
+  }
+
+  /* Erste Bauart: der Enums-Chunk mit JSON.parse in Rueckstrichen. */
+  function ersterWeg() {
+    return holeText('/index.html').then(function (html) {
+      return sucheEnumChunk(html.match(/assets\/[A-Za-z0-9_\-.]+\.js/g) || [], {}, 0);
+    }).then(function (chunk) {
+      if (!chunk) { return false; }
+      return holeText('/assets/' + chunk).then(function (src) {
+        enumIkonen.functions = ikonMap(src, 'devices');
+        enumIkonen.rooms = ikonMap(src, 'rooms');
+        if (ordneListenZu(src)) { return true; }
+
+        /* Fehlt eine, liegt sie in einer der Dateien, die der Chunk
+           nennt. Kurze Namen zuerst: die Listen stecken in kleinen
+           Bausteinen. Ohne diese Nachsuche fand Admin 7.8.23 am
+           07.10.2026 nur die 62 Funktionen und keinen einzigen Raum —
+           die Raumliste liegt dort in einer eigenen Datei. */
+        var dateien = (src.match(/[A-Za-z0-9_.-]+-[A-Za-z0-9_-]{8}\.js/g) || [])
+          .filter(function (x, i, a) { return a.indexOf(x) === i; })
+          .sort(function (a, b) { return a.length - b.length; })
+          .slice(0, 60);
+
+        return dateien.reduce(function (kette, f) {
+          return kette.then(function (fertig) {
+            if (fertig) { return true; }
+            return holeText('/assets/' + f).then(function (t) {
+              return ordneListenZu(t);
+            })['catch'](function () { return false; });
+          });
+        }, Promise.resolve(false));
       });
-    }, Promise.resolve(false));
-  })['catch'](function () { /* still bleiben: der Bestand genuegt */ })
-    .then(function () {
-      if (!enumVorlagen.rooms.length || !enumVorlagen.functions.length) {
-        katalogFehlt = true;
+    })['catch'](function () { return false; });
+  }
+
+  /* Zweite Bauart: das Riesenmodul. Groesse ist jetzt kein Ausschluss
+     mehr, aber die Reihenfolge bleibt: kleine Dateien zuerst, das
+     Riesenmodul zuletzt, und nach dem ersten Treffer ist Schluss. */
+  function zweiterWeg() {
+    return holeText('/index.html').then(function (html) {
+      var dateien = (html.match(/assets\/[A-Za-z0-9_\-.]+\.js/g) || [])
+        .filter(function (x, i, a) { return a.indexOf(x) === i; });
+      var geholt = 0, treffer = null;
+      return dateien.reduce(function (kette, f) {
+        return kette.then(function () {
+          if (treffer || geholt > 25000000) { return; }
+          return holeText('/' + f).then(function (t) {
+            geholt += t.length;
+            var satz = ausRiesenmodul(t);
+            if (satz) { treffer = satz; }
+          })['catch'](function () { });
+        });
+      }, Promise.resolve()).then(function () { return treffer; });
+    })['catch'](function () { return null; });
+  }
+
+  holeText('/index.html').then(function (html) {
+    stempel = stempelAus(html);
+    return leseAblage();
+  }).then(function (abgelegt) {
+    if (abgelegt && abgelegt.stempel === stempel &&
+        (abgelegt.rooms || []).length && (abgelegt.functions || []).length) {
+      uebernehmen(abgelegt);
+      return null;
+    }
+    /* Jetzt wird wirklich geholt - und erst jetzt sagen wir es. */
+    laedtAn();
+    return ersterWeg().then(function (ging) {
+      if (ging) {
+        return { rooms: enumVorlagen.rooms, functions: enumVorlagen.functions,
+          ikonDateien: { rooms: enumIkonen.rooms, functions: enumIkonen.functions } };
       }
-      /* Der Aufrufer entscheidet, ob und was neu zu zeichnen ist -
-         dieses Modul kennt die Oberflaeche nicht. */
-      if (typeof nachher === 'function') { nachher(); }
+      return zweiterWeg().then(function (satz) {
+        if (!satz) { return null; }
+        uebernehmen(satz);
+        return satz;
+      });
     });
+  }).then(function (zumAblegen) {
+    if (!zumAblegen) { return null; }
+    return ergaenzeAblage(stempel, zumAblegen);
+  })['catch'](function () { /* still bleiben: der Bestand genuegt */ })
+    .then(abschluss);
 }
 
 /* Das Icon einer Vorlage. Es steht als fertige data-URI im Chunk - genau

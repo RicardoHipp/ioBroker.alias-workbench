@@ -27,10 +27,18 @@
    Bricht die Kette - Aufbau geaendert, Datei zu gross -, bleibt die
    Karte leer und ueberall steht der rohe Name. Kein Fehler, nur weniger
    Komfort. Beide Schreibweisen werden verstanden: Werte in Backticks
-   (Admin 8) und als JSON-Strings (Admin 7). */
+   (Admin 8) und als JSON-Strings (Admin 7).
 
-import { sprache } from './sprache.js';
+   Gesucht wird nur noch, wenn die Ablage nichts hergibt (ablage.js).
+   Gemessen am 07.10.2026: das Buendel, in dem die Karte bei Admin 8
+   steckt, kostete 1 727 KB und 854 ms — bei jedem Oeffnen des Reiters,
+   fuer eine Karte von gut zwei Kilobyte. Gezogen werden jetzt beide
+   Sprachen auf einmal, damit ein Sprachwechsel nicht denselben Abruf
+   noch einmal ausloest. */
+
+import { sprache, SPRACHEN } from './sprache.js';
 import { holeText } from './basis.js';
+import { leseAblage, ergaenzeAblage, stempelAus } from './ablage.js';
 
 var musterNamen = {};
 var geholt = false;
@@ -39,8 +47,8 @@ var geholt = false;
    kennt die Werkbank nicht (SPRACHEN in sprache.js). */
 var ANKER = { de: 'Ger\u00e4tetyp', en: 'Device type' };
 
-function ziehe(src) {
-  var anker = ANKER[sprache] || ANKER.en;
+function ziehe(src, spr) {
+  var anker = ANKER[spr || sprache] || ANKER.en;
   var re = /"type-Device type":(?:`([^`]*)`|"((?:[^"\\]|\\.)*)")/g;
   var m, start = -1;
   while ((m = re.exec(src))) {
@@ -62,6 +70,22 @@ function ziehe(src) {
 /* Welche Dateien der Admin ueberhaupt ausliefert. Zwei Verzeichnisse,
    zusammengelegt und ohne Doppel - siehe Kopf: keines allein reicht
    fuer beide Admin-Fassungen. */
+/* Alle Sprachen auf einmal, nicht nur die eingestellte.
+
+   Die Karte wird abgelegt und beim naechsten Mal von dort genommen.
+   Wer dann die Sprache umstellt, haette ohne das hier eine Ablage, die
+   seine Sprache nicht enthaelt — und muesste das 7,9-MB-Buendel noch
+   einmal holen. Es sind zwei Sprachen und zusammen gut zwei Kilobyte;
+   beide mitzunehmen kostet nichts. */
+function alleZiehen(src) {
+  var raus = {}, hatWas = false;
+  SPRACHEN.forEach(function (spr) {
+    var k = ziehe(src, spr);
+    if (k) { raus[spr] = k; hatWas = true; }
+  });
+  return hatWas ? raus : null;
+}
+
 function adminDateien() {
   var raus = [];
   function dazu(f) {
@@ -114,29 +138,49 @@ function adminDateien() {
 export function ladeMusterNamen(nachher) {
   if (geholt) { return; }
   geholt = true;
-  adminDateien().then(function (dateien) {
-    if (!dateien.length) { throw new Error('kein Bundle'); }
-    return dateien.reduce(function (kette, f) {
-      return kette.then(function (fertig) {
-        if (fertig) { return true; }
-        return holeText('/' + f).then(function (src) {
-          /* Die Grenze liegt hoeher als beim Aufzaehlungskatalog (3 MB):
-             bei Admin 8 steckt die Karte ausgerechnet im grossen
-             GUI-Buendel, gemessen 8,4 MB (08.09.2026). Mit der alten
-             Grenze wurde genau diese Datei uebersprungen und produktiv
-             blieb jeder Beiname roh. Teuer ist es nicht: derselbe Admin
-             hat das Buendel gerade selbst geladen, der zweite Griff
-             kommt aus dem Zwischenspeicher des Browsers. Alles darueber
-             ist kein Buendel mehr, sondern ein Versehen. */
-          if (src.length > 12000000) { return false; }
-          var karte = ziehe(src);
-          if (karte) { musterNamen = karte; return true; }
-          return false;
-        })['catch'](function () { return false; });
-      });
-    }, Promise.resolve(false));
+
+  var stempel = null;
+
+  function fertig() { if (typeof nachher === 'function') { nachher(); } }
+
+  /* Suchen gibt es nur, wenn die Ablage nichts hergibt. Vorher hing
+     hier ein Abruf von 1 727 KB an jedem Oeffnen des Reiters, fuer eine
+     Karte von gut zwei Kilobyte (gemessen 07.10.2026). */
+  function suchen() {
+    return adminDateien().then(function (dateien) {
+      if (!dateien.length) { throw new Error('kein Bundle'); }
+      return dateien.reduce(function (kette, f) {
+        return kette.then(function (gefunden) {
+          if (gefunden) { return gefunden; }
+          return holeText('/' + f).then(function (src) {
+            /* Die Grenze liegt hoeher als beim Aufzaehlungskatalog:
+               bei Admin 8 steckt die Karte ausgerechnet im grossen
+               GUI-Buendel, gemessen 8,4 MB (08.09.2026). Alles darueber
+               ist kein Buendel mehr, sondern ein Versehen. */
+            if (src.length > 12000000) { return null; }
+            return alleZiehen(src);
+          })['catch'](function () { return null; });
+        });
+      }, Promise.resolve(null));
+    })['catch'](function () { return null; });
+  }
+
+  holeText('/index.html').then(function (html) {
+    stempel = stempelAus(html);
+    return leseAblage();
+  }).then(function (abgelegt) {
+    if (abgelegt && abgelegt.stempel === stempel && abgelegt.musternamen &&
+        abgelegt.musternamen[sprache]) {
+      musterNamen = abgelegt.musternamen[sprache];
+      return null;
+    }
+    return suchen().then(function (karten) {
+      if (!karten) { return null; }
+      musterNamen = karten[sprache] || karten.en || {};
+      return ergaenzeAblage(stempel, { musternamen: karten });
+    });
   })['catch'](function () { /* still bleiben: rohe Namen genuegen */ })
-    .then(function () { if (typeof nachher === 'function') { nachher(); } });
+    .then(fertig);
 }
 
 /* Der Beiname eines Musters - leer nur, wenn der Katalog nichts weiss.

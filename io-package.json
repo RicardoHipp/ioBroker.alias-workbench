@@ -191,6 +191,16 @@
     "ikonErsetzen": true,
     "vorlagenVomAdmin": true
   },
-  "objects": [],
+  "objects": [
+    {
+      "_id": "alias-workbench.0",
+      "type": "meta",
+      "common": {
+        "name": "Alias-Werkbank — Ablage",
+        "type": "meta.user"
+      },
+      "native": {}
+    }
+  ],
   "instanceObjects": []
 }
