@@ -137,6 +137,7 @@
   "diff.deviations": "Deviations from the proposal",
   "diff.formulaChange": "read formula: {0} → {1}",
   "diff.newByHand": "new, added by hand",
+  "diff.noName": "(no name)",
   "diff.nothingExists": "none of it exists yet",
   "diff.open": "{0} open",
   "diff.points": "{0} points",

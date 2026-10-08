@@ -137,6 +137,7 @@
   "diff.deviations": "Abweichungen vom Vorschlag",
   "diff.formulaChange": "Leseformel: {0} → {1}",
   "diff.newByHand": "neu, von Hand angelegt",
+  "diff.noName": "(ohne Namen)",
   "diff.nothingExists": "noch nichts davon existiert",
   "diff.open": "{0} offen",
   "diff.points": "{0} Punkte",

@@ -862,7 +862,7 @@ export function unterschiede(e) {
   var aliasDa = knotenDa(zielBasis);
 
   e.states.forEach(function (s) {
-    if (s.manuell) { raus.push({ n: s.n || '(ohne Namen)', was: tr('diff.newByHand') }); return; }
+    if (s.manuell) { raus.push({ n: s.n || tr('diff.noName'), was: tr('diff.newByHand') }); return; }
 
     var imAlias = !!S.objects[zielBasis + '.' + s.n];
     var grundlinieAn = aliasDa ? imAlias : warVorgabeAn(s);
