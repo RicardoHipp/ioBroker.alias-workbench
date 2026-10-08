@@ -12,13 +12,9 @@ const { expect } = require('chai');
 
 const wurzel = path.join(__dirname, '..');
 const jsDir = path.join(wurzel, 'admin', 'js');
-// Zwei getrennte Woerterbuecher, mit verschiedenen Aufgaben:
-//   admin/sprachen/  - die Oberflaeche des Reiters, 588 Schluessel,
-//                      von sprache.js selbst geladen. Deutsch und Englisch.
-//   admin/i18n/      - die Einstellungsseite, die der Admin zeigt. Den
-//                      Ordner liest der Admin (jsonConfig i18n: true), und
-//                      der Adapterpruefer erwartet dort alle elf Sprachen.
-const sprachenDir = path.join(wurzel, 'admin', 'sprachen');
+// Ein Woerterbuch, admin/i18n/. Die Einstellungsseite laedt es der Admin
+// (jsonConfig i18n: true), der Reiter holt dieselbe Datei in sprache.js.
+// Der Adapterpruefer erwartet in diesem Ordner alle elf Sprachen.
 const i18nDir = path.join(wurzel, 'admin', 'i18n');
 
 const SPRACHEN = ['en', 'de', 'ru', 'pt', 'nl', 'fr', 'it', 'es', 'pl', 'uk', 'zh-cn'];
@@ -50,15 +46,15 @@ describe('Die Module', () => {
 describe('Die Uebersetzungen des Reiters', () => {
     const dateien = {};
     SPRACHEN.forEach(s => {
-        const p = path.join(sprachenDir, `${s}.json`);
+        const p = path.join(i18nDir, `${s}.json`);
         if (fs.existsSync(p)) {
             dateien[s] = liesJson(p);
         }
     });
 
-    it('haben Englisch und Deutsch', () => {
-        expect(dateien.en, 'admin/sprachen/en.json fehlt').to.be.an('object');
-        expect(dateien.de, 'admin/sprachen/de.json fehlt').to.be.an('object');
+    it('haben alle elf Sprachen', () => {
+        const fehlt = SPRACHEN.filter(s => !dateien[s]);
+        expect(fehlt, `admin/i18n fehlt: ${fehlt.join(', ')}`).to.be.empty;
     });
 
     it('tragen in jeder vorhandenen Sprache dieselben Schluessel', () => {
@@ -116,7 +112,16 @@ describe('Die Uebersetzungen des Reiters', () => {
             .filter(f => f.endsWith('.js'))
             .forEach(f => { quelltext += lies(path.join(jsDir, f)); });
 
+        const seite = new Set();
+        const jc = liesJson(path.join(wurzel, 'admin', 'jsonConfig.json'));
+        Object.keys(jc.items || {}).forEach(feld => {
+            ['text', 'label', 'help'].forEach(attr => {
+                const w = jc.items[feld][attr];
+                if (typeof w === 'string') { seite.add(w); }
+            });
+        });
         const tot = Object.keys(dateien.en).filter(k => {
+            if (seite.has(k)) { return false; }
             if (quelltext.indexOf(`'${k}'`) !== -1 || quelltext.indexOf(`"${k}"`) !== -1) {
                 return false;
             }
@@ -522,9 +527,30 @@ describe('Die Einstellungsseite', () => {
             .empty;
     });
 
-    it('fuehrt im Woerterbuch keinen Schluessel, den die Seite nicht zeigt', () => {
+    it('fuehrt keinen Schluessel, den weder die Seite noch der Reiter braucht', () => {
+        // Dieselbe Datei traegt die zwoelf Texte der Einstellungsseite und
+        // die des Reiters. Ein Schluessel der Seite gilt, auch wenn tr()
+        // ihn nie ruft. Umgekehrt gilt ein Schluessel des Reiters, auch
+        // wenn die Seite ihn nicht anzeigt.
         const gebraucht = new Set(texte().map(t => t.text));
-        const tot = Object.keys(woerter.en || {}).filter(k => !gebraucht.has(k));
+        let quelltext = '';
+        fs.readdirSync(jsDir)
+            .filter(f => f.endsWith('.js'))
+            .forEach(f => { quelltext += lies(path.join(jsDir, f)); });
+        const tot = Object.keys(woerter.en || {}).filter(k => {
+            if (gebraucht.has(k)) { return false; }
+            if (quelltext.indexOf(`'${k}'`) !== -1 || quelltext.indexOf(`"${k}"`) !== -1) {
+                return false;
+            }
+            const teile = k.split('.');
+            for (let i = 1; i < teile.length; i++) {
+                const pre = teile.slice(0, i).join('.') + '.';
+                if (quelltext.indexOf(`'${pre}'`) !== -1 || quelltext.indexOf(`"${pre}"`) !== -1) {
+                    return false;
+                }
+            }
+            return true;
+        });
         expect(tot, `in admin/i18n/en.json, aber nirgends verwendet: ${tot.join(' | ')}`).to.be.empty;
     });
 
@@ -572,6 +598,34 @@ describe('Die Vorlagen', () => {
             expect(v.id, 'id fehlt').to.be.a('string').and.not.empty;
             expect(v.name, 'name fehlt').to.exist;
         });
+    });
+
+    it('legen Hinweistexte auf Deutsch und Englisch ab', () => {
+        // Name und die lesbaren Hinweise: { de, en }, sonst Englisch.
+        // Der Namenshinweis bleibt eine Suchmaske, eine Zeichenkette.
+        const schief = [];
+        const paar = (t, wo) => {
+            if (!t) {
+                return;
+            }
+            if (typeof t !== 'object' || Array.isArray(t) ||
+                !String(t.de || '').trim() || !String(t.en || '').trim()) {
+                schief.push(wo);
+            }
+        };
+        dateien.forEach(f => {
+            const v = liesJson(path.join(dir, f));
+            paar(v.hinweis, `${f} hinweis`);
+            if (v.erkennung) {
+                paar(v.erkennung.hinweis, `${f} erkennung.hinweis`);
+                if (v.erkennung.namenshinweis !== undefined &&
+                    typeof v.erkennung.namenshinweis !== 'string') {
+                    schief.push(`${f} namenshinweis`);
+                }
+            }
+            (v.zustaende || []).forEach(z => paar(z.hinweis, `${f}/${z.name}`));
+        });
+        expect(schief, schief.join(' | ')).to.be.empty;
     });
 
     it('vergeben jede id nur einmal', () => {

@@ -76,7 +76,10 @@
       "feld": "ENERGY.ApparentPower",
       "optional": true,
       "vorgabeAus": true,
-      "hinweis": "Scheinleistung. Kein Platz in socket oder light — landet wie TODAY im info-Geraet."
+      "hinweis": {
+        "de": "Scheinleistung. Kein Platz in socket oder light — landet wie TODAY im info-Geraet.",
+        "en": "Apparent power. No slot in socket or light — lands in the info device, like TODAY."
+      }
     },
     {
       "name": "REACTIVE_POWER",
@@ -87,7 +90,10 @@
       "feld": "ENERGY.ReactivePower",
       "optional": true,
       "vorgabeAus": true,
-      "hinweis": "Blindleistung."
+      "hinweis": {
+        "de": "Blindleistung.",
+        "en": "Reactive power."
+      }
     },
     {
       "name": "POWER_FACTOR",
@@ -97,7 +103,10 @@
       "feld": "ENERGY.Factor",
       "optional": true,
       "vorgabeAus": true,
-      "hinweis": "Leistungsfaktor cos phi, 0 bis 1 — ohne Einheit."
+      "hinweis": {
+        "de": "Leistungsfaktor cos phi, 0 bis 1 — ohne Einheit.",
+        "en": "Power factor cos phi, 0 to 1 — no unit."
+      }
     },
     {
       "name": "UNREACH",
@@ -126,7 +135,10 @@
       "feld": "UptimeSec",
       "optional": true,
       "vorgabeAus": true,
-      "hinweis": "Sekunden seit dem letzten Start. Faellt der Wert staendig zurueck, startet das Geraet neu."
+      "hinweis": {
+        "de": "Sekunden seit dem letzten Start. Faellt der Wert staendig zurueck, startet das Geraet neu.",
+        "en": "Seconds since the last start. If the value keeps falling back, the device is restarting."
+      }
     },
     {
       "name": "LAST_REPORT",
@@ -136,7 +148,10 @@
       "feld": "Time",
       "optional": true,
       "vorgabeAus": true,
-      "hinweis": "Zeitstempel der letzten Telemetrie des Geraets, nicht der von ioBroker."
+      "hinweis": {
+        "de": "Zeitstempel der letzten Telemetrie des Geraets, nicht der von ioBroker.",
+        "en": "Timestamp of the device's last telemetry, not ioBroker's."
+      }
     },
     {
       "name": "HEAP",
@@ -147,7 +162,10 @@
       "feld": "Heap",
       "optional": true,
       "vorgabeAus": true,
-      "hinweis": "Freier Speicher. Wird er klein, wird das Geraet unzuverlaessig."
+      "hinweis": {
+        "de": "Freier Speicher. Wird er klein, wird das Geraet unzuverlaessig.",
+        "en": "Free memory. If it gets small, the device becomes unreliable."
+      }
     },
     {
       "name": "WIFI_QUALITY",
@@ -158,7 +176,10 @@
       "feld": "Wifi.RSSI",
       "optional": true,
       "vorgabeAus": true,
-      "hinweis": "Guete 0 bis 100. RSSI in dBm steht getrennt daneben."
+      "hinweis": {
+        "de": "Guete 0 bis 100. RSSI in dBm steht getrennt daneben.",
+        "en": "Quality 0 to 100. RSSI in dBm is listed separately beside it."
+      }
     },
     {
       "name": "WIFI_SSID",
@@ -177,7 +198,10 @@
       "feld": "Wifi.LinkCount",
       "optional": true,
       "vorgabeAus": true,
-      "hinweis": "Wie oft die WLAN-Verbindung seit dem Start neu aufgebaut wurde."
+      "hinweis": {
+        "de": "Wie oft die WLAN-Verbindung seit dem Start neu aufgebaut wurde.",
+        "en": "How often the Wi-Fi connection has been re-established since start."
+      }
     },
     {
       "name": "WIFI_DOWNTIME",
@@ -187,7 +211,10 @@
       "feld": "Wifi.Downtime",
       "optional": true,
       "vorgabeAus": true,
-      "hinweis": "Summe der Ausfallzeit seit dem Start."
+      "hinweis": {
+        "de": "Summe der Ausfallzeit seit dem Start.",
+        "en": "Total downtime since start."
+      }
     },
     {
       "name": "IP",
@@ -197,7 +224,10 @@
       "feld": "IPAddress",
       "optional": true,
       "vorgabeAus": true,
-      "hinweis": "Drei Wege, weil keiner allein reicht. tele.STATE steht zuerst, weil es alle paar Minuten frisch kommt und einem Adresswechsel folgt - allerdings fuehrt es die IP erst ab neuerer Firmware mit (gemessen: 12.5.0 nein, 15.5.0 ja). tele.INFO2 schickt eine Tasmota beim Start und laesst es retained stehen; das steht auch bei alter Firmware da, ist aber ein Standbild vom letzten Boot. stat.STATUS5 entsteht, wenn jemand den Status abfragt. Aeltere Firmware schreibt die Felder in tele.INFO2 ohne die Huelle Info2 - deshalb derselbe Punkt zweimal, einmal mit und einmal ohne (gemessen 20.09.2026 am Badlicht: {WebServerMode, Hostname, IPAddress}).",
+      "hinweis": {
+        "de": "Drei Wege, weil keiner allein reicht. tele.STATE steht zuerst, weil es alle paar Minuten frisch kommt und einem Adresswechsel folgt - allerdings fuehrt es die IP erst ab neuerer Firmware mit (gemessen: 12.5.0 nein, 15.5.0 ja). tele.INFO2 schickt eine Tasmota beim Start und laesst es retained stehen; das steht auch bei alter Firmware da, ist aber ein Standbild vom letzten Boot. stat.STATUS5 entsteht, wenn jemand den Status abfragt. Aeltere Firmware schreibt die Felder in tele.INFO2 ohne die Huelle Info2 - deshalb derselbe Punkt zweimal, einmal mit und einmal ohne (gemessen 20.09.2026 am Badlicht: {WebServerMode, Hostname, IPAddress}).",
+        "en": "Three paths, because none of them is enough on its own. tele.STATE comes first, because it arrives fresh every few minutes and follows an address change — though it only carries the IP from newer firmware on (measured: 12.5.0 no, 15.5.0 yes). tele.INFO2 is sent by a Tasmota at start and left retained; it is there on old firmware too, but it is a snapshot from the last boot. stat.STATUS5 appears when someone queries the status. Older firmware writes the fields into tele.INFO2 without the Info2 wrapper — hence the same point twice, once with and once without (measured 20.09.2026 on Badlicht: {WebServerMode, Hostname, IPAddress})."
+      },
       "lesenSonst": [
         {
           "punkt": "tele.INFO2",

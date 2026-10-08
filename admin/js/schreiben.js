@@ -17,6 +17,7 @@ import {
   waehle,
   ordnerUnterAlias,
   kennungtauglich,
+  ohneUmlaute,
   kanalGruppen,
   teilEntwurf,
   aufteilBehaelter,
@@ -1448,8 +1449,8 @@ export function zeigeVerlegen(altVorgabe, zielVorgabe) {
   body.appendChild(vorschau);
 
   var saeubern = function (t) {
-    return String(t).trim()
-      .replace(/[^\w.\- \u00e4\u00f6\u00fc\u00c4\u00d6\u00dc\u00df]/g, '_')
+    return ohneUmlaute(t).trim()
+      .replace(/[^\w.\- ]/g, '_')
       .replace(/\s+/g, '_')
       .replace(/\.{2,}/g, '.')
       .replace(/^\.+|\.+$/g, '');

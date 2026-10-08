@@ -302,6 +302,17 @@ export function zeichneVorlagenBlatt(host) {
   head.appendChild(links);
   host.appendChild(head);
 
+  /* Der Kopfhinweis ist { de, en } oder eine Zeichenkette. Dieselbe
+     Wahl wie beim Namen: eingestellte Sprache, sonst Englisch. */
+  var kopfHinweis = sprachtext(v.hinweis);
+  if (kopfHinweis) {
+    var khw = el('div', 'hint');
+    khw.style.margin = '0 0 11px';
+    khw.style.whiteSpace = 'pre-wrap';
+    khw.textContent = kopfHinweis;
+    host.appendChild(khw);
+  }
+
   /* --- Was das Einlesen bewirken wuerde --- */
   if (vEinlesen) {
     var iw = el('div', 'aside w');
@@ -470,6 +481,14 @@ export function zeichneVorlagenBlatt(host) {
   ek.appendChild(eh);
   var eb = el('div');
   eb.style.padding = '9px 12px 11px';
+  var erkHinweis = sprachtext((v.erkennung || {}).hinweis);
+  if (erkHinweis) {
+    var ehw = el('div', 'hint');
+    ehw.style.whiteSpace = 'pre-wrap';
+    ehw.style.marginBottom = '9px';
+    ehw.textContent = erkHinweis;
+    eb.appendChild(ehw);
+  }
   var listenFeld = function (label, wert, setzen, hilfe) {
     var w = el('div');
     w.style.marginBottom = '9px';
@@ -529,6 +548,8 @@ export function zeichneVorlagenBlatt(host) {
     var auf = (vOffeneZeile === nr);
     var r = el('div', 'slot vklick' + (auf ? ' offen' : ''));
     r.style.gridTemplateColumns = '1fr 1.1fr 1.2fr 90px 15px';
+    var zeilenHinweis = sprachtext(z.hinweis);
+    if (zeilenHinweis) { r.title = zeilenHinweis; }
     r.appendChild(el('span', 'sn', z.name));
     r.appendChild(el('span', 'rx', z.rolle || '\u2014'));
     var pw = el('span', 'rx');
@@ -851,6 +872,13 @@ function schreibeErsatz(z, liste) {
 function vZeilenDetail(z, nr, eigen) {
   var v = vArbeitsstand();
   var d = el('div', 'detail');
+  var zeilenHinweis = sprachtext(z.hinweis);
+  if (zeilenHinweis) {
+    var hw0 = el('div', 'hint');
+    hw0.style.whiteSpace = 'pre-wrap';
+    hw0.textContent = zeilenHinweis;
+    d.appendChild(hw0);
+  }
 
   /* Genau der Aufbau des Detailblocks am Geraet: Name, liest aus,
      schreibt nach, Formel, Schreibformel, Rolle, Anzeige. Nur was ein

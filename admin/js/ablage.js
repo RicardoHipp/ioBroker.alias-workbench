@@ -25,6 +25,11 @@ import { socket } from './verbindung.js';
 
 var ORT = 'alias-workbench.0';
 var DATEI = 'katalog.json';
+var ABLAGE_NAME = { en: 'Alias Workbench — Storage', de: 'Alias-Werkbank — Ablage' };
+
+function nameIstAlt(name) {
+  return name === 'Alias-Werkbank — Ablage' || name === 'Alias-Werkbank - Ablage';
+}
 
 /* Den Dateibereich gibt es nur zu einem Objekt vom Typ `meta`. Adapter
    mit Dienstteil bekommen es vom js-controller; die Werkbank ist
@@ -39,12 +44,12 @@ function bereit() {
   return new Promise(function (fertig) {
     try {
       socket.emit('getObject', ORT, function (err, o) {
-        if (o && o.type === 'meta') { return fertig(true); }
-        socket.emit('setObject', ORT, {
-          type: 'meta',
-          common: { name: 'Alias-Werkbank — Ablage', type: 'meta.user' },
-          native: {}
-        }, function (fehler) { fertig(!fehler); });
+        if (o && o.type === 'meta' && !nameIstAlt(o.common && o.common.name)) { return fertig(true); }
+        var neu = (o && o.type === 'meta') ? o : { type: 'meta', native: {} };
+        neu.common = neu.common || {};
+        neu.common.name = ABLAGE_NAME;
+        neu.common.type = 'meta.user';
+        socket.emit('setObject', ORT, neu, function (fehler) { fertig(!fehler); });
       });
     } catch { fertig(false); }
     setTimeout(function () { fertig(false); }, 8000);

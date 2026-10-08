@@ -17,7 +17,10 @@
       "1.LEVEL",
       "1.LEVEL_REAL"
     ],
-    "hinweis": "1.LEVEL_REAL ist der Unterschied zum Rollladenaktor, der ebenfalls ein 1.LEVEL hat, aber keine Ruecklesung - und zur Zentrale HM-RCV-50, die fuenfzig blanke LEVEL-Kanaele fuehrt."
+    "hinweis": {
+      "de": "1.LEVEL_REAL ist der Unterschied zum Rollladenaktor, der ebenfalls ein 1.LEVEL hat, aber keine Ruecklesung - und zur Zentrale HM-RCV-50, die fuenfzig blanke LEVEL-Kanaele fuehrt.",
+      "en": "1.LEVEL_REAL is what sets this apart from the roller-shutter actuator, which also has a 1.LEVEL but no position feedback — and from the HM-RCV-50 central unit, which carries fifty bare LEVEL channels."
+    }
   },
   "zustaende": [
     {
@@ -27,7 +30,10 @@
       "einheit": "%",
       "lesen": "1.LEVEL",
       "schreiben": "1.LEVEL",
-      "hinweis": "Die Quelle steht schon auf 0 bis 100, also keine Umrechnung noetig."
+      "hinweis": {
+        "de": "Die Quelle steht schon auf 0 bis 100, also keine Umrechnung noetig.",
+        "en": "The source is already on a 0 to 100 scale, so no conversion is needed."
+      }
     },
     {
       "name": "ACTUAL",
@@ -36,7 +42,10 @@
       "einheit": "%",
       "lesen": "1.LEVEL_REAL",
       "optional": true,
-      "hinweis": "Der tatsaechlich erreichte Wert. Waehrend einer Rampe laeuft er dem Sollwert hinterher."
+      "hinweis": {
+        "de": "Der tatsaechlich erreichte Wert. Waehrend einer Rampe laeuft er dem Sollwert hinterher.",
+        "en": "The value actually reached. During a ramp it lags behind the setpoint."
+      }
     },
     {
       "name": "WORKING",
@@ -44,7 +53,10 @@
       "typ": "boolean",
       "lesen": "1.WORKING",
       "optional": true,
-      "hinweis": "true, solange die Rampe laeuft."
+      "hinweis": {
+        "de": "true, solange die Rampe laeuft.",
+        "en": "true while the ramp is running."
+      }
     },
     {
       "name": "DIRECTION",
@@ -53,7 +65,10 @@
       "lesen": "1.DIRECTION",
       "optional": true,
       "vorgabeAus": true,
-      "hinweis": "0 steht, 1 heller, 2 dunkler, 3 unbekannt."
+      "hinweis": {
+        "de": "0 steht, 1 heller, 2 dunkler, 3 unbekannt.",
+        "en": "0 is idle, 1 brighter, 2 darker, 3 unknown."
+      }
     },
     {
       "name": "RAMP_TIME",
@@ -64,7 +79,10 @@
       "schreiben": "1.RAMP_TIME",
       "optional": true,
       "vorgabeAus": true,
-      "hinweis": "Wie lange der naechste Uebergang dauern soll. Vor dem Setzen von LEVEL schreiben."
+      "hinweis": {
+        "de": "Wie lange der naechste Uebergang dauern soll. Vor dem Setzen von LEVEL schreiben.",
+        "en": "How long the next transition should take. Write this before setting LEVEL."
+      }
     },
     {
       "name": "ON_TIME",
@@ -84,7 +102,10 @@
       "schreiben": "1.INHIBIT",
       "optional": true,
       "vorgabeAus": true,
-      "hinweis": "Sperrt den Aktor. Solange true, nimmt er keine Befehle an - auch nicht vom Taster."
+      "hinweis": {
+        "de": "Sperrt den Aktor. Solange true, nimmt er keine Befehle an - auch nicht vom Taster.",
+        "en": "Locks the actuator. While true it accepts no commands — not even from the wall switch."
+      }
     },
     {
       "name": "UNREACH",
@@ -104,7 +125,10 @@
       "lesenSonst": {
         "punkt": "0.RSSI_PEER"
       },
-      "hinweis": "RSSI_DEVICE steht zuerst: es ist der Pegel, den die Zentrale vom Geraet empfaengt. RSSI_PEER ist bei Batteriegeraeten oft unbelegt und traegt dann Grenzwerte wie -2147483648."
+      "hinweis": {
+        "de": "RSSI_DEVICE steht zuerst: es ist der Pegel, den die Zentrale vom Geraet empfaengt. RSSI_PEER ist bei Batteriegeraeten oft unbelegt und traegt dann Grenzwerte wie -2147483648.",
+        "en": "RSSI_DEVICE comes first: it is the level the central unit receives from the device. RSSI_PEER is often empty on battery devices and then carries sentinel values such as -2147483648."
+      }
     }
   ],
   "weiterePunkte": {

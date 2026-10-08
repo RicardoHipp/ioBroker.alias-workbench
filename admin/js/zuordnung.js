@@ -17,7 +17,7 @@ import { enumVorlagen, katalogFehlt, ikonCache, ikonErlaubt, ikonNachtrag,
 import { kindZustaende, aliasQuellen, holeEinzelne,
          zeileAusAlias } from './werte.js';
 import { aliasFuer, ausgangsQuellen, zielId, knotenDa,
-         aboErgaenzen, quellenVonEntwurf } from './entwurf.js';
+         kennungtauglich, aboErgaenzen, quellenVonEntwurf } from './entwurf.js';
 import { zeichneErgebnis, entwurfAngefasst, angebotFrisch } from './ergebnis.js';
 
 
@@ -452,11 +452,12 @@ export function setzeEnums(e) {
   }
 }
 
-/* Der Name einer Aufzaehlung, so wie er als Ordner taugen wuerde.
+/* Der Name einer Aufzaehlung, so wie er als Ordner unter alias.0 taugt.
 
-   Ein Ordner unter `alias.0` darf keine Punkte enthalten - sie wuerden
-   eine weitere Ebene aufmachen. Alles andere bleibt, wie der Nutzer es
-   kennt: „Wohnkueche“ heisst auch im Pfad „Wohnkueche“. */
+   Dieselbe Regel wie beim Alias-Namen: kennungtauglich. Umlaute werden
+   zu ae, oe, ue und ss, ein Punkt wuerde sonst eine weitere Ebene
+   aufmachen. Der Raum bleibt „Wohnküche“, der Ordner heisst
+   „Wohnkueche“. */
 export function enumAlsOrdner(id) {
   if (!id) { return ''; }
   var o = enums[id];
@@ -468,7 +469,7 @@ export function enumAlsOrdner(id) {
     n = v ? (txt(v.name) || '') : '';
   }
   if (!n) { n = id.split('.').pop(); }
-  return String(n).replace(/\./g, '_').trim();
+  return kennungtauglich(n);
 }
 
 export function setzeZiel(e) {

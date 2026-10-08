@@ -8,7 +8,7 @@
 
 import { S } from './zustand.js';
 import { el, $ } from './basis.js';
-import { tr } from './sprache.js';
+import { tr, sprachtext } from './sprache.js';
 import { erkenneEntwurf, musterVon, rolleVonPlatz, typKonflikte, plaetzeFuerRolle, typPasstZuPlatz, fehlendePflicht } from './erkennung.js';
 import { kindZustaende, wertVon, fmt } from './werte.js';
 import { steuerKanaele, vorlagenAbweichung, bestandsAbweichung, waehle, quelleHier, quellenVerteilung } from './entwurf.js';
@@ -505,7 +505,14 @@ export function baueListe(host, e, pl, rateKnopf, musterBlock) {
        „geaendert", „weicht ab") wurde sie damit zu voll, und Rolle und
        Wert rutschten nach rechts weg (Ricardo, 08.09.2026). Die Kennung
        traegt jetzt den Hinweis; sichtbar bleibt sie im Detail. */
-    if (s.caption && s.caption !== s.n) { n3.title = s.caption; }
+    /* Beschriftung und der Hinweis aus der Vorlage. Der Hinweis ist
+       eine Zeichenkette oder { de, en }; sprachtext nimmt die
+       eingestellte Sprache, sonst Englisch. */
+    var titel = [];
+    if (s.caption && s.caption !== s.n) { titel.push(s.caption); }
+    var zeilenHinweis = sprachtext(s.hinweis);
+    if (zeilenHinweis) { titel.push(zeilenHinweis); }
+    if (titel.length) { n3.title = titel.join('\n\n'); }
     if (s.manuell) { n3.appendChild(el('span', 'hand', tr('list.byHand'))); }
     if (s.geaendert) { n3.appendChild(el('span', 'geae', tr('list.changed'))); }
     /* Was die Vorlage anders will, steht an der Zeile - sonst sieht man

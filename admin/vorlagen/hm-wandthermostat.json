@@ -8,7 +8,10 @@
   },
   "geraetetyp": "thermostat",
   "funktion": "heating",
-  "hinweis": "HmIP-WTH und Verwandte — der Thermostat an der Wand. Er misst Temperatur und Luftfeuchte und gibt den Sollwert vor, hat aber kein eigenes Ventil: geregelt wird am Heizkörper. Deshalb fehlt hier VALVE.",
+  "hinweis": {
+    "de": "HmIP-WTH und Verwandte — der Thermostat an der Wand. Er misst Temperatur und Luftfeuchte und gibt den Sollwert vor, hat aber kein eigenes Ventil: geregelt wird am Heizkörper. Deshalb fehlt hier VALVE.",
+    "en": "HmIP-WTH and relatives — the thermostat on the wall. It measures temperature and humidity and sets the setpoint, but it has no valve of its own: control happens at the radiator. VALVE is therefore absent here."
+  },
   "erkennung": {
     "erforderlich": [
       "1.SET_POINT_TEMPERATURE",
@@ -18,7 +21,10 @@
       "1.LEVEL",
       "4.SECTION"
     ],
-    "hinweis": "1.HUMIDITY hat nur der Wandthermostat und die Heizgruppe; 1.LEVEL schliesst das Heizkoerperventil aus, 4.SECTION die Gruppe."
+    "hinweis": {
+      "de": "1.HUMIDITY hat nur der Wandthermostat und die Heizgruppe; 1.LEVEL schliesst das Heizkoerperventil aus, 4.SECTION die Gruppe.",
+      "en": "Only the wall thermostat and the heating group have 1.HUMIDITY; 1.LEVEL excludes the radiator valve, 4.SECTION the group."
+    }
   },
   "zustaende": [
     {
@@ -42,7 +48,10 @@
       "typ": "number",
       "einheit": "%",
       "lesen": "1.HUMIDITY",
-      "hinweis": "Die Quelle traegt die Einheit „% rF\"; das thermostat-Muster erwartet an diesem Platz Prozent."
+      "hinweis": {
+        "de": "Die Quelle traegt die Einheit „% rF\"; das thermostat-Muster erwartet an diesem Platz Prozent.",
+        "en": "The source carries the unit \"% rH\"; the thermostat pattern expects percent on this slot."
+      }
     },
     {
       "name": "MODE",
@@ -57,7 +66,10 @@
         "2": "Urlaub",
         "3": "Modus 3"
       },
-      "hinweis": "Der Platz MODE verlangt eine Werteliste - ohne common.states steht im Widget nur eine nackte Zahl. Die Quelle liefert keine mit: hm-rpc meldet den Punkt als INTEGER 0 bis 3 ohne VALUE_LIST.\nBelegt sind 0, 1 und 2. Die Zuordnung steht so in aiohomematic, der Bibliothek hinter der Homematic-Anbindung von Home Assistant: AUTO=0, MANU=1, AWAY=2. Automatik heisst, das Wochenprogramm laeuft; Manuell haelt den eingestellten Sollwert; Urlaub (englisch away) ist der Modus, zu dem PARTY_MODE und PARTY_TIME_START/END gehoeren.\n3 bleibt neutral - bei HmIP kennt aiohomematic keine 3, und Boost laeuft ueber den eigenen Punkt."
+      "hinweis": {
+        "de": "Der Platz MODE verlangt eine Werteliste - ohne common.states steht im Widget nur eine nackte Zahl. Die Quelle liefert keine mit: hm-rpc meldet den Punkt als INTEGER 0 bis 3 ohne VALUE_LIST.\nBelegt sind 0, 1 und 2. Die Zuordnung steht so in aiohomematic, der Bibliothek hinter der Homematic-Anbindung von Home Assistant: AUTO=0, MANU=1, AWAY=2. Automatik heisst, das Wochenprogramm laeuft; Manuell haelt den eingestellten Sollwert; Urlaub (englisch away) ist der Modus, zu dem PARTY_MODE und PARTY_TIME_START/END gehoeren.\n3 bleibt neutral - bei HmIP kennt aiohomematic keine 3, und Boost laeuft ueber den eigenen Punkt.",
+        "en": "The MODE slot requires a value list — without common.states the widget shows a bare number. The source supplies none: hm-rpc reports the point as INTEGER 0 to 3 without a VALUE_LIST.\n0, 1 and 2 are used. The mapping is the one in aiohomematic, the library behind Home Assistant's Homematic integration: AUTO=0, MANU=1, AWAY=2. Automatic means the week programme is running; manual holds the setpoint; holiday (English: away) is the mode that PARTY_MODE and PARTY_TIME_START/END belong to.\n3 stays neutral — on HmIP aiohomematic knows no 3, and boost runs through its own point."
+      }
     },
     {
       "name": "BOOST",
@@ -74,7 +86,10 @@
       "lesen": "1.PARTY_MODE",
       "optional": true,
       "vorgabeAus": true,
-      "hinweis": "Nur lesbar. Gehoert zum Urlaubsmodus und wird ueber MODE gesetzt, nicht hier."
+      "hinweis": {
+        "de": "Nur lesbar. Gehoert zum Urlaubsmodus und wird ueber MODE gesetzt, nicht hier.",
+        "en": "Read only. Belongs to holiday mode and is set via MODE, not here."
+      }
     },
     {
       "name": "WINDOW_STATE",
@@ -87,7 +102,10 @@
         "0": "zu",
         "1": "offen"
       },
-      "hinweis": "Meldet, ob die Fensteroffen-Erkennung zugeschlagen hat. Das thermostat-Muster hat zwar einen Platz WINDOW, der nimmt aber nur sensor.window oder state.window - die Quelle liefert eine Zahl mit value.window. Angehakt landet der Punkt deshalb im info-Geraet. Wer ihn im Thermostat haben will, rechnet ihn per Leseformel auf einen Wahrheitswert um und setzt die Rolle auf sensor.window."
+      "hinweis": {
+        "de": "Meldet, ob die Fensteroffen-Erkennung zugeschlagen hat. Das thermostat-Muster hat zwar einen Platz WINDOW, der nimmt aber nur sensor.window oder state.window - die Quelle liefert eine Zahl mit value.window. Angehakt landet der Punkt deshalb im info-Geraet. Wer ihn im Thermostat haben will, rechnet ihn per Leseformel auf einen Wahrheitswert um und setzt die Rolle auf sensor.window.",
+        "en": "Reports whether the open-window detection has tripped. The thermostat pattern does have a WINDOW slot, but it only accepts sensor.window or state.window — the source delivers a number with value.window. Ticked, the point therefore lands in the info device. To have it in the thermostat, convert it to a boolean with a read formula and set the role to sensor.window."
+      }
     },
     {
       "name": "LOWBAT",
@@ -98,7 +116,10 @@
         "punkt": "0.LOWBAT"
       },
       "optional": true,
-      "hinweis": "HmIP schreibt LOW_BAT, die aeltere Homematic-Reihe LOWBAT."
+      "hinweis": {
+        "de": "HmIP schreibt LOW_BAT, die aeltere Homematic-Reihe LOWBAT.",
+        "en": "HmIP writes LOW_BAT, the older Homematic line writes LOWBAT."
+      }
     },
     {
       "name": "UNREACH",
@@ -118,7 +139,10 @@
       },
       "optional": true,
       "vorgabeAus": true,
-      "hinweis": "RSSI_DEVICE steht zuerst: es ist der Pegel, den die Zentrale vom Geraet empfaengt. RSSI_PEER ist bei Batteriegeraeten oft unbelegt und traegt dann Grenzwerte wie -2147483648."
+      "hinweis": {
+        "de": "RSSI_DEVICE steht zuerst: es ist der Pegel, den die Zentrale vom Geraet empfaengt. RSSI_PEER ist bei Batteriegeraeten oft unbelegt und traegt dann Grenzwerte wie -2147483648.",
+        "en": "RSSI_DEVICE comes first: it is the level the central unit receives from the device. RSSI_PEER is often empty on battery devices and then carries sentinel values such as -2147483648."
+      }
     },
     {
       "name": "VOLTAGE",
@@ -128,7 +152,10 @@
       "lesen": "0.OPERATING_VOLTAGE",
       "optional": true,
       "vorgabeAus": true,
-      "hinweis": "Batteriespannung. Nicht vorgehakt, und der VOLTAGE-Platz des Musters ist dafuer auch nicht gedacht: im type-detector gehoert VOLTAGE zur Messgruppe neben Strom, Verbrauch und Frequenz. Dass die Batterie zur Neige geht, meldet LOWBAT, und das ist vorgehakt."
+      "hinweis": {
+        "de": "Batteriespannung. Nicht vorgehakt, und der VOLTAGE-Platz des Musters ist dafuer auch nicht gedacht: im type-detector gehoert VOLTAGE zur Messgruppe neben Strom, Verbrauch und Frequenz. Dass die Batterie zur Neige geht, meldet LOWBAT, und das ist vorgehakt.",
+        "en": "Battery voltage. Not ticked, and the pattern's VOLTAGE slot is not meant for it either: in the type-detector VOLTAGE belongs to the metering group next to current, consumption and frequency. That the battery is running low is reported by LOWBAT, and that one is ticked."
+      }
     }
   ],
   "weiterePunkte": {

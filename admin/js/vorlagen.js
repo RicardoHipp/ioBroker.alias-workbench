@@ -575,7 +575,11 @@ export function wendeAn(v, kanal, gruende, instanz, auchOhneTreffer) {
         caption: z.beschriftung || '',
         dec: z.nachkommastellen === undefined ? undefined : String(z.nachkommastellen),
         states: z.werteliste || undefined,
-        manuell: false, ausVorlage: z.name, hinweis: z.hinweis || '', wege: []
+        manuell: false, ausVorlage: z.name,
+        /* Zeichenkette oder { de, en }. Ganz mitnehmen, nicht aufloesen:
+           beim Speichern zurueck in eine Vorlage bleiben beide Sprachen,
+           und die Anzeige waehlt ueber sprachtext. */
+        hinweis: z.hinweis || '', wege: []
       });
       return;
     }
@@ -650,6 +654,7 @@ export function wendeAn(v, kanal, gruende, instanz, auchOhneTreffer) {
       states: z.werteliste || undefined,
       manuell: false,
       ausVorlage: z.name,
+      /* Wie oben: das Sprachobjekt bleibt ganz, sprachtext waehlt. */
       hinweis: z.hinweis || '',
       /* Alle Lesewege mitnehmen, nicht nur den, der heute gegriffen hat.
          Wer aus diesem Geraet eine Vorlage macht, soll die Ersatzquellen

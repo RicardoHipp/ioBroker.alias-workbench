@@ -23,7 +23,10 @@
       "1.ERROR",
       "1.SET_POINT_TEMPERATURE"
     ],
-    "hinweis": "0.SABOTAGE ist die eigentliche Kennung. Ohne sie tragen die Ausschluesse die ganze Last, und Ausschluesse zaehlen nur auf, was man kennt: 1.STATE zusammen mit 0.LOW_BAT trifft auf dem Testsystem zwoelf Geraete, davon acht Schaltaktoren (HM-LC-Sw1PBU-FM und Verwandte) und den alten HM-Sec-SCo. Mit 0.SABOTAGE bleiben genau die drei HmIP-Fensterkontakte uebrig - die Schaltaktoren fuehren den Punkt nicht, der HM-Sec-SCo auch nicht, und die Heizgruppen haben ihn zwar, aber kein 1.STATE.\n\nDie Ausschluesse bleiben trotzdem stehen: 1.WORKING kennzeichnet den Schaltaktor, 1.ERROR die aeltere HM-Sec-SCo mit eigener Vorlage, SET_POINT_TEMPERATURE haelt die Thermostate fern, die ebenfalls 0.LOW_BAT fuehren.\n\nVorbehalt: Gemessen ist das an HMIP-SWDO. Ob jedes HmIP-Modell den Sabotagekontakt fuehrt - SWDO-I verdeckt, SWDO-PL, der Fenstergriff SRH - ist nicht geprueft. Bei HmIP-Gehaeusegeraeten ist er ueblich; faellt doch eines durch, gehoert dort eine eigene Vorlage hin."
+    "hinweis": {
+      "de": "0.SABOTAGE ist die eigentliche Kennung. Ohne sie tragen die Ausschluesse die ganze Last, und Ausschluesse zaehlen nur auf, was man kennt: 1.STATE zusammen mit 0.LOW_BAT trifft auf dem Testsystem zwoelf Geraete, davon acht Schaltaktoren (HM-LC-Sw1PBU-FM und Verwandte) und den alten HM-Sec-SCo. Mit 0.SABOTAGE bleiben genau die drei HmIP-Fensterkontakte uebrig - die Schaltaktoren fuehren den Punkt nicht, der HM-Sec-SCo auch nicht, und die Heizgruppen haben ihn zwar, aber kein 1.STATE.\n\nDie Ausschluesse bleiben trotzdem stehen: 1.WORKING kennzeichnet den Schaltaktor, 1.ERROR die aeltere HM-Sec-SCo mit eigener Vorlage, SET_POINT_TEMPERATURE haelt die Thermostate fern, die ebenfalls 0.LOW_BAT fuehren.\n\nVorbehalt: Gemessen ist das an HMIP-SWDO. Ob jedes HmIP-Modell den Sabotagekontakt fuehrt - SWDO-I verdeckt, SWDO-PL, der Fenstergriff SRH - ist nicht geprueft. Bei HmIP-Gehaeusegeraeten ist er ueblich; faellt doch eines durch, gehoert dort eine eigene Vorlage hin.",
+      "en": "0.SABOTAGE is the real signature. Without it the exclusions carry the whole load, and exclusions only count what one already knows: 1.STATE together with 0.LOW_BAT matches twelve devices on the test system, eight of them switch actuators (HM-LC-Sw1PBU-FM and relatives) and the old HM-Sec-SCo. With 0.SABOTAGE exactly the three HmIP window contacts remain — the switch actuators do not carry the point, nor does the HM-Sec-SCo, and the heating groups do have it but no 1.STATE.\n\nThe exclusions stay anyway: 1.WORKING marks the switch actuator, 1.ERROR the older HM-Sec-SCo with its own template, SET_POINT_TEMPERATURE keeps away the thermostats, which also carry 0.LOW_BAT.\n\nCaveat: this was measured on HMIP-SWDO. Whether every HmIP model carries the sabotage contact — SWDO-I concealed, SWDO-PL, the window handle SRH — has not been checked. On HmIP enclosure devices it is usual; if one does fall through, it needs a template of its own."
+    }
   },
   "zustaende": [
     {
@@ -32,7 +35,10 @@
       "typ": "boolean",
       "lesen": "1.STATE",
       "leseformel": "val > 0",
-      "hinweis": "Die Quelle steht auf 0 bis 1. Groesser null heisst offen."
+      "hinweis": {
+        "de": "Die Quelle steht auf 0 bis 1. Groesser null heisst offen.",
+        "en": "The source is on a 0 to 1 scale. Greater than zero means open."
+      }
     },
     {
       "name": "STATE_RAW",
@@ -41,7 +47,10 @@
       "lesen": "1.STATE",
       "optional": true,
       "vorgabeAus": true,
-      "hinweis": "Derselbe Punkt ungerechnet. Nur noetig, wenn etwas die Rohzahl braucht - im window-Muster hat sie keinen Platz und landet im info-Geraet."
+      "hinweis": {
+        "de": "Derselbe Punkt ungerechnet. Nur noetig, wenn etwas die Rohzahl braucht - im window-Muster hat sie keinen Platz und landet im info-Geraet.",
+        "en": "The same point, unconverted. Only needed when something wants the raw number — the window pattern has no slot for it and it lands in the info device."
+      }
     },
     {
       "name": "SABOTAGE",
@@ -49,7 +58,10 @@
       "typ": "boolean",
       "lesen": "0.SABOTAGE",
       "optional": true,
-      "hinweis": "Meldet, wenn das Gehaeuse geoeffnet wurde. Nicht vorgehakt: weder window- noch info-Muster haben einen Platz dafuer - wer die Meldung will, hakt sie an. Als Erkennungsmerkmal (erkennung.erforderlich) traegt 0.SABOTAGE weiter.",
+      "hinweis": {
+        "de": "Meldet, wenn das Gehaeuse geoeffnet wurde. Nicht vorgehakt: weder window- noch info-Muster haben einen Platz dafuer - wer die Meldung will, hakt sie an. Als Erkennungsmerkmal (erkennung.erforderlich) traegt 0.SABOTAGE weiter.",
+        "en": "Reports when the enclosure was opened. Not ticked: neither the window nor the info pattern has a slot for it — tick it if you want the report. As a detection mark (erkennung.erforderlich) 0.SABOTAGE stays."
+      },
       "vorgabeAus": true
     },
     {
@@ -61,7 +73,10 @@
         "punkt": "0.LOWBAT"
       },
       "optional": true,
-      "hinweis": "HmIP schreibt LOW_BAT, die aeltere Homematic-Reihe LOWBAT."
+      "hinweis": {
+        "de": "HmIP schreibt LOW_BAT, die aeltere Homematic-Reihe LOWBAT.",
+        "en": "HmIP writes LOW_BAT, the older Homematic line writes LOWBAT."
+      }
     },
     {
       "name": "UNREACH",
@@ -78,7 +93,10 @@
       "lesen": "0.OPERATING_VOLTAGE",
       "optional": true,
       "vorgabeAus": true,
-      "hinweis": "Batteriespannung. Nicht vorgehakt, und der VOLTAGE-Platz des Musters ist dafuer auch nicht gedacht: im type-detector gehoert VOLTAGE zur Messgruppe neben Strom, Verbrauch und Frequenz - es ist die Netzspannung eines messenden Geraets. Fuer Batterien gibt es dort nur BATTERY mit value.battery in Prozent. Einen Platz fuer „Batteriespannung in Volt\" kennt der Detector nicht. Angehakt landet der Punkt deshalb im info-Geraet. Dass die Batterie zur Neige geht, meldet LOWBAT, und das ist vorgehakt."
+      "hinweis": {
+        "de": "Batteriespannung. Nicht vorgehakt, und der VOLTAGE-Platz des Musters ist dafuer auch nicht gedacht: im type-detector gehoert VOLTAGE zur Messgruppe neben Strom, Verbrauch und Frequenz - es ist die Netzspannung eines messenden Geraets. Fuer Batterien gibt es dort nur BATTERY mit value.battery in Prozent. Einen Platz fuer „Batteriespannung in Volt\" kennt der Detector nicht. Angehakt landet der Punkt deshalb im info-Geraet. Dass die Batterie zur Neige geht, meldet LOWBAT, und das ist vorgehakt.",
+        "en": "Battery voltage. Not ticked, and the pattern's VOLTAGE slot is not meant for it either: in the type-detector VOLTAGE belongs to the metering group next to current, consumption and frequency — it is the mains voltage of a metering device. For batteries there is only BATTERY with value.battery in percent. The detector has no slot for \"battery voltage in volts\". Ticked, the point therefore lands in the info device. That the battery is running low is reported by LOWBAT, and that one is ticked."
+      }
     },
     {
       "name": "RSSI",
@@ -91,7 +109,10 @@
       },
       "optional": true,
       "vorgabeAus": true,
-      "hinweis": "RSSI_DEVICE steht zuerst: es ist der Pegel, den die Zentrale vom Geraet empfaengt. RSSI_PEER ist bei Batteriegeraeten oft unbelegt und traegt dann Grenzwerte wie -2147483648."
+      "hinweis": {
+        "de": "RSSI_DEVICE steht zuerst: es ist der Pegel, den die Zentrale vom Geraet empfaengt. RSSI_PEER ist bei Batteriegeraeten oft unbelegt und traegt dann Grenzwerte wie -2147483648.",
+        "en": "RSSI_DEVICE comes first: it is the level the central unit receives from the device. RSSI_PEER is often empty on battery devices and then carries sentinel values such as -2147483648."
+      }
     }
   ],
   "weiterePunkte": {

@@ -21,7 +21,10 @@
       "1.SET_POINT_TEMPERATURE",
       "1.ACTUAL_TEMPERATURE"
     ],
-    "hinweis": "Die Thermostate messen ebenfalls Temperatur und Feuchte, heissen ihre Punkte aber ACTUAL_TEMPERATURE und haben einen Sollwert. Beides ist hier verboten, sonst wuerde diese Vorlage ihnen den Rang ablaufen und das Stellglied unter den Tisch fallen."
+    "hinweis": {
+      "de": "Die Thermostate messen ebenfalls Temperatur und Feuchte, heissen ihre Punkte aber ACTUAL_TEMPERATURE und haben einen Sollwert. Beides ist hier verboten, sonst wuerde diese Vorlage ihnen den Rang ablaufen und das Stellglied unter den Tisch fallen.",
+      "en": "The thermostats also measure temperature and humidity, but their points are called ACTUAL_TEMPERATURE and they have a setpoint. Both are forbidden here, otherwise this template would outrank them and the actuator would be dropped."
+    }
   },
   "zustaende": [
     {
@@ -66,7 +69,10 @@
       },
       "optional": true,
       "vorgabeAus": true,
-      "hinweis": "RSSI_DEVICE steht zuerst: es ist der Pegel, den die Zentrale vom Geraet empfaengt. RSSI_PEER ist bei Batteriegeraeten oft unbelegt und traegt dann Grenzwerte wie -2147483648."
+      "hinweis": {
+        "de": "RSSI_DEVICE steht zuerst: es ist der Pegel, den die Zentrale vom Geraet empfaengt. RSSI_PEER ist bei Batteriegeraeten oft unbelegt und traegt dann Grenzwerte wie -2147483648.",
+        "en": "RSSI_DEVICE comes first: it is the level the central unit receives from the device. RSSI_PEER is often empty on battery devices and then carries sentinel values such as -2147483648."
+      }
     }
   ],
   "weiterePunkte": {

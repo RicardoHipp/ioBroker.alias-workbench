@@ -11,7 +11,7 @@ import { el } from './basis.js';
 import { tr } from './sprache.js';
 import { enumListe } from './aufzaehlungen.js';
 import { enumZeile, setzeZiel } from './zuordnung.js';
-import { aliasFuer, ausgangsQuellen, ordnerUnterAlias, kennungtauglich, knotenDa } from './entwurf.js';
+import { aliasFuer, ausgangsQuellen, ordnerUnterAlias, kennungtauglich, knotenDa, ohneUmlaute } from './entwurf.js';
 import { zeichneErgebnis, entwurfAngefasst, angebotFrisch } from './ergebnis.js';
 import { zeigeVerlegen } from './schreiben.js';
 
@@ -63,6 +63,7 @@ export function baueZielleiste(host, e) {
       iO.value = '';
       S.fokusOrdnerfeld = true;
       e.zielOrdner = 'alias.0';
+      e.ordnerRoh = '';
       e.ordnerVonHand = true;
       e.zuletzt = 'ordner';
       entwurfAngefasst();
@@ -76,16 +77,21 @@ export function baueZielleiste(host, e) {
     zb.appendChild(wrap);
 
     var saeubern = function (t) {
-      return String(t).trim()
-        .replace(/[^\w.\- äöüÄÖÜß]/g, '_')
+      return ohneUmlaute(t).trim()
+        .replace(/[^\w.\- ]/g, '_')
         .replace(/\s+/g, '_')
         .replace(/\.{2,}/g, '.')
         .replace(/^\.+|\.+$/g, '');
     };
     var uebernehmen = function () {
-      var t = saeubern(iO.value);
+      /* Der Ordner ist eine Kennung, der Raum nicht. „Küche" wird als
+         Ablageort zu Kueche, als Raumvorschlag bleibt es Küche. */
+      var roh = String(iO.value || '').trim();
+      var t = saeubern(roh);
       var neuerOrdner = t ? ('alias.0.' + t) : 'alias.0';
-      if (neuerOrdner === e.zielOrdner) { return; }
+      var rohNeu = (roh && roh.indexOf('.') === -1) ? roh : '';
+      if (neuerOrdner === e.zielOrdner && rohNeu === (e.ordnerRoh || '')) { return; }
+      e.ordnerRoh = rohNeu;
       e.zielOrdner = neuerOrdner;
       /* Ab jetzt gehoert der Ordner dem Nutzer - der Raum schreibt ihn
          nicht mehr um. Angeboten wird die Uebernahme trotzdem, aber in
@@ -328,17 +334,20 @@ export function baueZielleiste(host, e) {
     if (e.zuletzt === 'ordner') {
       var otx = String(e.zielOrdner || '').slice('alias.0.'.length);
       if (otx && otx.indexOf('.') === -1) {
+        /* Getippt wurde vielleicht „Küche", in der Kennung steht
+           Kueche. Der Raum bekommt den getippten Namen. */
+        var nameFuerRaum = e.ordnerRoh || otx;
         var vorhandenerRaum = enumListe('rooms', true).filter(function (r) {
-          return r.name.toLowerCase() === otx.toLowerCase() ||
-                 r.kurz.toLowerCase() === otx.toLowerCase();
+          return r.name.toLowerCase() === nameFuerRaum.toLowerCase() ||
+                 r.kurz.toLowerCase() === nameFuerRaum.toLowerCase();
         })[0];
-        var raumId = vorhandenerRaum ? vorhandenerRaum.id : ('enum.rooms.' + otx);
+        var raumId = vorhandenerRaum ? vorhandenerRaum.id : ('enum.rooms.' + nameFuerRaum);
         if (raumId !== e.raum) {
           var az = el('div', 'uebernahme' +
             (angebotFrisch('ordner:' + raumId) ? ' frisch' : ''));
           az.appendChild(el('span', 'zq', vorhandenerRaum
-            ? tr('target.alsoRoom', otx)
-            : tr('target.alsoRoomNew', otx)));
+            ? tr('target.alsoRoom', nameFuerRaum)
+            : tr('target.alsoRoomNew', nameFuerRaum)));
           var ab = el('button', 'btn mini wichtig', tr('target.yes'));
           ab.addEventListener('click', function () {
             e.raum = raumId;

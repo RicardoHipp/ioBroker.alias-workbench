@@ -588,15 +588,25 @@ export function springeZu(id, modus) {
    Frueher immer das letzte Stueck der Kennung — bei einer Homematic also
    `alias.0.NEQ0000000`, und bei einem Kanal davon schlicht `alias.0.1`.
    Wo ein Objekt einen Namen traegt, ist der gemeint. */
+/* Umlaute werden zu ae/oe/ue/ss. Eine Kennung darf nur a-z, A-Z,
+   Ziffern, Bindestrich und Unterstrich tragen — ae, oe und ue bleiben
+   lesbar, waehrend „Küche" als `K_che` niemand wiedererkennt. */
+export function ohneUmlaute(t) {
+  return String(t)
+    .replace(/Ä/g, 'Ae').replace(/Ö/g, 'Oe').replace(/Ü/g, 'Ue')
+    .replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue')
+    .replace(/ß/g, 'ss');
+}
+
 /* Ein Name, der als Kennung taugt. Dieselbe Regel wie in den Feldern
    der Zielleiste und des Verlegen-Dialogs - sie stand dort zweimal und
    hier gar nicht: ein Geraetename wie „HM-Schaltaktor, Original" wurde
    zu `HM-Schaltaktor_ Original`, das Komma ersetzt, das Leerzeichen
    stehengelassen (gefunden 26.08.2026 an einem Fake-Geraet).
-   Umlaute bleiben, Punkte wuerden eine Unterebene aufmachen. */
+   Punkte wuerden eine Unterebene aufmachen. */
 export function kennungtauglich(t) {
-  return String(t).trim()
-    .replace(/[^\w.\- äöüÄÖÜß]/g, '_')
+  return ohneUmlaute(t).trim()
+    .replace(/[^\w.\- ]/g, '_')
     .replace(/\s+/g, '_')
     .replace(/\./g, '_')
     .replace(/_{2,}/g, '_')

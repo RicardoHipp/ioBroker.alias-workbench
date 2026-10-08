@@ -25,7 +25,10 @@
     "verboten": [
       "1.SET_POINT_TEMPERATURE"
     ],
-    "hinweis": "2.STATE steht fest in der Liste, damit die Vorlage nicht auch am Einfach-Aktor greift - der hat nur Kanal 1 und gehoert zur Einfach-Vorlage. %N%.WORKING trennt die Schaltkanaele von allem anderen, was zufaellig STATE heisst: die Heizgruppe HmIP-HEATING hat einen schaltbaren 6.STATE, aber kein 6.WORKING, und der Fensterkontakt hat weder das eine noch das andere. Das verbotene SET_POINT_TEMPERATURE haelt zusaetzlich alle Thermostate fern."
+    "hinweis": {
+      "de": "2.STATE steht fest in der Liste, damit die Vorlage nicht auch am Einfach-Aktor greift - der hat nur Kanal 1 und gehoert zur Einfach-Vorlage. %N%.WORKING trennt die Schaltkanaele von allem anderen, was zufaellig STATE heisst: die Heizgruppe HmIP-HEATING hat einen schaltbaren 6.STATE, aber kein 6.WORKING, und der Fensterkontakt hat weder das eine noch das andere. Das verbotene SET_POINT_TEMPERATURE haelt zusaetzlich alle Thermostate fern.",
+      "en": "2.STATE is fixed in the list so the template does not also match the single actuator — that one has only channel 1 and belongs to the single-output template. %N%.WORKING separates the switch channels from everything else that happens to be called STATE: the heating group HmIP-HEATING has a switchable 6.STATE but no 6.WORKING, and the window contact has neither. The forbidden SET_POINT_TEMPERATURE additionally keeps all thermostats away."
+    }
   },
   "zustaende": [
     {
@@ -41,7 +44,10 @@
       "typ": "boolean",
       "lesen": "%N%.STATE",
       "optional": true,
-      "hinweis": "Liest dieselbe Quelle wie SET - der Aktor meldet keinen getrennten Istwert, 1.STATE ist beides. Deshalb standardmaessig aus: angehakt stuende derselbe Wert zweimal im Alias, und die Pruefung „kein Punkt doppelt\" meldet es zu Recht. Anhaken nur, wenn ein Widget ausdruecklich einen eigenen Rueckmeldepunkt erwartet.",
+      "hinweis": {
+        "de": "Liest dieselbe Quelle wie SET - der Aktor meldet keinen getrennten Istwert, 1.STATE ist beides. Deshalb standardmaessig aus: angehakt stuende derselbe Wert zweimal im Alias, und die Pruefung „kein Punkt doppelt\" meldet es zu Recht. Anhaken nur, wenn ein Widget ausdruecklich einen eigenen Rueckmeldepunkt erwartet.",
+        "en": "Reads the same source as SET — the actuator reports no separate actual value, 1.STATE is both. Therefore off by default: ticked, the same value would sit in the alias twice, and the check \"no point twice\" reports it, rightly. Tick it only when a widget explicitly expects its own feedback point."
+      },
       "vorgabeAus": true
     },
     {
@@ -50,7 +56,10 @@
       "typ": "boolean",
       "lesen": "%N%.WORKING",
       "optional": true,
-      "hinweis": "Gehoert zum einzelnen Ausgang, nicht zum Geraet - jeder Ausgang bekommt sein eigenes."
+      "hinweis": {
+        "de": "Gehoert zum einzelnen Ausgang, nicht zum Geraet - jeder Ausgang bekommt sein eigenes.",
+        "en": "Belongs to the single output, not to the device — each output gets its own."
+      }
     },
     {
       "name": "ON_TIME",
@@ -61,7 +70,10 @@
       "schreiben": "%N%.ON_TIME",
       "optional": true,
       "vorgabeAus": true,
-      "hinweis": "Einschaltdauer in Sekunden. Der Platz ON_TIME im Muster nimmt ihn auf."
+      "hinweis": {
+        "de": "Einschaltdauer in Sekunden. Der Platz ON_TIME im Muster nimmt ihn auf.",
+        "en": "On-time in seconds. The pattern's ON_TIME slot takes it."
+      }
     },
     {
       "name": "INHIBIT",
@@ -71,7 +83,10 @@
       "schreiben": "%N%.INHIBIT",
       "optional": true,
       "vorgabeAus": true,
-      "hinweis": "Sperrt diesen Ausgang. Solange true, nimmt er keine Befehle an - auch nicht vom Taster."
+      "hinweis": {
+        "de": "Sperrt diesen Ausgang. Solange true, nimmt er keine Befehle an - auch nicht vom Taster.",
+        "en": "Locks this output. While true it accepts no commands — not even from the wall switch."
+      }
     },
     {
       "name": "LOWBAT",
@@ -82,7 +97,10 @@
         "punkt": "0.LOW_BAT"
       },
       "optional": true,
-      "hinweis": "Kanal 0 gilt fuer das ganze Geraet. Beide Ausgaenge bekommen denselben Punkt - die Meldung betrifft ja beide."
+      "hinweis": {
+        "de": "Kanal 0 gilt fuer das ganze Geraet. Beide Ausgaenge bekommen denselben Punkt - die Meldung betrifft ja beide.",
+        "en": "Channel 0 applies to the whole device. Both outputs get the same point — the report concerns both."
+      }
     },
     {
       "name": "UNREACH",
@@ -90,7 +108,10 @@
       "typ": "boolean",
       "lesen": "0.UNREACH",
       "optional": true,
-      "hinweis": "Kanal 0, gilt fuer beide Ausgaenge."
+      "hinweis": {
+        "de": "Kanal 0, gilt fuer beide Ausgaenge.",
+        "en": "Channel 0, applies to both outputs."
+      }
     },
     {
       "name": "RSSI",
@@ -103,7 +124,10 @@
       "lesenSonst": {
         "punkt": "0.RSSI_PEER"
       },
-      "hinweis": "RSSI_DEVICE steht zuerst: es ist der Pegel, den die Zentrale vom Geraet empfaengt. RSSI_PEER ist bei Batteriegeraeten oft unbelegt und traegt dann Grenzwerte wie -2147483648."
+      "hinweis": {
+        "de": "RSSI_DEVICE steht zuerst: es ist der Pegel, den die Zentrale vom Geraet empfaengt. RSSI_PEER ist bei Batteriegeraeten oft unbelegt und traegt dann Grenzwerte wie -2147483648.",
+        "en": "RSSI_DEVICE comes first: it is the level the central unit receives from the device. RSSI_PEER is often empty on battery devices and then carries sentinel values such as -2147483648."
+      }
     }
   ],
   "weiterePunkte": {

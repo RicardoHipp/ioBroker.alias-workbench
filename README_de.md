@@ -584,12 +584,10 @@ ganze Kreislauf. Auf einer laufenden Installation hält der Admin Adapterdateien
 im Zwischenspeicher, deshalb ist `iobroker upload alias-workbench` nach dem
 Kopieren das, was den Browser die Änderung sehen lässt.
 
-Es gibt zwei Wörterbücher. `admin/i18n/` gehört der **Einstellungsseite**
-(jsonConfig mit `"i18n": true`, alle elf Sprachen, der Admin lädt es selbst).
-`admin/sprachen/` gehört dem **Reiter** (Deutsch und Englisch, geladen von
-`admin/js/sprache.js`; jede andere Sprache fällt auf Englisch zurück). Eine neue
-Sprache für den Reiter ist eine neue Datei in `admin/sprachen/` und ein Eintrag in
-`SPRACHEN` in `admin/js/sprache.js` — sonst nichts. Achte
+Es gibt ein Wörterbuch, `admin/i18n/`, alle elf Sprachen. Der Admin lädt es
+für die Einstellungsseite (jsonConfig mit `"i18n": true`). Der Reiter lädt
+dieselben Dateien aus `admin/js/sprache.js`. Eine Sprache, die nicht in der
+Liste steht, fällt auf Englisch zurück. Achte
 auf Zeichenketten, die direkt in `admin/tab.html` stehen: Sie werden zur
 Laufzeit ersetzt, und eine, die niemand verdrahtet hat, bleibt in jeder Sprache englisch,
 ohne dass es auffällt.
@@ -599,7 +597,7 @@ direkt lädt — einen Bauschritt gibt es für sie nicht, und die Gestaltung lie
 in einer Datei, `admin/css/werkbank.css`. Weil eine falsch gesetzte Modulgrenze
 erst zur Laufzeit auffällt, prüft `npm test` vor jedem Commit, ob sich noch
 alles bündeln lässt, ob jeder Bezeichner deklariert oder importiert ist und ob
-beide Sprachdateien dieselben Schlüssel tragen.
+alle elf Sprachdateien dieselben Schlüssel tragen.
 
 ## Hintergrund
 
@@ -613,6 +611,15 @@ beide Sprachdateien dieselben Schlüssel tragen.
 ## Änderungen
 
 ### **WORK IN PROGRESS**
+**Vorlagen**
+* **Hinweistexte der Vorlagen sind Deutsch und Englisch.** Beschreibung, Erkennungshinweis und der Hinweis an jeder Zeile stehen als `{ "de", "en" }`. Der Reiter zeigt die Adminsprache, sonst Englisch, sonst Deutsch. Der Namenshinweis bleibt eine Suchmaske (`licht|lampe|light|…`): er prüft den Gerätenamen, und der folgt nicht der Adminsprache.
+* **Ein Wörterbuch für Einstellungsseite und Reiter.** Beides liegt in `admin/i18n/`, alle elf Sprachen, gleiche Schlüssel. Der Reiter lädt dieselbe Datei. Eine unbekannte Sprache fällt auf Englisch zurück. Vorher hatte der Reiter ein eigenes Wörterbuch unter `admin/sprachen/`, nur Deutsch und Englisch.
+
+**Kennungen**
+* **Objektkennungen enthalten keine Umlaute mehr.** Eine Kennung darf nur Buchstaben ohne Akzent, Ziffern, `-` und `_` enthalten. Aus `Küche` im Namensfeld wird `Kueche` (`ä`/`Ä` zu `ae`/`Ae`, `ö`/`Ö` zu `oe`/`Oe`, `ü`/`Ü` zu `ue`/`Ue`, `ß` zu `ss`). Dasselbe gilt für „Ablegen unter“, den Verlege-Dialog und den Namen eines neuen Punkts. Punkte im Ordnerfeld bleiben, sie trennen die Ebenen. Einen Alias, dessen Kennung schon ein Ü trägt, lässt die Werkbank stehen, solange das Namensfeld nicht neu verlassen wird.
+* **Raum und Funktion behalten den Umlaut.** Der Raum heißt weiter `Wohnküche`. Wird der Ablageort daraus übernommen, heißt der Ordner `Wohnkueche`, der Pfad `alias.0.Wohnkueche.…`.
+* **Von Hand getippt bleibt der Raumvorschlag beim getippten Wort.** `Küche` in „Ablegen unter“ wird zum Ordner `Kueche`. Die Frage darunter nennt weiter den Raum `Küche`. Bestätigt man sie, entsteht `enum.rooms.Küche`, nicht `enum.rooms.Kueche`.
+
 **Werteliste und Thermostate**
 * **Mitgelieferte Vorlagen lassen sich jetzt Zeile für Zeile aufklappen**, zum Ansehen. Bisher war die Zeilenansicht den eigenen vorbehalten: wer sehen wollte, welche Ersatzquellen, Formeln oder Hinweise eine mitgelieferte führt, musste erst eine eigene Kopie anlegen — und hatte danach eine Kopie im Bestand, die er nie wollte. Alle Felder im Block sind gesperrt, durch bloßes Ansehen entsteht also kein Arbeitsstand.
 * Die Marke **„muss da sein“** zeigt jetzt, ob die Zeile selbst Pflicht ist — nicht, ob ihr Lesepfad in der Erkennungsliste steht. Das sind zwei verschiedene Fragen, die unter einem Wort gezeigt wurden: an der HmIP-Heizgruppe stand eine Marke, wo vier Zeilen Pflicht sind, bei den Tasmota-Vorlagen stand gar keine. Dasselbe galt für das Häkchen in der aufgeklappten Zeile, es gab also nirgends in der Oberfläche die richtige Auskunft. Über alle 16 Vorlagen gezählt ändert sich bei 15 die Zahl — jeweils auf das, was in der Vorlagendatei steht.

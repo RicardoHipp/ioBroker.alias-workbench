@@ -565,12 +565,10 @@ served as they are; editing one and reloading the tab is the whole cycle. On a
 running installation the admin caches adapter files, so `iobroker upload
 alias-workbench` after copying is what makes the browser see the change.
 
-There are two dictionaries. `admin/i18n/` belongs to the **settings page**
-(jsonConfig with `"i18n": true`, all eleven languages, loaded by the admin
-itself). `admin/sprachen/` belongs to the **tab** (German and English, loaded by
-`admin/js/sprache.js`; any other language falls back to English). A new tab
-language is a new file in `admin/sprachen/` and an entry in `SPRACHEN` in
-`admin/js/sprache.js` — nothing else. Watch for strings
+There is one dictionary, `admin/i18n/`, all eleven languages. The admin loads
+it for the settings page (`jsonConfig` with `"i18n": true`). The tab loads the
+same files from `admin/js/sprache.js`. A language that is not in the list falls
+back to English. Watch for strings
 written straight into `admin/tab.html`: they are replaced at runtime, and one
 that nobody wired up stays English in every language without anyone noticing.
 
@@ -579,7 +577,7 @@ modules — there is no build step for them, and styling lives in one file,
 `admin/css/werkbank.css`. Because a module boundary can be crossed wrongly in
 ways the browser only notices while running, `npm test` checks before every
 commit that everything still bundles, that every identifier is declared or
-imported, and that both language files carry the same keys.
+imported, and that all eleven language files carry the same keys.
 
 ## Background
 
@@ -593,6 +591,15 @@ imported, and that both language files carry the same keys.
 ## Changelog
 
 ### **WORK IN PROGRESS**
+**Templates**
+* **Template notes are German and English.** The description, the recognition note and each row note are `{ "de", "en" }`. The tab shows the admin language, otherwise English, otherwise German. The name hint stays one search pattern (`licht|lampe|light|…`): it matches the device name, which does not follow the admin language.
+* **One dictionary for the settings page and the tab.** Both live in `admin/i18n/`, all eleven languages, the same keys. The tab loads that same file. An unknown language falls back to English. The tab used to keep its own dictionary at `admin/sprachen/`, German and English only.
+
+**Identifiers**
+* **Object ids no longer contain umlauts.** An id may only contain unaccented letters, digits, `-` and `_`. `Küche` in the name field becomes `Kueche` (`ä`/`Ä` to `ae`/`Ae`, `ö`/`Ö` to `oe`/`Oe`, `ü`/`Ü` to `ue`/`Ue`, `ß` to `ss`). The same applies to "Place under", the move dialog and the name of a new point. Dots in the folder field stay, they separate the levels. An alias whose id already contains an umlaut is left as it is, until the name field is left again.
+* **Rooms and functions keep the umlaut.** The room is still called `Wohnküche`. When the folder is taken from it, the folder is `Wohnkueche` and the path is `alias.0.Wohnkueche.…`.
+* **Typing a folder by hand does not rename the room suggestion.** `Küche` in "Place under" becomes the folder `Kueche`. The question below still names the room `Küche`. Confirming it creates `enum.rooms.Küche`, not `enum.rooms.Kueche`.
+
 **Value list and thermostats**
 * **Shipped templates can now be opened row by row**, read-only. Until now the row view was reserved for your own templates: to see which fallback sources, formulas or notes a shipped one carries, you had to make an own copy first — and were left with a copy you never wanted. Every field in the block is disabled, so no working copy is created by looking.
 * The **‚must be present‘ mark** now shows whether the row itself is mandatory, not whether its read path appears in the recognition list — two different questions that had been shown under one word. At the HmIP heating group one row was marked where four are mandatory; the Tasmota templates marked none at all. The same applied to the checkbox in the expanded row, so there was nowhere in the interface showing the truth. Counted across all 16 templates, 15 now show a different number — each matching what the template file says.

@@ -20,7 +20,10 @@
     "verboten": [
       "1.WORKING"
     ],
-    "hinweis": "1.ERROR gibt es beim HmIP-Kontakt nicht - daran trennen sich die beiden Fassungen. 1.WORKING bleibt verboten, damit kein Schaltaktor hier hereinrutscht."
+    "hinweis": {
+      "de": "1.ERROR gibt es beim HmIP-Kontakt nicht - daran trennen sich die beiden Fassungen. 1.WORKING bleibt verboten, damit kein Schaltaktor hier hereinrutscht.",
+      "en": "1.ERROR does not exist on the HmIP contact — that is what separates the two variants. 1.WORKING stays forbidden so no switch actuator slips in here."
+    }
   },
   "zustaende": [
     {
@@ -36,7 +39,10 @@
       "lesen": "1.ERROR",
       "optional": true,
       "vorgabeAus": true,
-      "hinweis": "0 heisst in Ordnung, 7 Sabotage. Das window-Muster hat keinen Platz dafuer - angehakt landet der Punkt im info-Geraet."
+      "hinweis": {
+        "de": "0 heisst in Ordnung, 7 Sabotage. Das window-Muster hat keinen Platz dafuer - angehakt landet der Punkt im info-Geraet.",
+        "en": "0 means OK, 7 sabotage. The window pattern has no slot for it — ticked, the point lands in the info device."
+      }
     },
     {
       "name": "LOWBAT",
@@ -47,7 +53,10 @@
         "punkt": "1.LOWBAT"
       },
       "optional": true,
-      "hinweis": "Dieses Geraet fuehrt LOWBAT zweimal, an Kanal 0 und an Kanal 1. Kanal 0 ist der Wartungskanal und die richtige Adresse."
+      "hinweis": {
+        "de": "Dieses Geraet fuehrt LOWBAT zweimal, an Kanal 0 und an Kanal 1. Kanal 0 ist der Wartungskanal und die richtige Adresse.",
+        "en": "This device carries LOWBAT twice, on channel 0 and on channel 1. Channel 0 is the maintenance channel and the right address."
+      }
     },
     {
       "name": "UNREACH",
@@ -63,7 +72,10 @@
       "lesen": "0.STICKY_UNREACH",
       "optional": true,
       "vorgabeAus": true,
-      "hinweis": "Bleibt stehen, bis jemand sie zuruecksetzt - zeigt also auch einen Ausfall an, der schon wieder vorbei ist."
+      "hinweis": {
+        "de": "Bleibt stehen, bis jemand sie zuruecksetzt - zeigt also auch einen Ausfall an, der schon wieder vorbei ist.",
+        "en": "Stays set until someone clears it — so it also shows a failure that has already passed."
+      }
     },
     {
       "name": "RSSI",
@@ -76,7 +88,10 @@
       },
       "optional": true,
       "vorgabeAus": true,
-      "hinweis": "RSSI_DEVICE steht zuerst: es ist der Pegel, den die Zentrale vom Geraet empfaengt. RSSI_PEER ist bei Batteriegeraeten oft unbelegt und traegt dann Grenzwerte wie -2147483648."
+      "hinweis": {
+        "de": "RSSI_DEVICE steht zuerst: es ist der Pegel, den die Zentrale vom Geraet empfaengt. RSSI_PEER ist bei Batteriegeraeten oft unbelegt und traegt dann Grenzwerte wie -2147483648.",
+        "en": "RSSI_DEVICE comes first: it is the level the central unit receives from the device. RSSI_PEER is often empty on battery devices and then carries sentinel values such as -2147483648."
+      }
     }
   ],
   "weiterePunkte": {

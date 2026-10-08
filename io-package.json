@@ -196,7 +196,10 @@
       "_id": "alias-workbench.0",
       "type": "meta",
       "common": {
-        "name": "Alias-Werkbank — Ablage",
+        "name": {
+          "en": "Alias Workbench — Storage",
+          "de": "Alias-Werkbank — Ablage"
+        },
         "type": "meta.user"
       },
       "native": {}

@@ -9,7 +9,7 @@ import { wertVon, jsonFelder, feldAusFormel, feldFormel, feldWert, jsonVon, ziel
 import { musterVon, erkenneEntwurf, platzFuerRolle, typenFuerRolle, rolleVonPlatz } from './erkennung.js';
 import { musterName } from './musternamen.js';
 import { rollenFeld } from './rollenwahl.js';
-import { opt , quellenAuswahl, vorlagenAbweichung, bestandsAbweichung, aboErgaenzen } from './entwurf.js';
+import { opt , quellenAuswahl, vorlagenAbweichung, bestandsAbweichung, aboErgaenzen, ohneUmlaute } from './entwurf.js';
 import { zeichneErgebnis, entwurfAngefasst } from './ergebnis.js';
 
 import { rateBehalten } from './vorschlagen.js';
@@ -406,7 +406,7 @@ export function detailZeile(e, s, idx) {
     var nameStapel = mitVollId(nameFelder, vorspann + s.n);
     var nameVoll = nameStapel.querySelector('.vollid');
     var bereinigt = function (v) {
-      return v.trim().replace(/\s+/g, '_').replace(/[^\w\-äöüÄÖÜß]/g, '_');
+      return ohneUmlaute(v).trim().replace(/\s+/g, '_').replace(/[^\w\-]/g, '_');
     };
     iNa.addEventListener('click', function (ev) { ev.stopPropagation(); });
     /* Beim Tippen zieht die Kennung darunter mit — man sieht, was

@@ -21,7 +21,10 @@
       "2.STATE"
     ],
     "namenshinweis": "licht|lampe|light|led|leuchte|strahler|decken|spot",
-    "hinweis": "1.WORKING steht mit in der Pflicht: es trennt den Schaltaktor vom Fensterkontakt, der ebenfalls einen 1.STATE hat, aber nichts zu schalten. 2.STATE ist verboten, sonst wuerde diese Vorlage auch am Zweifach-Aktor greifen und dessen zweiten Ausgang stillschweigend unterschlagen."
+    "hinweis": {
+      "de": "1.WORKING steht mit in der Pflicht: es trennt den Schaltaktor vom Fensterkontakt, der ebenfalls einen 1.STATE hat, aber nichts zu schalten. 2.STATE ist verboten, sonst wuerde diese Vorlage auch am Zweifach-Aktor greifen und dessen zweiten Ausgang stillschweigend unterschlagen.",
+      "en": "1.WORKING is required as well: it separates the switch actuator from the window contact, which also has a 1.STATE but nothing to switch. 2.STATE is forbidden, otherwise this template would also match the dual actuator and silently drop its second output."
+    }
   },
   "zustaende": [
     {
@@ -37,7 +40,10 @@
       "typ": "boolean",
       "lesen": "1.STATE",
       "optional": true,
-      "hinweis": "Liest dieselbe Quelle wie SET - der Aktor meldet keinen getrennten Istwert, 1.STATE ist beides. Deshalb standardmaessig aus: angehakt stuende derselbe Wert zweimal im Alias, und die Pruefung „kein Punkt doppelt\" meldet es zu Recht. Anhaken nur, wenn ein Widget ausdruecklich einen eigenen Rueckmeldepunkt erwartet.",
+      "hinweis": {
+        "de": "Liest dieselbe Quelle wie SET - der Aktor meldet keinen getrennten Istwert, 1.STATE ist beides. Deshalb standardmaessig aus: angehakt stuende derselbe Wert zweimal im Alias, und die Pruefung „kein Punkt doppelt\" meldet es zu Recht. Anhaken nur, wenn ein Widget ausdruecklich einen eigenen Rueckmeldepunkt erwartet.",
+        "en": "Reads the same source as SET — the actuator reports no separate actual value, 1.STATE is both. Therefore off by default: ticked, the same value would sit in the alias twice, and the check \"no point twice\" reports it, rightly. Tick it only when a widget explicitly expects its own feedback point."
+      },
       "vorgabeAus": true
     },
     {
@@ -46,7 +52,10 @@
       "typ": "boolean",
       "lesen": "1.WORKING",
       "optional": true,
-      "hinweis": "Steht auf true, solange der Aktor den Befehl noch ausfuehrt."
+      "hinweis": {
+        "de": "Steht auf true, solange der Aktor den Befehl noch ausfuehrt.",
+        "en": "Stays true while the actuator is still carrying out the command."
+      }
     },
     {
       "name": "ON_TIME",
@@ -57,7 +66,10 @@
       "schreiben": "1.ON_TIME",
       "optional": true,
       "vorgabeAus": true,
-      "hinweis": "Einschaltdauer in Sekunden. Der Platz ON_TIME im Muster nimmt ihn auf."
+      "hinweis": {
+        "de": "Einschaltdauer in Sekunden. Der Platz ON_TIME im Muster nimmt ihn auf.",
+        "en": "On-time in seconds. The pattern's ON_TIME slot takes it."
+      }
     },
     {
       "name": "INHIBIT",
@@ -67,7 +79,10 @@
       "schreiben": "1.INHIBIT",
       "optional": true,
       "vorgabeAus": true,
-      "hinweis": "Sperrt den Aktor. Solange true, nimmt er keine Befehle an — auch nicht vom Taster."
+      "hinweis": {
+        "de": "Sperrt den Aktor. Solange true, nimmt er keine Befehle an — auch nicht vom Taster.",
+        "en": "Locks the actuator. While true it accepts no commands — not even from the wall switch."
+      }
     },
     {
       "name": "LOWBAT",
@@ -97,7 +112,10 @@
       "lesenSonst": {
         "punkt": "0.RSSI_PEER"
       },
-      "hinweis": "RSSI_DEVICE steht zuerst: es ist der Pegel, den die Zentrale vom Geraet empfaengt. RSSI_PEER ist bei Batteriegeraeten oft unbelegt und traegt dann Grenzwerte wie -2147483648."
+      "hinweis": {
+        "de": "RSSI_DEVICE steht zuerst: es ist der Pegel, den die Zentrale vom Geraet empfaengt. RSSI_PEER ist bei Batteriegeraeten oft unbelegt und traegt dann Grenzwerte wie -2147483648.",
+        "en": "RSSI_DEVICE comes first: it is the level the central unit receives from the device. RSSI_PEER is often empty on battery devices and then carries sentinel values such as -2147483648."
+      }
     }
   ],
   "weiterePunkte": {

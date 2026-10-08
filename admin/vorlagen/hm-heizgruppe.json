@@ -8,13 +8,19 @@
   },
   "geraetetyp": "thermostat",
   "funktion": "heating",
-  "hinweis": "Die Heizgruppe eines Raums (HmIP-HEATING, in der Zentrale als INT000000x). Sie ist kein Gerät, sondern eine Zusammenfassung: Wandthermostat, Heizkörperventile und ein etwaiger Fensterkontakt regeln darin gemeinsam. Deshalb führt sie beides — Luftfeuchte vom Wandthermostaten und Ventilstellung vom Heizkörper — und deshalb fehlen ihr Funkpegel und Batteriespannung: die gehören den Geräten darin, nicht der Gruppe.\n\nSie ist der richtige Alias für einen Raum. Wer stattdessen das einzelne Ventil nimmt, stellt die Regelung neben die Gruppe statt in sie hinein.",
+  "hinweis": {
+    "de": "Die Heizgruppe eines Raums (HmIP-HEATING, in der Zentrale als INT000000x). Sie ist kein Gerät, sondern eine Zusammenfassung: Wandthermostat, Heizkörperventile und ein etwaiger Fensterkontakt regeln darin gemeinsam. Deshalb führt sie beides — Luftfeuchte vom Wandthermostaten und Ventilstellung vom Heizkörper — und deshalb fehlen ihr Funkpegel und Batteriespannung: die gehören den Geräten darin, nicht der Gruppe.\n\nSie ist der richtige Alias für einen Raum. Wer stattdessen das einzelne Ventil nimmt, stellt die Regelung neben die Gruppe statt in sie hinein.",
+    "en": "The heating group of a room (HmIP-HEATING, in the central unit as INT000000x). It is not a device but a summary: wall thermostat, radiator valves and any window contact control together inside it. That is why it carries both — humidity from the wall thermostat and valve position from the radiator — and why it has no signal level and no battery voltage: those belong to the devices inside it, not to the group.\n\nIt is the right alias for a room. Taking the single valve instead puts the control beside the group rather than inside it."
+  },
   "erkennung": {
     "erforderlich": [
       "1.SET_POINT_TEMPERATURE",
       "4.SECTION"
     ],
-    "hinweis": "Kanal 4 fuehrt SECTION und PROCESS - das hat nur die Gruppe. Ein hoeherer Rang als bei Heizkoerper und Wandthermostat sorgt dafuer, dass sie gewinnt, wo sie zutrifft."
+    "hinweis": {
+      "de": "Kanal 4 fuehrt SECTION und PROCESS - das hat nur die Gruppe. Ein hoeherer Rang als bei Heizkoerper und Wandthermostat sorgt dafuer, dass sie gewinnt, wo sie zutrifft.",
+      "en": "Channel 4 carries SECTION and PROCESS — only the group has that. A higher rank than the radiator and the wall thermostat makes it win wherever it matches."
+    }
   },
   "zustaende": [
     {
@@ -38,7 +44,10 @@
       "typ": "number",
       "einheit": "%",
       "lesen": "1.HUMIDITY",
-      "hinweis": "Kommt vom Wandthermostaten der Gruppe."
+      "hinweis": {
+        "de": "Kommt vom Wandthermostaten der Gruppe.",
+        "en": "Comes from the group's wall thermostat."
+      }
     },
     {
       "name": "VALVE",
@@ -46,7 +55,10 @@
       "typ": "number",
       "einheit": "%",
       "lesen": "1.LEVEL",
-      "hinweis": "Die Ventilstellung der Heizkoerper in dieser Gruppe, 0 bis 100 Prozent. NICHT 1.VALVE_STATE — siehe hm-heizkoerper: das ist bei HmIP ein Zustandscode 0-8, kein Oeffnungsgrad. An allen sieben Gruppen von Ricardo nachgemessen (01.10.2026): 1.LEVEL traegt max 100 und die Einheit Prozent, 1.VALVE_STATE ist ENUM."
+      "hinweis": {
+        "de": "Die Ventilstellung der Heizkoerper in dieser Gruppe, 0 bis 100 Prozent. NICHT 1.VALVE_STATE — siehe hm-heizkoerper: das ist bei HmIP ein Zustandscode 0-8, kein Oeffnungsgrad. An allen sieben Gruppen von Ricardo nachgemessen (01.10.2026): 1.LEVEL traegt max 100 und die Einheit Prozent, 1.VALVE_STATE ist ENUM.",
+        "en": "The valve position of the radiators in this group, 0 to 100 percent. NOT 1.VALVE_STATE — see hm-heizkoerper: on HmIP that is a state code 0-8, not an opening percentage. Measured on all seven of Ricardo's groups (01.10.2026): 1.LEVEL has max 100 and the unit percent, 1.VALVE_STATE is an ENUM."
+      }
     },
     {
       "name": "MODE",
@@ -61,7 +73,10 @@
         "2": "Urlaub",
         "3": "Modus 3"
       },
-      "hinweis": "Der Platz MODE verlangt eine Werteliste - ohne common.states steht im Widget nur eine nackte Zahl. Die Quelle liefert keine mit: hm-rpc meldet den Punkt als INTEGER 0 bis 3 ohne VALUE_LIST.\nBelegt sind 0, 1 und 2. Die Zuordnung steht so in aiohomematic, der Bibliothek hinter der Homematic-Anbindung von Home Assistant: AUTO=0, MANU=1, AWAY=2. Automatik heisst, das Wochenprogramm laeuft; Manuell haelt den eingestellten Sollwert; Urlaub (englisch away) ist der Modus, zu dem PARTY_MODE und PARTY_TIME_START/END gehoeren.\n3 bleibt neutral - bei HmIP kennt aiohomematic keine 3, und Boost laeuft ueber den eigenen Punkt."
+      "hinweis": {
+        "de": "Der Platz MODE verlangt eine Werteliste - ohne common.states steht im Widget nur eine nackte Zahl. Die Quelle liefert keine mit: hm-rpc meldet den Punkt als INTEGER 0 bis 3 ohne VALUE_LIST.\nBelegt sind 0, 1 und 2. Die Zuordnung steht so in aiohomematic, der Bibliothek hinter der Homematic-Anbindung von Home Assistant: AUTO=0, MANU=1, AWAY=2. Automatik heisst, das Wochenprogramm laeuft; Manuell haelt den eingestellten Sollwert; Urlaub (englisch away) ist der Modus, zu dem PARTY_MODE und PARTY_TIME_START/END gehoeren.\n3 bleibt neutral - bei HmIP kennt aiohomematic keine 3, und Boost laeuft ueber den eigenen Punkt.",
+        "en": "The MODE slot requires a value list — without common.states the widget shows a bare number. The source supplies none: hm-rpc reports the point as INTEGER 0 to 3 without a VALUE_LIST.\n0, 1 and 2 are used. The mapping is the one in aiohomematic, the library behind Home Assistant's Homematic integration: AUTO=0, MANU=1, AWAY=2. Automatic means the week programme is running; manual holds the setpoint; holiday (English: away) is the mode that PARTY_MODE and PARTY_TIME_START/END belong to.\n3 stays neutral — on HmIP aiohomematic knows no 3, and boost runs through its own point."
+      }
     },
     {
       "name": "BOOST",
@@ -78,7 +93,10 @@
       "lesen": "1.PARTY_MODE",
       "optional": true,
       "vorgabeAus": true,
-      "hinweis": "Nur lesbar. Gehoert zum Urlaubsmodus und wird ueber MODE gesetzt, nicht hier."
+      "hinweis": {
+        "de": "Nur lesbar. Gehoert zum Urlaubsmodus und wird ueber MODE gesetzt, nicht hier.",
+        "en": "Read only. Belongs to holiday mode and is set via MODE, not here."
+      }
     },
     {
       "name": "WINDOW_STATE",
@@ -91,7 +109,10 @@
         "0": "zu",
         "1": "offen"
       },
-      "hinweis": "Bei der Gruppe kommt der Wert vom Fensterkontakt, der ihr zugeordnet ist - hier steht also, ob im Raum ein Fenster offen ist und die Heizung deshalb zurueckfaehrt.\n\nTrotzdem nicht vorgehakt: Das thermostat-Muster hat zwar einen Platz WINDOW, der nimmt aber nur sensor.window oder state.window - die Quelle liefert eine Zahl mit value.window. Angehakt landet der Punkt deshalb im info-Geraet statt im Thermostat. Wer ihn drin haben will, rechnet ihn per Leseformel auf einen Wahrheitswert um (`val === 1`) und setzt die Rolle auf sensor.window."
+      "hinweis": {
+        "de": "Bei der Gruppe kommt der Wert vom Fensterkontakt, der ihr zugeordnet ist - hier steht also, ob im Raum ein Fenster offen ist und die Heizung deshalb zurueckfaehrt.\n\nTrotzdem nicht vorgehakt: Das thermostat-Muster hat zwar einen Platz WINDOW, der nimmt aber nur sensor.window oder state.window - die Quelle liefert eine Zahl mit value.window. Angehakt landet der Punkt deshalb im info-Geraet statt im Thermostat. Wer ihn drin haben will, rechnet ihn per Leseformel auf einen Wahrheitswert um (`val === 1`) und setzt die Rolle auf sensor.window.",
+        "en": "On the group the value comes from the window contact assigned to it — so this says whether a window in the room is open and the heating is therefore set back.\n\nStill not ticked: the thermostat pattern does have a WINDOW slot, but it only accepts sensor.window or state.window — the source delivers a number with value.window. Ticked, the point therefore lands in the info device instead of the thermostat. To keep it in the thermostat, convert it to a boolean with a read formula (`val === 1`) and set the role to sensor.window."
+      }
     },
     {
       "name": "LOWBAT",
@@ -99,7 +120,10 @@
       "typ": "boolean",
       "lesen": "0.LOW_BAT",
       "optional": true,
-      "hinweis": "Die Gruppe fasst die Batteriewarnungen ihrer Mitglieder zusammen."
+      "hinweis": {
+        "de": "Die Gruppe fasst die Batteriewarnungen ihrer Mitglieder zusammen.",
+        "en": "The group combines the battery warnings of its members."
+      }
     },
     {
       "name": "UNREACH",
@@ -114,7 +138,10 @@
       "typ": "boolean",
       "lesen": "0.ERROR_OVERHEAT",
       "optional": true,
-      "hinweis": "Ueberhitzungsmeldung der Gruppe. Vorgehakt, weil sie ein Ausfallhinweis ist und keine Diagnosegroesse: `indicator.error` gehoert zur selben Wartungsgruppe wie LOWBAT und UNREACH. Nicht genommen sind 0.ERROR_CODE - ein Zahlencode ohne Werteliste, waehrend der Platz einen Indikator erwartet - und 0.SABOTAGE: Gehaeusemanipulation ist kein Heizungsausfall."
+      "hinweis": {
+        "de": "Ueberhitzungsmeldung der Gruppe. Vorgehakt, weil sie ein Ausfallhinweis ist und keine Diagnosegroesse: `indicator.error` gehoert zur selben Wartungsgruppe wie LOWBAT und UNREACH. Nicht genommen sind 0.ERROR_CODE - ein Zahlencode ohne Werteliste, waehrend der Platz einen Indikator erwartet - und 0.SABOTAGE: Gehaeusemanipulation ist kein Heizungsausfall.",
+        "en": "Overheating report of the group. Ticked because it is a failure indication and not a diagnostic value: `indicator.error` belongs to the same maintenance group as LOWBAT and UNREACH. Not taken are 0.ERROR_CODE — a numeric code without a value list, while the slot expects an indicator — and 0.SABOTAGE: enclosure tampering is not a heating failure."
+      }
     }
   ],
   "weiterePunkte": {
