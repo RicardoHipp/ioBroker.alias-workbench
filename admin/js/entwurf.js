@@ -388,27 +388,84 @@ export function quellenVerteilung(aliasId) {
      Kanaele bei Homematic). Zwei `channel` in einem Ordner - etwa
      `0_userdata.0.Solar.Netz` und `…Solar.Balkon` - bleiben getrennt:
      das sind zwei Geraete, keine zwei Sparten. */
-  var nachEltern = {};
-  raus.forEach(function (q) {
-    var t = q.id.split('.');
-    t.pop();
-    var eltern = t.join('.');
-    (nachEltern[eltern] = nachEltern[eltern] || []).push(q);
-  });
-  var zusammen = [];
-  Object.keys(nachEltern).forEach(function (eltern) {
-    var gruppe = nachEltern[eltern];
-    var ohneObjekt = gruppe.every(function (q) { return !S.objects[q.id]; });
-    var elternGeraet = !!(S.objects[eltern] && S.objects[eltern].type === 'device');
-    if (gruppe.length < 2 || !eltern || (!ohneObjekt && !elternGeraet)) {
-      zusammen = zusammen.concat(gruppe);
-      return;
-    }
-    var summe = 0;
-    gruppe.forEach(function (q) { summe += q.n; });
-    zusammen.push({ id: eltern, n: summe });
-  });
-  return sortiere(zusammen);
+  function geschwister(liste2) {
+    var nachEltern = {};
+    liste2.forEach(function (q) {
+      var t = q.id.split('.');
+      t.pop();
+      var eltern = t.join('.');
+      (nachEltern[eltern] = nachEltern[eltern] || []).push(q);
+    });
+    var zusammen = [];
+    Object.keys(nachEltern).forEach(function (eltern) {
+      var gruppe = nachEltern[eltern];
+      var ohneObjekt = gruppe.every(function (q) { return !S.objects[q.id]; });
+      var elternGeraet = !!(S.objects[eltern] && S.objects[eltern].type === 'device');
+      if (gruppe.length < 2 || !eltern || (!ohneObjekt && !elternGeraet)) {
+        zusammen = zusammen.concat(gruppe);
+        return;
+      }
+      var summe = 0;
+      gruppe.forEach(function (q) { summe += q.n; });
+      zusammen.push({ id: eltern, n: summe });
+    });
+    return zusammen;
+  }
+
+  /* Eine Quelle, die UNTER einer anderen Quelle liegt.
+
+     Der Schritt darueber fasst Geschwister zusammen, nicht Vorfahr und
+     Nachfahr. `mqtt-client.0.inverter.HM600.ch0` und `…inverter.HM600`
+     blieben deshalb zwei Quellen, obwohl HM600 ein einziger
+     Wechselrichter ist - an Ricardos `Solar.Balkon.Einspeisung` stand
+     „4 Quellen" statt drei (08.10.2026).
+
+     Gegen die HAUPTquelle wird genau das weiter oben schon geprueft.
+     Hier dasselbe unter den uebrigen, mit der Sicherung des
+     Geschwisterschritts: nur wenn der tiefere Knoten kein eigenes Objekt
+     hat - so legt MQTT seine Kennungsebenen an - oder der Vorfahr ein
+     `device` ist, so liegen die Homematic-Kanaele. Zwei `channel` mit
+     eigenen Objekten bleiben getrennt, auch wenn einer unter dem anderen
+     liegt: das sind zwei Geraete.
+
+     Von innen nach aussen, sonst bleibt bei einer Kette A / A.b / A.b.c
+     die Mitte liegen. */
+  function vorfahren(liste2) {
+    var stand = {};
+    liste2.forEach(function (q) { stand[q.id] = q.n; });
+    liste2.map(function (q) { return q.id; })
+      .sort(function (x, y) { return y.length - x.length; })
+      .forEach(function (id) {
+        if (stand[id] === undefined) { return; }
+        var vorfahr = null;
+        Object.keys(stand).forEach(function (k) {
+          if (k === id || id.indexOf(k + '.') !== 0) { return; }
+          if (vorfahr === null || k.length > vorfahr.length) { vorfahr = k; }
+        });
+        if (vorfahr === null) { return; }
+        var eigenes = !!S.objects[id];
+        var vorfahrGeraet = !!(S.objects[vorfahr] && S.objects[vorfahr].type === 'device');
+        if (eigenes && !vorfahrGeraet) { return; }
+        stand[vorfahr] += stand[id];
+        delete stand[id];
+      });
+    return Object.keys(stand).map(function (k) { return { id: k, n: stand[k] }; });
+  }
+
+  /* Abwechselnd, bis sich nichts mehr ruehrt.
+
+     Einmal durch genuegt nicht: der Geschwisterschritt erzeugt flachere
+     Knoten, die danach Vorfahr eines Uebriggebliebenen sein koennen. Am
+     Victron-Laderegler `…solarcharger.288` entstand `…288` erst aus
+     `…288.Dc` und `…288.Yield`, und erst dann war `…288.History.Daily.0`
+     ein Nachfahr davon (08.10.2026). Drei Runden sind reichlich; die
+     Liste wird in jeder echt kuerzer. */
+  for (var runde = 0; runde < 3; runde += 1) {
+    var vorher = raus.length;
+    raus = vorfahren(geschwister(raus));
+    if (raus.length === vorher) { break; }
+  }
+  return sortiere(raus);
 }
 
 export function quelleVon(aliasId) {
