@@ -406,7 +406,7 @@ export function detailZeile(e, s, idx) {
     var nameStapel = mitVollId(nameFelder, vorspann + s.n);
     var nameVoll = nameStapel.querySelector('.vollid');
     var bereinigt = function (v) {
-      return ohneUmlaute(v).trim().replace(/\s+/g, '_').replace(/[^\w\-]/g, '_');
+      return ohneUmlaute(v).trim().replace(/\s+/g, '_').replace(/[^\w-]/g, '_');
     };
     iNa.addEventListener('click', function (ev) { ev.stopPropagation(); });
     /* Beim Tippen zieht die Kennung darunter mit — man sieht, was

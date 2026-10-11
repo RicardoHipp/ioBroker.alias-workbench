@@ -8,6 +8,12 @@ sie beim Beheben notiert wurden — je Fassung ein Abschnitt, neueste zuerst.
 
 ### Deutsch
 
+### English
+
+## 0.11.0 (2026-10-11)
+
+### Deutsch
+
 * **Hinweistexte der Vorlagen sind Deutsch und Englisch.** Beschreibung, Erkennungshinweis und der Hinweis an jeder Zeile waren ein deutscher Satz. Der Reiter hat sie nicht gezeigt. Jetzt stehen sie als `{ "de", "en" }`, dieselbe Form wie der Vorlagenname. Angezeigt wird die Adminsprache, sonst Englisch, sonst Deutsch: im Vorlagenblatt unter dem Namen, im Kasten Erkennung, an der Zeile und aufgeklappt, und am Gerät als Hinweis am Zeilennamen. Der Namenshinweis bleibt eine Suchmaske (`licht|lampe|light|…`). Er prüft den Gerätenamen, und der folgt nicht der Adminsprache; getrennte Sprachfassungen würden „Lampe“ auf einem englischen Admin verfehlen.
 * **Ein Wörterbuch für Einstellungsseite und Reiter.** Die Seite lag in `admin/i18n/` mit elf Sprachen, der Reiter in `admin/sprachen/` mit Deutsch und Englisch. Getrennt, weil der Adapterprüfer einen `i18n`-Ordner ohne die übrigen Sprachen bemängelt. Jetzt ist es eine Datei je Sprache unter `admin/i18n/`, gleiche Schlüssel, der Reiter lädt dieselbe Datei. Eine unbekannte Sprache fällt auf Englisch zurück. Die Notiz zu 0.10.0 beschreibt weiter die zwei Wörterbücher; das ist die veröffentlichte Fassung.
 * **Objektkennungen enthalten keine Umlaute mehr.** Der Repository-Prüfer lässt in einer Kennung nur `a-z`, `A-Z`, `0-9`, `-` und `_`. `ä`/`Ä` wird `ae`/`Ae`, `ö`/`Ö` `oe`/`Oe`, `ü`/`Ü` `ue`/`Ue`, `ß` `ss` — im Namensfeld, in „Ablegen unter“, im Verlege-Dialog und beim Namen eines neuen Punkts. Punkte im Ordnerfeld bleiben, sie trennen die Ebenen. Einen vorhandenen Alias, dessen Kennung schon ein Ü trägt, lässt die Werkbank stehen, solange das Namensfeld nicht neu verlassen wird. Verlässt man es, entsteht beim Speichern ein zweiter Alias unter der neuen Kennung; der alte bleibt.

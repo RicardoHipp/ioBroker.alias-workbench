@@ -2,6 +2,44 @@
 
 Einträge, die aus [README_de.md](README_de.md) herausgewachsen sind, neueste zuerst.
 In der README bleiben die sieben Fassungen stehen, die auch der ioBroker-Admin zeigt.
+### 0.9.7
+*Die Fassungen 0.9.1 bis 0.9.6 waren lokale Zwischenstände und wurden nie
+veröffentlicht — ihre Änderungen stecken in 0.9.7.*
+
+Sieben Pakete aus einem Code-Review — 45 behobene Fehler zwischen 0.9.0 und dieser Fassung. Die Zwischenstände 0.9.1 bis 0.9.6 waren lokal und wurden nie veröffentlicht; hier stehen sie zusammengefasst.
+
+**Datenverlust und Fehlerpfade**
+* Ein Fehler an den Aufzählungen hält das Verlegen jetzt auf. Vorher lief das Löschen des alten Alias trotzdem — danach war er weg und der neue stand in keiner Aufzählung mehr
+* Ein Teilfehler beim Löschen macht den Wiederholen-Knopf nicht mehr zur Attrappe: Es wird nur ausgetragen, was wirklich weg ist
+* Verwaiste Punkte werden auch beim zweiten Anlauf gelöscht
+* Ein Ladefehler bei den Aufzählungen lässt den alten Stand stehen, statt ihn zu leeren — und solange sie unbekannt sind, wird nichts geschrieben. Vorher konnte ein Aussetzer beim Laden dazu führen, dass ein Alias aus allen Räumen und Funktionen fiel
+* Ein Ladefehler bei den eigenen Vorlagen wird gemeldet statt verschwiegen; vorher hätte das nächste Speichern eine vorhandene Vorlage mit Version 1 ersetzt
+
+**Verbindung und Anzeige**
+* Nach einem Verbindungsabbruch arbeitet der Reiter wieder. Der WebSocket des Admin feuert `connect` nur einmal pro Seitenleben, danach `reconnect` — das hörte niemand, und es kamen weder Objekt- noch Wertänderungen an
+* Der Vorlagenmodus baut sich nicht mehr im Sekundentakt neu auf, und wo die Auswahl fällt, fallen auch ihre Abos
+* „Weicht vom Alias ab“ erscheint jetzt auch im Aliasmodus — dort, wo die Marke am meisten sagt
+* Ein schneller Quellenwechsel holt keinen fremden Wert mehr, die Quellen-Sprungliste steht nie doppelt
+* Objektnamen folgen der Adminsprache; der Funktionsabgleich sieht alle Sprachfassungen an und legt keinen Doppelgänger mehr an
+
+**Vorlagen**
+* Ein kaputter Namenshinweis legt nicht mehr die ganze Quellenansicht lahm — samt der verschachtelten Form `(a+)+`, an der die Ausdrucks-Maschine hängenbleibt
+* Die Formel einer Ersatzquelle überlebt das Aktualisieren, ein unbekannter Gerätetyp wirft nicht mehr
+* Das Einlesen prüft mehr als Kennung und Zustände; eine von Hand eingetippte Kennung ersetzt keine fremde Vorlage mehr
+* Der Platzhalter `%N%` trifft nur noch die Ausgangsnummer, nicht jede Endziffer
+* Der Rollladen bekommt seinen STOP: Ein Tastendruck hat keinen Zustand zum Lesen, und diesen Fall kannte das Anwenden nicht — **kein einziger** Rollladen-Alias hatte je einen
+* ON_TIME findet seinen Platz (vier Vorlagen trugen die falsche Rolle)
+
+**MQTT und Tasmota**
+* Ein leerer `custom`-Eintrag legt nichts mehr lahm, `enabled: false` gilt als abgeschaltet
+* Kein falsches „kann nicht senden“ mehr bei ioBroker.mqtt und sonoff — dort ist die Sendefähigkeit schlicht unbekannt, nicht verneint
+* „Antwort erhalten“ nur noch bei einer echten Antwort; `Vcc` und `Command` sind keine Befehle
+
+**Tempo, am Produktivsystem mit 24.786 Objekten gemessen**
+* Das Suchfeld blockiert nicht mehr: **236 ms je Anschlag → 0**, der ganze Baum **263 → 67 ms**
+* Ein Neuzeichnen kostet keine halbe Sekunde mehr — Binärsuche statt linearer Scans: Zeichnen einer Quelle **15,8 → 1,6 ms**, eines Alias mit 50 Punkten **51,9 → 14,2 ms**
+* Eine Leseformel kann den Reiter nicht mehr dauerhaft einfrieren
+* Abonniert wird, was gelesen wird — vorher konnte ein einziger Alias den halben Adapter abonnieren
 
 ### 0.9.0
 * Die Rollenliste ist wieder vollständig: der Detektor liefert die Ausdrücke seiner Plätze als Text MIT Schrägstrichen (`/^indicator…$/`), nicht als regulären Ausdruck. Wer sie für Teil des Ausdrucks hält, findet danach weder Anfang noch Ende — 210 statt 232 Rollen, und ausgerechnet `indicator.lowbat` fehlte, die Rolle, die jedes Homematic-Gerät schreibt. In der Rollenwahl stand ohne Suchtext deshalb kein einziger Musterplatz mehr, sondern nur die Zeile „alle Rollen anzeigen"

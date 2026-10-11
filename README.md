@@ -590,7 +590,7 @@ imported, and that all eleven language files carry the same keys.
 
 ## Changelog
 
-### **WORK IN PROGRESS**
+### 0.11.0 (2026-10-11)
 **Templates**
 * **Template notes are German and English.** The description, the recognition note and each row note are `{ "de", "en" }`. The tab shows the admin language, otherwise English, otherwise German. The name hint stays one search pattern (`licht|lampe|light|…`): it matches the device name, which does not follow the admin language.
 * **One dictionary for the settings page and the tab.** Both live in `admin/i18n/`, all eleven languages, the same keys. The tab loads that same file. An unknown language falls back to English. The tab used to keep its own dictionary at `admin/sprachen/`, German and English only.
@@ -738,45 +738,6 @@ All changes in detail, with cause and measurement: [docs/aenderungen-ausfuehrlic
 * The changelog only lists versions that actually exist on npm. The entries 0.9.1 to 0.9.6 were local intermediate steps and were never published; their content is now summarised under 0.9.7. Found by the repochecker (E2004, E1032)
 * The README no longer describes how to add the adapter by hand — in the official repository it is picked from the adapter list (E6013)
 * `dependabot.yml` gets a seven-day cooldown for npm packages: what appears today is proposed a week later. If a compromised release is pulled within that time, it never arrives here (E8915). And `@types/node` stays on its major version — the types must match the Node release the adapter runs on (E8917)
-
-### 0.9.7
-*Versions 0.9.1 to 0.9.6 were local intermediate steps and were never
-published — their changes are part of 0.9.7.*
-
-Seven packages from a code review — 45 fixes between 0.9.0 and this release. The intermediate steps 0.9.1 to 0.9.6 stayed local and were never published; they are summarised here.
-
-**Data loss and failure paths**
-* An enumeration error now stops a move. Previously the old alias was deleted anyway — and afterwards it was gone while the new one sat in no enumeration at all
-* A partial failure while deleting no longer turns the retry button into a prop: only what really went is dropped
-* Orphaned points are deleted on the second attempt too
-* A load error on the enumerations leaves the previous state standing instead of emptying it — and while they are unknown, nothing is written. Before, one hiccup could drop an alias out of every room and function
-* A load error on your own templates is reported instead of swallowed; otherwise the next save would have replaced an existing template with version 1
-
-**Connection and display**
-* The tab works again after a dropped connection. The admin's WebSocket fires `connect` once per page lifetime and `reconnect` afterwards — nobody listened, and neither object nor state changes arrived
-* Template mode no longer rebuilds itself every second, and where the selection goes, its subscriptions go too
-* “Differs from the alias” now also shows in alias mode — where it says the most
-* Switching sources quickly no longer fetches the wrong value; the source jump list never appears twice
-* Object names follow the admin language; the function match looks at every language and no longer creates a duplicate
-
-**Templates**
-* A broken name hint no longer takes down the whole source view — including the nested form `(a+)+` where the expression engine stalls
-* The formula of a fallback source survives updating, an unknown device type no longer throws
-* Importing checks more than id and states; a hand-typed id no longer replaces someone else's template
-* The `%N%` placeholder only hits the output number now, not every trailing digit
-* The blind gets its STOP: a button press has no state to read, and that case was unknown to template application — **not a single** blind alias ever had one
-* ON_TIME finds its slot (four templates carried the wrong role)
-
-**MQTT and Tasmota**
-* An empty `custom` entry no longer takes anything down, `enabled: false` counts as switched off
-* No more false “cannot publish” for ioBroker.mqtt and sonoff — there, publishing capability is simply unknown, not denied
-* “Answer received” only for a real answer; `Vcc` and `Command` are not commands
-
-**Speed, measured on a production system with 24,786 objects**
-* The search box no longer blocks: **236 ms per keystroke → 0**, the whole tree **263 → 67 ms**
-* A redraw no longer costs half a second — binary search instead of linear scans: drawing a source **15.8 → 1.6 ms**, an alias with 50 points **51.9 → 14.2 ms**
-* A read formula can no longer freeze the tab for good
-* What is subscribed is what is read — before, a single alias could subscribe to half an adapter
 
 Older entries: [CHANGELOG_OLD.md](CHANGELOG_OLD.md).
 
