@@ -164,6 +164,85 @@ export function sammle(wurzel, versionen) {
   };
 }
 
+/* ================== Auffaelliges in den Werten ==================
+
+   Die Werte werden gebraucht — eine JSON-Quelle wie `tele/SENSOR` ist
+   ohne ihren Inhalt nutzlos —, koennen aber eine Adresse oder eine
+   Kennung tragen. Hier wird nichts entfernt, nur hervorgehoben: was
+   auffaellig ist, entscheidet der Mensch, der die Datei verschickt. */
+var MUSTER = [
+  { art: 'ip', re: /\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/ },
+  { art: 'mac', re: /\b[0-9A-Fa-f]{2}(?::[0-9A-Fa-f]{2}){5}\b/ },
+];
+
+/* Eine Kennung ist ein Stueck von mindestens acht Zeichen, in dem
+   Buchstaben UND Ziffern vorkommen.
+
+   Die erste Fassung suchte nach Stuecken ab zwanzig Zeichen. Das war in
+   beide Richtungen falsch (gemessen 12.10.2026): `QEQ0695220` und
+   `000A9D899204D8` — genau die Seriennummern, um die es geht — sind
+   kuerzer und blieben unbemerkt, waehrend `countSystemVariables` als
+   Kennung markiert wurde, obwohl es ein Datenpunktname ist.
+
+   Buchstaben und Ziffern gemischt trennt beides sauber: gewoehnliche
+   Namen (`CONFIG_PENDING`, `Wand_Jonas_Schlafzimmer`, `buildLabel`) haben
+   keine Ziffern, Seriennummern und Schluessel haben welche.
+
+   Der Bindestrich gehoert NICHT zum Stueck: sonst waere `HM-LC-Sw1PBU-FM`
+   ein Treffer, und eine Geraetebezeichnung ist keine Kennung. So zerfaellt
+   sie in kurze Stuecke und faellt durch. */
+var KENNUNG = /[0-9A-Za-z_]{8,}/g;
+function istKennung(stueck) {
+  return /[A-Za-z]/.test(stueck) && /[0-9]/.test(stueck);
+}
+
+export function auffaellig(wert) {
+  var t = typeof wert === 'string' ? wert : JSON.stringify(wert);
+  if (!t) { return []; }
+  var raus = MUSTER.filter(function (m) { return m.re.test(t); }).map(function (m) { return m.art; });
+  if ((t.match(KENNUNG) || []).some(istKennung)) { raus.push('kennung'); }
+  return raus;
+}
+
+/* Die Zeilen der Vorschau — dieselbe Quelle fuer den Dialog und fuer den
+   Pruefpunkt, damit „was die Vorschau zeigt, steht auch in der Datei"
+   nicht zwei Rechenwege hat. */
+export function vorschauZeilen(daten) {
+  return daten.objekte.map(function (o) {
+    var c = o.common || {};
+    return {
+      pfad: o.pfad,
+      type: o.virtuell ? '(ohne Objekt)' : o.type,
+      virtuell: !!o.virtuell,
+      name: typeof c.name === 'string' ? c.name : (c.name ? JSON.stringify(c.name) : ''),
+      rolle: c.role || '',
+      datentyp: c.type || '',
+      einheit: c.unit || '',
+      hatWert: 'wert' in o,
+      wert: 'wert' in o ? o.wert : undefined,
+      auffaellig: 'wert' in o ? auffaellig(o.wert) : [],
+    };
+  });
+}
+
+/* Kennungen stehen nicht nur in den Werten.
+
+   Gemessen am 12.10.2026 an `hm-rega.0.QEQ0695220`: die Seriennummer
+   steht in `wurzel` und in zwoelf `common.name`-Werten, obwohl `native`
+   nachweislich fehlt. Das Weglassen von `native` entfernt also keine
+   Kennung, die auch im Namen oder im Pfad steht — und davon muss die
+   Vorschau sprechen, sonst verspricht sie mehr, als sie halten kann. */
+export function auffaelligImGeruest(daten) {
+  var raus = [];
+  if (auffaellig(daten.wurzel).length) { raus.push({ wo: 'wurzel', text: daten.wurzel }); }
+  daten.objekte.forEach(function (o) {
+    var c = o.common || {};
+    var n = typeof c.name === 'string' ? c.name : (c.name ? JSON.stringify(c.name) : '');
+    if (n && auffaellig(n).length) { raus.push({ wo: o.pfad || '(Wurzel)', text: n }); }
+  });
+  return raus;
+}
+
 /* Gleiche Bauweise wie `vAusgeben` im Vorlagenblatt. */
 function dateiGeben(daten) {
   var name = String(daten.wurzel).split('.').pop() || 'attrappe';
@@ -187,6 +266,119 @@ export function ausgeben(wurzel, fertig) {
       if (typeof fertig === 'function') { fertig(daten); }
     });
   });
+}
+
+/* Abgewaehlte Werte herausnehmen.
+
+   Der Wert faellt weg, das Objekt bleibt — und `werteAbgewaehlt` sagt,
+   dass jemand ihn entfernt hat. Ohne diese Liste saehe ein entfernter
+   Wert aus wie ein Punkt, der gerade nichts liefert. */
+export function ohneAbgewaehlte(daten, abgewaehlt) {
+  var raus = JSON.parse(JSON.stringify(daten));
+  var weg = [];
+  raus.objekte.forEach(function (o) {
+    if (abgewaehlt.indexOf(o.pfad) > -1 && 'wert' in o) { delete o.wert; weg.push(o.pfad); }
+  });
+  if (weg.length) { raus.werteAbgewaehlt = weg.sort(); }
+  return raus;
+}
+
+/* ================== Die Vorschau ================== */
+
+export function zeigeVorschau(wurzel, fertig) {
+  holeWerte(wurzel, [wurzel], function () {
+    holeVersionen(wurzel, function (versionen) {
+      var daten = sammle(wurzel, versionen);
+      baueVorschau(daten);
+      if (typeof fertig === 'function') { fertig(daten); }
+    });
+  });
+}
+
+function baueVorschau(daten) {
+  var dlg = document.getElementById('dlg-mock');
+  var body = document.getElementById('mock-body');
+  var knopf = document.getElementById('btn-mock-go');
+  if (!dlg || !body || !knopf) { return; }
+  body.textContent = '';
+
+  var zeilen = vorschauZeilen(daten);
+  var mitWert = zeilen.filter(function (z) { return z.hatWert; });
+  var abgewaehlt = [];
+
+  var kopf = el('div', 'mk-kopf');
+  kopf.appendChild(el('div', 'mk-wurzel', daten.wurzel));
+  kopf.appendChild(el('div', 'mk-zahlen', tr('mock.counts',
+    zeilen.length, mitWert.length,
+    (daten.erzeugtVon && daten.erzeugtVon.version) || '?',
+    (daten.quelle && (daten.quelle.adapter + ' ' + daten.quelle.version)) || '—')));
+  kopf.appendChild(el('div', 'mk-ohne', tr('mock.noNative')));
+  body.appendChild(kopf);
+
+  /* Was auch ohne `native` mitfaehrt — Pfad und Namen. */
+  var geruest = auffaelligImGeruest(daten);
+  if (geruest.length) {
+    var warn = el('div', 'mk-warn');
+    warn.appendChild(el('div', 'mk-warn-kopf', tr('mock.inNames', geruest.length)));
+    var ul = el('ul', 'mk-warn-liste');
+    geruest.slice(0, 8).forEach(function (g) {
+      ul.appendChild(el('li', null, g.wo + ' — ' + g.text));
+    });
+    warn.appendChild(ul);
+    body.appendChild(warn);
+  }
+
+  var tab = el('table', 'mk-tab');
+  var kz = el('tr');
+  [tr('mock.colValue'), tr('mock.colPath'), tr('mock.colType'),
+    tr('mock.colRole'), tr('mock.colName')].forEach(function (t) {
+    kz.appendChild(el('th', null, t));
+  });
+  tab.appendChild(kz);
+
+  zeilen.forEach(function (z) {
+    var tz = el('tr', z.virtuell ? 'mk-virt' : '');
+    var tdW = el('td', 'mk-wert');
+    if (z.hatWert) {
+      var lab = el('label');
+      var box = el('input');
+      box.type = 'checkbox';
+      box.checked = true;
+      box.addEventListener('change', function () {
+        var i = abgewaehlt.indexOf(z.pfad);
+        if (box.checked) { if (i > -1) { abgewaehlt.splice(i, 1); } }
+        else if (i === -1) { abgewaehlt.push(z.pfad); }
+        tz.classList.toggle('mk-aus', !box.checked);
+      });
+      lab.appendChild(box);
+      var wt = el('span', 'mk-wtext', String(z.wert));
+      if (z.auffaellig.length) {
+        wt.classList.add('auff');
+        wt.title = tr('mock.suspicious', z.auffaellig.join(', '));
+      }
+      lab.appendChild(wt);
+      tdW.appendChild(lab);
+    }
+    tz.appendChild(tdW);
+    tz.appendChild(el('td', 'mk-pfad', z.pfad || '·'));
+    tz.appendChild(el('td', null, z.type + (z.datentyp ? ' · ' + z.datentyp : '') +
+      (z.einheit ? ' ' + z.einheit : '')));
+    tz.appendChild(el('td', null, z.rolle));
+    tz.appendChild(el('td', 'mk-name', z.name));
+    tab.appendChild(tz);
+  });
+  body.appendChild(tab);
+
+  /* Den Knopf neu setzen, damit kein Zuhoerer eines frueheren Aufrufs
+     haengen bleibt und die Datei zweimal schreibt. */
+  var neu = knopf.cloneNode(true);
+  knopf.parentNode.replaceChild(neu, knopf);
+  neu.addEventListener('click', function () {
+    dateiGeben(ohneAbgewaehlte(daten, abgewaehlt));
+    dlg.close();
+  });
+
+  if (!dlg.open) { dlg.showModal(); }
 }
 
 /* ================== Das Menue am Baum ==================
@@ -217,7 +409,10 @@ export function zeigeMenue(ev, knotenId) {
   z.title = tr('tree.exportMockHint', knotenId);
   z.addEventListener('click', function () {
     menueZu();
-    ausgeben(knotenId);
+    /* Erst zeigen, dann schreiben — wie ueberall sonst in der Werkbank.
+       Hier geht nichts in die Objekte, aber die Datei verlaesst das
+       Haus, und was darin steht, soll vorher jemand gesehen haben. */
+    zeigeVorschau(knotenId);
   });
   m.appendChild(z);
 

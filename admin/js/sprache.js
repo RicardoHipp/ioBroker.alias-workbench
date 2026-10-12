@@ -148,6 +148,8 @@ export function beschrifteHtml() {
   setz('#res .empty', tr('help.sources'));
   setz('#btn-dry-write', tr('write.now'));
   setz('#dlg-checks h3', tr('check.title'));
+  setz('#mock-titel', tr('tree.exportMock'));
+  setz('#btn-mock-go', tr('mock.save'));
   document.querySelectorAll('dialog [data-close]').forEach(function (b) {
     b.textContent = tr('write.close');
   });

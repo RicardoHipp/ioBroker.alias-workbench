@@ -594,6 +594,7 @@ imported, and that all eleven language files carry the same keys.
 ### **WORK IN PROGRESS**
 **Tree**
 * **Right-click a node → "Export as mock device".** Everything below that node goes into a file: the objects and the values they carry right now. The point is not backup but rebuilding — from that file a device can be recreated elsewhere, so a template can be built for a device you do not own. What goes in is a positive list, not a filter: `native` is dropped entirely, and from `common` only `name`, `role`, `type`, `unit`, `read`, `write`, `min`, `max`, `def` and `states` are kept. `states` has to come along, otherwise the type detector does not recognise the slots with `statesDefined`. Paths are relative to the exported node, which is why the mock device matches the same templates somewhere else. Levels without an object of their own are recorded as such. Reading such a file back in is not built yet.
+* **Before writing the file, the workbench shows what goes into it.** One row per entry with value, path, type, role and name — and a checkbox per value: untick what should not travel, and the object still stays. Values that look like an IP, a MAC or an identifier are highlighted. Above that stands what travels even without `native`: identifiers often sit **in the path and in the names too**, and leaving out `native` does not remove those. Measured on a HomeMatic central: twelve such places, although the file carries no `native` at all.
 
 ### 0.11.0 (2026-10-11)
 **Templates**
