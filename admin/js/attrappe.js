@@ -175,25 +175,48 @@ var MUSTER = [
   { art: 'mac', re: /\b[0-9A-Fa-f]{2}(?::[0-9A-Fa-f]{2}){5}\b/ },
 ];
 
-/* Eine Kennung ist ein Stueck von mindestens acht Zeichen, in dem
-   Buchstaben UND Ziffern vorkommen.
+/* Wann ist ein Stueck eine Kennung?
 
-   Die erste Fassung suchte nach Stuecken ab zwanzig Zeichen. Das war in
-   beide Richtungen falsch (gemessen 12.10.2026): `QEQ0695220` und
-   `000A9D899204D8` — genau die Seriennummern, um die es geht — sind
-   kuerzer und blieben unbemerkt, waehrend `countSystemVariables` als
-   Kennung markiert wurde, obwohl es ein Datenpunktname ist.
+   Gesucht wird in Stuecken ab acht Zeichen aus `[0-9A-Za-z_]`. Der
+   Bindestrich gehoert NICHT dazu: sonst waere `HM-LC-Sw1PBU-FM` ein
+   Treffer, und eine Geraetebezeichnung ist keine Kennung. So zerfaellt
+   sie in kurze Stuecke und faellt durch.
 
-   Buchstaben und Ziffern gemischt trennt beides sauber: gewoehnliche
-   Namen (`CONFIG_PENDING`, `Wand_Jonas_Schlafzimmer`, `buildLabel`) haben
-   keine Ziffern, Seriennummern und Schluessel haben welche.
+   Ein solches Stueck gilt als Kennung, wenn es
+     - Buchstaben UND Ziffern traegt und ziffernlastig ist (ab 40 Prozent), oder
+     - sehr lang ist (ab 20 Zeichen) und Ziffern traegt.
 
-   Der Bindestrich gehoert NICHT zum Stueck: sonst waere `HM-LC-Sw1PBU-FM`
-   ein Treffer, und eine Geraetebezeichnung ist keine Kennung. So zerfaellt
-   sie in kurze Stuecke und faellt durch. */
+   Die Regel entstand in drei Anlaeufen, jeder mit einer Messung:
+
+   1. „ab zwanzig Zeichen": verfehlte `QEQ0695220` und `000A9D899204D8`
+      — genau die Seriennummern, um die es geht — und markierte
+      `countSystemVariables`, einen Datenpunktnamen.
+   2. „Buchstaben UND Ziffern": fing die Seriennummern, markierte aber
+      `SetOption59`. Ein Tasmota-Befehl stuende damit in jeder
+      Tasmota-Attrappe als Kennung (Ricardo, 12.10.2026 am Bild).
+   3. Der Ziffernanteil trennt beides: `SetOption59` hat 18 Prozent,
+      `QEQ0695220` 70, `000A9D899204D8` 79. Namen mit angehaengter Nummer
+      (`Status11`, `SetOption19`, `POWER1`) bleiben darunter.
+
+   Die zweite Bedingung, die Laenge, holt lange Schluessel herein, die
+   nicht ziffernlastig sind — ein Base64-Zeichen hat oft nur ein Drittel
+   Ziffern. Ohne Ziffern faellt auch ein langes Stueck durch, sonst waere
+   `countSystemVariables` wieder dabei.
+
+   4. Dass die ziffernlastige Haelfte auch Buchstaben verlangt, kam aus
+      derselben Messung: `3.89.11.20260919` ist eine Firmware-Version, und
+      `20260919` ist zu hundert Prozent Ziffern. Daten, Versionen und
+      Zaehler sind reine Ziffern, Kennungen tragen fast immer Buchstaben.
+
+   Aufgegeben wird damit die rein numerische Seriennummer. Die ist von
+   einem Zaehler aber auch durch keine Regel zu unterscheiden — dort hilft
+   nur, dass die Werte ueberhaupt in der Vorschau stehen. */
 var KENNUNG = /[0-9A-Za-z_]{8,}/g;
 function istKennung(stueck) {
-  return /[A-Za-z]/.test(stueck) && /[0-9]/.test(stueck);
+  var ziffern = (stueck.match(/[0-9]/g) || []).length;
+  if (!ziffern) { return false; }
+  if (stueck.length >= 20) { return true; }
+  return /[A-Za-z]/.test(stueck) && (ziffern / stueck.length) >= 0.4;
 }
 
 export function auffaellig(wert) {
