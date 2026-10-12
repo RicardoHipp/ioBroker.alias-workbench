@@ -21,7 +21,12 @@ import { tr } from './sprache.js';
 import { holeWerte } from './werte.js';
 
 /* Die Nummer steigt, sobald sich das Format aendert — sonst liesse sich
-   eine alte Datei nicht von einer neuen unterscheiden. */
+   eine alte Datei nicht von einer neuen unterscheiden.
+
+   Dass der Wert vom eigenen Block an den Eintrag wanderte (12.10.2026),
+   hat sie NICHT erhoeht: zu dem Zeitpunkt war keine Datei im Umlauf, es
+   gab das Einlesen noch nicht, und gelesen hat das Format nur der eigene
+   Pruefpunkt Z2. Ab jetzt waere derselbe Schritt ein Versionssprung. */
 export var FORMAT = 1;
 
 /* Nur diese Felder aus `common` gehen mit.
@@ -84,23 +89,28 @@ export function sammle(wurzel) {
     objekte.push({ pfad: relativ(wurzel, id), virtuell: true });
   });
 
+  /* Der Wert steht AM Eintrag, nicht in einem eigenen Block.
+
+     Getrennt waere es die sauberere Trennung — die Objekte beschreiben
+     das Geraet, die Werte sind eine Momentaufnahme. Nur liest diese
+     Datei ein Mensch: man bekommt sie geschickt und will bei
+     `ENERGY.Power` sofort sehen, was dort steht, statt vierzig Zeilen
+     weiter unten nachzuschlagen. Ricardo, 12.10.2026.
+
+     Ein Punkt ohne Wert hat den Schluessel einfach nicht — es gibt ihn,
+     er traegt nur gerade nichts. */
   ids.forEach(function (id) {
     var o = S.objects[id] || {};
-    objekte.push({
+    var eintrag = {
       pfad: relativ(wurzel, id),
       type: o.type,
       common: gesiebtesCommon(o.common),
-    });
+    };
+    var st = S.werte[id];
+    if (st && st.val !== undefined && st.val !== null) { eintrag.wert = st.val; }
+    objekte.push(eintrag);
   });
   objekte.sort(function (a, b) { return a.pfad.localeCompare(b.pfad); });
-
-  /* Ein Punkt ohne Wert faellt aus `werte` heraus, nicht aus `objekte`:
-     es gibt ihn, er traegt nur gerade nichts. */
-  var werte = {};
-  ids.forEach(function (id) {
-    var st = S.werte[id];
-    if (st && st.val !== undefined && st.val !== null) { werte[relativ(wurzel, id)] = st.val; }
-  });
 
   return {
     format: FORMAT,
@@ -108,7 +118,6 @@ export function sammle(wurzel) {
     erzeugt: new Date().toISOString(),
     nativeEnthalten: false,
     objekte: objekte,
-    werte: werte,
   };
 }
 
