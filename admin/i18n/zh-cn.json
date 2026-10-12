@@ -282,6 +282,8 @@
   "mockin.exists": "（已存在）",
   "mockin.from": "来自 {0} · 由 alias-workbench {1} 写入 · 来源 {2}",
   "mockin.name": "名称",
+  "mockin.nameTaken": "名称「{0}」已存在——那里已有 {1} 个对象",
+  "mockin.nameTakenHint": "请换一个名称。写入已有的模拟设备会把两者混在一起：只有路径相同的会被替换，旧的其余部分仍在——结果会是一台从未存在过的设备。",
   "mockin.noRoot": "缺少根条目。",
   "move.button": "移动……",
   "move.done": "已移动。该别名现位于 {0}。",

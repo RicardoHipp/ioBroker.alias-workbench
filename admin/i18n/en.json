@@ -282,6 +282,8 @@
   "mockin.exists": "(already there)",
   "mockin.from": "From {0} · written by alias-workbench {1} · source {2}",
   "mockin.name": "Name",
+  "mockin.nameTaken": "The name “{0}” is taken — {1} objects already sit there",
+  "mockin.nameTakenHint": "Please choose a different name. Writing into an existing mock device would mix the two: only matching paths are replaced, the rest of the old one stays — and you would end up with a device that never existed.",
   "mockin.noRoot": "The root entry is missing.",
   "move.button": "Move …",
   "move.done": "Moved. The alias is now at {0}.",

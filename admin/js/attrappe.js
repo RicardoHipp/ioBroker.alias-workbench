@@ -643,7 +643,35 @@ function zeigeEinlesen(daten, fehler) {
   function malen() {
     name = nameAus(feld.value);
     var liste = baueAttrappe(daten, name);
-    zielZeile.textContent = ATTRAPPEN_WURZEL + '.' + name;
+    var basis = ATTRAPPEN_WURZEL + '.' + name;
+    zielZeile.textContent = basis;
+
+    /* Einen vergebenen Namen gibt es nicht zweimal: dann bleibt der
+       Knopf gesperrt, bis jemand einen anderen eintippt.
+
+       Der Grund steht in einer Messung vom 12.10.2026. Geschrieben wird
+       je Objekt, also wird nur ueberschrieben, wo der Pfad gleich ist.
+       Dieselbe Datei erneut einzulesen waere ein sauberer Ersatz — ein
+       ANDERES Geraet unter demselben Namen ergibt aber eine Mischung:
+       aus einem Geraet mit 46 Objekten und einem Kanal mit 16 wurden 61,
+       weil nur die Wurzel beiden gemeinsam war und 45 Objekte des ersten
+       stehenblieben. Dabei entsteht ein Geraet, das es nie gab — und
+       genau daran wuerde dann jemand eine Vorlage bauen.
+
+       Ricardo hat am 12.10.2026 entschieden: sperren, nicht warnen. */
+    var altWarn = kopf.querySelector('.mk-namewarn');
+    if (altWarn) { altWarn.remove(); }
+    var vorhanden = Object.keys(S.objects).filter(function (id) {
+      return id === basis || id.indexOf(basis + '.') === 0;
+    });
+    if (vorhanden.length) {
+      var nw = el('div', 'mk-fehler mk-namewarn');
+      nw.appendChild(el('div', 'mk-warn-kopf', tr('mockin.nameTaken', name, vorhanden.length)));
+      nw.appendChild(el('div', null, tr('mockin.nameTakenHint')));
+      kopf.appendChild(nw);
+    }
+    neuerKnopf.disabled = vorhanden.length > 0;
+
     kopf.querySelector('.mk-zahlen') && kopf.querySelector('.mk-zahlen').remove();
     kopf.appendChild(el('div', 'mk-zahlen', tr('mockin.counts', liste.length,
       liste.filter(function (x) { return x.hatWert; }).length,

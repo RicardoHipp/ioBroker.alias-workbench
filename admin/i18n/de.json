@@ -282,6 +282,8 @@
   "mockin.exists": "(gibt es schon)",
   "mockin.from": "Aus {0} · geschrieben von alias-workbench {1} · Quelle {2}",
   "mockin.name": "Name",
+  "mockin.nameTaken": "Den Namen „{0}\" gibt es schon — dort liegen {1} Objekte",
+  "mockin.nameTakenHint": "Bitte einen anderen Namen wählen. In eine vorhandene Attrappe zu schreiben würde beide vermischen: ersetzt wird nur, wo der Pfad gleich ist, der Rest der alten bleibt stehen — und heraus käme ein Gerät, das es nie gab.",
   "mockin.noRoot": "Der Eintrag für die Wurzel fehlt.",
   "move.button": "Verlegen …",
   "move.done": "Verlegt. Der Alias steht jetzt unter {0}.",

@@ -282,6 +282,8 @@
   "mockin.exists": "(já existe)",
   "mockin.from": "De {0} · escrito por alias-workbench {1} · origem {2}",
   "mockin.name": "Nome",
+  "mockin.nameTaken": "O nome «{0}» já existe — estão lá {1} objetos",
+  "mockin.nameTakenHint": "Escolha outro nome. Escrever num dispositivo fictício existente misturaria os dois: só os caminhos coincidentes são substituídos, o resto do antigo fica — e resultaria um dispositivo que nunca existiu.",
   "mockin.noRoot": "Falta a entrada da raiz.",
   "move.button": "Avançar …",
   "move.done": "Movido. O alias está agora em {0}.",

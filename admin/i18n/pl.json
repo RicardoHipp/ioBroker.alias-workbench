@@ -282,6 +282,8 @@
   "mockin.exists": "(już istnieje)",
   "mockin.from": "Z {0} · zapisał alias-workbench {1} · źródło {2}",
   "mockin.name": "Nazwa",
+  "mockin.nameTaken": "Nazwa „{0}” już istnieje — leży tam {1} obiektów",
+  "mockin.nameTakenHint": "Wybierz inną nazwę. Zapis do istniejącego urządzenia zastępczego zmieszałby oba: zastępowane jest tylko to, co ma tę samą ścieżkę, reszta starego zostaje — i powstałoby urządzenie, którego nigdy nie było.",
   "mockin.noRoot": "Brakuje wpisu korzenia.",
   "move.button": "Przejdź do…",
   "move.done": "Przeniesiono. Alias znajduje się teraz pod adresem {0}.",

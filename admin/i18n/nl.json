@@ -282,6 +282,8 @@
   "mockin.exists": "(bestaat al)",
   "mockin.from": "Uit {0} · geschreven door alias-workbench {1} · bron {2}",
   "mockin.name": "Naam",
+  "mockin.nameTaken": "De naam ‘{0}’ bestaat al — daar staan {1} objecten",
+  "mockin.nameTakenHint": "Kies een andere naam. Schrijven in een bestaand nagebootst apparaat zou beide vermengen: alleen gelijke paden worden vervangen, de rest van het oude blijft staan — en er ontstaat een apparaat dat nooit bestond.",
   "mockin.noRoot": "Het item voor de wortel ontbreekt.",
   "move.button": "Verplaats …",
   "move.done": "Verplaatst. De alias staat nu op {0}.",
