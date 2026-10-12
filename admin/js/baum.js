@@ -443,7 +443,7 @@ function renderKinder(knoten, filter, tiefe) {
     /* Rechtsklick auf JEDE Zeile, nicht nur auf waehlbare: ausgeben
        laesst sich auch ein Geraet oder ein Ordner, und gerade der ist
        beim Nachbauen der interessante Knoten. */
-    d.addEventListener('contextmenu', function (e) { zeigeMenue(e, k.id); });
+    d.addEventListener('contextmenu', function (e) { zeigeMenue(e, k.id, d); });
 
     if (waehlbar) {
       d.tabIndex = 0;

@@ -411,8 +411,19 @@ function baueVorschau(daten) {
 
 var offenesMenue = null;
 
+/* Welche Zeile das Menue meint.
+
+   Ein Rechtsklick waehlt nicht aus — das bleibt dem Linksklick. Damit
+   stand aber nirgends, von WELCHER Zeile die Attrappe entstehen wuerde,
+   wenn man eine andere als die gewaehlte anklickt (Ricardo, 12.10.2026).
+   Das ist nicht nur Kosmetik: so erzeugt man die Attrappe vom falschen
+   Knoten. Die Marke ist bewusst eine andere als die Auswahl `sel`, sonst
+   saehen zwei Zeilen gleich aus. */
+var markierteZeile = null;
+
 export function menueZu() {
   if (offenesMenue) { offenesMenue.remove(); offenesMenue = null; }
+  if (markierteZeile) { markierteZeile.classList.remove('menueziel'); markierteZeile = null; }
 }
 
 function beiKlickDaneben(ev) {
@@ -423,9 +434,13 @@ document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape') { 
 window.addEventListener('scroll', menueZu, true);
 window.addEventListener('resize', menueZu);
 
-export function zeigeMenue(ev, knotenId) {
+export function zeigeMenue(ev, knotenId, zeile) {
   ev.preventDefault();
   menueZu();
+
+  var ziel = zeile || (ev.currentTarget && ev.currentTarget.classList
+    && ev.currentTarget.classList.contains('node') ? ev.currentTarget : null);
+  if (ziel) { ziel.classList.add('menueziel'); markierteZeile = ziel; }
 
   var m = el('div', 'baummenue');
   var z = el('div', 'bm-zeile', tr('tree.exportMock'));
