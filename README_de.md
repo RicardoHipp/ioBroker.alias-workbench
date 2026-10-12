@@ -196,8 +196,9 @@ Früh. Benutzbar, aber nicht fertig.
 
 - Läuft als Tab im Admin; der Adapter selbst führt keinen Prozess aus
   (`mode: none`). Die Instanz gibt es nur, damit sie die Einstellungen trägt.
-- Oberfläche auf Deutsch und Englisch, je 550 Schlüssel; die Einstellungsseite
-  in elf Sprachen
+- Oberfläche in allen elf Admin-Sprachen, je 712 Schlüssel — ein Wörterbuch
+  unter `admin/i18n/`, von Reiter und Einstellungsseite gemeinsam benutzt. Eine
+  unbekannte Sprache fällt auf Englisch zurück
 - 16 mitgelieferte Vorlagen: elf Homematic, vier Tasmota, ein reiner Messpunkt
 - **Es fehlt:** „wer benutzt diesen Alias" — vis-Ansichten sowie Alexa- und
   Google-Namen lassen sich von hier aus nicht durchsuchen, deshalb warnt ein

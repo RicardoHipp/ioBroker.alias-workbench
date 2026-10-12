@@ -187,8 +187,9 @@ Early. Usable, but not finished.
 
 - Works as an admin tab; the adapter itself runs no process (`mode: none`).
   The instance exists only to carry the settings.
-- Interface in German and English, 550 keys each; the settings page in
-  eleven languages
+- Interface in all eleven admin languages, 712 keys each — one dictionary at
+  `admin/i18n/`, shared by the tab and the settings page. An unknown language
+  falls back to English
 - 16 bundled templates: eleven Homematic, four Tasmota, one plain measuring point
 - **Missing:** "who uses this alias" — vis views, Alexa and Google names cannot
   be searched from here, so a rename warns you instead of pretending to be
