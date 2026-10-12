@@ -38,6 +38,27 @@ export var FORMAT = 1;
    Erkennung will man an der Attrappe pruefen. */
 var COMMON_FELDER = ['name', 'role', 'type', 'unit', 'read', 'write', 'min', 'max', 'def', 'states'];
 
+/* Ab wann ist ein Teilbaum zu gross fuer eine Attrappe?
+
+   Gemessen am 12.10.2026 an beiden Systemen. Produktiv, auf Geraeteebene:
+   Median 20 Objekte, p90 136, p99 2551 — die Ausreisser sind
+   `yr.0.forecastHourly` (3173), `dreame.0.852247104` (2857) und
+   `mercedesme.0....` (2551). Am Testsystem: Median 25, p90 63.
+
+   200 liegt deutlich ueber p90, schweigt also bei normalen Geraeten, und
+   weit unter den Unfaellen. Bei 100 ginge die Warnung schon bei jedem
+   siebten Geraet an — und man gewoehnt sich das Wegklicken an.
+
+   Es ist eine Warnung, keine Sperre: wer 3000 Objekte ausgeben will,
+   darf das, er soll es nur nicht aus Versehen tun. (Ricardo hatte am
+   12.10.2026 `0_userdata` ausgegeben und wieder eingelesen — 393
+   Objekte, darunter eine Attrappe in der Attrappe.) */
+export var GROSS_AB = 200;
+
+/* So viele Zeilen zeigt die Vorschau hoechstens. Bei 3000 Zeilen waere
+   der Dialog unbrauchbar, und gelesen wuerde er ohnehin nicht. */
+var ZEILEN_MAX = 300;
+
 /* Alles unterhalb der Wurzel, die Wurzel eingeschlossen. */
 function unterhalb(wurzel) {
   var pre = wurzel + '.';
@@ -338,6 +359,14 @@ function baueVorschau(daten) {
   kopf.appendChild(el('div', 'mk-ohne', tr('mock.noNative')));
   body.appendChild(kopf);
 
+  /* Zu gross? Warnen, nicht sperren. */
+  if (zeilen.length > GROSS_AB) {
+    var gw = el('div', 'mk-warn mk-gross');
+    gw.appendChild(el('div', 'mk-warn-kopf', tr('mock.tooBig', zeilen.length, GROSS_AB)));
+    gw.appendChild(el('div', null, tr('mock.tooBigHint')));
+    body.appendChild(gw);
+  }
+
   /* Was auch ohne `native` mitfaehrt — Pfad und Namen. */
   var geruest = auffaelligImGeruest(daten);
   if (geruest.length) {
@@ -359,7 +388,7 @@ function baueVorschau(daten) {
   });
   tab.appendChild(kz);
 
-  zeilen.forEach(function (z) {
+  zeilen.slice(0, ZEILEN_MAX).forEach(function (z) {
     var tz = el('tr', z.virtuell ? 'mk-virt' : '');
     var tdW = el('td', 'mk-wert');
     if (z.hatWert) {
@@ -391,6 +420,9 @@ function baueVorschau(daten) {
     tab.appendChild(tz);
   });
   body.appendChild(tab);
+  if (zeilen.length > ZEILEN_MAX) {
+    body.appendChild(el('div', 'mk-mehr', tr('mock.more', zeilen.length - ZEILEN_MAX)));
+  }
 
   /* Den Knopf neu setzen, damit kein Zuhoerer eines frueheren Aufrufs
      haengen bleibt und die Datei zweimal schreibt. */
