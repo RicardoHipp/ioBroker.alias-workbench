@@ -19,6 +19,8 @@ import { S } from './zustand.js';
 import { el } from './basis.js';
 import { tr } from './sprache.js';
 import { holeWerte } from './werte.js';
+import { socket } from './verbindung.js';
+import { INSTANZ_ID } from './vorlagen.js';
 
 /* Die Nummer steigt, sobald sich das Format aendert — sonst liesse sich
    eine alte Datei nicht von einer neuen unterscheiden.
@@ -79,9 +81,47 @@ function relativ(wurzel, id) {
   return id === wurzel ? '' : id.slice(wurzel.length + 1);
 }
 
+/* Die beiden Versionen, die in die Datei gehoeren.
+
+   `erzeugtVon` sagt, welche Werkbank die Datei geschrieben hat — wichtig,
+   wenn jemand eine Datei schickt und etwas fehlt, das eine neuere Fassung
+   mitschreibt.
+
+   `quelle` ist die wichtigere: der Aufbau der Objekte kommt vom
+   Quelladapter, und derselbe `tele.SENSOR` sieht unter zwei Fassungen des
+   mqtt-Adapters verschieden aus. Aus `wurzel` liest man die Instanz ab,
+   ihre Version nicht.
+
+   `system.adapter.*` steht NICHT in S.objects — der Reiter laedt die
+   Objekte des Baums, nicht die der Instanzen. Darum ueber den Socket. */
+export function holeVersionen(wurzel, fertig) {
+  var teile = String(wurzel).split('.');
+  var quellInstanz = teile.length > 1 ? teile[0] + '.' + teile[1] : '';
+  var raus = { erzeugtVon: null, quelle: null };
+  var offen = 2;
+  var ab = function () { if (--offen <= 0) { fertig(raus); } };
+
+  socket.emit('getObject', INSTANZ_ID, function (err, o) {
+    if (!err && o && o.common) {
+      raus.erzeugtVon = { adapter: 'alias-workbench', version: o.common.version };
+    }
+    ab();
+  });
+  if (!quellInstanz) { ab(); return; }
+  socket.emit('getObject', 'system.adapter.' + quellInstanz, function (err, o) {
+    /* Kein Treffer ist kein Fehler: `0_userdata.0` und `alias.0` haben
+       keine eigene Instanz in diesem Sinn. */
+    if (!err && o && o.common) {
+      raus.quelle = { adapter: quellInstanz, version: o.common.version };
+    }
+    ab();
+  });
+}
+
 /* Aus dem, was geladen ist, die Datei bauen. Liest nichts nach — die
-   Werte muessen vorher in S.werte stehen (siehe `ausgeben`). */
-export function sammle(wurzel) {
+   Werte muessen vorher in S.werte stehen und die Versionen uebergeben
+   sein (siehe `ausgeben`). */
+export function sammle(wurzel, versionen) {
   var ids = unterhalb(wurzel);
   var objekte = [];
 
@@ -112,10 +152,13 @@ export function sammle(wurzel) {
   });
   objekte.sort(function (a, b) { return a.pfad.localeCompare(b.pfad); });
 
+  var v = versionen || {};
   return {
     format: FORMAT,
     wurzel: wurzel,
     erzeugt: new Date().toISOString(),
+    erzeugtVon: v.erzeugtVon || null,
+    quelle: v.quelle || null,
     nativeEnthalten: false,
     objekte: objekte,
   };
@@ -138,9 +181,11 @@ function dateiGeben(daten) {
    weil das Muster `<wurzel>.*` sie nicht einschliesst. */
 export function ausgeben(wurzel, fertig) {
   holeWerte(wurzel, [wurzel], function () {
-    var daten = sammle(wurzel);
-    dateiGeben(daten);
-    if (typeof fertig === 'function') { fertig(daten); }
+    holeVersionen(wurzel, function (versionen) {
+      var daten = sammle(wurzel, versionen);
+      dateiGeben(daten);
+      if (typeof fertig === 'function') { fertig(daten); }
+    });
   });
 }
 
