@@ -577,6 +577,8 @@
   "tree.collapseAll": "alles zuklappen",
   "tree.emptyNode": "keine Datenpunkte — der Knoten steht in der Datenbank, ist aber leer",
   "tree.expandAll": "alles aufklappen",
+  "tree.exportMock": "Als Attrappe ausgeben",
+  "tree.exportMockHint": "Schreibt alles unterhalb von {0} in eine Datei: Objekte und aktuelle Werte, ohne native",
   "tree.filter": "filtern …",
   "tree.filterAria": "Objekte filtern",
   "tree.loading": "lade Objekte …",

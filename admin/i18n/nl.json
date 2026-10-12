@@ -577,6 +577,8 @@
   "tree.collapseAll": "alles samenvouwen",
   "tree.emptyNode": "geen gegevens — het knooppunt staat in de database, maar is leeg",
   "tree.expandAll": "alles uitvouwen",
+  "tree.exportMock": "Exporteren als nagebootst apparaat",
+  "tree.exportMockHint": "Schrijft alles onder {0} naar een bestand: objecten en actuele waarden, zonder native",
   "tree.filter": "filter …",
   "tree.filterAria": "Objecten filteren",
   "tree.loading": "objecten worden geladen …",

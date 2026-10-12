@@ -611,6 +611,10 @@ alle elf Sprachdateien dieselben Schlüssel tragen.
 
 ## Änderungen
 
+### **WORK IN PROGRESS**
+**Baum**
+* **Rechtsklick auf einen Knoten → „Als Attrappe ausgeben".** Alles unterhalb dieses Knotens wandert in eine Datei: die Objekte und die Werte, die sie gerade tragen. Der Zweck ist nicht das Sichern, sondern das Nachbauen — aus der Datei entsteht anderswo wieder ein Gerät, so dass sich eine Vorlage für ein Gerät bauen lässt, das man nicht besitzt. Was mitgeht, steht in einer Positivliste, nicht in einem Filter: `native` fällt vollständig weg, aus `common` bleiben nur `name`, `role`, `type`, `unit`, `read`, `write`, `min`, `max`, `def` und `states`. `states` muss mit, sonst erkennt der type-detector die Plätze mit `statesDefined` nicht. Die Pfade sind relativ zum ausgegebenen Knoten — darum trifft die Attrappe an einem anderen Ort dieselben Vorlagen. Ebenen ohne eigenes Objekt werden als solche vermerkt. Das Einlesen einer solchen Datei gibt es noch nicht.
+
 ### 0.11.0 (2026-10-11)
 **Vorlagen**
 * **Hinweistexte der Vorlagen sind Deutsch und Englisch.** Beschreibung, Erkennungshinweis und der Hinweis an jeder Zeile stehen als `{ "de", "en" }`. Der Reiter zeigt die Adminsprache, sonst Englisch, sonst Deutsch. Der Namenshinweis bleibt eine Suchmaske (`licht|lampe|light|…`): er prüft den Gerätenamen, und der folgt nicht der Adminsprache.

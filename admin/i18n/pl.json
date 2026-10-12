@@ -577,6 +577,8 @@
   "tree.collapseAll": "zwinąć wszystko",
   "tree.emptyNode": "brak danych — węzeł istnieje w bazie danych, ale jest pusty",
   "tree.expandAll": "rozwiń wszystko",
+  "tree.exportMock": "Wyeksportuj jako urządzenie zastępcze",
+  "tree.exportMockHint": "Zapisuje wszystko poniżej {0} do pliku: obiekty i bieżące wartości, bez native",
   "tree.filter": "filtruj …",
   "tree.filterAria": "Filtruj obiekty",
   "tree.loading": "ładowanie obiektów…",

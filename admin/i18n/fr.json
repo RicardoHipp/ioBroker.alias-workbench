@@ -577,6 +577,8 @@
   "tree.collapseAll": "masquer tout",
   "tree.emptyNode": "aucune donnée — le nœud existe dans la base de données mais est vide",
   "tree.expandAll": "Tout développer",
+  "tree.exportMock": "Exporter comme appareil fictif",
+  "tree.exportMockHint": "Écrit tout ce qui se trouve sous {0} dans un fichier : objets et valeurs actuelles, sans native",
   "tree.filter": "filtre …",
   "tree.filterAria": "Filtrer les objets",
   "tree.loading": "Chargement des objets…",

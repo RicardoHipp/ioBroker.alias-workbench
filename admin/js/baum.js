@@ -11,6 +11,7 @@ import './enums.js';
 import { mitNachfrage, aboLoesen } from './entwurf.js';
 import { zeichneErgebnis } from './ergebnis.js';
 import { zeichneVorlagenListe } from './vorlagenblatt.js';
+import { zeigeMenue } from './attrappe.js';
 
 var KLAPP_SCHLUESSEL = 'alias-workbench.baum';
 
@@ -438,6 +439,11 @@ function renderKinder(knoten, filter, tiefe) {
       }
       d.appendChild(el('span', 'cnt', k._zust + ''));
     }
+
+    /* Rechtsklick auf JEDE Zeile, nicht nur auf waehlbare: ausgeben
+       laesst sich auch ein Geraet oder ein Ordner, und gerade der ist
+       beim Nachbauen der interessante Knoten. */
+    d.addEventListener('contextmenu', function (e) { zeigeMenue(e, k.id); });
 
     if (waehlbar) {
       d.tabIndex = 0;

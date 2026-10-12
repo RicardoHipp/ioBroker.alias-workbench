@@ -591,6 +591,10 @@ imported, and that all eleven language files carry the same keys.
 
 ## Changelog
 
+### **WORK IN PROGRESS**
+**Tree**
+* **Right-click a node → "Export as mock device".** Everything below that node goes into a file: the objects and the values they carry right now. The point is not backup but rebuilding — from that file a device can be recreated elsewhere, so a template can be built for a device you do not own. What goes in is a positive list, not a filter: `native` is dropped entirely, and from `common` only `name`, `role`, `type`, `unit`, `read`, `write`, `min`, `max`, `def` and `states` are kept. `states` has to come along, otherwise the type detector does not recognise the slots with `statesDefined`. Paths are relative to the exported node, which is why the mock device matches the same templates somewhere else. Levels without an object of their own are recorded as such. Reading such a file back in is not built yet.
+
 ### 0.11.0 (2026-10-11)
 **Templates**
 * **Template notes are German and English.** The description, the recognition note and each row note are `{ "de", "en" }`. The tab shows the admin language, otherwise English, otherwise German. The name hint stays one search pattern (`licht|lampe|light|…`): it matches the device name, which does not follow the admin language.

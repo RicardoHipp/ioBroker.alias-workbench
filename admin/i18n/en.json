@@ -577,6 +577,8 @@
   "tree.collapseAll": "collapse all",
   "tree.emptyNode": "no datapoints — the node exists in the database but is empty",
   "tree.expandAll": "expand all",
+  "tree.exportMock": "Export as mock device",
+  "tree.exportMockHint": "Writes everything below {0} to a file: objects and current values, without native",
   "tree.filter": "filter …",
   "tree.filterAria": "Filter objects",
   "tree.loading": "loading objects …",

@@ -577,6 +577,8 @@
   "tree.collapseAll": "折叠全部",
   "tree.emptyNode": "无数据点——该节点在数据库中存在，但为空",
   "tree.expandAll": "展开全部",
+  "tree.exportMock": "导出为模拟设备",
+  "tree.exportMockHint": "将 {0} 之下的全部内容写入文件：对象和当前值，不含 native",
   "tree.filter": "筛选……",
   "tree.filterAria": "筛选对象",
   "tree.loading": "正在加载对象……",

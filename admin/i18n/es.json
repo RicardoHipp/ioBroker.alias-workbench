@@ -577,6 +577,8 @@
   "tree.collapseAll": "ocultar todo",
   "tree.emptyNode": "No hay datos: el nodo existe en la base de datos, pero está vacío.",
   "tree.expandAll": "Mostrar todo",
+  "tree.exportMock": "Exportar como dispositivo simulado",
+  "tree.exportMockHint": "Escribe todo lo que hay debajo de {0} en un archivo: objetos y valores actuales, sin native",
   "tree.filter": "filtrar …",
   "tree.filterAria": "Filtrar objetos",
   "tree.loading": "Cargando objetos…",
