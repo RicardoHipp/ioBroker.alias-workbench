@@ -150,6 +150,8 @@ export function beschrifteHtml() {
   setz('#dlg-checks h3', tr('check.title'));
   setz('#mock-titel', tr('tree.exportMock'));
   setz('#btn-mock-go', tr('mock.save'));
+  setz('#mockin-titel', tr('tree.importMock'));
+  setz('#btn-mockin-go', tr('mockin.create'));
   document.querySelectorAll('dialog [data-close]').forEach(function (b) {
     b.textContent = tr('write.close');
   });

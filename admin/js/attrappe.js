@@ -439,6 +439,19 @@ export function zeigeMenue(ev, knotenId) {
   });
   m.appendChild(z);
 
+  /* Einlesen haengt nicht am geklickten Knoten — eine Attrappe entsteht
+     immer unter `0_userdata.0.wb-attrappe`. Der Eintrag steht trotzdem
+     hier: alles zur Attrappe an einer Stelle, und der Dialog sagt, wo
+     sie landet. */
+  var zi = el('div', 'bm-zeile', tr('tree.importMock'));
+  zi.title = tr('tree.importMockHint', ATTRAPPEN_WURZEL);
+  zi.addEventListener('click', function () {
+    menueZu();
+    var f = document.getElementById('datei-attrappe');
+    if (f) { f.click(); }
+  });
+  m.appendChild(zi);
+
   /* Erst anhaengen, dann messen: vorher hat das Menue keine Groesse und
      liesse sich nicht am Fensterrand ausrichten. */
   m.style.left = '0px';
@@ -452,3 +465,183 @@ export function zeigeMenue(ev, knotenId) {
 
   offenesMenue = m;
 }
+
+/* ================== Einlesen ==================
+
+   Eingelesen wird NIE an den Originalpfad. Eine Attrappe landet immer
+   unter `0_userdata.0.wb-attrappe.<name>`:
+
+   - Der schlimme Fall kommt baulich nicht vor. Ein fremder Export von
+     `hm-rpc.0.ABC123` zurueckzuschreiben, wo er herkam, traefe fremde
+     Geraete; ein eigener ueberschriebe das Echte. Eine Einstellung
+     („Einlesen erlauben") leistet das nicht: wer sie einschaltet, laesst
+     sie an, und sie schuetzt nicht vor dem Ueberschreiben.
+   - Die Vorlagen greifen trotzdem, weil sie RELATIVE Namen pruefen
+     (`stat.POWER`, `1.LEVEL`), nicht die Wurzel. Der Pruefstand zeigt das
+     seit Monaten: `wbFake` liegt unter `0_userdata.0.wbfake.mqtt.…`, und
+     die mitgelieferten Vorlagen passen unveraendert.
+
+   `0_userdata.0` und nicht `alias-workbench.0`: dort gehoeren vom Nutzer
+   angelegte Objekte hin, der Pruefstand benutzt es schon so, und
+   `alias-workbench.0` ist ein `meta`-Objekt fuer die Dateiablage.
+
+   Geschrieben wird erst, wenn der Dialog gezeigt hat, was entstehen
+   wuerde — dieselbe Zusage wie beim Trockenlauf. Der Trockenlauf des
+   Alias selbst passt nicht: er haengt an `S.entwurf` und verlangt, dass
+   jedes Objekt unter `alias.` liegt. */
+
+export var ATTRAPPEN_WURZEL = '0_userdata.0.wb-attrappe';
+
+/* Die Datei pruefen, bevor irgendetwas daraus gebaut wird. Gibt null
+   zurueck, wenn sie taugt, sonst den Grund. */
+export function pruefeDatei(roh) {
+  if (!roh || typeof roh !== 'object') { return tr('mockin.badJson'); }
+  if (roh.format !== FORMAT) { return tr('mockin.badFormat', String(roh.format), String(FORMAT)); }
+  if (!Array.isArray(roh.objekte) || !roh.objekte.length) { return tr('mockin.badObjects'); }
+  var schlecht = roh.objekte.filter(function (o) {
+    return !o || typeof o !== 'object' || typeof o.pfad !== 'string';
+  });
+  if (schlecht.length) { return tr('mockin.badEntry', schlecht.length); }
+  if (!roh.objekte.some(function (o) { return o.pfad === ''; })) { return tr('mockin.noRoot'); }
+  return null;
+}
+
+function nameAus(wurzel) {
+  var letzt = String(wurzel || '').split('.').pop() || 'attrappe';
+  return letzt.replace(/[^\w-]/g, '_');
+}
+
+/* Was entstehen wuerde. Virtuelle Ebenen bekommen KEIN Objekt: im
+   Original stand dort auch keins, und ioBroker zeigt die Stufe von selbst
+   als `VIR` an. */
+export function baueAttrappe(daten, name) {
+  var basis = ATTRAPPEN_WURZEL + '.' + name;
+  return daten.objekte.filter(function (o) { return !o.virtuell; }).map(function (o) {
+    var id = o.pfad ? basis + '.' + o.pfad : basis;
+    var obj = {
+      type: o.type || 'folder',
+      common: JSON.parse(JSON.stringify(o.common || {})),
+      native: { angelegtVon: 'alias-workbench', attrappeAus: daten.wurzel },
+    };
+    if (!obj.common.name) { obj.common.name = o.pfad || name; }
+    return { id: id, obj: obj, hatWert: 'wert' in o, wert: o.wert, schonDa: !!S.objects[id] };
+  });
+}
+
+export function schreibeAttrappe(liste, fertig) {
+  var offen = liste.length;
+  if (!offen) { return fertig(); }
+  liste.forEach(function (x) {
+    socket.emit('setObject', x.id, x.obj, function () {
+      if (!x.hatWert) { if (--offen <= 0) { fertig(); } return; }
+      socket.emit('setState', x.id, { val: x.wert, ack: true }, function () {
+        if (--offen <= 0) { fertig(); }
+      });
+    });
+  });
+}
+
+export function einlesenDatei(datei) {
+  var leser = new FileReader();
+  leser.onload = function () {
+    var roh = null;
+    try { roh = JSON.parse(String(leser.result)); } catch { roh = null; }
+    var fehler = pruefeDatei(roh);
+    zeigeEinlesen(roh, fehler);
+  };
+  leser.readAsText(datei);
+}
+
+function zeigeEinlesen(daten, fehler) {
+  var dlg = document.getElementById('dlg-mockin');
+  var body = document.getElementById('mockin-body');
+  var knopf = document.getElementById('btn-mockin-go');
+  if (!dlg || !body || !knopf) { return; }
+  body.textContent = '';
+
+  var neuerKnopf = knopf.cloneNode(true);
+  knopf.parentNode.replaceChild(neuerKnopf, knopf);
+
+  if (fehler) {
+    var f = el('div', 'mk-fehler');
+    f.appendChild(el('div', 'mk-warn-kopf', tr('mockin.bad')));
+    f.appendChild(el('div', null, fehler));
+    body.appendChild(f);
+    neuerKnopf.disabled = true;
+    if (!dlg.open) { dlg.showModal(); }
+    return;
+  }
+  neuerKnopf.disabled = false;
+
+  var name = nameAus(daten.wurzel);
+  var kopf = el('div', 'mk-kopf');
+  kopf.appendChild(el('div', 'mk-ohne', tr('mockin.from', daten.wurzel,
+    (daten.erzeugtVon && daten.erzeugtVon.version) || '?',
+    (daten.quelle && (daten.quelle.adapter + ' ' + daten.quelle.version)) || '—')));
+
+  var zeile = el('div', 'mk-namenszeile');
+  zeile.appendChild(el('span', 'mk-lbl', tr('mockin.name')));
+  var feld = el('input', 'tx');
+  feld.type = 'text';
+  feld.value = name;
+  zeile.appendChild(feld);
+  kopf.appendChild(zeile);
+  var zielZeile = el('div', 'mk-wurzel');
+  kopf.appendChild(zielZeile);
+  body.appendChild(kopf);
+
+  var tab = el('table', 'mk-tab');
+  body.appendChild(tab);
+
+  function malen() {
+    name = nameAus(feld.value);
+    var liste = baueAttrappe(daten, name);
+    zielZeile.textContent = ATTRAPPEN_WURZEL + '.' + name;
+    kopf.querySelector('.mk-zahlen') && kopf.querySelector('.mk-zahlen').remove();
+    kopf.appendChild(el('div', 'mk-zahlen', tr('mockin.counts', liste.length,
+      liste.filter(function (x) { return x.hatWert; }).length,
+      liste.filter(function (x) { return x.schonDa; }).length)));
+    tab.textContent = '';
+    var kz = el('tr');
+    [tr('mock.colPath'), tr('mock.colType'), tr('mock.colRole'), tr('mock.colValue')]
+      .forEach(function (t) { kz.appendChild(el('th', null, t)); });
+    tab.appendChild(kz);
+    liste.forEach(function (x) {
+      var tz = el('tr');
+      var tdId = el('td', 'mk-pfad', x.id);
+      if (x.schonDa) { tdId.appendChild(el('span', 'mk-schon', ' ' + tr('mockin.exists'))); }
+      tz.appendChild(tdId);
+      tz.appendChild(el('td', null, (x.obj.type || '') +
+        (x.obj.common.type ? ' · ' + x.obj.common.type : '')));
+      tz.appendChild(el('td', null, x.obj.common.role || ''));
+      tz.appendChild(el('td', 'mk-wert', x.hatWert ? String(x.wert) : ''));
+      tab.appendChild(tz);
+    });
+    return liste;
+  }
+  var liste = malen();
+  feld.addEventListener('input', function () { liste = malen(); });
+
+  neuerKnopf.addEventListener('click', function () {
+    neuerKnopf.disabled = true;
+    schreibeAttrappe(liste, function () {
+      dlg.close();
+      /* Der Baum weiss noch nichts von den neuen Objekten. */
+      if (typeof window.__wbNachEinlesen === 'function') { window.__wbNachEinlesen(); }
+    });
+  });
+
+  if (!dlg.open) { dlg.showModal(); }
+}
+
+/* Das Dateifeld anmelden. Dasselbe Muster wie beim Vorlagen-Einlesen in
+   ergebnis.js: der Wert wird geleert, damit dieselbe Datei erneut geht. */
+(function () {
+  var f = document.getElementById('datei-attrappe');
+  if (!f) { return; }
+  f.addEventListener('change', function () {
+    var datei = this.files && this.files[0];
+    this.value = '';
+    if (datei) { einlesenDatei(datei); }
+  });
+})();
