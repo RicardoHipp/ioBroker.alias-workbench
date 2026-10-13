@@ -18,7 +18,11 @@
 import { S } from './zustand.js';
 import { el } from './basis.js';
 import { tr } from './sprache.js';
-import { holeWerte } from './werte.js';
+import { holeWerte, kindZustaende } from './werte.js';
+/* Zirkulaer zu baum.js/ergebnis.js - das ist in Ordnung, weil nichts
+   davon beim Laden gerufen wird, nur in Rueckrufen. */
+import { mitNachfrage, zweigUmschalten, zweigPfade } from './entwurf.js';
+import { zeichneErgebnis } from './ergebnis.js';
 import { socket } from './verbindung.js';
 import { INSTANZ_ID } from './vorlagen.js';
 
@@ -498,6 +502,29 @@ export function zeigeMenue(ev, knotenId, zeile) {
     if (f) { f.click(); }
   });
   m.appendChild(zi);
+
+  /* Mehrere Zweige als ein Geraet - dasselbe wie Strg-Klick im Baum,
+     nur sichtbar. Ohne diesen Eintrag faende die Funktion nur, wer
+     weiss, dass es sie gibt; und am Tablet gibt es gar keine Taste.
+
+     Nur an waehlbaren Zweigen und nur, wenn schon etwas gewaehlt ist -
+     ohne eine erste Auswahl gibt es nichts, wozu man etwas dazunimmt. */
+  if (S.current && knotenId !== S.current && kindZustaende(knotenId).length) {
+    var drin = zweigPfade().indexOf(knotenId) !== -1;
+    var zm = el('div', 'bm-zeile', drin ? tr('tree.branchRemove') : tr('tree.branchAdd'));
+    zm.title = tr('tree.branchHint');
+    zm.addEventListener('click', function () {
+      menueZu();
+      mitNachfrage(knotenId, function () {
+        var grund = zweigUmschalten(knotenId);
+        if (grund === 'fremd') {
+          S.zweigMeldung = tr('tree.branchForeign');
+          zeichneErgebnis();
+        }
+      });
+    });
+    m.appendChild(zm);
+  }
 
   /* Erst anhaengen, dann messen: vorher hat das Menue keine Groesse und
      liesse sich nicht am Fensterrand ausrichten. */

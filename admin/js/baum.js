@@ -8,7 +8,7 @@ import { S } from './zustand.js';
 import { $, el } from './basis.js';
 import { tr, txt, expertenVorgabe } from './sprache.js';
 import './enums.js';
-import { mitNachfrage, aboLoesen } from './entwurf.js';
+import { mitNachfrage, aboLoesen, zweigUmschalten, zweigPfade, waehle } from './entwurf.js';
 import { zeichneErgebnis } from './ergebnis.js';
 import { zeichneVorlagenListe } from './vorlagenblatt.js';
 import { zeigeMenue } from './attrappe.js';
@@ -206,6 +206,17 @@ export function zeichneBaum() {
   }
 }
 
+/* Warum ein Strg-Klick nicht angekommen ist.
+
+   „schon drin" und „der letzte" brauchen keine Worte - da passiert
+   sichtbar nichts, und das versteht sich. „Aus einer anderen Instanz"
+   braucht sie: sonst klickt jemand dreimal und haelt es fuer kaputt. */
+function meldeZweig(grund) {
+  if (grund !== 'fremd') { return; }
+  S.zweigMeldung = tr('tree.branchForeign');
+  zeichneErgebnis();
+}
+
 /* Waehlbar ist alles, unter dem irgendwo Zustaende liegen — nicht nur
    direkt darunter. MQTT legt fuer Zwischenebenen gar keine Objekte an:
    unter …SmartHome.Karbonator existieren nur tele.LWT, tele.SENSOR und
@@ -392,8 +403,14 @@ function renderKinder(knoten, filter, tiefe) {
 
     var li = el('li');
     var waehlbar = istWaehlbar(k);
+    /* Bei einer Mehrfachauswahl ist JEDER gewaehlte Zweig markiert, und
+       der gemeinsame Elternknoten schwaecher - sonst sieht man nicht,
+       worauf der Entwurf steht. Denselben Mangel hatte das
+       Attrappen-Menue (Ricardo, 12.10.2026). */
+    var gewaehlt = zweigPfade().indexOf(k.id) !== -1;
+    var istEltern = !!(S.zweige && S.zweige.length) && k.id === S.current;
     var d = el('div', 'node' + (waehlbar ? ' pick' : ' grp') + (leer ? ' leer' : '') +
-      (k.id === S.current ? ' sel' : ''));
+      (gewaehlt ? ' sel' : '') + (istEltern ? ' selEltern' : ''));
 
     var hatKinder = kinderPassen;
     var auf = aufJetzt;
@@ -458,10 +475,34 @@ function renderKinder(knoten, filter, tiefe) {
          dazu, und die stehen nicht in den Zeilen. Geschrieben wird
          dadurch nichts — es geht nur darum, dass niemand etwas verliert,
          ohne gefragt zu werden. */
-      var go = function () { mitNachfrage(k.id); };
-      d.addEventListener('click', go);
+      /* Ein gewoehnlicher Klick waehlt EINEN Knoten - auch dann, wenn es
+         derselbe ist, auf dem gerade eine Mehrfachauswahl steht. Wer den
+         Elternknoten anklickt, will ihn ganz. */
+      var go = function () {
+        mitNachfrage(k.id, function () { S.zweige = null; waehle(k.id); });
+      };
+      /* Strg-Klick nimmt einen Zweig dazu oder heraus, statt die Auswahl
+         zu ersetzen. Strg und nicht Umschalt: Umschalt heisst ueberall
+         „Bereich von…bis", gewollt sind einzelne Zweige. Auf dem Mac
+         dieselbe Taste wie sonst dort (Cmd).
+
+         Wer keine Tastatur hat oder nicht weiss, dass es das gibt,
+         findet dasselbe im Rechtsklickmenue. */
+      var dazu = function () {
+        mitNachfrage(k.id, function () {
+          var grund = zweigUmschalten(k.id);
+          if (grund) { meldeZweig(grund); }
+        });
+      };
+      d.addEventListener('click', function (e) {
+        if (e.ctrlKey || e.metaKey) { e.preventDefault(); dazu(); return; }
+        go();
+      });
       d.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); }
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          if (e.ctrlKey || e.metaKey) { dazu(); } else { go(); }
+        }
       });
     }
     li.appendChild(d);

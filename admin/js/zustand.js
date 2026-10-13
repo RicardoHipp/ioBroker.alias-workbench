@@ -28,6 +28,25 @@ export var S = {
   aliasKaputt: {},
   werte: {},
   current: null,
+  /* Mehrere Zweige als EIN Geraet.
+
+     Manche Adapter verteilen ein Geraet auf Geschwisterzweige: Matter
+     legt eine Steckdose als Ordner mit zwei `device` darunter ab - der
+     Schalter in `OnOffPlugInUnit-1`, die Messwerte in
+     `ElectricalSensor-2` (gemessen am Produktivsystem 13.10.2026). Der
+     Ordner selbst traegt keine Datenpunkte und ist damit nicht
+     waehlbar, und jeder Endpoint einzeln ergibt ein halbes Geraet.
+
+     `S.current` bleibt EIN Knoten - hier der gemeinsame Elternknoten -,
+     und `S.zweige` sagt, welche seiner Zweige dazugehoeren. `null`
+     heisst „alle", also genau das bisherige Verhalten. Eine Liste
+     daraus zu machen haette `S.current` an 91 Stellen beruehrt, ohne
+     dass irgendeine davon besser geworden waere.
+
+     Die Auswahl ist fluechtig: sie ueberlebt keinen Seitenneustart. */
+  zweige: null,
+  /* Einmalige Rueckmeldung aus dem Baum an die rechte Seite. */
+  zweigMeldung: '',
   openRow: null,
   entwurf: null,
   baum: null,

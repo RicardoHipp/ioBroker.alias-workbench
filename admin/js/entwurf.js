@@ -8,7 +8,7 @@ import { $ } from './basis.js';
 import { txt, tr } from './sprache.js';
 import './enums.js';
 import { zusatzName, setzeModus, zeichneBaum, merkeKlappstand } from './baum.js';
-import { kindZustaende, geraetePunkte, aliasQuellen, holeWerte,
+import { kindZustaende, geraetePunkte, aliasQuellen, holeWerte, istZerlegt,
   mitVorspann, schreibQuelle, zeileAusAlias, statesText, statesGleich, istTaster as istTasterObjekt
 } from './werte.js';
 import { erkenneEntwurf } from './erkennung.js';
@@ -77,10 +77,56 @@ export function baueEntwurf(kanal) {
      relativer Name kommt von dort. Sonst hiesse die Zeile
      `tele_Weihnachten_aussen_STATE` statt `tele_STATE`, und derselbe
      Tasmota ergaebe je nach FullTopic einen anderen Alias. */
-  geraetePunkte(kanal).forEach(function (p) {
+  var punkte = geraetePunkte(kanal);
+  /* Mehrere Zweige als ein Geraet: nur die gewaehlten. Gefiltert wird
+     NACH `geraetePunkte`, nicht davor - dessen Ergebnis liegt je Knoten
+     im Zwischenspeicher, und die Auswahl ist fluechtig. */
+  var mehrzweig = false;
+  if (S.zweige && S.zweige.length && kanal === S.current) {
+    mehrzweig = true;
+    punkte = punkte.filter(function (p) {
+      return S.zweige.some(function (z) { return p.rel === z || p.rel.indexOf(z + '.') === 0; });
+    });
+  }
+  /* Kurze Namen, wo sie eindeutig sind.
+
+     Aus `OnOffPlugInUnit-1.SET` soll `SET` werden - sonst hiesse der
+     Alias-Punkt `OnOffPlugInUnit-1_SET`, und die Zeile traegt den Namen
+     eines Endpoints, den ausser dem Adapter niemand kennt. Gekuerzt wird
+     nur, wenn das letzte Glied unter den GEWAEHLTEN Zweigen genau einmal
+     vorkommt; sonst bliebe nicht unterscheidbar, welcher Zweig gemeint
+     ist.
+
+     Nicht bei einem zerlegten Geraet (Tasmota): dort ist der Zweig
+     bedeutungstragend. `cmnd.POWER` und `stat.POWER` kuerzten sich
+     ohnehin nicht, weil `POWER` zweimal vorkommt - aber `tele.SENSOR`
+     waere eindeutig und wuerde zu `SENSOR`. Das haette jeden
+     bestehenden MQTT-Alias gebrochen.
+
+     Dasselbe gilt, wenn jemand die Sparten eines Tasmota ausdruecklich
+     zusammenklickt (`…Steckdose.stat` + `…Steckdose.tele`). Dort heisst
+     der Zweig `cmnd`, `stat` oder `tele`, und die Vorlagen adressieren
+     genau so (`stat.POWER`). Gekuerzt faende keine von ihnen mehr ihr
+     Ziel. */
+  var kurz = {};
+  var sparte = (S.zweige || []).some(function (zg) {
+    return SPARTEN.indexOf(zg.split('.').pop()) !== -1;
+  });
+  if (mehrzweig && !sparte && !istZerlegt(kanal)) {
+    var zaehler = {};
+    punkte.forEach(function (p) {
+      var k = p.rel.split('.').pop();
+      zaehler[k] = (zaehler[k] || 0) + 1;
+    });
+    punkte.forEach(function (p) {
+      var k = p.rel.split('.').pop();
+      if (zaehler[k] === 1 && k !== p.rel) { kurz[p.rel] = k; }
+    });
+  }
+  punkte.forEach(function (p) {
     var id = p.id;
     var o = S.objects[id], c = o.common || {}, a = c.alias || {}, q = aliasQuellen(o);
-    var kurzName = p.rel;
+    var kurzName = kurz[p.rel] || p.rel;
     /* Ein Knopfdruck hat keinen Zustand — sonst hat auch ein
        nur-schreibender Punkt einen.
 
@@ -980,7 +1026,85 @@ export function aboErgaenzen(quellen) {
   zeigeAbozahl();
 }
 
-export function waehle(id, fertig) {
+/* Die gewaehlten Zweige als volle Kennungen - eine Liste, auch wenn es
+   nur einer ist. */
+export function zweigPfade() {
+  if (!S.current) { return []; }
+  if (!S.zweige || !S.zweige.length) { return [S.current]; }
+  return S.zweige.map(function (z) { return S.current + '.' + z; });
+}
+
+/* Der laengste gemeinsame Elternknoten mehrerer Kennungen - auf
+   Punktgrenzen, nicht auf Zeichen. */
+function gemeinsamerEltern(ids) {
+  var teile = ids[0].split('.');
+  for (var i = 1; i < ids.length; i++) {
+    var t2 = ids[i].split('.');
+    var n = 0;
+    while (n < teile.length && n < t2.length && teile[n] === t2[n]) { n++; }
+    teile = teile.slice(0, n);
+  }
+  return teile.join('.');
+}
+
+/* Einen Zweig dazunehmen oder herausnehmen.
+
+   Gedacht fuer Geraete, die ueber Geschwisterzweige verteilt liegen
+   (Matter, siehe `S.zweige`). Der gemeinsame Elternknoten wird zur
+   Auswahl, die angeklickten Zweige zu `S.zweige`.
+
+   Gibt einen Grund zurueck, wenn es nicht geht - dann hat sich nichts
+   geaendert. */
+export function zweigUmschalten(id) {
+  if (!S.current) { return 'leer'; }
+  var pfade = zweigPfade();
+  var drin = pfade.indexOf(id);
+  if (drin !== -1) {
+    /* Der letzte laesst sich nicht abwaehlen - sonst stuende rechts
+       nichts mehr, und der Klick saehe aus wie ein Fehler. */
+    if (pfade.length < 2) { return 'letzter'; }
+    pfade.splice(drin, 1);
+  } else {
+    /* Ein Zweig, der einen anderen enthaelt (oder in ihm liegt), ist
+       kein zweiter Zweig - sonst zaehlten dieselben Punkte doppelt. */
+    var verschachtelt = pfade.some(function (p) {
+      return p === id || id.indexOf(p + '.') === 0 || p.indexOf(id + '.') === 0;
+    });
+    if (verschachtelt) { return 'verschachtelt'; }
+    pfade.push(id);
+  }
+  var eltern = gemeinsamerEltern(pfade);
+  /* Nie ueber die Instanz hinaus. Zwei Zweige aus verschiedenen
+     Adaptern haetten gar keinen gemeinsamen Elternknoten, und zwei
+     Instanzen desselben Adapters nur den Adapternamen - in beiden
+     Faellen stuende die Werkbank auf einem Knoten, der kein Ort ist.
+     Ein Geraet liegt in einer Instanz; das ist keine kuenstliche
+     Schranke, sondern die Lage. */
+  if (!eltern || eltern.split('.').length < 2) { return 'fremd'; }
+  var zweige = pfade.map(function (p) { return p.slice(eltern.length + 1); })
+    .filter(function (z) { return z; });
+  /* Steht ein gewaehlter Pfad selbst auf dem Elternknoten, ist „alles"
+     gemeint - dann ist es wieder eine gewoehnliche Auswahl. */
+  S.zweige = (zweige.length === pfade.length && zweige.length > 1) ? zweige.sort() : null;
+  waehle(eltern, null, true);
+  return '';
+}
+
+export function waehle(id, fertig, zweigeBehalten) {
+  /* Ein ANDERER Knoten hebt die Mehrfachauswahl auf, derselbe nicht.
+
+     `waehle(S.current)` heisst an drei Stellen „bau den Entwurf neu" -
+     nach dem Nachladen der Objekte (`objekte.js`), nach einer Aenderung
+     am Bestand (`ergebnis.js`) und nach dem Schreiben (`schreiben.js`).
+     Eine Regel, die hier bei JEDEM Aufruf aufraeumt, loescht die
+     Auswahl beim naechsten Objektereignis aus dem Admin - gemessen
+     13.10.2026 in AA3, wo ein neu angelegter Datenpunkt sie mitnahm.
+
+     Dass ein gewoehnlicher KLICK auf den Elternknoten „alles" bedeutet,
+     entscheidet der Klick selbst (`baum.js`), nicht diese Funktion.
+     `zweigeBehalten` setzt nur `zweigUmschalten`, das den Knoten
+     absichtlich wechselt. */
+  if (!zweigeBehalten && id !== S.current) { S.zweige = null; }
   /* Wer links etwas anderes anklickt, will es rechts sehen - auch wenn
      der Fokus noch in einem Feld der rechten Seite steht. `tipptGerade`
      haelt das Neuzeichnen zurueck, damit ein eintreffender Messwert
@@ -1042,8 +1166,11 @@ export function waehle(id, fertig) {
      Zeilen mit neuen Quellen dazukommen. Eine Liste, damit beim
      naechsten Wechsel `aboLoesen` alles abmeldet. */
   aboLoesen();
-  S.abo = [id + '.*'];
-  socket.emit('subscribe', id + '.*');
+  /* Bei mehreren Zweigen nur diese, nicht den ganzen Elternknoten. Der
+     traegt oft mehr, als zum Geraet gehoert - bei Matter den Kanal
+     `info` mit der Verbindungsmeldung, anderswo gleich mehrere Geraete. */
+  S.abo = zweigPfade().map(function (p) { return p + '.*'; });
+  S.abo.forEach(function (m) { socket.emit('subscribe', m); });
   if (id.indexOf('alias.') === 0) {
     var ausAlias = [];
     kindZustaende(id).forEach(function (kid) {

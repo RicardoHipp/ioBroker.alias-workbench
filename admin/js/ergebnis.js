@@ -37,7 +37,9 @@ import {
   bestandVorrang,
   kanalGruppen,
   aufteilBehaelter,
-  rohEntwurf
+  rohEntwurf,
+  zweigPfade,
+  zweigUmschalten
 } from './entwurf.js';
 import { setzeEnums, setzeZiel, unterschiede } from './zuordnung.js';
 import './detail.js';
@@ -55,7 +57,7 @@ import {
 } from './schreiben.js';
 
 import { mqttKarte, mqttSchreiben } from './mqtt.js';
-import { kindZustaende, direkteZustaende } from './werte.js';
+import { kindZustaende, direkteZustaende, mitVorspann } from './werte.js';
 import './aufzaehlungen.js';
 import { erkenneEntwurf } from './erkennung.js';
 import { zusatzName } from './baum.js';
@@ -308,6 +310,57 @@ var warumAuf = false;
   /* Der Kopf: was links angeklickt wurde - Name, Kennung, Bestand
      und der Sprungknopf zum Gegenstueck. Nicht, was daraus werden
      soll: das sagt die Zielzeile darunter. */
+  /* Geschwisterzweige mit eigenen Datenpunkten, die noch nicht zur
+     Auswahl gehoeren.
+
+     Gemeint sind Geraete, die ein Adapter auf mehrere Zweige verteilt -
+     Matter legt den Schalter in `OnOffPlugInUnit-1` und die Messwerte in
+     `ElectricalSensor-2`. Angeboten wird das nur, nie ausgefuehrt.
+
+     Nicht angeboten wird es an einem Alias (dort gibt es nichts
+     zusammenzufassen) und nicht unter einer Instanzwurzel, wo die
+     „Nachbarn" schlicht alle anderen Geraete waeren. */
+  function nachbarZweige() {
+    if (!S.current || S.current.indexOf('alias.') === 0) { return []; }
+    var pfade = zweigPfade();
+    var eltern = (S.zweige && S.zweige.length)
+      ? S.current
+      : S.current.slice(0, S.current.lastIndexOf('.'));
+    if (!eltern || eltern.split('.').length < 3) { return []; }
+    var vor = eltern + '.';
+    var kinder = {};
+    mitVorspann(vor).forEach(function (id) {
+      var rest = id.slice(vor.length);
+      var erst = rest.split('.')[0];
+      if (!erst) { return; }
+      if (S.objects[id] && S.objects[id].type === 'state') { kinder[vor + erst] = 1; }
+    });
+    return Object.keys(kinder).filter(function (k) {
+      return pfade.indexOf(k) === -1 &&
+        !pfade.some(function (p) { return k.indexOf(p + '.') === 0 || p.indexOf(k + '.') === 0; });
+    }).sort();
+  }
+
+  /* Warum das ein Geraet sein koennte - wo es belegbar ist.
+
+     Matter schreibt an jeden Endpoint dieselbe `nodeId` und dieselbe
+     `statusStates.onlineId` (gemessen an matter.0.controller.2,
+     13.10.2026). Wo das zutrifft, ist es keine Vermutung. Wo nicht,
+     bleibt es ein nuechternes Angebot. */
+  function nachbarnGrund(nachbarn) {
+    var eigen = S.objects[zweigPfade()[0]] || {};
+    var kennung = function (o) {
+      var st = ((o.common || {}).statusStates || {}).onlineId || '';
+      var nid = (o.native || {}).nodeId;
+      return st + '|' + (nid === undefined ? '' : nid);
+    };
+    var meins = kennung(eigen);
+    var gleich = meins !== '|' && nachbarn.every(function (n) {
+      return kennung(S.objects[n] || {}) === meins;
+    });
+    return gleich ? tr('result.addNeighboursSame') : tr('result.addNeighboursHint');
+  }
+
   function baueKopf() {
     var obj = S.objects[S.current] || {};
     var alleZust = kindZustaende(S.current);
@@ -322,6 +375,18 @@ var warumAuf = false;
        oben steht, nicht unter den Bestandszaehler. */
     var namensZeile = el('div', 'namzeile');
     namensZeile.appendChild(el('div', 'id', kopfName || S.current.split('.').pop()));
+    /* Liegt das Geraet auf mehrere Geschwisterzweige verteilt, steht der
+       Weg dorthin hier - sichtbar. Strg-Klick im Baum tut dasselbe, aber
+       den findet nur, wer schon weiss, dass es ihn gibt. */
+    var nachbarn = nachbarZweige();
+    if (nachbarn.length) {
+      var nk = el('button', 'btn klein', tr('result.addNeighbours', nachbarn.length));
+      nk.title = nachbarnGrund(nachbarn);
+      nk.addEventListener('click', function () {
+        nachbarn.forEach(function (n) { zweigUmschalten(n); });
+      });
+      namensZeile.appendChild(nk);
+    }
     links.appendChild(namensZeile);
     links.appendChild(el('div', 'pfad', S.current));
 
@@ -1050,6 +1115,16 @@ var warumAuf = false;
     var sg0 = $('#sperrgrund');
     if (sg0) { sg0.hidden = true; sg0.textContent = ''; }
     if (S.baumModus === 'vorlagen') { return zeichneVorlagenBlatt(host); }
+    /* Eine Meldung aus dem Baum - einmal zeigen, dann weg. Sie steht
+       ganz oben, weil sie auf einen Klick antwortet, der sonst wirkungslos
+       aussieht. */
+    if (S.zweigMeldung) {
+      var zm = el('div', 'aside w');
+      zm.style.borderLeftColor = 'var(--warn)';
+      zm.textContent = S.zweigMeldung;
+      host.appendChild(zm);
+      S.zweigMeldung = '';
+    }
     var bck = $('#btn-checks');
     if (bck) { bck.disabled = false; }
     if (!S.current || !S.entwurf) { return zeichneLeer(host); }

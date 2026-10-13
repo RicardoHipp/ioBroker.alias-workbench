@@ -191,6 +191,10 @@
   .tree .node.leer { opacity:.45; font-style:italic; }
   .tree .node.leer .kind { background:transparent; border:1px solid var(--line); }
   .tree .node.sel { background:var(--accent); color:var(--accent-ink); font-weight:600; }
+  /* Der gemeinsame Elternknoten einer Mehrfachauswahl: markiert, aber
+     schwaecher als die Zweige selbst. Er ist der Ort, auf dem der
+     Entwurf steht - angeklickt hat ihn niemand. */
+  .tree .node.selEltern { background:var(--accent-soft); font-weight:600; }
   .tree .node.sel .kind { background:rgba(255,255,255,.22); color:inherit; }
   /* Die Vorlagenliste benutzt dieselben Knotenzeilen, hat aber statt
      `kind`/`nam`/`cnt` ein Abzeichen, einen Namen und rechts die Kennung.
