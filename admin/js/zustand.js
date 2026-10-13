@@ -69,6 +69,15 @@ export var S = {
   tauschPlan: null,
   tauschWeg: {},
   tauschFilter: '',
+  /* Fuer welches Ziel die Werte schon geholt sind - Stufe 5 braucht sie. */
+  tauschWerte: null,
+  /* Von Hand benannte Ziele beim Tausch: Alias-Punkt -> Punkt am neuen Geraet. */
+  tauschHand: {},
+  /* Was beim Tausch mit einer gewechselten Einheit geschehen soll:
+     Alias-Punkt -> nichts | einheit | rechnen. */
+  tauschEinheit: {},
+  /* Soll der Tausch die Formeln des neuen Geraets uebernehmen? */
+  tauschMerkung: null,
   loeschListe: [],
   loeschZiel: null,
   loeschAlleAusgaenge: false,

@@ -637,6 +637,13 @@
   .rat { font-family:var(--sans); font-size:8px; font-weight:700; letter-spacing:.05em;
          text-transform:uppercase; background:var(--accent-soft); color:var(--accent);
          padding:0 6px; border-radius:999px; margin-left:6px; white-space:nowrap; }
+  /* Name und Marke im Tauschdialog untereinander. Die Namensspalte ist
+     120 Pixel breit; „ERKANNT" hinter `ELECTRIC_POWER` lief sonst in die
+     Pfade der Nachbarzeile (Ricardo, 13.10.2026). */
+  #swap-body .slot .zuname { display:flex; flex-direction:column;
+                             align-items:flex-start; gap:3px; }
+  #swap-body .slot .zuname .rat,
+  #swap-body .slot .zuname .herk { margin-left:0; }
   /* Herkunftsmarke am Quellentausch: dieselbe Form wie „vermutet", aber
      grau statt farbig - sie warnt nicht, sie sagt nur, woher die
      Zuordnung kommt (Stufe 4, ueber den Alias-Punkt). */
