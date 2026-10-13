@@ -10,17 +10,26 @@
    der ganze Unterschied zum Neu-Anlegen, das den Alias aus der Vorlage
    heraus neu baut und dabei Namen, Rollen und Formeln mitbringt.
 
-   Zugeordnet wird in drei Stufen, absteigend nach Verlaesslichkeit:
+   Zugeordnet wird in vier Stufen, absteigend nach Verlaesslichkeit:
      1. gleicher relativer Pfad  (…ABC.1.STATE → …XYZ.1.STATE)
      2. ueber die Vorlage        (der Punkt weiss aus `native.ausZustand`,
                                   aus welcher Zeile er stammt)
+     4. ueber den Alias-Punkt    (sein eigener Name und seine eigene
+                                  Rolle - nicht die seiner alten Quelle)
      3. ueber Rolle und Namen    (nur als Vorschlag, sichtbar markiert)
-   Was nichts findet, bleibt leer - und laesst sich dann entfernen. */
+   Was nichts findet, bleibt leer - und laesst sich dann entfernen.
+
+   Die Nummern sind die Reihenfolge ihrer Entstehung, nicht die der
+   Anwendung: Stufe 4 greift VOR dem Raten, weil sie belegter ist. Die
+   drei alten Nummern umzuhaengen haette jeden Pruefpunkt und jede
+   gespeicherte Messung ungueltig gemacht, ohne irgendetwas besser zu
+   machen. */
 
 import { S } from './zustand.js';
 import { $, el } from './basis.js';
-import { tr, txt } from './sprache.js';
+import { tr, txt, sprachtext } from './sprache.js';
 import { socket } from './verbindung.js';
+import { pruefeVorlage } from './vorlagen.js';
 import { aliasQuellen, kindZustaende } from './werte.js';
 import { holeZweig, indexNeu } from './objekte.js';
 import { waehle, knotenDa } from './entwurf.js';
@@ -120,6 +129,127 @@ function geraten(altQuelle, neuKanal) {
   return treffer ? { id: treffer, ueber: 'rolle', rolle: rolle } : null;
 }
 
+/* Stufe 4: der Alias-Punkt selbst - sein Name und seine Rolle.
+
+   Die drei alten Stufen fragen alle, WOHER der Punkt bisher liest. Das
+   greift, solange beide Geraete aehnlich gebaut sind, und versagt
+   vollstaendig, sobald sie es nicht sind. Gemessen am 13.10.2026 am
+   Produktivsystem: eine Tasmota-Steckdose auf eine Matter-Steckdose
+   umhaengen ergab 0 von 8 Zuordnungen - bei zwei Geraeten, die dasselbe
+   tun.
+
+   Zweimal lag es an der Quelle, nie am Ziel:
+   - mqtt-client pflegt keine Rollen (`stat.POWER`, `cmnd.POWER` und
+     `tele.SENSOR` haben alle `role: undefined`), damit faellt der
+     Rollenvergleich in Stufe 3 ohne einen Treffer aus.
+   - Fuenf der acht Punkte lesen aus EINEM Punkt, dem Telemetrie-JSON
+     `tele.SENSOR`. Aus ihm laesst sich nichts ableiten; er heisst
+     `SENSOR` und traegt die Bedeutung erst in der Formel.
+
+   Dabei steht die Antwort fertig im Alias: `…PC.ELECTRIC_POWER` traegt
+   `role: value.power`, und am neuen Geraet liegt
+   `…ElectricalSensor-2.ELECTRIC_POWER` mit genau dieser Rolle. Die
+   Bedeutung wurde beim Anlegen in den Alias geschrieben - sie beim
+   Tauschen nicht wieder zu lesen, war die Luecke.
+
+   Zwei Guetegrade, und beide verlangen Eindeutigkeit:
+   - Name UND Rolle gleich, genau einmal -> starker Treffer, gilt wie
+     ein Pfadtreffer und bekommt eine Herkunftsmarke.
+   - nur die Rolle, und nur wenn sie unter dem neuen Geraet genau einmal
+     vorkommt -> Vorschlag wie Stufe 3, sichtbar als „vermutet".
+   Zwei Punkte mit `value.power` unter einem Knoten heben sich also auf,
+   statt dass einer von beiden gewaehlt wird. */
+function ausAliasPunkt(punktId, name, neuKanal) {
+  var o = S.objects[punktId];
+  var rolle = ((o && o.common) || {}).role || '';
+  if (!rolle) { return null; }
+  /* Der blosse Punktname, auch wenn der Alias Unterebenen hat. */
+  var kurz = String(name).split('.').pop().toLowerCase();
+  var mitRolle = [], mitBeidem = [];
+  kindZustaende(neuKanal).forEach(function (id) {
+    var k = S.objects[id];
+    if (!k || !k.common || k.common.role !== rolle) { return; }
+    mitRolle.push(id);
+    if (id.split('.').pop().toLowerCase() === kurz) { mitBeidem.push(id); }
+  });
+  if (mitBeidem.length === 1) { return { id: mitBeidem[0], stark: true, rolle: rolle }; }
+  if (!mitBeidem.length && mitRolle.length === 1) {
+    return { id: mitRolle[0], stark: false, rolle: rolle };
+  }
+  return null;
+}
+
+/* Die gemerkte Vorlage gegen die NEUE Quelle halten.
+
+   Ein Alias merkt sich, aus welcher Vorlage er entstanden ist - am Kanal
+   `native.vorlage`, an jedem Punkt zusaetzlich `native.ausZustand`. Die
+   Merkung ist stark: „sie bleibt, bis du sie ausdruecklich umstellst",
+   und der Reiter wendet sie auch dann an, wenn die Erkennung sie nicht
+   mehr findet (dann steht „erzwungen" daneben).
+
+   Beim Tausch auf ein BAUGLEICHES Geraet ist das richtig und soll so
+   bleiben. Beim Tausch auf ein anders gebautes Geraet ist es falsch, und
+   zwar unsichtbar falsch. Gemessen am 13.10.2026 an Ricardos
+   `alias.0.Bastelzimmer.PC`, nach dem Tausch von einer Tasmota-Steckdose
+   auf eine Matter-Steckdose:
+   - Der Kanal trug weiter `vorlage: tasmota-steckdose`, der Reiter
+     meldete „GEMERKT / ERZWUNGEN ✕ cmnd.POWER" und „21 ohne Quelle".
+   - Schlimmer sind die FORMELN, die aus derselben Vorlage stammen und an
+     den Punkten stehen: `JSON.parse(val)?.ENERGY?.Power ?? null` passte
+     zum Telemetrie-JSON einer Tasmota. Matter liefert eine blanke Zahl,
+     `JSON.parse(37)` ergibt 37, `37?.ENERGY` ist undefined - und der
+     Punkt stand auf `null`. Vier Messwerte waren still leer, ohne
+     Fehlermeldung.
+   - Und an `SET` blieb die Schreibformel `val ? "ON" : "OFF"` stehen,
+     die einen String auf einen boolean-Punkt geschrieben haette.
+
+   Die Formel gehoert zur QUELLE, nicht zum Alias - sie beschreibt, wie
+   man aus dieser Bauart einen Wert holt. Wechselt die Bauart, ist sie in
+   beide Richtungen falsch (Ricardo: „wenn ich von matter auf mqtt
+   wechsle, muessten die ja wieder dazu"). Entschieden wird das nicht
+   automatisch: die Werkbank sagt es und bietet es an. */
+export function merkungPruefen(kanal, neuKanal) {
+  var k = S.objects[kanal];
+  var id = k && k.native && k.native.vorlage;
+  if (!id || !neuKanal) { return null; }
+  var v = null;
+  (S.VORLAGEN || []).forEach(function (x) { if (x.id === id) { v = x; } });
+  /* Eine Merkung auf eine Vorlage, die es nicht mehr gibt, ist ebenso
+     ueberholt wie eine, die nicht mehr passt. */
+  if (!v) { return { id: id, name: id, passt: false, fehler: [tr('swap.tplGone')], ersatz: null }; }
+  var t = pruefeVorlage(v, neuKanal);
+  if (t.passt) { return { id: id, name: sprachtext(v.name), passt: true }; }
+  /* Passt eine ANDERE auf die neue Quelle, gehoert sie genannt - dann
+     weiss der Nutzer, dass es dort Formeln und Namen zu holen gibt. Die
+     Werkbank wendet sie hier nicht an: das ist „Alias aktualisieren",
+     ein eigener Weg mit eigener Vorschau. */
+  var ersatz = null;
+  (S.VORLAGEN || []).forEach(function (x) {
+    if (x.id === id) { return; }
+    var p = pruefeVorlage(x, neuKanal);
+    if (p.passt && (!ersatz || p.punkte > ersatz.punkte)) {
+      ersatz = { name: sprachtext(x.name), punkte: p.punkte };
+    }
+  });
+  return { id: id, name: sprachtext(v.name), passt: false,
+           fehler: (t.fehler || []).slice(0, 3), ersatz: ersatz };
+}
+
+/* Welche Punkte des Alias tragen eine Merkung oder eine Formel? */
+export function merkungStellen(kanal) {
+  var raus = { kanal: false, punkte: [], formeln: [] };
+  var k = S.objects[kanal];
+  if (k && k.native && (k.native.vorlage || k.native.vorlageVersion)) { raus.kanal = true; }
+  aliasPunkte(kanal).forEach(function (id) {
+    var o = S.objects[id];
+    var n = (o && o.native) || {};
+    var a = (o.common && o.common.alias) || {};
+    if (n.vorlage || n.ausZustand) { raus.punkte.push(id); }
+    if (a.read || a.write) { raus.formeln.push(id); }
+  });
+  return raus;
+}
+
 /* Die Zuordnungstabelle: je Alias-Punkt, was heute gilt und was danach
    gelten soll. `stufe` sagt, wie verlaesslich der Vorschlag ist. */
 export function tauschPlan(kanal, neuKanal) {
@@ -164,6 +294,30 @@ export function tauschPlan(kanal, neuKanal) {
       var v = ausVorlage(id, neuKanal);
       if (v && v.read) { zeile.neuR = v.read; zeile.stufe = 2; if (v.write) { zeile.neuW = v.write; } }
     }
+    /* 4. ueber den Alias-Punkt - vor dem Raten, weil belegter.
+
+       Das Schreibziel darf hier auf der Lesequelle liegen: Wo ein
+       einziger Punkt liest und schreibt, ist das die richtige Form und
+       nicht die Falle aus der Regel weiter unten. Verlangt werden drei
+       Dinge - ein starker Treffer, ein Alias-Punkt, der ueberhaupt
+       schreibt, und ein Ziel, das sich beschreiben laesst. Ein Melder
+       wie `ACTUAL` bekommt so nie ein Schreibziel. */
+    if (!zeile.neuR) {
+      var ap = ausAliasPunkt(id, zeile.name, neuKanal);
+      if (ap && ap.stark) {
+        zeile.neuR = ap.id;
+        zeile.stufe = 4;
+        zeile.ausAlias = ap.rolle;
+        var ac = (S.objects[id] || {}).common || {};
+        var zc = (S.objects[ap.id] || {}).common || {};
+        if (ac.write && zc.write) { zeile.neuW = ap.id; zeile.einPunkt = true; }
+      } else if (ap) {
+        zeile.neuR = ap.id;
+        zeile.stufe = 3;
+        zeile.geratenUeber = 'aliasRolle';
+        zeile.geratenRolle = ap.rolle;
+      }
+    }
     /* 3. geraten */
     if (!zeile.neuR && zeile.altR) {
       var g = geraten(zeile.altR, neuKanal);
@@ -198,8 +352,16 @@ export function tauschPlan(kanal, neuKanal) {
        der Fehler, den W20 abschaffen sollte (Ricardo, 12.09.2026).
 
        Danach steht `neuW` leer, und die Sperre aus W20 greift: der
-       Nutzer entscheidet, ob der Punkt entfernt wird. */
-    if (!zeile.einfach && zeile.neuW && zeile.neuW === zeile.neuR) { zeile.neuW = ''; }
+       Nutzer entscheidet, ob der Punkt entfernt wird.
+
+       Ausgenommen ist nur Stufe 4 mit `einPunkt`: dort ist die Gleichheit
+       nicht geraten, sondern gepruefte Absicht - ein Punkt, der liest und
+       schreibt. Matter legt die Steckdose so an (`…OnOffPlugInUnit-1.SET`,
+       `role: switch`, lesbar und beschreibbar), hm-rpc mit `1.STATE`
+       ebenso. Ohne diese Ausnahme meldete die Zeile „kein Schreibziel
+       gefunden" an einem Punkt, der genau dafuer da ist. */
+    if (!zeile.einfach && !zeile.einPunkt &&
+        zeile.neuW && zeile.neuW === zeile.neuR) { zeile.neuW = ''; }
     /* Bei einfacher Quelle gilt die Lesequelle fuer beides. */
     if (zeile.einfach && zeile.neuR) { zeile.neuW = zeile.neuR; }
     return zeile;
@@ -208,7 +370,7 @@ export function tauschPlan(kanal, neuKanal) {
 
 /* Was der Tausch am Ende schreibt - dieselbe Form wie `baueObjekte`,
    damit der Trockenlauf-Dialog sie unveraendert anzeigen kann. */
-export function tauschObjekte(kanal, neuKanal, plan, weg) {
+export function tauschObjekte(kanal, neuKanal, plan, weg, merkungLoesen) {
   var raus = [];
   var k = S.objects[kanal];
   if (k) {
@@ -216,6 +378,10 @@ export function tauschObjekte(kanal, neuKanal, plan, weg) {
     delete kn.ts; delete kn.from; delete kn.user; delete kn.acl; delete kn._id;
     kn.native = kn.native || {};
     kn.native.quelle = neuKanal;
+    /* `geraetetyp` bleibt: der sagt, was das Geraet IST (socket), und das
+       aendert sich beim Tausch der Quelle nicht. Weg muss nur, was auf
+       die alte Bauart zeigt. */
+    if (merkungLoesen) { delete kn.native.vorlage; delete kn.native.vorlageVersion; }
     raus.push({ id: kanal, neu: false, obj: kn });
   }
   plan.forEach(function (z) {
@@ -227,7 +393,11 @@ export function tauschObjekte(kanal, neuKanal, plan, weg) {
     delete neu.ts; delete neu.from; delete neu.user; delete neu.acl; delete neu._id;
     var a = neu.common.alias || {};
     if (z.neuW && z.neuW !== z.neuR) { a.id = { read: z.neuR, write: z.neuW }; }
-    else if (z.einfach) { a.id = z.neuR; }
+    /* `einPunkt`: Lesen und Schreiben fallen am neuen Geraet auf einen
+       Punkt zusammen (Stufe 4). Dann ist die einfache Form richtig -
+       die Objektform unten wuerde `write` weglassen und aus einem
+       Schalter einen Melder machen. */
+    else if (z.einfach || z.einPunkt) { a.id = z.neuR; }
     else {
       /* Getrennte Quellen ohne Schreibtreffer: die Objektform bleibt.
 
@@ -239,6 +409,17 @@ export function tauschObjekte(kanal, neuKanal, plan, weg) {
          Ohne Treffer bleibt `write` einfach weg: dann schreibt der Alias
          nirgendwohin, und das ist die ehrliche Auskunft. */
       a.id = { read: z.neuR };
+    }
+    /* Mit der Merkung gehen die Formeln. Sie stammen aus derselben
+       Vorlage und beschreiben die alte Bauart; stehen sie weiter da,
+       steht der Punkt still auf `null` (siehe `merkungPruefen`). */
+    if (merkungLoesen) {
+      delete a.read;
+      delete a.write;
+      neu.native = neu.native || {};
+      delete neu.native.vorlage;
+      delete neu.native.vorlageVersion;
+      delete neu.native.ausZustand;
     }
     neu.common.alias = a;
     raus.push({ id: z.id, neu: false, obj: neu });
@@ -397,6 +578,7 @@ export function zeigeTausch() {
   S.tauschNeu = '';
   S.tauschWeg = {};
   S.tauschPlan = null;
+  S.tauschMerkung = null;
   /* Auch die Suche faengt neu an. Sie blieb sonst stehen, und beim
      naechsten Oeffnen zeigte der Baum „Kein Geraet gefunden" — im
      schlimmsten Fall genau dann, wenn im Feld noch das eben getauschte,
@@ -465,6 +647,9 @@ function zeichneTausch() {
     S.tauschNeu = id;
     S.tauschPlan = null;
     S.tauschWeg = {};
+    /* Andere Quelle, andere Frage: ob die gemerkte Vorlage passt, haengt
+       am Ziel. Die Vorgabe wird in `zeichneTausch` neu gesetzt. */
+    S.tauschMerkung = null;
     zeichneTausch();
   };
   zeichneAuswahlbaum(baumHost, S.tauschFilter, gewaehlt);
@@ -582,10 +767,20 @@ function zeichneTausch() {
          blossen Punktnamen oder ueber die Rolle. Das sind zwei sehr
          verschiedene Vermutungen, und sie pruefen sich verschieden. */
       var rm = el('span', 'rat', tr('guess.mark'));
-      rm.title = z.geratenUeber === 'rolle'
-        ? tr('swap.guessedByRole', z.geratenRolle || '?')
-        : tr('swap.guessedByName', (z.altR || '').split('.').pop());
+      rm.title = z.geratenUeber === 'aliasRolle'
+        ? tr('swap.guessedByAliasRole', z.geratenRolle || '?')
+        : z.geratenUeber === 'rolle'
+          ? tr('swap.guessedByRole', z.geratenRolle || '?')
+          : tr('swap.guessedByName', (z.altR || '').split('.').pop());
       nm.appendChild(rm);
+    } else if (z.stufe === 4) {
+      /* Kein „vermutet", aber auch kein stiller Treffer: dass die
+         Zuordnung vom Alias-Punkt kommt und nicht vom Pfad, erklaert,
+         warum ein Tausch zwischen zwei ganz verschiedenen Adaptern
+         ueberhaupt aufgeht - und woran er haengt, wenn er danebenliegt. */
+      var hm = el('span', 'herk', tr('swap.fromAliasMark'));
+      hm.title = tr('swap.fromAlias', z.name.split('.').pop(), z.ausAlias || '?');
+      nm.appendChild(hm);
     }
     r.appendChild(nm);
     var rechts = el('span');
@@ -661,6 +856,46 @@ function zeichneTausch() {
     k.appendChild(r);
   });
   body.appendChild(k);
+
+  /* --- Die gemerkte Vorlage, gegen die neue Quelle gehalten ---
+
+     Nur wenn sie NICHT mehr passt. Beim baugleichen Ersatz steht hier
+     nichts, und das ist der haeufigere Fall. */
+  var merk = merkungPruefen(kanal, S.tauschNeu);
+  if (merk && !merk.passt) {
+    var stellen = merkungStellen(kanal);
+    if (S.tauschMerkung === null || S.tauschMerkung === undefined) { S.tauschMerkung = true; }
+    var mk = el('div', 'aside w');
+    mk.style.borderLeftColor = 'var(--warn)';
+    mk.appendChild(el('b', null, tr('swap.tplStale', merk.name)));
+    (merk.fehler || []).forEach(function (f) { mk.appendChild(el('div', 'hint', f)); });
+    /* Die Formeln sind der eigentliche Grund, warum das nicht still
+       stehenbleiben darf - sie machen aus Messwerten ein `null`, ohne
+       dass irgendwo ein Fehler steht. */
+    if (stellen.formeln.length) {
+      mk.appendChild(el('div', 'hint', tr('swap.tplFormulas', stellen.formeln.length)));
+    }
+    if (merk.ersatz) {
+      mk.appendChild(el('div', 'hint', tr('swap.tplOther', merk.ersatz.name)));
+    }
+    var ml = document.createElement('label');
+    ml.style.display = 'flex';
+    ml.style.gap = '6px';
+    ml.style.alignItems = 'center';
+    ml.style.marginTop = '7px';
+    ml.style.cursor = 'pointer';
+    var mcb = document.createElement('input');
+    mcb.type = 'checkbox';
+    mcb.checked = !!S.tauschMerkung;
+    mcb.addEventListener('change', function () { S.tauschMerkung = mcb.checked; zeichneTausch(); });
+    ml.appendChild(mcb);
+    ml.appendChild(el('span', null, tr('swap.tplDrop',
+      stellen.punkte.length + (stellen.kanal ? 1 : 0), stellen.formeln.length)));
+    mk.appendChild(ml);
+    body.appendChild(mk);
+  } else {
+    S.tauschMerkung = false;
+  }
 
   /* Wo die neue Quelle anders tickt als die alte. Die Formel des Alias
      bleibt beim Tausch stehen - rechnet die alte Quelle 0..100 und die
@@ -744,7 +979,7 @@ export function tauscheAus() {
   b.disabled = true;
   b.textContent = tr('write.writing');
 
-  var arbeit = tauschObjekte(kanal, neu, S.tauschPlan, S.tauschWeg);
+  var arbeit = tauschObjekte(kanal, neu, S.tauschPlan, S.tauschWeg, !!S.tauschMerkung);
   var loeschen = Object.keys(S.tauschWeg).filter(function (id) { return S.tauschWeg[id]; });
   var fehler = [];
 

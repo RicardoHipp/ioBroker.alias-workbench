@@ -633,6 +633,12 @@
   .rat { font-family:var(--sans); font-size:8px; font-weight:700; letter-spacing:.05em;
          text-transform:uppercase; background:var(--accent-soft); color:var(--accent);
          padding:0 6px; border-radius:999px; margin-left:6px; white-space:nowrap; }
+  /* Herkunftsmarke am Quellentausch: dieselbe Form wie „vermutet", aber
+     grau statt farbig - sie warnt nicht, sie sagt nur, woher die
+     Zuordnung kommt (Stufe 4, ueber den Alias-Punkt). */
+  .herk { font-family:var(--sans); font-size:8px; font-weight:700; letter-spacing:.05em;
+          text-transform:uppercase; background:var(--surface-3); color:var(--ink-3);
+          padding:0 6px; border-radius:999px; margin-left:6px; white-space:nowrap; }
   .erow .nm3 .ratknopf { font-family:var(--sans); font-size:11px; cursor:pointer; margin-left:5px;
                          color:var(--ink-3); padding:0 4px; border-radius:var(--r-sm); }
   .erow .nm3 .ratknopf:hover { background:var(--surface-3); color:var(--ink); }
