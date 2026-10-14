@@ -352,13 +352,24 @@ behoben in PR 339, seit 6.0.3 nimmt der Platz beide
 (`/^value\.(energy\.consumed|power\.consumption)$/`).
 
 **Wer so einen Alias mit einem älteren Detektor liest, verliert den Punkt.**
-Betroffen ist, was den Alias liest, nicht die Werkbank: vis, Alexa, der
-Gerätemanager, jeder Adapter mit eigener Detektor-Fassung. Auf einem bewohnten
-System waren das am 14.10.2026 noch 4.6.4 (Admin, vis, Gerätemanager), 5.0.15
-(matter) und 6.0.1 (mcp-server) — dort fehlt der Verbrauch, bis der lesende
-Adapter aktualisiert ist. Bestehende Aliase mit der alten Rolle bleiben
-erkannt, der Ausdruck nimmt sie weiter. Jede der vier Zeilen trägt den Grund im
-Feld `_rolle`.
+Betroffen ist nicht die Werkbank, sondern jeder Adapter, der den Alias liest —
+und jeder bringt seine **eigene** Detektor-Fassung mit, teils über npm, teils
+fest in sein Frontend eingebacken, wo keine `package.json` sie verrät. Auf
+einem bewohnten System am 14.10.2026 nachgemessen:
+
+| Leser | Fassung | nimmt `value.energy.consumed`? |
+|---|---|---|
+| `iobroker.admin`, Gerätemanager | eingebacken ins Frontend-Asset | nein — im Bündel steht nur `value\.power\.consumption` |
+| `iobroker.devices` | eingebacken ins Frontend-Asset | nein, ebenso |
+| `iobroker.matter` | 5.0.15 über npm | nein, `/^value\.power\.consumption$/` |
+| `@iobroker/mcp-server` | 6.0.1 über npm | nein, dieselbe Zeile |
+| `iobroker.hm-rpc` | 4.6.4, oberste Ebene | nein — liest aber keine Aliase |
+
+Gemessen wurde am Muster selbst, nicht an der Versionsnummer: bei den beiden
+eingebackenen steht `energy.consumed` nirgends im Bündel. Dort fehlt der
+Verbrauch also, bis der lesende Adapter nachzieht. Bestehende Aliase mit der
+alten Rolle bleiben überall erkannt, der Ausdruck nimmt sie weiter. Jede der
+vier Zeilen trägt den Grund im Feld `_rolle`.
 
 ### Rollenwissen neben den Zeilen
 
@@ -625,7 +636,7 @@ alle elf Sprachdateien dieselben Schlüssel tragen.
 
 ### **WORK IN PROGRESS**
 * **Der Verbrauchspunkt trägt jetzt die Rolle, die richtig ist: `value.energy.consumed`.** Die Einheit ist Wh, also eine Energie und keine Leistung — sie gehört unter `value.energy.*` und nicht zu den Watt in `value.power.*`. Genau deshalb ist `value.power.consumption` in der Rollenliste von ioBroker durchgestrichen. Bis `@iobroker/type-detector` 6.0.2 ging es trotzdem nicht anders: das Muster `consumption` traf allein die durchgestrichene Rolle, und ein Punkt mit der richtigen fiel ohne ein Wort aus dem erkannten Gerät — die Steckdose wurde weiter erkannt, nur ohne ihren Verbrauch, und genauso kam sie bei vis, Alexa und im Gerätemanager an. Gemeldet als [Issue 334](https://github.com/ioBroker/ioBroker.type-detector/issues/334) samt Befund, behoben in PR 339, am 14.10.2026 als 6.0.3 veröffentlicht. Der Detektor nimmt jetzt beide Rollen, und die vier mitgelieferten Vorlagen (`messpunkt`, `tasmota-lampe`, `tasmota-mehrfach`, `tasmota-steckdose`) schreiben die richtige.
-* **Was das kostet, offen gesagt:** Einen Alias liest nicht die Werkbank, sondern jeder Adapter mit seiner eigenen Detektor-Fassung, und eine ältere als 6.0.3 nimmt nur die durchgestrichene Rolle. Auf einem bewohnten System am 14.10.2026 gemessen: 4.6.4 für Admin, vis und Gerätemanager, 5.0.15 im matter, 6.0.1 im mcp-server. Bis die aktualisiert sind, fehlt dort ein Verbrauchspunkt, der neu aus einer der vier Vorlagen entsteht. Bestehende Aliase bleiben unberührt — der Ausdruck nimmt die alte Rolle weiter, sie werden also so oder so erkannt.
+* **Was das kostet, offen gesagt:** Einen Alias liest nicht die Werkbank, sondern jeder Adapter, der ihn liest — und jeder bringt seine eigene Detektor-Fassung mit, teils über npm, teils fest in sein Frontend eingebacken, wo keine `package.json` sie verrät. Eine ältere als 6.0.3 nimmt nur die durchgestrichene Rolle. Auf einem bewohnten System am 14.10.2026 am Muster selbst gemessen, nicht an der Versionsnummer: der **Gerätemanager** des Admin und **iobroker.devices** tragen je ein eingebackenes Bündel, in dem `energy.consumed` nirgends steht; **iobroker.matter** hat 5.0.15 und der **mcp-server** 6.0.1, beide mit `/^value\.power\.consumption$/`. Bis die nachziehen, fehlt dort ein Verbrauchspunkt, der neu aus einer der vier Vorlagen entsteht. Bestehende Aliase bleiben unberührt — der Ausdruck nimmt die alte Rolle weiter, sie werden also so oder so erkannt.
 
 ### 0.12.0 (2026-10-14)
 **Quelle tauschen**

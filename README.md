@@ -341,13 +341,24 @@ fixed in PR 339, and since 6.0.3 the place accepts both
 (`/^value\.(energy\.consumed|power\.consumption)$/`).
 
 **Reading such an alias with an older detector loses the point.** What is
-affected is whatever reads the alias, not the workbench: vis, Alexa, the device
-manager, every adapter with its own detector version. On a live system on
-2026-10-14 those were still 4.6.4 (admin, vis, device manager), 5.0.15 (matter)
-and 6.0.1 (mcp-server) — there the consumption is missing until the reading
-adapter is updated. Existing aliases with the old role stay recognised, the
-expression still accepts them. Each of the four rows carries the reason in a
-field `_rolle`.
+affected is not the workbench but every adapter that reads the alias — and each
+brings its **own** detector version, some over npm, some baked into its
+frontend where no `package.json` reveals it. Measured on a live system on
+2026-10-14:
+
+| Reader | Version | accepts `value.energy.consumed`? |
+|---|---|---|
+| `iobroker.admin`, device manager | baked into a frontend asset | no — the bundle holds `value\.power\.consumption` only |
+| `iobroker.devices` | baked into a frontend asset | no, likewise |
+| `iobroker.matter` | 5.0.15 over npm | no, `/^value\.power\.consumption$/` |
+| `@iobroker/mcp-server` | 6.0.1 over npm | no, same line |
+| `iobroker.hm-rpc` | 4.6.4, top level | no — but it does not read aliases |
+
+This was measured on the pattern itself rather than on a version number: in
+both baked bundles `energy.consumed` appears nowhere. So the consumption is
+missing there until the reading adapter catches up. Existing aliases with the
+old role stay recognised everywhere, the expression still accepts them. Each of
+the four rows carries the reason in a field `_rolle`.
 
 ### Role knowledge beside the rows
 
@@ -606,7 +617,7 @@ imported, and that all eleven language files carry the same keys.
 
 ### **WORK IN PROGRESS**
 * **The consumption point now carries the role it should: `value.energy.consumed`.** The unit is Wh, which is energy and not power, so it belongs under `value.energy.*` and not with the watts in `value.power.*` — which is why the ioBroker roles list strikes `value.power.consumption` through. Up to `@iobroker/type-detector` 6.0.2 there was no choice anyway: the pattern `consumption` matched the struck-through role alone, and a point carrying the correct one dropped out of the detected device without a word — the socket was still recognised, just without its consumption, and that is how it reached vis, Alexa and the device manager. Reported as [issue 334](https://github.com/ioBroker/ioBroker.type-detector/issues/334) with the finding, fixed in PR 339, released as 6.0.3 on 2026-10-14. The detector now accepts both roles, and the four shipped templates (`messpunkt`, `tasmota-lampe`, `tasmota-mehrfach`, `tasmota-steckdose`) write the correct one.
-* **What that costs, said plainly:** an alias is read not by the workbench but by every adapter carrying its own detector version, and one older than 6.0.3 accepts the struck-through role only. Measured on a live system on 2026-10-14: 4.6.4 for admin, vis and the device manager, 5.0.15 in matter, 6.0.1 in the mcp-server. Until those are updated, a consumption point newly built from one of the four templates is missing there. Existing aliases are not touched — the expression still accepts the old role, so they stay recognised either way.
+* **What that costs, said plainly:** an alias is read not by the workbench but by every adapter that reads it — and each carries its own detector version, some over npm, some baked into its frontend where no `package.json` reveals it. One older than 6.0.3 accepts the struck-through role only. Measured on a live system on 2026-10-14, on the pattern itself rather than on a version number: the admin's **device manager** and **iobroker.devices** each carry a baked bundle in which `energy.consumed` appears nowhere; **iobroker.matter** has 5.0.15 and the **mcp-server** 6.0.1, both with `/^value\.power\.consumption$/`. Until those catch up, a consumption point newly built from one of the four templates is missing there. Existing aliases are not touched — the expression still accepts the old role, so they stay recognised either way.
 
 ### 0.12.0 (2026-10-14)
 **Swapping the source**
