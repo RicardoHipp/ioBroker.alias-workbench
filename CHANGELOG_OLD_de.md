@@ -1,7 +1,11 @@
 # Ältere Änderungen
 
 Einträge, die aus [README_de.md](README_de.md) herausgewachsen sind, neueste zuerst.
-In der README bleiben die sieben Fassungen stehen, die auch der ioBroker-Admin zeigt.
+In der README bleiben die sieben Fassungen stehen, die auch der ioBroker-Admin zeigt.### 0.9.8
+* Der Changelog nennt nur noch Fassungen, die es auf npm wirklich gibt. Die Einträge 0.9.1 bis 0.9.6 waren lokale Zwischenstände und wurden nie veröffentlicht; ihr Inhalt steht jetzt zusammengefasst bei 0.9.7. Gefunden vom Repochecker (E2004, E1032)
+* Die README beschreibt nicht mehr, wie man den Adapter von Hand hinzufügt — im offiziellen Repository wählt man ihn aus der Adapterliste (E6013)
+* `dependabot.yml` bekommt eine Abkühlzeit von sieben Tagen für npm-Pakete: Was heute erscheint, wird erst in einer Woche vorgeschlagen. Wird eine kompromittierte Fassung in dieser Zeit zurückgezogen, kommt sie hier nie an (E8915). Und `@types/node` bleibt bei seiner Hauptversion — die Typen müssen zu der Node-Fassung passen, unter der der Adapter läuft (E8917)
+
 ### 0.9.7
 *Die Fassungen 0.9.1 bis 0.9.6 waren lokale Zwischenstände und wurden nie
 veröffentlicht — ihre Änderungen stecken in 0.9.7.*
