@@ -328,13 +328,27 @@ When a template is rejected, the picker says why: *"1.LEVEL missing"*, not
 `tasmota-lampe`, `tasmota-mehrfach`, `tasmota-steckdose`) give the row
 `CONSUMPTION` the role `value.power.consumption`, which is struck through in
 the ioBroker [state roles list](https://github.com/ioBroker/ioBroker.docs/blob/master/docs/en/dev/stateroles.md).
-It stays on purpose: `@iobroker/type-detector` 6.0.x recognises `CONSUMPTION`
-only with exactly this role (`typePatterns.js`, pattern `consumption`,
-`defaultRole: 'value.power.consumption'`). With `value.energy.consumed` the
-point would drop out of the detected device, and vis, Alexa and the device
-manager would no longer show any consumption. Each of the four rows carries
-this reason in a field `_rolle`. The role will change once the type-detector
-does.
+It stays on purpose — since 2026-10-14 for a different reason than before.
+
+Up to `@iobroker/type-detector` 6.0.2 there was no choice: the pattern
+`consumption` recognised `CONSUMPTION` only with exactly this role. Since 6.0.3
+it accepts both (`/^value\.(energy\.consumed|power\.consumption)$/`,
+[issue 334](https://github.com/ioBroker/ioBroker.type-detector/issues/334),
+PR 339) and suggests `value.energy.consumed`.
+
+The workbench **reads** both from then on and keeps **suggesting** the old one,
+because an alias is read not only by the workbench but by every adapter with
+its own detector version. On a live system on 2026-10-14 those were 4.6.4
+(admin, vis, device manager), 5.0.15 (matter) and 6.0.1 (mcp-server) — all
+three accept the old role only. With `value.energy.consumed` the point would
+drop out of the detected device there, and vis, Alexa and the device manager
+would no longer show any consumption. Every version understands the old role,
+only the newest understands the new one.
+
+Only the suggestion is turned back, in one place
+(`src-admin/detector-bundle.js`); the expression stays as the library delivers
+it. Each of the four rows carries the reason in a field `_rolle`. Once those
+readers have caught up, the block goes and the four templates change with it.
 
 ### Role knowledge beside the rows
 
@@ -590,6 +604,10 @@ imported, and that all eleven language files carry the same keys.
   core feature of the js-controller, not of any adapter
 
 ## Changelog
+
+### **WORK IN PROGRESS**
+* **The type detector is now 6.0.3, and the consumption point is recognised with either role.** The pattern `consumption` used to match the single role `value.power.consumption` — the one the ioBroker roles list strikes through. A point carrying the current `value.energy.consumed` dropped out of the device without a word: the socket was still recognised, just without its consumption, and that is also how it reached vis, Alexa and the device manager. Reported as [issue 334](https://github.com/ioBroker/ioBroker.type-detector/issues/334) with the finding, fixed in PR 339 and released on 2026-10-14 as 6.0.3: the place now accepts both roles. The workbench reads both from now on.
+* **Written is still the old role, and that is deliberate.** 6.0.3 also switched its own suggestion to `value.energy.consumed`, and simply following it would have broken exactly what was just fixed — because an alias is read not by the workbench but by every adapter with its own detector version. Measured on a live system on 2026-10-14: 4.6.4 for admin, vis and the device manager, 5.0.15 in matter, 6.0.1 in the mcp-server, and all three match the old role only. Every version understands the old role, only the newest understands the new one, so the workbench keeps suggesting the old one. Turned back in one place with the measurement beside it (`src-admin/detector-bundle.js`), checked by a test that reads the shipped bundle: both roles must fill the place, the suggestion must be the compatible one. Once the readers have caught up, the block and the four templates change together.
 
 ### 0.12.0 (2026-10-14)
 **Swapping the source**

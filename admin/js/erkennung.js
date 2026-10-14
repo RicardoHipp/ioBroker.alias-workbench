@@ -232,11 +232,16 @@ export function musterVon(typ) {
    stand dazu nichts weiter als „passt nicht".
 
    Zur Rolle selbst: `value.power.consumption` ist in der Rollenliste von
-   ioBroker durchgestrichen, der type-detector 6.0.x erkennt CONSUMPTION
-   aber NUR mit genau dieser Rolle (typePatterns.js, Muster `consumption`).
-   Die mitgelieferten Vorlagen behalten sie deshalb bewusst; jede traegt
-   den Grund im Feld `_rolle`. Role note for reviewers: the deprecated role
-   is kept on purpose because the type-detector requires it.
+   ioBroker durchgestrichen. Bis zum type-detector 6.0.2 ging es nicht
+   anders — das Muster `consumption` erkannte CONSUMPTION nur mit genau
+   dieser Rolle. Seit 6.0.3 nimmt es beide an (Issue 334, PR 339) und
+   schlaegt die neue vor; die Werkbank dreht nur den VORSCHLAG zurueck,
+   weil aeltere Leser-Adapter die neue Rolle nicht kennen — der Grund
+   steht samt Messung in `src-admin/detector-bundle.js`. Die
+   mitgelieferten Vorlagen behalten die alte Rolle deshalb weiter; jede
+   traegt den Grund im Feld `_rolle`. Role note for reviewers: the
+   deprecated role is kept on purpose for compatibility with older
+   readers, see src-admin/detector-bundle.js.
 
    Dieselbe Suche stand vorher zweimal im Code (detail.js und
    vorlagenblatt.js), beide Male ohne den Typ anzusehen. */

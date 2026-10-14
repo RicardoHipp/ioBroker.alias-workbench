@@ -903,6 +903,69 @@ describe('Der eingebackene Detektor', () => {
         expect(treffer[1], 'admin/detector.js ist alt: neu bauen mit "npm run build"')
             .to.equal(paket.version);
     });
+
+    /* Der Verbrauchsplatz: liest beides, schlaegt die alte Rolle vor.
+
+       Seit type-detector 6.0.3 nimmt das Muster `consumption` beide
+       Rollen an (unser Issue 334, PR 339, gemergt am 14.10.2026) und
+       schlaegt dabei `value.energy.consumed` vor. Einen Alias liest aber
+       jeder Adapter mit SEINER Detektor-Fassung, und die aelteren kennen
+       nur `value.power.consumption` — gemessen am Produktivsystem am
+       14.10.2026: 4.6.4 (Admin, vis, Geraetemanager), 5.0.15 (matter),
+       6.0.1 (mcp-server), alle drei mit `/^value\.power\.consumption$/`.
+
+       Darum dreht `src-admin/detector-bundle.js` den Vorschlag zurueck,
+       und nur den. Dieser Test prueft beides am ausgelieferten Buendel:
+       dass der Ausdruck ungekuerzt ankommt (sonst waere der Gewinn aus
+       6.0.3 wieder weg) und dass der Vorschlag der kompatible ist.
+
+       Wenn die Leser nachgezogen sind, fallen Block und Test zusammen
+       weg — bis dahin sagt dieser Test, dass die Ausnahme noch steht. */
+    it('liest beide Verbrauchsrollen, schlaegt aber die kompatible vor', () => {
+        const vm = require('node:vm');
+        const ctx = { window: {}, console };
+        vm.createContext(ctx);
+        vm.runInContext(lies(path.join(wurzel, 'admin', 'detector.js')), ctx);
+        const D = ctx.window.AWDetector;
+
+        const platz = D.patterns.socket.states.find(st => st.name === 'CONSUMPTION');
+        expect(platz, 'socket hat keinen CONSUMPTION-Platz mehr').to.not.equal(undefined);
+
+        // Der Ausdruck kommt als Text mit Schraegstrichen (getPatterns),
+        // darum erst zusammensetzen und dann die Bedeutung pruefen - nicht
+        // den Wortlaut: eine kuenftige Fassung darf weitere Rollen zulassen.
+        const nimmt = new RegExp(String(platz.role).replace(/^\/|\/$/g, ''));
+        expect(nimmt.test('value.energy.consumed'),
+            'der Ausdruck nimmt die neue Rolle nicht - Bibliothek aelter als 6.0.3?')
+            .to.equal(true);
+        expect(nimmt.test('value.power.consumption'),
+            'der Ausdruck nimmt die alte Rolle nicht mehr - bestehende Aliase fallen durch')
+            .to.equal(true);
+
+        expect(platz.defaultRole,
+            'der Vorschlag ist die neue Rolle - aeltere Leser verlieren den Verbrauch')
+            .to.equal('value.power.consumption');
+
+        // Und die Gegenprobe am Erkennungslauf selbst: beide Rollen
+        // muessen den Platz wirklich belegen, nicht nur im Ausdruck stehen.
+        const detektor = new D.ChannelDetector();
+        ['value.power.consumption', 'value.energy.consumed'].forEach(rolle => {
+            const objects = {
+                'x.0.d': { _id: 'x.0.d', type: 'channel', common: { name: 'D' }, native: {} },
+                'x.0.d.S': { _id: 'x.0.d.S', type: 'state',
+                    common: { name: 'S', type: 'boolean', role: 'switch', read: true, write: true } },
+                'x.0.d.C': { _id: 'x.0.d.C', type: 'state',
+                    common: { name: 'C', type: 'number', role: rolle, unit: 'Wh', read: true, write: false } },
+            };
+            const r = detektor.detect({
+                objects, id: 'x.0.d',
+                _keysOptional: Object.keys(objects), _usedIdsOptional: [],
+            });
+            const belegt = (r && r[0] ? r[0].states : []).filter(st => st.id).map(st => st.name);
+            expect(belegt, 'Rolle ' + rolle + ' belegt den Verbrauchsplatz nicht')
+                .to.include('CONSUMPTION');
+        });
+    });
 });
 
 /* Der Rueckfall auf die naechstbeste Vorlage.

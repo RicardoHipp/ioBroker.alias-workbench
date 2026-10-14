@@ -18,7 +18,7 @@
   "devDependencies": {
     "@iobroker/eslint-config": "^2.3.4",
     "@iobroker/testing": "^6.2.2",
-    "@iobroker/type-detector": "^6.0.0",
+    "@iobroker/type-detector": "^6.0.3",
     "esbuild": "^0.28.2"
   },
   "scripts": {
