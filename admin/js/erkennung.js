@@ -231,17 +231,18 @@ export function musterVon(typ) {
    statt als `electricity` nur noch als `info` erkannt. Am Bildschirm
    stand dazu nichts weiter als „passt nicht".
 
-   Zur Rolle selbst: `value.power.consumption` ist in der Rollenliste von
-   ioBroker durchgestrichen. Bis zum type-detector 6.0.2 ging es nicht
-   anders — das Muster `consumption` erkannte CONSUMPTION nur mit genau
-   dieser Rolle. Seit 6.0.3 nimmt es beide an (Issue 334, PR 339) und
-   schlaegt die neue vor; die Werkbank dreht nur den VORSCHLAG zurueck,
-   weil aeltere Leser-Adapter die neue Rolle nicht kennen — der Grund
-   steht samt Messung in `src-admin/detector-bundle.js`. Die
-   mitgelieferten Vorlagen behalten die alte Rolle deshalb weiter; jede
-   traegt den Grund im Feld `_rolle`. Role note for reviewers: the
-   deprecated role is kept on purpose for compatibility with older
-   readers, see src-admin/detector-bundle.js.
+   Zur Rolle selbst: `value.energy.consumed` ist die richtige, und seit
+   dem 14.10.2026 steht sie auch in den vier mitgelieferten Vorlagen.
+   Die Einheit ist Wh, also eine Energie und keine Leistung — sie
+   gehoert unter `value.energy.*` und nicht zu den Watt in
+   `value.power.*`. Genau deshalb ist `value.power.consumption` in der
+   Rollenliste von ioBroker durchgestrichen. Bis zum type-detector 6.0.2
+   ging es trotzdem nicht anders: das Muster `consumption` erkannte
+   CONSUMPTION nur mit der alten Rolle, ein Punkt mit der richtigen fiel
+   lautlos aus dem Geraet. Behoben in 6.0.3 (Issue 334, PR 339) — der
+   Platz nimmt beide. Wer einen so gebauten Alias mit einem aelteren
+   Detektor liest, verliert den Punkt; dann gehoert der lesende Adapter
+   aktualisiert. Jede der vier Zeilen traegt das im Feld `_rolle`.
 
    Dieselbe Suche stand vorher zweimal im Code (detail.js und
    vorlagenblatt.js), beide Male ohne den Typ anzusehen. */

@@ -324,31 +324,30 @@ nothing on purpose. Fifty bare `LEVEL` channels are not a device.
 When a template is rejected, the picker says why: *"1.LEVEL missing"*, not
 *"does not fit"*. A reason you cannot act on is not a reason.
 
-**About the role `value.power.consumption`.** Four templates (`messpunkt`,
-`tasmota-lampe`, `tasmota-mehrfach`, `tasmota-steckdose`) give the row
-`CONSUMPTION` the role `value.power.consumption`, which is struck through in
-the ioBroker [state roles list](https://github.com/ioBroker/ioBroker.docs/blob/master/docs/en/dev/stateroles.md).
-It stays on purpose — since 2026-10-14 for a different reason than before.
+**About the consumption role.** Four templates (`messpunkt`, `tasmota-lampe`,
+`tasmota-mehrfach`, `tasmota-steckdose`) give the row `CONSUMPTION` the role
+`value.energy.consumed`. That is the correct one: the unit is Wh, which is
+**energy** and not power, so it belongs under `value.energy.*` rather than with
+the watts in `value.power.*`. That is exactly why `value.power.consumption` is
+struck through in the ioBroker
+[state roles list](https://github.com/ioBroker/ioBroker.docs/blob/master/docs/en/dev/stateroles.md).
 
-Up to `@iobroker/type-detector` 6.0.2 there was no choice: the pattern
-`consumption` recognised `CONSUMPTION` only with exactly this role. Since 6.0.3
-it accepts both (`/^value\.(energy\.consumed|power\.consumption)$/`,
+Up to `@iobroker/type-detector` 6.0.2 there was no choice anyway: the pattern
+`consumption` recognised `CONSUMPTION` only with the struck-through role, and a
+point carrying the correct one dropped out of the detected device without a
+word. Reported as
 [issue 334](https://github.com/ioBroker/ioBroker.type-detector/issues/334),
-PR 339) and suggests `value.energy.consumed`.
+fixed in PR 339, and since 6.0.3 the place accepts both
+(`/^value\.(energy\.consumed|power\.consumption)$/`).
 
-The workbench **reads** both from then on and keeps **suggesting** the old one,
-because an alias is read not only by the workbench but by every adapter with
-its own detector version. On a live system on 2026-10-14 those were 4.6.4
-(admin, vis, device manager), 5.0.15 (matter) and 6.0.1 (mcp-server) — all
-three accept the old role only. With `value.energy.consumed` the point would
-drop out of the detected device there, and vis, Alexa and the device manager
-would no longer show any consumption. Every version understands the old role,
-only the newest understands the new one.
-
-Only the suggestion is turned back, in one place
-(`src-admin/detector-bundle.js`); the expression stays as the library delivers
-it. Each of the four rows carries the reason in a field `_rolle`. Once those
-readers have caught up, the block goes and the four templates change with it.
+**Reading such an alias with an older detector loses the point.** What is
+affected is whatever reads the alias, not the workbench: vis, Alexa, the device
+manager, every adapter with its own detector version. On a live system on
+2026-10-14 those were still 4.6.4 (admin, vis, device manager), 5.0.15 (matter)
+and 6.0.1 (mcp-server) — there the consumption is missing until the reading
+adapter is updated. Existing aliases with the old role stay recognised, the
+expression still accepts them. Each of the four rows carries the reason in a
+field `_rolle`.
 
 ### Role knowledge beside the rows
 
@@ -606,8 +605,8 @@ imported, and that all eleven language files carry the same keys.
 ## Changelog
 
 ### **WORK IN PROGRESS**
-* **The type detector is now 6.0.3, and the consumption point is recognised with either role.** The pattern `consumption` used to match the single role `value.power.consumption` — the one the ioBroker roles list strikes through. A point carrying the current `value.energy.consumed` dropped out of the device without a word: the socket was still recognised, just without its consumption, and that is also how it reached vis, Alexa and the device manager. Reported as [issue 334](https://github.com/ioBroker/ioBroker.type-detector/issues/334) with the finding, fixed in PR 339 and released on 2026-10-14 as 6.0.3: the place now accepts both roles. The workbench reads both from now on.
-* **Written is still the old role, and that is deliberate.** 6.0.3 also switched its own suggestion to `value.energy.consumed`, and simply following it would have broken exactly what was just fixed — because an alias is read not by the workbench but by every adapter with its own detector version. Measured on a live system on 2026-10-14: 4.6.4 for admin, vis and the device manager, 5.0.15 in matter, 6.0.1 in the mcp-server, and all three match the old role only. Every version understands the old role, only the newest understands the new one, so the workbench keeps suggesting the old one. Turned back in one place with the measurement beside it (`src-admin/detector-bundle.js`), checked by a test that reads the shipped bundle: both roles must fill the place, the suggestion must be the compatible one. Once the readers have caught up, the block and the four templates change together.
+* **The consumption point now carries the role it should: `value.energy.consumed`.** The unit is Wh, which is energy and not power, so it belongs under `value.energy.*` and not with the watts in `value.power.*` — which is why the ioBroker roles list strikes `value.power.consumption` through. Up to `@iobroker/type-detector` 6.0.2 there was no choice anyway: the pattern `consumption` matched the struck-through role alone, and a point carrying the correct one dropped out of the detected device without a word — the socket was still recognised, just without its consumption, and that is how it reached vis, Alexa and the device manager. Reported as [issue 334](https://github.com/ioBroker/ioBroker.type-detector/issues/334) with the finding, fixed in PR 339, released as 6.0.3 on 2026-10-14. The detector now accepts both roles, and the four shipped templates (`messpunkt`, `tasmota-lampe`, `tasmota-mehrfach`, `tasmota-steckdose`) write the correct one.
+* **What that costs, said plainly:** an alias is read not by the workbench but by every adapter carrying its own detector version, and one older than 6.0.3 accepts the struck-through role only. Measured on a live system on 2026-10-14: 4.6.4 for admin, vis and the device manager, 5.0.15 in matter, 6.0.1 in the mcp-server. Until those are updated, a consumption point newly built from one of the four templates is missing there. Existing aliases are not touched — the expression still accepts the old role, so they stay recognised either way.
 
 ### 0.12.0 (2026-10-14)
 **Swapping the source**

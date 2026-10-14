@@ -336,32 +336,29 @@ treffen mit Absicht nichts. Fünfzig blanke `LEVEL`-Kanäle sind kein Gerät.
 Wird eine Vorlage abgelehnt, sagt die Auswahl warum: *„1.LEVEL fehlt"*, nicht
 *„passt nicht"*. Ein Grund, mit dem man nichts anfangen kann, ist kein Grund.
 
-**Zur Rolle `value.power.consumption`.** Vier Vorlagen (`messpunkt`,
-`tasmota-lampe`, `tasmota-mehrfach`, `tasmota-steckdose`) geben der Zeile
-`CONSUMPTION` die Rolle `value.power.consumption`, die in der
+**Zur Rolle des Verbrauchs.** Vier Vorlagen (`messpunkt`, `tasmota-lampe`,
+`tasmota-mehrfach`, `tasmota-steckdose`) geben der Zeile `CONSUMPTION` die Rolle
+`value.energy.consumed`. Das ist die richtige: Die Einheit ist Wh, also eine
+**Energie** und keine Leistung — sie gehört unter `value.energy.*` und nicht zu
+den Watt in `value.power.*`. Genau deshalb ist `value.power.consumption` in der
 [Rollenliste](https://github.com/ioBroker/ioBroker.docs/blob/master/docs/en/dev/stateroles.md)
-von ioBroker durchgestrichen ist. Sie bleibt mit Absicht — seit dem 14.10.2026
-aus einem anderen Grund als vorher.
+von ioBroker durchgestrichen.
 
-Bis `@iobroker/type-detector` 6.0.2 ging es nicht anders: das Muster
-`consumption` erkannte `CONSUMPTION` nur mit genau dieser Rolle. Seit 6.0.3
-nimmt es beide an (`/^value\.(energy\.consumed|power\.consumption)$/`,
+Bis `@iobroker/type-detector` 6.0.2 ging es trotzdem nicht anders: das Muster
+`consumption` erkannte `CONSUMPTION` nur mit der durchgestrichenen Rolle, ein
+Punkt mit der richtigen fiel ohne ein Wort aus dem erkannten Gerät. Gemeldet als
 [Issue 334](https://github.com/ioBroker/ioBroker.type-detector/issues/334),
-PR 339) und schlägt dabei `value.energy.consumed` vor.
+behoben in PR 339, seit 6.0.3 nimmt der Platz beide
+(`/^value\.(energy\.consumed|power\.consumption)$/`).
 
-Die Werkbank **liest** seither beide und **schlägt** weiter die alte vor, denn
-einen Alias liest nicht nur sie, sondern jeder Adapter mit seiner eigenen
-Detektor-Fassung. Auf einem bewohnten System waren das am 14.10.2026: 4.6.4
-(Admin, vis, Gerätemanager), 5.0.15 (matter), 6.0.1 (mcp-server) — alle drei
-nehmen nur die alte Rolle. Mit `value.energy.consumed` fiele der Punkt dort aus
-dem erkannten Gerät, und vis, Alexa und der Gerätemanager zeigten keinen
-Verbrauch mehr. Die alte Rolle versteht also jede Fassung, die neue nur die
-neueste.
-
-Zurückgedreht wird nur der Vorschlag, an einer Stelle
-(`src-admin/detector-bundle.js`); der Ausdruck bleibt, wie die Bibliothek ihn
-liefert. Jede der vier Zeilen trägt den Grund im Feld `_rolle`. Sind die Leser
-nachgezogen, fällt der Block weg und die vier Vorlagen wechseln mit ihm.
+**Wer so einen Alias mit einem älteren Detektor liest, verliert den Punkt.**
+Betroffen ist, was den Alias liest, nicht die Werkbank: vis, Alexa, der
+Gerätemanager, jeder Adapter mit eigener Detektor-Fassung. Auf einem bewohnten
+System waren das am 14.10.2026 noch 4.6.4 (Admin, vis, Gerätemanager), 5.0.15
+(matter) und 6.0.1 (mcp-server) — dort fehlt der Verbrauch, bis der lesende
+Adapter aktualisiert ist. Bestehende Aliase mit der alten Rolle bleiben
+erkannt, der Ausdruck nimmt sie weiter. Jede der vier Zeilen trägt den Grund im
+Feld `_rolle`.
 
 ### Rollenwissen neben den Zeilen
 
@@ -627,8 +624,8 @@ alle elf Sprachdateien dieselben Schlüssel tragen.
 ## Änderungen
 
 ### **WORK IN PROGRESS**
-* **Der type-detector ist jetzt 6.0.3, und der Verbrauchspunkt wird mit beiden Rollen erkannt.** Das Muster `consumption` traf bisher die einzige Rolle `value.power.consumption` — die, die in der Rollenliste von ioBroker durchgestrichen ist. Ein Punkt mit der heutigen Rolle `value.energy.consumed` fiel ohne ein Wort aus dem Gerät: die Steckdose wurde weiter erkannt, nur ohne ihren Verbrauch, und genauso kam sie bei vis, Alexa und im Gerätemanager an. Gemeldet als [Issue 334](https://github.com/ioBroker/ioBroker.type-detector/issues/334) samt Befund, behoben in PR 339 und am 14.10.2026 als 6.0.3 veröffentlicht: der Platz nimmt jetzt beide Rollen. Die Werkbank liest seither beide.
-* **Geschrieben wird weiter die alte Rolle, und das mit Absicht.** 6.0.3 hat auch seinen eigenen Vorschlag auf `value.energy.consumed` umgestellt, und ihm einfach zu folgen hätte genau das kaputtgemacht, was gerade behoben wurde — denn einen Alias liest nicht die Werkbank, sondern jeder Adapter mit seiner eigenen Detektor-Fassung. Auf einem bewohnten System am 14.10.2026 gemessen: 4.6.4 für Admin, vis und Gerätemanager, 5.0.15 im matter, 6.0.1 im mcp-server, und alle drei treffen nur die alte Rolle. Die alte Rolle versteht jede Fassung, die neue nur die neueste — also schlägt die Werkbank weiter die alte vor. Zurückgedreht an einer Stelle, mit der Messung daneben (`src-admin/detector-bundle.js`), geprüft von einem Test, der das ausgelieferte Bündel liest: beide Rollen müssen den Platz belegen, der Vorschlag muss der verträgliche sein. Sind die Leser nachgezogen, wechseln der Block und die vier Vorlagen zusammen.
+* **Der Verbrauchspunkt trägt jetzt die Rolle, die richtig ist: `value.energy.consumed`.** Die Einheit ist Wh, also eine Energie und keine Leistung — sie gehört unter `value.energy.*` und nicht zu den Watt in `value.power.*`. Genau deshalb ist `value.power.consumption` in der Rollenliste von ioBroker durchgestrichen. Bis `@iobroker/type-detector` 6.0.2 ging es trotzdem nicht anders: das Muster `consumption` traf allein die durchgestrichene Rolle, und ein Punkt mit der richtigen fiel ohne ein Wort aus dem erkannten Gerät — die Steckdose wurde weiter erkannt, nur ohne ihren Verbrauch, und genauso kam sie bei vis, Alexa und im Gerätemanager an. Gemeldet als [Issue 334](https://github.com/ioBroker/ioBroker.type-detector/issues/334) samt Befund, behoben in PR 339, am 14.10.2026 als 6.0.3 veröffentlicht. Der Detektor nimmt jetzt beide Rollen, und die vier mitgelieferten Vorlagen (`messpunkt`, `tasmota-lampe`, `tasmota-mehrfach`, `tasmota-steckdose`) schreiben die richtige.
+* **Was das kostet, offen gesagt:** Einen Alias liest nicht die Werkbank, sondern jeder Adapter mit seiner eigenen Detektor-Fassung, und eine ältere als 6.0.3 nimmt nur die durchgestrichene Rolle. Auf einem bewohnten System am 14.10.2026 gemessen: 4.6.4 für Admin, vis und Gerätemanager, 5.0.15 im matter, 6.0.1 im mcp-server. Bis die aktualisiert sind, fehlt dort ein Verbrauchspunkt, der neu aus einer der vier Vorlagen entsteht. Bestehende Aliase bleiben unberührt — der Ausdruck nimmt die alte Rolle weiter, sie werden also so oder so erkannt.
 
 ### 0.12.0 (2026-10-14)
 **Quelle tauschen**

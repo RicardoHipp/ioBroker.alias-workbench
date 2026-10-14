@@ -904,24 +904,29 @@ describe('Der eingebackene Detektor', () => {
             .to.equal(paket.version);
     });
 
-    /* Der Verbrauchsplatz: liest beides, schlaegt die alte Rolle vor.
+    /* Der Verbrauchsplatz: beide Rollen erkannt, die richtige geschrieben.
 
-       Seit type-detector 6.0.3 nimmt das Muster `consumption` beide
-       Rollen an (unser Issue 334, PR 339, gemergt am 14.10.2026) und
-       schlaegt dabei `value.energy.consumed` vor. Einen Alias liest aber
-       jeder Adapter mit SEINER Detektor-Fassung, und die aelteren kennen
-       nur `value.power.consumption` — gemessen am Produktivsystem am
-       14.10.2026: 4.6.4 (Admin, vis, Geraetemanager), 5.0.15 (matter),
-       6.0.1 (mcp-server), alle drei mit `/^value\.power\.consumption$/`.
+       `value.power.consumption` ist in der Rollenliste von ioBroker
+       durchgestrichen, und zu Recht: die Einheit ist Wh, das ist eine
+       Energie und keine Leistung, gehoert also unter `value.energy.*`
+       und nicht zu den Watt in `value.power.*`. Bis type-detector 6.0.2
+       traf das Muster `consumption` trotzdem nur die alte Rolle - ein
+       Punkt mit der richtigen fiel lautlos aus dem Geraet. Behoben in
+       6.0.3 (Issue 334, PR 339): der Platz nimmt beide.
 
-       Darum dreht `src-admin/detector-bundle.js` den Vorschlag zurueck,
-       und nur den. Dieser Test prueft beides am ausgelieferten Buendel:
-       dass der Ausdruck ungekuerzt ankommt (sonst waere der Gewinn aus
-       6.0.3 wieder weg) und dass der Vorschlag der kompatible ist.
+       Seither schreiben die vier mitgelieferten Vorlagen die richtige,
+       und der Vorschlag der Bibliothek gilt unveraendert. Dieser Test
+       haelt beides am ausgelieferten Buendel fest - der Vorschlag ist
+       die neue Rolle, und BEIDE belegen den Platz wirklich, denn an der
+       alten haengen die bestehenden Aliase.
 
-       Wenn die Leser nachgezogen sind, fallen Block und Test zusammen
-       weg — bis dahin sagt dieser Test, dass die Ausnahme noch steht. */
-    it('liest beide Verbrauchsrollen, schlaegt aber die kompatible vor', () => {
+       Wer so einen Alias mit einem Detektor aelter als 6.0.3 liest,
+       verliert den Punkt; dann gehoert der lesende Adapter aktualisiert.
+       Vorher stand hier das Gegenteil: ein Block in
+       `src-admin/detector-bundle.js` drehte den Vorschlag auf die alte
+       Rolle zurueck, wegen genau dieser Leser (Ricardo hat am
+       14.10.2026 anders entschieden - richtig ist richtig). */
+    it('erkennt beide Verbrauchsrollen und schlaegt die richtige vor', () => {
         const vm = require('node:vm');
         const ctx = { window: {}, console };
         vm.createContext(ctx);
@@ -936,15 +941,15 @@ describe('Der eingebackene Detektor', () => {
         // den Wortlaut: eine kuenftige Fassung darf weitere Rollen zulassen.
         const nimmt = new RegExp(String(platz.role).replace(/^\/|\/$/g, ''));
         expect(nimmt.test('value.energy.consumed'),
-            'der Ausdruck nimmt die neue Rolle nicht - Bibliothek aelter als 6.0.3?')
+            'der Ausdruck nimmt die richtige Rolle nicht - Bibliothek aelter als 6.0.3?')
             .to.equal(true);
         expect(nimmt.test('value.power.consumption'),
             'der Ausdruck nimmt die alte Rolle nicht mehr - bestehende Aliase fallen durch')
             .to.equal(true);
 
         expect(platz.defaultRole,
-            'der Vorschlag ist die neue Rolle - aeltere Leser verlieren den Verbrauch')
-            .to.equal('value.power.consumption');
+            'der Vorschlag ist nicht die aktuelle Rolle - dreht sie jemand zurueck?')
+            .to.equal('value.energy.consumed');
 
         // Und die Gegenprobe am Erkennungslauf selbst: beide Rollen
         // muessen den Platz wirklich belegen, nicht nur im Ausdruck stehen.
@@ -965,6 +970,23 @@ describe('Der eingebackene Detektor', () => {
             expect(belegt, 'Rolle ' + rolle + ' belegt den Verbrauchsplatz nicht')
                 .to.include('CONSUMPTION');
         });
+    });
+
+    /* Und die vier Vorlagen schreiben sie auch.
+
+       Die Rolle steht nicht im Code, sondern in vier JSON-Dateien - ein
+       Test am Buendel allein saehe nicht, wenn eine davon zurueckfaellt. */
+    it('laesst die vier Vorlagen die aktuelle Verbrauchsrolle schreiben', () => {
+        ['messpunkt', 'tasmota-lampe', 'tasmota-mehrfach', 'tasmota-steckdose']
+            .forEach(name => {
+                const v = liesJson(path.join(wurzel, 'admin', 'vorlagen', name + '.json'));
+                const zeile = (v.zustaende || v.states || [])
+                    .find(z => z.name === 'CONSUMPTION');
+                expect(zeile, name + ' hat keine CONSUMPTION-Zeile mehr')
+                    .to.not.equal(undefined);
+                expect(zeile.rolle, name + ' schreibt die durchgestrichene Rolle')
+                    .to.equal('value.energy.consumed');
+            });
     });
 });
 

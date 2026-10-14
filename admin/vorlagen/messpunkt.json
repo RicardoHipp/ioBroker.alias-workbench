@@ -1,6 +1,6 @@
 {
   "id": "messpunkt",
-  "version": 5,
+  "version": 6,
   "rang": 5,
   "name": {
     "de": "Reiner Messpunkt",
@@ -31,8 +31,8 @@
     },
     {
       "name": "CONSUMPTION",
-      "rolle": "value.power.consumption",
-      "_rolle": "value.power.consumption is struck through in the ioBroker state roles list. Since @iobroker/type-detector 6.0.3 the CONSUMPTION place accepts value.energy.consumed as well (typePatterns.js, pattern 'consumption', issue 334, PR 339) and suggests that new role. The old one is kept here anyway, because an alias is read by every adapter with its own detector version, and the older ones accept the old role only - measured on a live system 2026-10-14: 4.6.4 (admin, vis, device manager), 5.0.15 (matter), 6.0.1 (mcp-server). With value.energy.consumed the point would drop out of the detected device there, and vis, Alexa and the device manager would no longer show the consumption. Every version understands the old role, only the newest understands the new one. Kept until those readers have caught up; the suggestion is turned back in one place, src-admin/detector-bundle.js.",
+      "rolle": "value.energy.consumed",
+      "_rolle": "value.energy.consumed is the current role for a consumed amount of energy: the unit is Wh, which is energy and not power, so it belongs under value.energy.* rather than under value.power.* (that one holds W and kW). The ioBroker state roles list strikes value.power.consumption through for exactly that reason. @iobroker/type-detector accepts both roles at the CONSUMPTION place since 6.0.3 (typePatterns.js, pattern 'consumption', issue 334, PR 339) and has value.energy.consumed as its defaultRole. Note for anyone reading such an alias with a detector older than 6.0.3: there the place accepts the struck-through role only, so the point drops out of the detected device - update the reading adapter.",
       "typ": "number",
       "einheit": "kWh",
       "lesen": "tele.SENSOR",
