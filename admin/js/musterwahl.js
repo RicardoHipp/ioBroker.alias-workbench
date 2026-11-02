@@ -94,8 +94,12 @@ export function baueMusterwahl(e, haupt, pflichtFehlt) {
   var vlbl = el('span', 'feldlabel', tr('pattern.label'));
   vw.appendChild(vlbl);
   /* Musterwahl als Eingabefeld mit eigener Liste statt als <select>.
-     Ein <select> laesst sich nicht durchsuchen, und die 51 Muster
-     brauchten deshalb einen Knopf daneben, der die Liste umschaltet.
+     Ein <select> laesst sich nicht durchsuchen, und die ueber fuenfzig
+     Muster brauchten deshalb einen Knopf daneben, der die Liste
+     umschaltet. (Wie viele es sind, sagt die Bibliothek: 51 mit
+     type-detector 6.0.x, 52 seit 6.2.0 mit dem Typ `tv`. Der Knopf
+     nennt die Zahl selbst, `pattern.allPatterns` bekommt sie als
+     Platzhalter.)
      Jetzt ist beides im Feld: tippen sucht ueber alle Muster, und die
      letzte Zeile schaltet zwischen den ueblichen und allen um. Kein
      <datalist> - dessen Fenster malt das Betriebssystem, und in
@@ -614,7 +618,7 @@ export function baueMusterwahl(e, haupt, pflichtFehlt) {
     meta.appendChild(el('span', 'chip warn', tr('pattern.manualInstead', e.wantAuto)));
   }
   if (meta.childNodes.length) { vw.appendChild(meta); }
-  /* Der Knopf „alle 51 Muster" stand frueher neben dem Auswahlfeld und
+  /* Der Knopf „alle N Muster" stand frueher neben dem Auswahlfeld und
      schaltete die Liste um. Er sitzt jetzt als letzte Zeile in der Liste
      selbst - dort, wo man ihn braucht, statt daneben. */
 
