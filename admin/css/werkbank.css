@@ -924,7 +924,11 @@
      die Felder darunter auch - und Marken, die unter dem Musterfeld
      dazukommen, wachsen nach unten, ohne die Zeile zu verschieben.
      (Unterkanten-Ausrichtung schob genau dann das Feld nach oben.) */
-  .suggestbox .acts { display:flex; gap:18px; align-items:flex-start; flex-wrap:wrap; width:100%; }
+  /* Zeilenabstand 2px: rutschen die Knoepfe unter die Felder, bringen sie
+     ihre 16px fuer die fehlende Beschriftung schon mit. Mit 18px dazu
+     stand eine leere Zeile zwischen gelbem Satz und Knoepfen (Ricardo,
+     21.11.2026). Nebeneinander bleibt es bei 18px. */
+  .suggestbox .acts { display:flex; gap:2px 18px; align-items:flex-start; flex-wrap:wrap; width:100%; }
   /* Ein Feld ohne Beschriftung (der Knopf) startet um deren Hoehe tiefer,
      damit es auf der Feldlinie liegt. */
   .suggestbox .acts .knoepfe { margin-top:16px; }
@@ -988,7 +992,10 @@
   .btn.mini.wichtig {
     background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600;
   }
-  .btn.mini.wichtig:hover { filter:brightness(1.08); }
+  /* `button.btn:hover:not(:disabled)` ist spezifischer und setzte den
+     hellen Grund - weisse Schrift auf Weiss, der Knopf verschwand unter
+     der Maus (Ricardo, 21.11.2026). Also mit derselben Spezifitaet. */
+  button.btn.mini.wichtig:hover:not(:disabled) { background:var(--accent); filter:brightness(1.08); }
   /* Leise Fassung: mit passender Vorlage ist Raten nur ein Nebenweg.
      Der Rahmen bleibt (schwache Linienfarbe) - ganz ohne laese sich der
      Knopf wie eine Beschriftung (Ricardo, 25.08.2026). */
