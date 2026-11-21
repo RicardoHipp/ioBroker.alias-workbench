@@ -1708,6 +1708,12 @@ export function bestandsAbweichung(s, aliasId) {
   if (!statesGleich(s.states, ist.states)) {
     raus.push({ feld: 'states', jetzt: statesText(s.states), bestand: statesText(ist.states) });
   }
+  /* Die Beschriftung auch: sie wird als `common.name` geschrieben. Ohne
+     sie stand bei geaenderter Beschriftung keine Marke da, obwohl das
+     Aktualisieren den Namen aenderte (21.11.2026). */
+  if ((s.caption || '') !== (ist.caption || '')) {
+    raus.push({ feld: 'caption', jetzt: s.caption || '', bestand: ist.caption || '' });
+  }
   return raus;
 }
 

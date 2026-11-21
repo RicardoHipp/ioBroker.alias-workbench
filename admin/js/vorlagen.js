@@ -761,6 +761,19 @@ export function vorschlag(kanal, vorlagenId, instanz) {
      (gefunden 09.09.2026). Was der Nutzer wirklich braucht, steht im
      Musterwahl-Feld und im Vorlagenblatt. */
   if (vorlagenId) { e.vonHandGewaehlt = true; }
+  /* Was die Vorlage wollte, festhalten - auch ohne bestehenden Alias.
+
+     Bisher entstand `vorlagenWert` nur im Bestandsabgleich. Bei einem
+     NEUEN Alias gab es ihn nicht, „weicht von der Vorlage ab" konnte nie
+     erscheinen, und die einzige Spur einer Aenderung war die Marke
+     „geaendert", die jetzt entfaellt (Ricardo, 21.11.2026). Der
+     Bestandsabgleich ueberschreibt ihn danach mit denselben Werten. */
+  e.states.forEach(function (s) {
+    if (s.vorlagenWert) { return; }
+    s.vorlagenWert = { on: s.on, role: s.role, typ: s.typ, unit: s.unit,
+                       caption: s.caption, f: s.f, fw: s.fw,
+                       srcR: s.srcR, srcW: s.srcW, states: s.states };
+  });
   return merkeHakenVorgabe(e);
 }
 

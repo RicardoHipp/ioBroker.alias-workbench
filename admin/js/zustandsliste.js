@@ -514,7 +514,14 @@ export function baueListe(host, e, pl, rateKnopf, musterBlock) {
     if (zeilenHinweis) { titel.push(zeilenHinweis); }
     if (titel.length) { n3.title = titel.join('\n\n'); }
     if (s.manuell) { n3.appendChild(el('span', 'hand', tr('list.byHand'))); }
-    if (s.geaendert) { n3.appendChild(el('span', 'geae', tr('list.changed'))); }
+    /* „geaendert" steht nicht mehr als Marke da (Ricardo, 21.11.2026).
+       Die Marken beantworten eine Frage: was passiert mit dem Punkt beim
+       Schreiben - kommt dazu, wird geaendert, wird entfernt. „geaendert"
+       sagte nur „hier wurde geklickt": unter einem bestehenden Alias stand
+       es doppelt neben „weicht vom gespeicherten Alias ab", bei einem
+       neuen Alias ist ohnehin alles neu, und nach dem Zurueckstellen blieb
+       es stehen, obwohl nichts mehr abwich. Die Fahne `s.geaendert` bleibt:
+       das Raten laesst Handentscheidungen damit in Ruhe (U15). */
     /* Kommt die Zeile neu in den Alias, oder faellt sie heraus?
 
        Bisher sah ein frisch angehakter Punkt genauso aus wie einer, der
@@ -575,7 +582,7 @@ export function baueListe(host, e, pl, rateKnopf, musterBlock) {
          `e.ziel || e.kanal` eine). */
       var bAbw = bestandsAbweichung(s, e.ziel || e.kanal);
       if (bAbw.length) {
-        var bv = el('span', 'geae bstabw', tr('list.aliasDiffers'));
+        var bv = el('span', 'geae bstabw', tr('list.willChange'));
         bv.title = bAbw.map(function (x) {
           return x.feld + ': ' + (x.bestand || '—') + '  →  ' + (x.jetzt || '—');
         }).join(String.fromCharCode(10));
