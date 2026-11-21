@@ -8,7 +8,35 @@ sie beim Beheben notiert wurden — je Fassung ein Abschnitt, neueste zuerst.
 
 ### Deutsch
 
+* **Die vier Einstellungen heißen englisch, und eine Migration bringt den Bestand mit.** `ikonRaeume`, `ikonFunktionen`, `ikonErsetzen`, `vorlagenVomAdmin` → `iconRooms`, `iconFunctions`, `iconReplace`, `templatesFromAdmin`. Anlass ist die Durchsicht von PR 6634 am 17.11.2026: mcm1957 markierte den Punkt als `must be fixed` mit Frist 1.12.2026, seine Begründung lautet „Object Ids must use english names — unless they are directly supplied by external systems".
+
+  **Warum Umbenennen allein Schaden gewesen wäre.** `einst(name)` liest aus `system.adapter.alias-workbench.0.native` und fällt auf eine Vorgabetabelle zurück, wenn ein Schlüssel fehlt. Alle vier Vorgaben stehen auf `true`. Nach einem bloßen Umbenennen hätte `einst('iconRooms')` den alten Schlüssel nicht mehr gefunden, wäre auf `true` gefallen — und eine abgeschaltete Einstellung wäre still wieder angegangen. Das ist genau die Art Fehler, die niemandem auffällt.
+
+  **Der Weg, der nicht genommen wurde.** Überall beide Schreibweisen zu lesen hätte den Adapter an 92 Stellen berührt, jede mit einer zweiten Wahrheit, und keine davon wäre je wieder verschwunden. Stattdessen kennt genau **ein** Modul die alten Namen: `admin/js/migration.js`. Jede andere Datei kennt nur die englischen. Ein Test hält das fest — er durchsucht alle übrigen Dateien in `admin/js/` sowie `io-package.json` und `jsonConfig.json` nach den vier alten Namen und fällt durch, sobald einer auftaucht.
+
+  **Zwingend, aber nicht heimlich** (Ricardos Entscheidung vom 21.11.2026, tragfähig bei 21 Installationen laut iobroker.live): Eine Instanz mit alten Namen öffnet beim Start einen modalen Dialog, der die Zahl nennt und auf das fehlende Rückwärts hinweist. „Nicht jetzt" schließt ihn nicht, sondern schaltet auf „Ohne die Umstellung kann die Werkbank nicht arbeiten" — hinter einem `showModal` ist ohnehin nichts bedienbar, es braucht keine zweite Sperrmechanik.
+
+  **Gemessen am Testsystem am 21.11.2026**, mit `ikonRaeume` vorher auf `false`: Dialog offen und modal, alle vier alten Namen im Text, „Nicht jetzt" lässt ihn stehen, „Umstellen" meldet vier. Danach `iconRooms=false` — der abgeschaltete Wert hat überlebt —, die drei anderen `true`, kein alter Schlüssel mehr da, die eigene Vorlage im selben `native` unberührt. Festgehalten als Prüfpunkt Q14.
+
+  **Ein Fallstrick, den erst das Einspielen zeigte.** `iobroker upload` trägt die Vorgaben aus `io-package.json` in bestehende Instanzen nach. Direkt nach dem Einspielen stand am Produktivsystem beides im `native`: `ikonRaeume`…`vorlagenVomAdmin` **und** `iconRooms`…`templatesFromAdmin`, letztere mit ihrer Vorgabe `true`. Der erste Entwurf dieses Moduls gab in so einem Fall dem **neuen** Schlüssel den Vorrang — gedacht für „die Umstellung lief schon und jemand hat seither gespeichert". Den Fall kann es aber gar nicht geben: Nach der Umstellung ist der alte Schlüssel weg, und `io-package.json` kennt ihn nicht mehr, er kommt durch kein Einspielen zurück. Beide da heißt somit immer: alt ist der echte Wert, neu die nachgetragene Vorgabe. Also gewinnt der alte — sonst hätte ausgerechnet die Migration den stillen Sprung auf `true` verursacht.
+
+  Dazu ein zweiter Fehler im selben Atemzug: Der erste Versuch überschrieb den Zielschlüssel einfach, womit die Einfügereihenfolge im Objekt entschied, welcher Wert gewann. Die ist nirgends zugesichert. Jetzt werden nachgetragene Vorgaben übersprungen statt überschrieben, und beide Reihenfolgen geben dasselbe.
+
 ### English
+
+* **The four settings carry English names, and a migration brings the existing ones along.** `ikonRaeume`, `ikonFunktionen`, `ikonErsetzen`, `vorlagenVomAdmin` → `iconRooms`, `iconFunctions`, `iconReplace`, `templatesFromAdmin`. The trigger was the review of PR 6634 on 2026-11-17: mcm1957 marked the point `must be fixed` with a deadline of 2026-12-01, his reasoning being "Object Ids must use english names — unless they are directly supplied by external systems".
+
+  **Why renaming alone would have been damage.** `einst(name)` reads from `system.adapter.alias-workbench.0.native` and falls back to a defaults table when a key is missing. All four defaults are `true`. After a plain rename, `einst('iconRooms')` would no longer have found the old key, would have fallen back to `true` — and a setting that had been switched off would silently have come back on. Exactly the kind of fault nobody notices.
+
+  **The path not taken.** Reading both spellings everywhere would have touched the adapter in 92 places, each a second truth, and none of them ever going away again. Instead exactly **one** module knows the old names: `admin/js/migration.js`. Every other file knows the English ones only. A test holds that in place — it searches all remaining files in `admin/js/` plus `io-package.json` and `jsonConfig.json` for the four old names and fails as soon as one shows up.
+
+  **Mandatory, but not silent** (Ricardo's decision of 2026-11-21, tenable at 21 installations according to iobroker.live): an instance carrying old names opens a modal dialog at startup that names the count and points out there is no way back. "Not now" does not close it but switches to "the workbench cannot work without the conversion" — behind a `showModal` nothing is operable anyway, so no second locking mechanism is needed.
+
+  **Measured on the test system on 2026-11-21**, with `ikonRaeume` set to `false` beforehand: dialog open and modal, all four old names in the text, "Not now" leaves it standing, "Convert" reports four. Afterwards `iconRooms=false` — the switched-off value survived — the other three `true`, no old key left, and the user's own template in the same `native` untouched. Recorded as check point Q14.
+
+  **A trap that only showed up on deployment.** `iobroker upload` carries the defaults from `io-package.json` into existing instances. Right after deploying, the live system's `native` held both: `ikonRaeume`…`vorlagenVomAdmin` **and** `iconRooms`…`templatesFromAdmin`, the latter with their default `true`. The first draft of this module gave precedence to the **new** key in that case — intended for "the conversion already ran and someone has saved since". But that case cannot arise: after the conversion the old key is gone, and `io-package.json` no longer knows it, so no deployment brings it back. Both present therefore always means: old is the real value, new is the carried-in default. So the old one wins — otherwise the migration itself would have caused the silent jump to `true`.
+
+  And a second fault in the same breath: the first attempt simply overwrote the target key, which left the insertion order of the object deciding which value won. That order is guaranteed nowhere. Carried-in defaults are now skipped rather than overwritten, and both orders give the same result.
 
 ## 0.13.0 (2026-11-02)
 

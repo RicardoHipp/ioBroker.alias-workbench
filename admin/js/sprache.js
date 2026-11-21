@@ -140,6 +140,9 @@ export function beschrifteHtml() {
   setz('#mqtt-titel', tr('mq.dialogTitle'));
   /* Der Titel des Info-Dialogs traegt den Musternamen und wird beim
      Oeffnen gesetzt; hier steht nur der Rueckfall ohne Muster. */
+  setz('#migr-titel', tr('migr.title'));
+  setz('#migr-go', tr('migr.go'));
+  setz('#migr-later', tr('migr.later'));
   setz('#info-titel', tr('info.dlgTitle', ''));
   setz('#guess-titel', tr('guess.tplTitle'));
   setz('#btn-guess-go', tr('guess.tplGo'));

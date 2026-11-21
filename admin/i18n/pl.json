@@ -775,5 +775,15 @@
   "write.willKeep": "zachowano: {0}",
   "write.willRemove": "usunięto: {0}",
   "write.writeSourceMissing": "{0}: punkt danych wysyłania {1} jeszcze nie istnieje",
-  "write.writing": "pisanie …"
+  "write.writing": "pisanie …",
+  "migr.title": "Stare nazwy wymagają konwersji",
+  "migr.lead": "Ta instancja ma jeszcze {0} ustawieni(e/a) pod starymi niemieckimi nazwami. Zostaną teraz zmienione na angielskie; do tego czasu warsztat nie działa.",
+  "migr.noWayBack": "Nie ma drogi powrotnej. Kto chce zabezpieczenia, niech najpierw zrobi kopię zapasową ioBrokera.",
+  "migr.locked": "Bez konwersji warsztat nie działa. Jak dotąd nic nie zostało zmienione.",
+  "migr.go": "Przekonwertuj",
+  "migr.later": "Nie teraz",
+  "migr.retry": "Jeszcze raz",
+  "migr.reload": "Przeładuj",
+  "migr.done": "Przekonwertowano ustawienia: {0}. Przeładuj kartę.",
+  "migr.failed": "Konwersja nie powiodła się: {0}"
 }

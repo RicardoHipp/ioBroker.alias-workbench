@@ -775,5 +775,15 @@
   "write.willKeep": "conservato: {0}",
   "write.willRemove": "rimosso: {0}",
   "write.writeSourceMissing": "{0}: il dato di invio {1} non esiste ancora",
-  "write.writing": "scrivendo …"
+  "write.writing": "scrivendo …",
+  "migr.title": "I nomi vecchi devono essere convertiti",
+  "migr.lead": "Questa istanza porta ancora {0} impostazione/i con i vecchi nomi tedeschi. Vengono convertiti in nomi inglesi; finché non è fatto, il banco di lavoro non funziona.",
+  "migr.noWayBack": "Non si torna indietro. Chi vuole una rete di sicurezza faccia prima un backup di ioBroker.",
+  "migr.locked": "Senza la conversione il banco di lavoro non funziona. Finora non è stato modificato nulla.",
+  "migr.go": "Converti",
+  "migr.later": "Non ora",
+  "migr.retry": "Riprova",
+  "migr.reload": "Ricarica",
+  "migr.done": "{0} impostazione/i convertite. Ricarica la scheda.",
+  "migr.failed": "Conversione non riuscita: {0}"
 }

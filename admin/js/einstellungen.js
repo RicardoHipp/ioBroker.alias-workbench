@@ -1,3 +1,4 @@
+import { migrationNoetig } from './migration.js';
 import { socket } from './verbindung.js';
 
 /* Die Einstellungen der Instanz.
@@ -14,10 +15,10 @@ import { socket } from './verbindung.js';
    etwa weil die Instanz aelter ist als die Einstellung - gilt die
    Vorgabe hier. */
 var EINST_VORGABE = {
-  ikonRaeume: true,
-  ikonFunktionen: true,
-  ikonErsetzen: true,
-  vorlagenVomAdmin: true
+  iconRooms: true,
+  iconFunctions: true,
+  iconReplace: true,
+  templatesFromAdmin: true
 };
 var einstellungen = {};
 
@@ -35,6 +36,12 @@ export function instanzId() {
 export function ladeEinstellungen(danach) {
   socket.emit('getObject', instanzId(), function (err, obj) {
     if (!err && obj && obj.native) { einstellungen = obj.native; }
+    /* Traegt die Instanz noch alte, deutsche Namen, uebernimmt die
+       Migration - sie oeffnet einen modalen Dialog, und bis der
+       durch ist, arbeitet die Werkbank nicht weiter. Der Rest des
+       Adapters kennt nur die englischen Namen; `migration.js` ist die
+       einzige Stelle, die die alten ueberhaupt noch kennt. */
+    if (!err && obj && migrationNoetig(obj, instanzId())) { return; }
     if (typeof danach === 'function') { danach(); }
   });
 }

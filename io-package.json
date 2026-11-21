@@ -186,10 +186,10 @@
     "extIcon": "https://raw.githubusercontent.com/RicardoHipp/ioBroker.alias-workbench/main/admin/alias-workbench.png"
   },
   "native": {
-    "ikonRaeume": true,
-    "ikonFunktionen": true,
-    "ikonErsetzen": true,
-    "vorlagenVomAdmin": true
+    "iconRooms": true,
+    "iconFunctions": true,
+    "iconReplace": true,
+    "templatesFromAdmin": true
   },
   "objects": [
     {

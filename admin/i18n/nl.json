@@ -775,5 +775,15 @@
   "write.willKeep": "bewaard: {0}",
   "write.willRemove": "verwijderd: {0}",
   "write.writeSourceMissing": "{0}: het verzendgegevenspunt {1} bestaat nog niet",
-  "write.writing": "schrijven …"
+  "write.writing": "schrijven …",
+  "migr.title": "Oudere namen moeten worden omgezet",
+  "migr.lead": "Deze instantie heeft nog {0} instelling(en) met hun oude Duitse namen. Ze worden nu omgezet naar Engelse namen; tot dat klaar is werkt de werkbank niet.",
+  "migr.noWayBack": "Er is geen weg terug. Wie een vangnet wil, maakt eerst een ioBroker-back-up.",
+  "migr.locked": "Zonder de omzetting werkt de werkbank niet. Er is tot nu toe niets gewijzigd.",
+  "migr.go": "Omzetten",
+  "migr.later": "Niet nu",
+  "migr.retry": "Opnieuw",
+  "migr.reload": "Herladen",
+  "migr.done": "{0} instelling(en) omgezet. Laad het tabblad opnieuw.",
+  "migr.failed": "Omzetten mislukt: {0}"
 }

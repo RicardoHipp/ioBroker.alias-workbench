@@ -10,6 +10,7 @@ import { zeichneBaum } from './baum.js';
 import { ladeBefehlswissen } from './mqtt.js';
 import { ladeVorlagen, setzeMeta } from './vorlagen.js';
 import { ladeMusterNamen } from './musternamen.js';
+import { migrationVerdrahten } from './migration.js';
 import { S } from './zustand.js';
 
 
@@ -27,6 +28,7 @@ socket.on('connect', function () {
   ladeSprache(function () {
   c.textContent = tr('app.connected');
   beschrifteHtml();
+  migrationVerdrahten();
   /* Nebenlaeufig - wer schneller ist als der Katalog, sieht kurz die
      rohen Namen, das naechste Zeichnen traegt die Beinamen nach. */
   ladeMusterNamen(function () { if (S.current) { zeichneErgebnis(); } });

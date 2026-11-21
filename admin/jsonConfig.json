@@ -43,7 +43,7 @@
       "lg": 12,
       "xl": 12
     },
-    "ikonRaeume": {
+    "iconRooms": {
       "type": "checkbox",
       "label": "Add missing icons to rooms",
       "help": "Applies when a room has no icon at all and a template of the same name or ID exists.",
@@ -55,7 +55,7 @@
       "lg": 6,
       "xl": 6
     },
-    "ikonFunktionen": {
+    "iconFunctions": {
       "type": "checkbox",
       "label": "Add missing icons to functions",
       "help": "Same for functions. Enumerations mirrored from a HomeMatic CCU never carry an icon.",
@@ -66,7 +66,7 @@
       "lg": 6,
       "xl": 6
     },
-    "ikonErsetzen": {
+    "iconReplace": {
       "type": "checkbox",
       "label": "Also replace unusable icon entries",
       "help": "The Admin setup wizard leaves a bare name such as \"Playroom\" in the icon field, which no longer resolves to a picture and shows as a broken box. With this on, the workbench replaces it. It overwrites a field that is not empty — the dry run names it explicitly.",
@@ -89,7 +89,7 @@
       "lg": 12,
       "xl": 12
     },
-    "vorlagenVomAdmin": {
+    "templatesFromAdmin": {
       "type": "checkbox",
       "label": "Offer the Admin's room and function templates",
       "help": "The workbench reads them at runtime from the Admin's own bundle instead of keeping a copy that would age with every update. If that fails, the selection lists simply show what already exists — no error, just fewer entries.",

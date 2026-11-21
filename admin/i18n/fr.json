@@ -775,5 +775,15 @@
   "write.willKeep": "conservé : {0}",
   "write.willRemove": "supprimé : {0}",
   "write.writeSourceMissing": "{0} : le point de données d'envoi {1} n'existe pas encore",
-  "write.writing": "écriture…"
+  "write.writing": "écriture…",
+  "migr.title": "Les anciens noms doivent être convertis",
+  "migr.lead": "Cette instance porte encore {0} réglage(s) sous leurs anciens noms allemands. Ils sont convertis en noms anglais ; tant que ce n'est pas fait, l'établi ne fonctionne pas.",
+  "migr.noWayBack": "Il n'y a pas de retour en arrière. Pour un filet de sécurité, faites d'abord une sauvegarde ioBroker.",
+  "migr.locked": "Sans la conversion, l'établi ne fonctionne pas. Rien n'a été modifié jusqu'ici.",
+  "migr.go": "Convertir",
+  "migr.later": "Pas maintenant",
+  "migr.retry": "Réessayer",
+  "migr.reload": "Recharger",
+  "migr.done": "{0} réglage(s) converti(s). Rechargez l'onglet.",
+  "migr.failed": "Échec de la conversion : {0}"
 }

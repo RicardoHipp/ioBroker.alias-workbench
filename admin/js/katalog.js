@@ -263,7 +263,7 @@ function uebernehmen(satz) {
 }
 
 export function ladeEnumVorlagen(nachher) {
-  if (vorlagenGeholt || !einst('vorlagenVomAdmin')) { return; }
+  if (vorlagenGeholt || !einst('templatesFromAdmin')) { return; }
   vorlagenGeholt = true;
 
   var stempel = null;
@@ -458,10 +458,10 @@ export function holeIkon(art, name, fertig) {
    des Admin hinterlaesst dort einen blossen Namen wie „Playroom“, der
    zu keinem Bild fuehrt. */
 export function ikonErlaubt(art, o) {
-  if (!einst(art === 'rooms' ? 'ikonRaeume' : 'ikonFunktionen')) { return false; }
+  if (!einst(art === 'rooms' ? 'iconRooms' : 'iconFunctions')) { return false; }
   var da = o && o.common && o.common.icon;
   if (ikonTaugt(da)) { return false; }          /* schon ein Bild - Finger weg */
-  if (da && !einst('ikonErsetzen')) { return false; }
+  if (da && !einst('iconReplace')) { return false; }
   return true;
 }
 

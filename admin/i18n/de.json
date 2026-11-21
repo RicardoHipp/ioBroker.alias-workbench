@@ -775,5 +775,15 @@
   "write.willKeep": "bleiben stehen: {0}",
   "write.willRemove": "entfernt: {0}",
   "write.writeSourceMissing": "{0}: den Sendepunkt {1} gibt es noch nicht",
-  "write.writing": "schreibe …"
+  "write.writing": "schreibe …",
+  "migr.title": "Ältere Namen müssen umgestellt werden",
+  "migr.lead": "Diese Instanz trägt noch {0} Einstellung(en) unter ihren alten deutschen Namen. Sie werden jetzt auf englische Namen umgestellt; bis das erledigt ist, kann die Werkbank nicht arbeiten.",
+  "migr.noWayBack": "Es gibt keinen Rückweg. Wer ein Netz will, legt vorher ein ioBroker-Backup an.",
+  "migr.locked": "Ohne die Umstellung kann die Werkbank nicht arbeiten. Geändert wurde bisher nichts.",
+  "migr.go": "Umstellen",
+  "migr.later": "Nicht jetzt",
+  "migr.retry": "Noch einmal",
+  "migr.reload": "Neu laden",
+  "migr.done": "{0} Einstellung(en) umgestellt. Lade den Reiter neu.",
+  "migr.failed": "Umstellung fehlgeschlagen: {0}"
 }

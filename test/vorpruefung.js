@@ -1810,3 +1810,134 @@ describe('Die Werteliste', () => {
         expect(statesGleich(undefined, ventil)).to.equal(false);
     });
 });
+
+
+/* Die Umstellung auf englische Bezeichner.
+
+   `admin/js/migration.js` ist die einzige Stelle im Adapter, die die
+   alten deutschen Namen noch kennt (PR 6634, mcm1957 am 17.11.2026:
+   „Object Ids must use english names"). Der Rest kennt nur die
+   englischen - deshalb muss genau dieses Modul stimmen.
+
+   Geprueft wird die reine Rechnung, ohne Browser und ohne Verbindung:
+   der Quelltext wird herausgeschnitten und ausgefuehrt, wie es die
+   Tests hier auch sonst tun. */
+describe('Die Umstellung auf englische Bezeichner', () => {
+    const quelle = lies(path.join(jsDir, 'migration.js'));
+    const von = quelle.indexOf('export var INSTANZ_NAMEN');
+    const bis = quelle.indexOf('/* Schreiben.');
+    const code = quelle.slice(von, bis).split('export ').join('');
+    const t = new Function(
+        code + '; return { INSTANZ_NAMEN, instanzBefunde, nativeUmgestellt };')();
+
+    it('nennt genau die vier Einstellungen, die mcm1957 benannt hat', () => {
+        expect(t.INSTANZ_NAMEN).to.deep.equal({
+            ikonRaeume: 'iconRooms',
+            ikonFunktionen: 'iconFunctions',
+            ikonErsetzen: 'iconReplace',
+            vorlagenVomAdmin: 'templatesFromAdmin',
+        });
+    });
+
+    it('meldet nur, was wirklich dasteht', () => {
+        // Eine frische Instanz hat die Schluessel gar nicht - dann ist
+        // nichts zu tun, die Vorgabe greift ohnehin.
+        expect(t.instanzBefunde({ native: {} })).to.be.empty;
+        expect(t.instanzBefunde({})).to.be.empty;
+        expect(t.instanzBefunde(null)).to.be.empty;
+
+        const zwei = t.instanzBefunde({ native: { ikonRaeume: false, vorlagenVomAdmin: true } });
+        expect(zwei.map(b => b.alt)).to.have.members(['ikonRaeume', 'vorlagenVomAdmin']);
+        expect(zwei.map(b => b.neu)).to.have.members(['iconRooms', 'templatesFromAdmin']);
+    });
+
+    it('nimmt den Wert mit - gerade den abgeschalteten', () => {
+        /* Der Grund fuer die ganze Migration. Ohne sie faende `einst()`
+           den alten Schluessel nicht mehr und fiele auf die Vorgabe
+           zurueck - und die ist bei allen vieren `true`. Wer eine
+           Einstellung abgeschaltet hatte, haette sie still wieder an. */
+        const raus = t.nativeUmgestellt({ ikonRaeume: false, ikonErsetzen: false });
+        expect(raus.iconRooms).to.equal(false);
+        expect(raus.iconReplace).to.equal(false);
+        expect(raus.ikonRaeume).to.equal(undefined);
+        expect(raus.ikonErsetzen).to.equal(undefined);
+    });
+
+    it('laesst alles andere unberuehrt', () => {
+        // Im selben native liegen die eigenen Vorlagen des Nutzers.
+        // Die gehoeren einem spaeteren Schritt und duerfen jetzt nicht
+        // verlorengehen.
+        const vorlagen = [{ id: 'eigene', version: 2 }];
+        const raus = t.nativeUmgestellt({ ikonRaeume: true, vorlagen, fremd: 'bleibt' });
+        expect(raus.vorlagen).to.deep.equal(vorlagen);
+        expect(raus.fremd).to.equal('bleibt');
+    });
+
+    it('laeuft ein zweites Mal ohne Schaden', () => {
+        const einmal = t.nativeUmgestellt({ ikonRaeume: false, vorlagen: [] });
+        const zweimal = t.nativeUmgestellt(einmal);
+        expect(zweimal).to.deep.equal(einmal);
+        expect(t.instanzBefunde({ native: einmal })).to.be.empty;
+    });
+
+    it('laesst bei beiden Schreibweisen den ALTEN Wert gewinnen', () => {
+        /* Am Produktivsystem gemessen (21.11.2026): `iobroker upload`
+           traegt die Vorgaben aus io-package.json in bestehende
+           Instanzen nach. Nach dem Einspielen stehen die vier
+           englischen Schluessel also schon da - mit `true`, nicht mit
+           dem Wert des Nutzers. Gaebe man dem neuen den Vorrang, machte
+           eine abgeschaltete Einstellung genau den stillen Sprung auf
+           `true`, den diese Migration verhindern soll.
+
+           Der Gegenfall kann nicht auftreten: Nach der Umstellung ist
+           der alte Schluessel weg, und io-package.json kennt ihn nicht
+           mehr - er kommt durch kein Einspielen zurueck. */
+        const raus = t.nativeUmgestellt({ ikonRaeume: false, iconRooms: true });
+        expect(raus.iconRooms, 'die nachgetragene Vorgabe hat den echten Wert verdraengt')
+            .to.equal(false);
+        expect(raus.ikonRaeume).to.equal(undefined);
+    });
+
+    it('haengt dabei nicht an der Reihenfolge der Schluessel', () => {
+        /* Erst ueberschrieb der spaetere Schluessel den frueheren, und
+           damit entschied die Einfuegereihenfolge im Objekt, welcher
+           Wert gewann. Die ist nirgends zugesichert. */
+        const altZuerst = t.nativeUmgestellt({ ikonRaeume: false, iconRooms: true, vorlagen: [] });
+        const neuZuerst = t.nativeUmgestellt({ iconRooms: true, ikonRaeume: false, vorlagen: [] });
+        expect(altZuerst).to.deep.equal(neuZuerst);
+        expect(altZuerst.iconRooms).to.equal(false);
+        expect(altZuerst.vorlagen).to.deep.equal([]);
+    });
+
+    it('haelt die Dialogtexte in allen elf Sprachen bereit', () => {
+        const noetig = ['migr.title', 'migr.lead', 'migr.noWayBack', 'migr.locked',
+            'migr.go', 'migr.later', 'migr.retry', 'migr.reload', 'migr.done', 'migr.failed'];
+        SPRACHEN.forEach(sp => {
+            const d = liesJson(path.join(i18nDir, sp + '.json'));
+            noetig.forEach(k => {
+                expect(d[k], `${k} fehlt in ${sp}.json`).to.be.a('string').and.not.be.empty;
+            });
+        });
+    });
+
+    it('kennt im uebrigen Adapter keinen alten Namen mehr', () => {
+        /* Der eigentliche Zweck des Moduls: Es ist die EINZIGE Stelle,
+           die die alten Namen kennt. Taucht einer woanders auf, ist die
+           Umstellung unvollstaendig. */
+        const alt = ['ikonRaeume', 'ikonFunktionen', 'ikonErsetzen', 'vorlagenVomAdmin'];
+        const treffer = [];
+        fs.readdirSync(jsDir).forEach(f => {
+            if (!f.endsWith('.js') || f === 'migration.js') { return; }
+            const inhalt = lies(path.join(jsDir, f));
+            alt.forEach(a => { if (inhalt.includes(a)) { treffer.push(f + ': ' + a); } });
+        });
+        expect(treffer, 'alter Name ausserhalb von migration.js').to.be.empty;
+
+        ['io-package.json', path.join('admin', 'jsonConfig.json')].forEach(rel => {
+            const inhalt = lies(path.join(wurzel, rel));
+            alt.forEach(a => {
+                expect(inhalt.includes(a), `${a} steht noch in ${rel}`).to.equal(false);
+            });
+        });
+    });
+});
