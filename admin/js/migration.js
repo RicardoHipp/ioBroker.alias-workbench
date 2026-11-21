@@ -37,7 +37,14 @@ export var INSTANZ_NAMEN = {
   ikonRaeume: 'iconRooms',
   ikonFunktionen: 'iconFunctions',
   ikonErsetzen: 'iconReplace',
-  vorlagenVomAdmin: 'templatesFromAdmin'
+  vorlagenVomAdmin: 'templatesFromAdmin',
+  /* Die eigenen Vorlagen des Nutzers. Umbenannt wird hier nur der
+     SCHLUESSEL - die Feldnamen INNERHALB einer Vorlage (`zustaende`,
+     `rolle`, `typ` …) bleiben vorerst, wie sie sind. Die liessen sich
+     nicht ueber ein Muster erfassen: `z.typ` ist ein Vorlagenfeld,
+     das danebenstehende `typ:` ein Entwurfsfeld, und beide stehen in
+     derselben Zeile. Siehe `plan_englisch.md`, Schicht C. */
+  vorlagen: 'templates'
 };
 
 /* Alt -> neu, fuer die Felder an den Alias-Objekten.

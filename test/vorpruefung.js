@@ -1836,6 +1836,9 @@ describe('Die Umstellung auf englische Bezeichner', () => {
             ikonFunktionen: 'iconFunctions',
             ikonErsetzen: 'iconReplace',
             vorlagenVomAdmin: 'templatesFromAdmin',
+            // Nur der Schluessel. Die Feldnamen INNERHALB einer eigenen
+            // Vorlage bleiben vorerst deutsch - siehe plan_englisch.md.
+            vorlagen: 'templates',
         });
     });
 
@@ -1863,18 +1866,19 @@ describe('Die Umstellung auf englische Bezeichner', () => {
         expect(raus.ikonErsetzen).to.equal(undefined);
     });
 
-    it('laesst alles andere unberuehrt', () => {
-        // Im selben native liegen die eigenen Vorlagen des Nutzers.
-        // Die gehoeren einem spaeteren Schritt und duerfen jetzt nicht
-        // verlorengehen.
-        const vorlagen = [{ id: 'eigene', version: 2 }];
+    it('nimmt die eigenen Vorlagen mit, Inhalt unangetastet', () => {
+        /* Der Schluessel wandert von `vorlagen` nach `templates`, die
+           Vorlage darin bleibt Zeichen fuer Zeichen gleich - ihre
+           Feldnamen sind Schicht C und noch nicht dran. */
+        const vorlagen = [{ id: 'eigene', version: 2, zustaende: [{ name: 'SET', rolle: 'switch' }] }];
         const raus = t.nativeUmgestellt({ ikonRaeume: true, vorlagen, fremd: 'bleibt' });
-        expect(raus.vorlagen).to.deep.equal(vorlagen);
-        expect(raus.fremd).to.equal('bleibt');
+        expect(raus.templates).to.deep.equal(vorlagen);
+        expect(raus.vorlagen).to.equal(undefined);
+        expect(raus.fremd, 'ein fremdes Feld wurde angefasst').to.equal('bleibt');
     });
 
     it('laeuft ein zweites Mal ohne Schaden', () => {
-        const einmal = t.nativeUmgestellt({ ikonRaeume: false, vorlagen: [] });
+        const einmal = t.nativeUmgestellt({ ikonRaeume: false, vorlagen: [{ id: 'x' }] });
         const zweimal = t.nativeUmgestellt(einmal);
         expect(zweimal).to.deep.equal(einmal);
         expect(t.instanzBefunde({ native: einmal })).to.be.empty;
@@ -1902,11 +1906,11 @@ describe('Die Umstellung auf englische Bezeichner', () => {
         /* Erst ueberschrieb der spaetere Schluessel den frueheren, und
            damit entschied die Einfuegereihenfolge im Objekt, welcher
            Wert gewann. Die ist nirgends zugesichert. */
-        const altZuerst = t.nativeUmgestellt({ ikonRaeume: false, iconRooms: true, vorlagen: [] });
-        const neuZuerst = t.nativeUmgestellt({ iconRooms: true, ikonRaeume: false, vorlagen: [] });
+        const altZuerst = t.nativeUmgestellt({ ikonRaeume: false, iconRooms: true, fremd: 1 });
+        const neuZuerst = t.nativeUmgestellt({ iconRooms: true, ikonRaeume: false, fremd: 1 });
         expect(altZuerst).to.deep.equal(neuZuerst);
         expect(altZuerst.iconRooms).to.equal(false);
-        expect(altZuerst.vorlagen).to.deep.equal([]);
+        expect(altZuerst.fremd).to.equal(1);
     });
 
     it('haelt die Dialogtexte in allen elf Sprachen bereit', () => {
@@ -2010,8 +2014,12 @@ describe('Die Umstellung auf englische Bezeichner', () => {
 
         ['io-package.json', path.join('admin', 'jsonConfig.json')].forEach(rel => {
             const inhalt = lies(path.join(wurzel, rel));
+            /* Als JSON-Schluessel suchen, in Anfuehrungszeichen. Die
+               blosse Zeichenkette traefe auch Fliesstext - `vorlagen`
+               steckt in „Funktionsvorlagen" im deutschen Changelog. */
             Object.keys(t.INSTANZ_NAMEN).forEach(a => {
-                expect(inhalt.includes(a), `${a} steht noch in ${rel}`).to.equal(false);
+                expect(inhalt.includes('"' + a + '"'),
+                    `"${a}" steht noch als Schluessel in ${rel}`).to.equal(false);
             });
         });
     });

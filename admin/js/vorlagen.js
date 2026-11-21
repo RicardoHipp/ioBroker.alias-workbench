@@ -121,7 +121,7 @@ export function ladeVorlagen(fertig) {
          `aendereVorlagen` eine vorhandene Vorlage mit Version 1
          ersetzt. */
       if (err) { return schluss([], true); }
-      schluss((o && o.native && o.native.vorlagen) || []);
+      schluss((o && o.native && o.native.templates) || []);
     });
   }
 }
@@ -144,7 +144,7 @@ export function aendereVorlagen(id, vorlage, fertig) {
   socket.emit('getObject', INSTANZ_ID, function (err, o) {
     if (err || !o) { return fertig(err || tr('tpls.noInstance', INSTANZ_ID)); }
     o.native = o.native || {};
-    var liste = Array.isArray(o.native.vorlagen) ? o.native.vorlagen.slice() : [];
+    var liste = Array.isArray(o.native.templates) ? o.native.templates.slice() : [];
     var i = -1;
     liste.forEach(function (x, n) { if (x && x.id === id) { i = n; } });
     if (vorlage === null) {
@@ -155,7 +155,7 @@ export function aendereVorlagen(id, vorlage, fertig) {
     } else {
       liste.push(vorlage);
     }
-    o.native.vorlagen = liste;
+    o.native.templates = liste;
     socket.emit('setObject', INSTANZ_ID, o, function (e2) { fertig(e2 || null); });
   });
 }
