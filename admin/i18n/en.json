@@ -777,7 +777,7 @@
   "write.writeSourceMissing": "{0}: the send datapoint {1} does not exist yet",
   "write.writing": "writing …",
   "migr.title": "Older names must be converted",
-  "migr.lead": "This instance still carries {0} setting(s) and {1} alias object(s) under their old German names. They are converted to English names now; the workbench cannot work until that is done.",
+  "migr.lead": "This instance still carries {0} setting(s), {1} alias object(s) and {2} own template(s) under their old German names. They are converted to English names now; the workbench cannot work until that is done.",
   "migr.noWayBack": "There is no way back. If you want a safety net, make an ioBroker backup first.",
   "migr.locked": "Without the conversion the workbench cannot work. Nothing has been changed so far.",
   "migr.go": "Convert",
@@ -786,5 +786,7 @@
   "migr.reload": "Reload",
   "migr.done": "{0} object(s) converted. Reload the tab.",
   "migr.running": "Converting…",
-  "migr.partly": "{0} converted, {1} could not be written:"
+  "migr.partly": "{0} converted, {1} could not be written:",
+  "migr.templateRow": "Own template {0}: field names",
+  "tv.badOldFormat": "This file was exported by an older version of the workbench (German field names) and can no longer be read in."
 }

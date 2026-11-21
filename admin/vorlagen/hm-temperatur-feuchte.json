@@ -1,81 +1,81 @@
 {
   "id": "hm-temperatur-feuchte",
   "version": 2,
-  "rang": 40,
+  "priority": 40,
   "name": {
     "de": "Homematic Temperatur- und Feuchtefühler",
     "en": "Homematic temperature and humidity sensor"
   },
-  "geraetetyp": "temperature",
-  "funktion": "temperature_sensor",
-  "hinweis": {
+  "deviceType": "temperature",
+  "enumFunction": "temperature_sensor",
+  "note": {
     "de": "HM-WDS40-TH-I und Verwandte. Reiner Fühler ohne Stellglied — im temperature-Muster ist die Temperatur der Hauptwert und die Feuchte steht daneben.",
     "en": "HM-WDS40-TH-I and relatives. A plain sensor with nothing to actuate; in the temperature pattern temperature is the main value and humidity sits alongside."
   },
-  "erkennung": {
-    "erforderlich": [
+  "detection": {
+    "required": [
       "1.TEMPERATURE",
       "1.HUMIDITY"
     ],
-    "verboten": [
+    "forbidden": [
       "1.SET_POINT_TEMPERATURE",
       "1.ACTUAL_TEMPERATURE"
     ],
-    "hinweis": {
+    "note": {
       "de": "Die Thermostate messen ebenfalls Temperatur und Feuchte, heissen ihre Punkte aber ACTUAL_TEMPERATURE und haben einen Sollwert. Beides ist hier verboten, sonst wuerde diese Vorlage ihnen den Rang ablaufen und das Stellglied unter den Tisch fallen.",
       "en": "The thermostats also measure temperature and humidity, but their points are called ACTUAL_TEMPERATURE and they have a setpoint. Both are forbidden here, otherwise this template would outrank them and the actuator would be dropped."
     }
   },
-  "zustaende": [
+  "points": [
     {
       "name": "ACTUAL",
-      "rolle": "value.temperature",
-      "typ": "number",
-      "einheit": "°C",
-      "lesen": "1.TEMPERATURE"
+      "role": "value.temperature",
+      "type": "number",
+      "unit": "°C",
+      "read": "1.TEMPERATURE"
     },
     {
       "name": "HUMIDITY",
-      "rolle": "value.humidity",
-      "typ": "number",
-      "einheit": "%",
-      "lesen": "1.HUMIDITY"
+      "role": "value.humidity",
+      "type": "number",
+      "unit": "%",
+      "read": "1.HUMIDITY"
     },
     {
       "name": "LOWBAT",
-      "rolle": "indicator.lowbat",
-      "typ": "boolean",
-      "lesen": "0.LOWBAT",
-      "lesenSonst": {
-        "punkt": "0.LOW_BAT"
+      "role": "indicator.lowbat",
+      "type": "boolean",
+      "read": "0.LOWBAT",
+      "readFallback": {
+        "point": "0.LOW_BAT"
       },
       "optional": true
     },
     {
       "name": "UNREACH",
-      "rolle": "indicator.maintenance.unreach",
-      "typ": "boolean",
-      "lesen": "0.UNREACH",
+      "role": "indicator.maintenance.unreach",
+      "type": "boolean",
+      "read": "0.UNREACH",
       "optional": true
     },
     {
       "name": "RSSI",
-      "rolle": "value.rssi",
-      "typ": "number",
-      "einheit": "dBm",
-      "lesen": "0.RSSI_DEVICE",
-      "lesenSonst": {
-        "punkt": "0.RSSI_PEER"
+      "role": "value.rssi",
+      "type": "number",
+      "unit": "dBm",
+      "read": "0.RSSI_DEVICE",
+      "readFallback": {
+        "point": "0.RSSI_PEER"
       },
       "optional": true,
-      "vorgabeAus": true,
-      "hinweis": {
+      "offByDefault": true,
+      "note": {
         "de": "RSSI_DEVICE steht zuerst: es ist der Pegel, den die Zentrale vom Geraet empfaengt. RSSI_PEER ist bei Batteriegeraeten oft unbelegt und traegt dann Grenzwerte wie -2147483648.",
         "en": "RSSI_DEVICE comes first: it is the level the central unit receives from the device. RSSI_PEER is often empty on battery devices and then carries sentinel values such as -2147483648."
       }
     }
   ],
-  "weiterePunkte": {
+  "extraPoints": {
     "*.ACTIVE_PROFILE": "level.mode",
     "*.ACTUAL_TEMPERATURE": "value.temperature",
     "*.ACTUAL_TEMPERATURE_STATUS": "value",

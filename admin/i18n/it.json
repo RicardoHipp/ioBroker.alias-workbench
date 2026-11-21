@@ -777,7 +777,7 @@
   "write.writeSourceMissing": "{0}: il dato di invio {1} non esiste ancora",
   "write.writing": "scrivendo …",
   "migr.title": "I nomi vecchi devono essere convertiti",
-  "migr.lead": "Questa istanza porta ancora {0} impostazione/i e {1} oggetto/i alias con i vecchi nomi tedeschi. Vengono convertiti in nomi inglesi; finché non è fatto, il banco di lavoro non funziona.",
+  "migr.lead": "Questa istanza porta ancora {0} impostazione/i, {1} oggetto/i alias e {2} modello/i propri con i vecchi nomi tedeschi. Vengono convertiti in nomi inglesi; finché non è fatto, il banco di lavoro non funziona.",
   "migr.noWayBack": "Non si torna indietro. Chi vuole una rete di sicurezza faccia prima un backup di ioBroker.",
   "migr.locked": "Senza la conversione il banco di lavoro non funziona. Finora non è stato modificato nulla.",
   "migr.go": "Converti",
@@ -786,5 +786,7 @@
   "migr.reload": "Ricarica",
   "migr.done": "{0} oggetto/i convertiti. Ricarica la scheda.",
   "migr.running": "Conversione in corso…",
-  "migr.partly": "{0} convertiti, {1} non è stato possibile scriverli:"
+  "migr.partly": "{0} convertiti, {1} non è stato possibile scriverli:",
+  "migr.templateRow": "Modello proprio {0}: nomi dei campi",
+  "tv.badOldFormat": "Questo file proviene da una versione precedente del banco di lavoro (nomi dei campi in tedesco) e non viene più importato."
 }

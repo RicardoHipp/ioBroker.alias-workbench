@@ -1,121 +1,121 @@
 {
   "id": "hm-rollladen",
   "version": 4,
-  "rang": 40,
+  "priority": 40,
   "name": {
     "de": "Homematic Rollladenaktor",
     "en": "Homematic blind actuator"
   },
-  "geraetetyp": "blind",
-  "funktion": "shutters",
-  "hinweis": {
+  "deviceType": "blind",
+  "enumFunction": "shutters",
+  "note": {
     "de": "HM-LC-Bl1PBU-FM und Verwandte. LEVEL steht an der Quelle schon auf 0 bis 100 Prozent, wobei 100 offen heißt — genau die Zählrichtung, die das blind-Muster erwartet.",
     "en": "HM-LC-Bl1PBU-FM and relatives. LEVEL is already 0 to 100 percent at the source, 100 meaning open."
   },
-  "erkennung": {
-    "erforderlich": [
+  "detection": {
+    "required": [
       "1.LEVEL",
       "1.STOP"
     ],
-    "hinweis": {
+    "note": {
       "de": "1.STOP trennt den Rollladen vom Dimmer: nur ein Fahrantrieb laesst sich mitten in der Bewegung anhalten. Es haelt auch die Zentrale HM-RCV-50 fern, die fuenfzig blanke LEVEL-Kanaele fuehrt.",
       "en": "1.STOP separates the roller shutter from the dimmer: only a drive can be stopped in the middle of a movement. It also keeps away the HM-RCV-50 central unit, which carries fifty bare LEVEL channels."
     }
   },
-  "zustaende": [
+  "points": [
     {
       "name": "SET",
-      "rolle": "level.blind",
-      "typ": "number",
-      "einheit": "%",
-      "lesen": "1.LEVEL",
-      "schreiben": "1.LEVEL"
+      "role": "level.blind",
+      "type": "number",
+      "unit": "%",
+      "read": "1.LEVEL",
+      "write": "1.LEVEL"
     },
     {
       "name": "ACTUAL",
-      "rolle": "value.blind",
-      "typ": "number",
-      "einheit": "%",
-      "lesen": "1.LEVEL",
+      "role": "value.blind",
+      "type": "number",
+      "unit": "%",
+      "read": "1.LEVEL",
       "optional": true,
-      "hinweis": {
+      "note": {
         "de": "Liest dieselbe Quelle wie SET - der Aktor meldet keinen getrennten Istwert, waehrend der Fahrt steht in 1.LEVEL schon das Ziel. Deshalb nicht vorgehakt: angehakt stuende derselbe Wert zweimal im Alias und die Pruefung „kein Punkt doppelt\" meldet es zu Recht. Ob die Fahrt noch laeuft, sagt WORKING. Anhaken nur, wenn ein Widget ausdruecklich einen eigenen Istwert erwartet.",
         "en": "Reads the same source as SET — the actuator reports no separate actual value, and during travel 1.LEVEL already holds the target. Therefore not ticked: ticked, the same value would sit in the alias twice and the check \"no point twice\" reports it, rightly. Whether travel is still running is what WORKING says. Tick it only when a widget explicitly expects its own actual value."
       },
-      "vorgabeAus": true
+      "offByDefault": true
     },
     {
       "name": "STOP",
-      "rolle": "button.stop",
-      "typ": "boolean",
-      "lesen": "1.STOP",
-      "schreiben": "1.STOP",
+      "role": "button.stop",
+      "type": "boolean",
+      "read": "1.STOP",
+      "write": "1.STOP",
       "optional": true,
-      "hinweis": {
+      "note": {
         "de": "Liest und schreibt 1.STOP. Der Alias-Punkt bekommt trotzdem read: false - das kommt aus der Rolle button.stop -, und vis, Alexa und matter zeichnen einen Knopf. Mit der Lesequelle sieht der Alias auch einen Druck von aussen.",
         "en": "Reads and writes 1.STOP. The alias point still gets read: false — that comes from the role button.stop — and vis, Alexa and matter draw a button. With the read source the alias also sees a press from outside."
       }
     },
     {
       "name": "DIRECTION",
-      "rolle": "indicator.direction",
-      "typ": "number",
-      "lesen": "1.DIRECTION",
+      "role": "indicator.direction",
+      "type": "number",
+      "read": "1.DIRECTION",
       "optional": true,
-      "hinweis": {
+      "note": {
         "de": "0 steht, 1 faehrt auf, 2 faehrt zu, 3 unbekannt.",
         "en": "0 is idle, 1 travels open, 2 travels closed, 3 unknown."
       }
     },
     {
       "name": "WORKING",
-      "rolle": "indicator.working",
-      "typ": "boolean",
-      "lesen": "1.WORKING",
+      "role": "indicator.working",
+      "type": "boolean",
+      "read": "1.WORKING",
       "optional": true,
-      "hinweis": {
+      "note": {
         "de": "true, solange der Antrieb laeuft.",
         "en": "true while the drive is running."
       }
     },
     {
       "name": "INHIBIT",
-      "rolle": "switch",
-      "typ": "boolean",
-      "lesen": "1.INHIBIT",
-      "schreiben": "1.INHIBIT",
+      "role": "switch",
+      "type": "boolean",
+      "read": "1.INHIBIT",
+      "write": "1.INHIBIT",
       "optional": true,
-      "vorgabeAus": true,
-      "hinweis": {
+      "offByDefault": true,
+      "note": {
         "de": "Sperrt den Aktor. Solange true, nimmt er keine Befehle an - auch nicht vom Taster.",
         "en": "Locks the actuator. While true it accepts no commands — not even from the wall switch."
       }
     },
     {
       "name": "UNREACH",
-      "rolle": "indicator.maintenance.unreach",
-      "typ": "boolean",
-      "lesen": "0.UNREACH",
+      "role": "indicator.maintenance.unreach",
+      "type": "boolean",
+      "read": "0.UNREACH",
       "optional": true
     },
     {
       "name": "RSSI",
-      "rolle": "value.rssi",
-      "typ": "number",
-      "einheit": "dBm",
-      "lesen": "0.RSSI_DEVICE",
+      "role": "value.rssi",
+      "type": "number",
+      "unit": "dBm",
+      "read": "0.RSSI_DEVICE",
       "optional": true,
-      "vorgabeAus": true,
-      "lesenSonst": {
-        "punkt": "0.RSSI_PEER"
+      "offByDefault": true,
+      "readFallback": {
+        "point": "0.RSSI_PEER"
       },
-      "hinweis": {
+      "note": {
         "de": "RSSI_DEVICE steht zuerst: es ist der Pegel, den die Zentrale vom Geraet empfaengt. RSSI_PEER ist bei Batteriegeraeten oft unbelegt und traegt dann Grenzwerte wie -2147483648.",
         "en": "RSSI_DEVICE comes first: it is the level the central unit receives from the device. RSSI_PEER is often empty on battery devices and then carries sentinel values such as -2147483648."
       }
     }
   ],
-  "weiterePunkte": {
+  "extraPoints": {
     "*.ACTIVE_PROFILE": "level.mode",
     "*.ACTUAL_TEMPERATURE": "value.temperature",
     "*.ACTUAL_TEMPERATURE_STATUS": "value",

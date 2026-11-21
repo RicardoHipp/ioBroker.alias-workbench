@@ -281,7 +281,7 @@ Sonst wird außerhalb dieses Namensraums nie etwas angefasst.
 
 Der Vorschlag kommt der Reihe nach aus: dem Raum, der schon an der Quelle oder
 an einem ihrer Kanäle steht, dem Gerätenamen (`FK_Max_Spielzimmer` →
-`Max_Spielzimmer`), dem Zielordner. Die Funktion kommt aus dem Feld `funktion`
+`Max_Spielzimmer`), dem Zielordner. Die Funktion kommt aus dem Feld `enumFunction`
 der Vorlage, oder aus dem erkannten Typ, wenn die Vorlage keines hat.
 
 Der Admin bringt 62 Funktions- und 58 Raumvorlagen mit, jede mit einem Bild. Die
@@ -369,11 +369,11 @@ Gemessen wurde am Muster selbst, nicht an der Versionsnummer: bei den beiden
 eingebackenen steht `energy.consumed` nirgends im Bündel. Dort fehlt der
 Verbrauch also, bis der lesende Adapter nachzieht. Bestehende Aliase mit der
 alten Rolle bleiben überall erkannt, der Ausdruck nimmt sie weiter. Jede der
-vier Zeilen trägt den Grund im Feld `_rolle`.
+vier Zeilen trägt den Grund im Feld `_role`.
 
 ### Rollenwissen neben den Zeilen
 
-Eine Vorlage kann `weiterePunkte` mitbringen: Rollen für Datenpunkte, die keine
+Eine Vorlage kann `extraPoints` mitbringen: Rollen für Datenpunkte, die keine
 eigene Zeile bekommen. Ohne das zeigte „alle Datenpunkte des Geräts" bei den
 meisten Zeilen *keine Rolle* an, weil hm-rpc das Feld schlicht leer lässt. Eine
 `*.NAME`-Wildcard gilt je Kanal, sodass `2.LEVEL` und `3.RAMP_TIME` abgedeckt
@@ -384,7 +384,7 @@ es nichts — angereichert werden nur Rohzeilen.
 
 Der Knopf **Als Vorlage speichern …** macht aus dem Gerät, das du vor dir hast,
 wieder eine Vorlage. Pfade werden relativ zum Gerät, aus
-`JSON.parse(val).ENERGY.Power` wird wieder `feld: "ENERGY.Power"`, und Rollen,
+`JSON.parse(val).ENERGY.Power` wird wieder `jsonField: "ENERGY.Power"`, und Rollen,
 Einheiten und Formeln bleiben erhalten.
 
 Was eine Vorlage von sich aus nicht wissen kann, ist, **welche Datenpunkte ein
@@ -447,16 +447,16 @@ Passen mehrere Vorlagen, entscheidet diese Reihenfolge:
    Mehrfachgeräten je Ausgang, dazu Inhaltsprüfungen, die zutrafen
 2. **der Namenshinweis**, falls er passt
 3. **deine eigene Vorlage** vor einer mitgelieferten
-4. **`rang`**, damit dasselbe Gerät immer gleich erkannt wird
+4. **`priority`**, damit dasselbe Gerät immer gleich erkannt wird
 
 Die Reihenfolge ist wichtig. Zuerst Belege zu zählen ist das, was eine mit
 Absicht gebaute Vorlage davor bewahrt, gegen eine mitgelieferte zu verlieren,
 deren Stichwort zufällig im Gerätenamen vorkommt.
 
 Was Schritt 3 für Aktualisierungen bedeutet: Eine eigene Vorlage **kann von
-einer mitgelieferten nicht über den `rang` ausgestochen werden** — dieser Schritt
-steht über `rang`, also kann keine künftige Fassung dieses Adapters dir
-stillschweigend ein Gerät wegnehmen. `rang` entscheidet immer nur zwischen
+einer mitgelieferten nicht über den `priority` ausgestochen werden** — dieser Schritt
+steht über `priority`, also kann keine künftige Fassung dieses Adapters dir
+stillschweigend ein Gerät wegnehmen. `priority` entscheidet immer nur zwischen
 Vorlagen derselben Herkunft, weshalb eine neue eigene Vorlage auch aus deinen
 eigenen Vorlagen heraus nummeriert wird und die mitgelieferten Nummern gar nicht
 beachtet.
@@ -508,7 +508,7 @@ Zwei Dinge stechen diese Regel:
   Rückmeldewert — `1.STATE` ist beides —, deshalb bleibt ihr `ON_ACTUAL` aus.
 - Wo der Zweck für Anhaken spricht, das Muster aber **keinen Platz** hat, wird
   abgewogen: Der Punkt landet in einem Info-Gerät neben dem eigentlichen. Für
-  einen einzelnen Wert lohnt das selten, und der `hinweis` der Vorlage muss es
+  einen einzelnen Wert lohnt das selten, und der `note` der Vorlage muss es
   sagen. Und prüfe, was ein Platz **bedeutet**, bevor du ihn benutzt — ein
   passender Name ist noch kein passender Zweck, wie der Spannungsfall oben zeigt.
 
@@ -551,21 +551,21 @@ Eine JSON-Datei je Vorlage unter `admin/vorlagen/`. Beispiel:
 
 | Schlüssel | Bedeutung |
 |---|---|
-| `erkennung.erforderlich` | diese Datenpunkte muss es geben, sonst greift die Vorlage nicht |
-| `erkennung.inhalt` | der genannte Datenpunkt muss dieses Feld in seinem JSON enthalten |
-| `erkennung.verboten` | diese Datenpunkte darf es **nicht** geben, sonst greift die Vorlage nicht |
-| `erkennung.namenshinweis` | entscheidet nur zwischen Vorlagen, die gleich gut passen |
-| `rang` | letzter Stichentscheid, damit dasselbe Gerät immer gleich erkannt wird |
+| `detection.required` | diese Datenpunkte muss es geben, sonst greift die Vorlage nicht |
+| `detection.content` | der genannte Datenpunkt muss dieses Feld in seinem JSON enthalten |
+| `detection.forbidden` | diese Datenpunkte darf es **nicht** geben, sonst greift die Vorlage nicht |
+| `detection.nameHint` | entscheidet nur zwischen Vorlagen, die gleich gut passen |
+| `priority` | letzter Stichentscheid, damit dasselbe Gerät immer gleich erkannt wird |
 | `optional` | der Zustand entfällt, wenn seine Quelle oder das JSON-Feld fehlt |
-| `vorgabeAus` | vorgeschlagen, aber nicht angehakt — siehe **Was eine Vorlage von sich aus anhakt** |
-| `feld` | baut die Leseformel `JSON.parse(val).<Feld>` |
-| `mehrfach` + `%N%` | ein Gerät je Ausgang; die Nummern werden aus dem Bestand gelesen |
-| `werteliste` | Werteliste für den Datenpunkt — Plätze wie EFFECT werden ohne sie nicht erkannt |
-| `absolut` | `lesen` ist eine vollständige Objektkennung, nicht relativ zum Gerät — dasselbe Objekt für jedes Gerät |
-| `beschriftung` | der Anzeigename des Datenpunkts, wenn er vom Platznamen abweichen soll |
-| `nachkommastellen` | Nachkommastellen für die Wertanzeige |
+| `offByDefault` | vorgeschlagen, aber nicht angehakt — siehe **Was eine Vorlage von sich aus anhakt** |
+| `jsonField` | baut die Leseformel `JSON.parse(val).<Feld>` |
+| `multiple` + `%N%` | ein Gerät je Ausgang; die Nummern werden aus dem Bestand gelesen |
+| `valueList` | Werteliste für den Datenpunkt — Plätze wie EFFECT werden ohne sie nicht erkannt |
+| `absolute` | `read` ist eine vollständige Objektkennung, nicht relativ zum Gerät — dasselbe Objekt für jedes Gerät |
+| `caption` | der Anzeigename des Datenpunkts, wenn er vom Platznamen abweichen soll |
+| `decimals` | Nachkommastellen für die Wertanzeige |
 
-`verboten` ist das, was eine einfache Steckdose wirklich von einer mehrfachen
+`forbidden` ist das, was eine einfache Steckdose wirklich von einer mehrfachen
 trennt: Die einfache hat kein `stat.POWER2`. Ein fehlender Datenpunkt zählt
 bewusst **nicht** als Beleg — sonst ließe sich der Punktestand einer Vorlage mit
 einer Liste erfundener Ausschlüsse aufblasen.
@@ -641,6 +641,7 @@ alle elf Sprachdateien dieselben Schlüssel tragen.
 * **Und ein Fallstrick, den erst das Einspielen zeigte.** `iobroker upload` trägt die Vorgaben aus `io-package.json` in bestehende Instanzen nach. Nach dem Einspielen stehen die vier englischen Schlüssel also schon da — mit ihrer Vorgabe **an**, nicht mit dem Wert des Nutzers —, während die alten noch danebenstehen. Der erste Entwurf hätte dem neuen Wert den Vorrang gegeben und damit genau den stillen Sprung gemacht, den die Umstellung verhindern soll. Jetzt gewinnt der alte Wert, und das Ergebnis hängt auch nicht mehr an der Reihenfolge der Schlüssel im Objekt. Am Produktivsystem gefunden, am Testsystem nachgestellt und belegt.
 * **Und dieselbe Umstellung für die Aliase selbst.** Die Felder, die die Werkbank an ihre Aliase schreibt, hießen deutsch: `quelle`, `vorlage`, `vorlageVersion`, `ausZustand`, `geraetetyp`, `musterVonHand`, `vonHand`, `angelegtVon`, `attrappeAus`. Jetzt `source`, `template`, `templateVersion`, `templateState`, `deviceType`, `deviceTypeManual`, `manual`, `createdBy`, `mockedFrom`. Derselbe Dialog erledigt es beim Start und nennt die Zahl der betroffenen Objekte — gezählt wird nur, was eines unserer Felder trägt; ein von Hand im Admin gebauter Alias bleibt unberührt. Angefasst wird ausschließlich `native`: kein `common.alias`, keine Rolle, keine Formel, keine Einheit. Es bewegt sich kein Wert und es schaltet nichts. An 109 Objekten gegengerechnet — `common` blieb bei **allen** gleich, `native` änderte sich bei genau den 100 betroffenen. Bricht der Lauf ab, weil der Reiter geschlossen wird, nennt der Dialog beim nächsten Öffnen genau die übrigen.
 * **Die eigenen Vorlagen liegen jetzt unter `templates`.** Bisher hieß der Schlüssel in der Instanzkonfiguration `vorlagen`. Umbenannt wird nur der Schlüssel — die Vorlage darunter bleibt Zeichen für Zeichen gleich. Ihre **Feldnamen** (`zustaende`, `rolle`, `typ` …) sind bewusst noch nicht dran: Sie lassen sich nicht über ein Muster erfassen, weil dieselben Wörter im Code auch anderes bedeuten — `z.typ` ist ein Vorlagenfeld, das danebenstehende `typ:` ein Entwurfsfeld, beide in derselben Zeile. Das wird ein eigener Schritt.
+* **Das Vorlagenformat ist englisch — und besser benannt, nicht nur übersetzt.** Alle Felder einer Vorlage haben neue Namen: `points` statt `zustaende`, `detection` mit `required`, `forbidden`, `content` und `nameHint`, je Punkt `role`, `type`, `unit`, `read`, `write`, `readFormula`, `writeFormula`, `readFallback`, `offByDefault` und so fort. Wo eine Übersetzung zu wenig war, steht ein besserer Name: `priority` sagt, wozu die Zahl da ist (welche Vorlage gewinnt); `points` statt „states", weil das sich mit der Werteliste `common.states` und den Plätzen des Detektors verwechselt; `jsonField`, weil das Feld ein Pfad **in einem JSON** ist; `enumFunction`, weil `function` ein Schlüsselwort ist und die ioBroker-Aufzählung gemeint ist. Die 16 mitgelieferten Vorlagen sind umgestellt, **eigene Vorlagen stellt derselbe Startdialog um**, Inhalt für Inhalt. Eine alte exportierte Datei wird beim Einlesen **abgewiesen** — mit dem Satz, dass sie aus einer älteren Fassung stammt, statt mit einem rätselhaften „keine Zeilen". Die Tabelle der Feldnamen in diesem README ist nachgezogen.
 
 ### 0.13.0 (2026-11-02)
 * **Der type-detector ist jetzt 6.2.0, und damit kommt ein Gerätetyp dazu: `tv`.** Die Werkbank bietet deshalb 52 Muster statt 51, mit zwanzig Plätzen für einen Fernseher — `POWER`, `KEY`, `VOLUME`, `INPUT`, `APP`, `ART_MODE` und die übrigen. Unterwegs brachte 6.1.0 einen ES-Modul-Bau mit, und daher ist das ausgelieferte Bündel kleiner (66 KB statt 70). An der Verbrauchsrolle ändert sich gegenüber 6.0.3 nichts: beide Rollen werden erkannt, vorgeschlagen wird die aktuelle. Am 02.11.2026 über alle Muster gemessen: 752 Plätze statt 732, und die Rollenableitung bleibt unberührt — dieselben acht Plätze holen ihre Rolle aus dem Ausdruck, dieselben neunzehn haben keine.

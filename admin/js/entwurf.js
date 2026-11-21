@@ -279,7 +279,7 @@ export function alleUndVorlage(kanal, vorlagenId, instanz) {
      Vorlagenzeilen und an der Erkennung aendert sich nichts. */
   var tpl = null;
   S.VORLAGEN.forEach(function (kandidat) { if (kandidat.id === v.vorlage) { tpl = kandidat; } });
-  var wissen = (tpl && tpl.weiterePunkte) || null;
+  var wissen = (tpl && tpl.extraPoints) || null;
   var wissenRolle = function (rel) {
     if (!wissen) { return ''; }
     if (wissen[rel]) { return wissen[rel]; }
@@ -1195,8 +1195,8 @@ export function waehle(id, fertig, zweigeBehalten) {
      Deren Werte muessen vorliegen, bevor die Vorlage geprueft wird —
      sonst faellt ein JSON-Feld durch, bloss weil noch nichts da war. */
   S.VORLAGEN.forEach(function (tpl) {
-    (tpl.zustaende || []).forEach(function (tplZeile) {
-      if (tplZeile.absolut && tplZeile.lesen && S.objects[tplZeile.lesen]) { quellen.push(tplZeile.lesen); }
+    (tpl.points || []).forEach(function (tplZeile) {
+      if (tplZeile.absolute && tplZeile.read && S.objects[tplZeile.read]) { quellen.push(tplZeile.read); }
     });
   });
 
@@ -1497,16 +1497,16 @@ export function ausgangsQuellen(e) {
   if (!e || e.instanz === null || e.instanz === undefined || !e.kanal) { return null; }
   var tpl = null;
   S.VORLAGEN.forEach(function (kandidat) { if (kandidat.id === e.vorlage) { tpl = kandidat; } });
-  if (!tpl || !tpl.mehrfach) { return null; }
-  var platz = (tpl.mehrfach && tpl.mehrfach.platzhalter) || '%N%';
+  if (!tpl || !tpl.multiple) { return null; }
+  var platz = (tpl.multiple && tpl.multiple.placeholder) || '%N%';
   var raus = [];
   var dazu = function (p) {
     if (!p) { return; }
     var voll = e.kanal + '.' + p;
     if (raus.indexOf(voll) === -1) { raus.push(voll); }
   };
-  (tpl.zustaende || []).forEach(function (tplZeile) {
-    [tplZeile.lesen, tplZeile.schreiben].forEach(function (p) {
+  (tpl.points || []).forEach(function (tplZeile) {
+    [tplZeile.read, tplZeile.write].forEach(function (p) {
       if (!p || String(p).indexOf(platz) === -1) { return; }
       dazu(setzeInstanz(p, tpl, e.instanz));
       if (String(e.instanz) === '1') { dazu(String(p).split(platz).join('')); }

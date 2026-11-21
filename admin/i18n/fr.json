@@ -777,7 +777,7 @@
   "write.writeSourceMissing": "{0} : le point de données d'envoi {1} n'existe pas encore",
   "write.writing": "écriture…",
   "migr.title": "Les anciens noms doivent être convertis",
-  "migr.lead": "Cette instance porte encore {0} réglage(s) et {1} objet(s) d'alias sous leurs anciens noms allemands. Ils sont convertis en noms anglais ; tant que ce n'est pas fait, l'établi ne fonctionne pas.",
+  "migr.lead": "Cette instance porte encore {0} réglage(s), {1} objet(s) d'alias et {2} modèle(s) personnel(s) sous leurs anciens noms allemands. Ils sont convertis en noms anglais ; tant que ce n'est pas fait, l'établi ne fonctionne pas.",
   "migr.noWayBack": "Il n'y a pas de retour en arrière. Pour un filet de sécurité, faites d'abord une sauvegarde ioBroker.",
   "migr.locked": "Sans la conversion, l'établi ne fonctionne pas. Rien n'a été modifié jusqu'ici.",
   "migr.go": "Convertir",
@@ -786,5 +786,7 @@
   "migr.reload": "Recharger",
   "migr.done": "{0} objet(s) converti(s). Rechargez l’onglet.",
   "migr.running": "Conversion en cours…",
-  "migr.partly": "{0} converti(s), {1} n'ont pas pu être écrits :"
+  "migr.partly": "{0} converti(s), {1} n'ont pas pu être écrits :",
+  "migr.templateRow": "Modèle personnel {0} : noms des champs",
+  "tv.badOldFormat": "Ce fichier provient d'une ancienne version de l'établi (noms de champs allemands) et ne peut plus être importé."
 }

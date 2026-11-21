@@ -8,6 +8,14 @@ sie beim Beheben notiert wurden — je Fassung ein Abschnitt, neueste zuerst.
 
 ### Deutsch
 
+* **Das Vorlagenformat ist englisch (Schicht C).** Der schwierigste Teil der Umstellung, weil es hier kein eindeutiges Muster gab wie `native.x` bei den Alias-Objekten. Dieselben Wörter bedeuteten im Code anderes, in derselben Zeile: `z.typ` war ein Vorlagenfeld, das `typ:` daneben ein Entwurfsfeld. Ein erster Versuch, Datei für Datei umzubenennen, wurde zurückgenommen — er hätte den Adapter **still** inkonsistent gemacht: Die Dateien trugen noch `zustaende`, ein Leser erwartete schon `points`, und `(v.points || [])` ergibt eine leere Liste statt eines Fehlers.
+
+  Darum in zwei Zügen. **C1** gab jeder Variablen, die eine Vorlage hält, einen eindeutigen Namen (`tpl`, `tplZeile`, `quellTpl` …) — reines Umbenennen lokaler Variablen, ohne Verhaltensänderung, mit `no-undef` als Netz: Eine übersehene Stelle macht den Namen undefiniert, und der Linter meldet es sofort. Das ist fünfmal passiert, keiner der Fehler hat einen Test erreicht. **C2** benannte danach die Felder um — jetzt über ein eindeutiges Muster, `tplZeile.rolle` → `tplZeile.role`.
+
+  Die Namenstabelle steht genau einmal, in `admin/js/migration.js`. Mit ihr werden die eigenen Vorlagen der Nutzer migriert, und mit ihr wurden die 16 mitgelieferten Dateien umgestellt — eine Tabelle, nicht zwei. Gefunden wurde sie nicht durch Absuchen der Dateien, sondern durch Lesen der Funktion, die eine Vorlage **baut** (`baueVorlage`): Die Dateien kennen `absolut`, `schreibenAbs`, `beschriftung` und `nachkommastellen` gar nicht.
+
+  Unterwegs zwei Fehler, die beinahe durchgerutscht wären. Ein Umbenenner ersetzte auch Zeichenketten — und `'typ'` und `'feld'` sind in diesem Projekt auch CSS-Klassen; die Darstellung wäre zerbrochen, ohne dass ein Test anschlägt. Und die Lesewege des Entwurfs (`{punkt, feld, formel}`) trugen in C1 denselben Trägernamen wie die echten Ersatzquellen der Vorlage; C2 hätte sie mit umbenannt und das Lesen gebrochen. Beides vor dem Einspielen gefunden.
+
 * **Die Felder an den Alias-Objekten heißen englisch.** `quelle` → `source`, `vorlage` → `template`, `vorlageVersion` → `templateVersion`, `ausZustand` → `templateState`, `geraetetyp` → `deviceType`, `musterVonHand` → `deviceTypeManual`, `vonHand` → `manual`, `angelegtVon` → `createdBy`, `attrappeAus` → `mockedFrom`.
 
   **`templateState`, nicht `fromState`.** Das Feld hält den Namen der Vorlagenzeile, aus der ein Punkt stammt — `SET`, `ACTUAL` —, und wird gegen `z.name` in den Zeilen der Vorlage verglichen. Der erste Entwurf nannte es `fromState`, was sich wie „Kennung der Quelle" liest; die ist aber `source`.
@@ -37,6 +45,14 @@ sie beim Beheben notiert wurden — je Fassung ein Abschnitt, neueste zuerst.
   Dazu ein zweiter Fehler im selben Atemzug: Der erste Versuch überschrieb den Zielschlüssel einfach, womit die Einfügereihenfolge im Objekt entschied, welcher Wert gewann. Die ist nirgends zugesichert. Jetzt werden nachgetragene Vorgaben übersprungen statt überschrieben, und beide Reihenfolgen geben dasselbe.
 
 ### English
+
+* **The template format is English (layer C).** The hardest part of the conversion, because there was no unambiguous pattern like `native.x` for the alias objects. The same words meant other things in the code, on the same line: `z.typ` was a template field, the `typ:` beside it a draft field. A first attempt to rename file by file was rolled back — it would have left the adapter **silently** inconsistent: the files still carried `zustaende`, one reader already expected `points`, and `(v.points || [])` yields an empty list instead of an error.
+
+  So it went in two moves. **C1** gave every variable holding a template an unambiguous name (`tpl`, `tplZeile`, `quellTpl` …) — pure renaming of local variables, no change in behaviour, with `no-undef` as the net: a missed spot leaves the name undefined, and the linter reports it at once. That happened five times; none of those faults reached a test. **C2** then renamed the fields — now through an unambiguous pattern, `tplZeile.rolle` → `tplZeile.role`.
+
+  The name table exists exactly once, in `admin/js/migration.js`. It migrates the users' own templates, and it converted the 16 shipped files — one table, not two. It was found not by searching the files but by reading the function that **builds** a template (`baueVorlage`): the files do not even know `absolut`, `schreibenAbs`, `beschriftung` and `nachkommastellen`.
+
+  Two faults almost slipped through on the way. A renamer replaced strings too — and `'typ'` and `'feld'` are also CSS classes in this project; the display would have broken without any test noticing. And the draft's read paths (`{punkt, feld, formel}`) carried the same carrier name in C1 as the template's real fallback sources; C2 would have renamed them too and broken the reading. Both were caught before deploying.
 
 * **The fields on the alias objects carry English names.** `quelle` → `source`, `vorlage` → `template`, `vorlageVersion` → `templateVersion`, `ausZustand` → `templateState`, `geraetetyp` → `deviceType`, `musterVonHand` → `deviceTypeManual`, `vonHand` → `manual`, `angelegtVon` → `createdBy`, `attrappeAus` → `mockedFrom`.
 

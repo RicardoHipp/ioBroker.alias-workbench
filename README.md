@@ -270,7 +270,7 @@ outside that namespace is ever touched.
 
 The proposal comes from, in order: the room already on the source or one of its
 channels, the device name (`FK_Max_Spielzimmer` → `Max_Spielzimmer`), the
-target folder. The function comes from the template's `funktion` field, or from
+target folder. The function comes from the template's `enumFunction` field, or from
 the detected type when the template has none.
 
 The admin ships 62 function and 58 room templates, each with a picture. The
@@ -358,11 +358,11 @@ This was measured on the pattern itself rather than on a version number: in
 both baked bundles `energy.consumed` appears nowhere. So the consumption is
 missing there until the reading adapter catches up. Existing aliases with the
 old role stay recognised everywhere, the expression still accepts them. Each of
-the four rows carries the reason in a field `_rolle`.
+the four rows carries the reason in a field `_role`.
 
 ### Role knowledge beside the rows
 
-A template can carry `weiterePunkte`: roles for datapoints that get no row of
+A template can carry `extraPoints`: roles for datapoints that get no row of
 their own. Without it, "all datapoints of the device" showed *no role* on most
 lines, because hm-rpc simply leaves the field empty. A `*.NAME` wildcard applies
 per channel, so `2.LEVEL` and `3.RAMP_TIME` are covered without listing every
@@ -373,7 +373,7 @@ enriched.
 
 The **Save as template …** button turns the device you are looking at back into
 a template. Paths become relative to the device, `JSON.parse(val).ENERGY.Power`
-becomes `feld: "ENERGY.Power"` again, and roles, units and formulas are kept.
+becomes `jsonField: "ENERGY.Power"` again, and roles, units and formulas are kept.
 
 What a template cannot know by itself is **which datapoints make a device this
 kind of device**. That is a statement about all future devices, so the dialog
@@ -432,16 +432,16 @@ When several templates fit, the winner is decided in this order:
    output for multi-output devices, plus content checks that came out true
 2. **the name hint**, if it matches
 3. **your own template** over a shipped one
-4. **`rang`**, so the same device is always detected the same way
+4. **`priority`**, so the same device is always detected the same way
 
 Order matters. Counting evidence first is what keeps a template you built on
 purpose from losing to a shipped one whose word happens to appear in the device
 name.
 
 Note what step 3 means for updates: a template of yours **cannot be outranked by
-a shipped one on `rang`** — that step sits above `rang` in the order, so no
+a shipped one on `priority`** — that step sits above `priority` in the order, so no
 future version of this adapter can quietly take a device away from a template
-you built. `rang` only ever breaks ties between templates of the same origin,
+you built. `priority` only ever breaks ties between templates of the same origin,
 which is also why a new template of yours is numbered from your own templates
 and ignores the shipped numbers entirely.
 
@@ -491,7 +491,7 @@ Two things override that:
   feedback value — `1.STATE` is both — so their `ON_ACTUAL` stays off.
 - Where the purpose says tick but the pattern has **no slot**, weigh it: the
   point lands in an info device next to the real one. For a single value that
-  is rarely worth it, and the template's `hinweis` has to say so. And check
+  is rarely worth it, and the template's `note` has to say so. And check
   what a slot **means** before using it — a matching name is not a matching
   purpose, as the voltage case above shows.
 
@@ -535,21 +535,21 @@ One JSON file per template under `admin/vorlagen/`. Example:
 
 | Key | Meaning |
 |---|---|
-| `erkennung.erforderlich` | these datapoints must exist, otherwise the template does not match |
-| `erkennung.inhalt` | the named datapoint must contain this field in its JSON |
-| `erkennung.verboten` | these datapoints must **not** exist, otherwise the template does not match |
-| `erkennung.namenshinweis` | only breaks ties between templates that fit equally well |
-| `rang` | last tie-breaker, so the same device is always detected the same way |
+| `detection.required` | these datapoints must exist, otherwise the template does not match |
+| `detection.content` | the named datapoint must contain this field in its JSON |
+| `detection.forbidden` | these datapoints must **not** exist, otherwise the template does not match |
+| `detection.nameHint` | only breaks ties between templates that fit equally well |
+| `priority` | last tie-breaker, so the same device is always detected the same way |
 | `optional` | the state is skipped when its source or JSON field is missing |
-| `vorgabeAus` | proposed but unchecked — see **What a template ticks by default** below |
-| `feld` | builds the read function `JSON.parse(val).<field>` |
-| `mehrfach` + `%N%` | one device per output; the numbers are read from what exists |
-| `werteliste` | value list for the datapoint — slots like EFFECT are not detected without one |
-| `absolut` | `lesen` is a full object id, not relative to the device — the same object for every device |
-| `beschriftung` | the datapoint's display name, if it should differ from its slot name |
-| `nachkommastellen` | decimals for the value display |
+| `offByDefault` | proposed but unchecked — see **What a template ticks by default** below |
+| `jsonField` | builds the read function `JSON.parse(val).<field>` |
+| `multiple` + `%N%` | one device per output; the numbers are read from what exists |
+| `valueList` | value list for the datapoint — slots like EFFECT are not detected without one |
+| `absolute` | `read` is a full object id, not relative to the device — the same object for every device |
+| `caption` | the datapoint's display name, if it should differ from its slot name |
+| `decimals` | decimals for the value display |
 
-`verboten` is what genuinely separates a single socket from a multi-output one:
+`forbidden` is what genuinely separates a single socket from a multi-output one:
 the single one has no `stat.POWER2`. An absent datapoint deliberately does **not**
 count as evidence — otherwise a list of invented exclusions could inflate a
 template's score.
@@ -622,6 +622,7 @@ imported, and that all eleven language files carry the same keys.
 * **And a trap that only showed up on deployment.** `iobroker upload` carries the defaults from `io-package.json` into existing instances. After a deployment the four English keys are therefore already present — with their default **on**, not with the user's value — while the old ones still sit beside them. The first draft would have given the new value precedence and so made exactly the silent jump the conversion is meant to prevent. Now the old value wins, and the result no longer depends on the order of the keys in the object. Found on the live system, reproduced and recorded on the test system.
 * **And the same conversion for the aliases themselves.** The fields the workbench writes on its aliases were German: `quelle`, `vorlage`, `vorlageVersion`, `ausZustand`, `geraetetyp`, `musterVonHand`, `vonHand`, `angelegtVon`, `attrappeAus`. Now `source`, `template`, `templateVersion`, `templateState`, `deviceType`, `deviceTypeManual`, `manual`, `createdBy`, `mockedFrom`. The same dialog does it at startup and names the number of affected objects — only those carrying one of our fields are counted, so an alias built by hand in the admin is left alone. Only `native` is touched: no `common.alias`, no role, no formula, no unit. No value moves and nothing switches. Checked against 109 objects — `common` stayed identical on **all** of them, `native` changed on exactly the 100 affected. If the run is cut short because the tab is closed, the dialog names exactly the remaining ones next time.
 * **Your own templates now live under `templates`.** The key in the instance configuration used to be `vorlagen`. Only the key is renamed — the template underneath stays identical character for character. Its **field names** (`zustaende`, `rolle`, `typ` …) are deliberately left for later: they cannot be caught by a pattern, because the same words mean other things elsewhere in the code — `z.typ` is a template field while the `typ:` right beside it is a draft field, both on the same line. That will be a step of its own.
+* **The template format is English — and better named, not just translated.** Every field of a template has a new name: `points` instead of `zustaende`, `detection` with `required`, `forbidden`, `content` and `nameHint`, per point `role`, `type`, `unit`, `read`, `write`, `readFormula`, `writeFormula`, `readFallback`, `offByDefault` and so on. Where a translation fell short there is a better name: `priority` says what the number is for (which template wins); `points` rather than "states", which gets confused with the value list `common.states` and with the detector's slots; `jsonField`, because the field is a path **inside a JSON**; `enumFunction`, because `function` is a keyword and the ioBroker enumeration is meant. The 16 shipped templates are converted, **your own templates are converted by the same startup dialog**, content and all. An old exported file is **refused** on import — with a sentence saying it comes from an older version, instead of a puzzling "no rows". The field-name table in this README has been updated.
 
 ### 0.13.0 (2026-11-02)
 * **The type detector is now 6.2.0, and that adds a device type: `tv`.** The workbench therefore offers 52 patterns instead of 51, with twenty places for a television — `POWER`, `KEY`, `VOLUME`, `INPUT`, `APP`, `ART_MODE` and the rest. 6.1.0 brought an ES module build along the way, which is what makes the shipped bundle smaller (66 KB instead of 70). The consumption role is unchanged from 6.0.3: both roles are recognised, the current one is suggested. Measured on 2026-11-02 over all patterns: 752 places instead of 732, and the role derivation is untouched — the same eight places take their role from the expression, the same nineteen have none.

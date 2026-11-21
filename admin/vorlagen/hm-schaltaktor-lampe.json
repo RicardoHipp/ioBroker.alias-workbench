@@ -1,124 +1,124 @@
 {
   "id": "hm-schaltaktor-lampe",
   "version": 4,
-  "rang": 20,
+  "priority": 20,
   "name": {
     "de": "Homematic Schaltaktor als Lampe",
     "en": "Homematic switch actuator as light"
   },
-  "geraetetyp": "light",
-  "funktion": "light",
-  "hinweis": {
+  "deviceType": "light",
+  "enumFunction": "light",
+  "note": {
     "de": "Ein Ausgang, zum Beispiel HM-LC-Sw1PBU-FM. Diese Vorlage steht ueber der Steckdosen-Fassung, weil ein Unterputz-Schaltaktor hinter einem Taster fast immer Licht schaltet — anders als bei Tasmota, wo die Steckdose der Regelfall ist. Passt es nicht, die Steckdosen-Vorlage von Hand waehlen.",
     "en": "Single output, e.g. HM-LC-Sw1PBU-FM. Ranked above the socket variant because a flush-mounted actuator behind a wall switch nearly always drives a light."
   },
-  "erkennung": {
-    "erforderlich": [
+  "detection": {
+    "required": [
       "1.STATE",
       "1.WORKING"
     ],
-    "verboten": [
+    "forbidden": [
       "2.STATE"
     ],
-    "namenshinweis": "licht|lampe|light|led|leuchte|strahler|decken|spot",
-    "hinweis": {
+    "nameHint": "licht|lampe|light|led|leuchte|strahler|decken|spot",
+    "note": {
       "de": "1.WORKING steht mit in der Pflicht: es trennt den Schaltaktor vom Fensterkontakt, der ebenfalls einen 1.STATE hat, aber nichts zu schalten. 2.STATE ist verboten, sonst wuerde diese Vorlage auch am Zweifach-Aktor greifen und dessen zweiten Ausgang stillschweigend unterschlagen.",
       "en": "1.WORKING is required as well: it separates the switch actuator from the window contact, which also has a 1.STATE but nothing to switch. 2.STATE is forbidden, otherwise this template would also match the dual actuator and silently drop its second output."
     }
   },
-  "zustaende": [
+  "points": [
     {
       "name": "SET",
-      "rolle": "switch.light",
-      "typ": "boolean",
-      "lesen": "1.STATE",
-      "schreiben": "1.STATE"
+      "role": "switch.light",
+      "type": "boolean",
+      "read": "1.STATE",
+      "write": "1.STATE"
     },
     {
       "name": "ON_ACTUAL",
-      "rolle": "sensor.light",
-      "typ": "boolean",
-      "lesen": "1.STATE",
+      "role": "sensor.light",
+      "type": "boolean",
+      "read": "1.STATE",
       "optional": true,
-      "hinweis": {
+      "note": {
         "de": "Liest dieselbe Quelle wie SET - der Aktor meldet keinen getrennten Istwert, 1.STATE ist beides. Deshalb standardmaessig aus: angehakt stuende derselbe Wert zweimal im Alias, und die Pruefung „kein Punkt doppelt\" meldet es zu Recht. Anhaken nur, wenn ein Widget ausdruecklich einen eigenen Rueckmeldepunkt erwartet.",
         "en": "Reads the same source as SET — the actuator reports no separate actual value, 1.STATE is both. Therefore off by default: ticked, the same value would sit in the alias twice, and the check \"no point twice\" reports it, rightly. Tick it only when a widget explicitly expects its own feedback point."
       },
-      "vorgabeAus": true
+      "offByDefault": true
     },
     {
       "name": "WORKING",
-      "rolle": "indicator.working",
-      "typ": "boolean",
-      "lesen": "1.WORKING",
+      "role": "indicator.working",
+      "type": "boolean",
+      "read": "1.WORKING",
       "optional": true,
-      "hinweis": {
+      "note": {
         "de": "Steht auf true, solange der Aktor den Befehl noch ausfuehrt.",
         "en": "Stays true while the actuator is still carrying out the command."
       }
     },
     {
       "name": "ON_TIME",
-      "rolle": "level.timer.off",
-      "typ": "number",
-      "einheit": "s",
-      "lesen": "1.ON_TIME",
-      "schreiben": "1.ON_TIME",
+      "role": "level.timer.off",
+      "type": "number",
+      "unit": "s",
+      "read": "1.ON_TIME",
+      "write": "1.ON_TIME",
       "optional": true,
-      "vorgabeAus": true,
-      "hinweis": {
+      "offByDefault": true,
+      "note": {
         "de": "Einschaltdauer in Sekunden. Der Platz ON_TIME im Muster nimmt ihn auf.",
         "en": "On-time in seconds. The pattern's ON_TIME slot takes it."
       }
     },
     {
       "name": "INHIBIT",
-      "rolle": "switch",
-      "typ": "boolean",
-      "lesen": "1.INHIBIT",
-      "schreiben": "1.INHIBIT",
+      "role": "switch",
+      "type": "boolean",
+      "read": "1.INHIBIT",
+      "write": "1.INHIBIT",
       "optional": true,
-      "vorgabeAus": true,
-      "hinweis": {
+      "offByDefault": true,
+      "note": {
         "de": "Sperrt den Aktor. Solange true, nimmt er keine Befehle an — auch nicht vom Taster.",
         "en": "Locks the actuator. While true it accepts no commands — not even from the wall switch."
       }
     },
     {
       "name": "LOWBAT",
-      "rolle": "indicator.lowbat",
-      "typ": "boolean",
-      "lesen": "0.LOWBAT",
-      "lesenSonst": {
-        "punkt": "0.LOW_BAT"
+      "role": "indicator.lowbat",
+      "type": "boolean",
+      "read": "0.LOWBAT",
+      "readFallback": {
+        "point": "0.LOW_BAT"
       },
       "optional": true
     },
     {
       "name": "UNREACH",
-      "rolle": "indicator.maintenance.unreach",
-      "typ": "boolean",
-      "lesen": "0.UNREACH",
+      "role": "indicator.maintenance.unreach",
+      "type": "boolean",
+      "read": "0.UNREACH",
       "optional": true
     },
     {
       "name": "RSSI",
-      "rolle": "value.rssi",
-      "typ": "number",
-      "einheit": "dBm",
-      "lesen": "0.RSSI_DEVICE",
+      "role": "value.rssi",
+      "type": "number",
+      "unit": "dBm",
+      "read": "0.RSSI_DEVICE",
       "optional": true,
-      "vorgabeAus": true,
-      "lesenSonst": {
-        "punkt": "0.RSSI_PEER"
+      "offByDefault": true,
+      "readFallback": {
+        "point": "0.RSSI_PEER"
       },
-      "hinweis": {
+      "note": {
         "de": "RSSI_DEVICE steht zuerst: es ist der Pegel, den die Zentrale vom Geraet empfaengt. RSSI_PEER ist bei Batteriegeraeten oft unbelegt und traegt dann Grenzwerte wie -2147483648.",
         "en": "RSSI_DEVICE comes first: it is the level the central unit receives from the device. RSSI_PEER is often empty on battery devices and then carries sentinel values such as -2147483648."
       }
     }
   ],
-  "weiterePunkte": {
+  "extraPoints": {
     "*.ACTIVE_PROFILE": "level.mode",
     "*.ACTUAL_TEMPERATURE": "value.temperature",
     "*.ACTUAL_TEMPERATURE_STATUS": "value",

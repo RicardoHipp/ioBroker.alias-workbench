@@ -215,33 +215,33 @@ describe('Die Vorlagen und ihre Datentypen', () => {
         return raus;
     };
 
-    const vorlagen = liesJson(path.join(wurzel, 'admin', 'vorlagen', 'index.json')).vorlagen.map(name =>
+    const vorlagen = liesJson(path.join(wurzel, 'admin', 'vorlagen', 'index.json')).templates.map(name =>
         // index.json fuehrt die Dateinamen samt Endung
         liesJson(path.join(wurzel, 'admin', 'vorlagen', name)),
     );
 
     it('findet zu jedem Geraetetyp ein Muster', () => {
         const ohne = vorlagen
-            .filter(v => v.geraetetyp && !musterVon(v.geraetetyp))
-            .map(v => `${v.id}: ${v.geraetetyp}`);
+            .filter(v => v.deviceType && !musterVon(v.deviceType))
+            .map(v => `${v.id}: ${v.deviceType}`);
         expect(ohne, `Geraetetyp ohne Muster: ${ohne.join(', ')}`).to.be.empty;
     });
 
     it('geben jedem Zustand einen Datentyp, den sein Platz zulaesst', () => {
         const schief = [];
         vorlagen.forEach(v => {
-            if (!v.geraetetyp || !musterVon(v.geraetetyp)) {
+            if (!v.deviceType || !musterVon(v.deviceType)) {
                 return;
             }
-            (v.zustaende || []).forEach(z => {
-                const erlaubt = typenFuerRolle(v.geraetetyp, z.rolle);
-                if (!erlaubt.length || !z.typ) {
+            (v.points || []).forEach(z => {
+                const erlaubt = typenFuerRolle(v.deviceType, z.role);
+                if (!erlaubt.length || !z.type) {
                     return; // kein Platz, keine Vorgabe, oder kein Typ gesetzt
                 }
-                if (erlaubt.indexOf(z.typ) === -1) {
-                    const plaetze = plaetzeFuerRolle(v.geraetetyp, z.rolle).map(x => x.name);
+                if (erlaubt.indexOf(z.type) === -1) {
+                    const plaetze = plaetzeFuerRolle(v.deviceType, z.role).map(x => x.name);
                     schief.push(
-                        `${v.id}/${z.name}: ${plaetze.join(' bzw. ')} laesst ${erlaubt.join('/')} zu, Vorlage sagt ${z.typ}`,
+                        `${v.id}/${z.name}: ${plaetze.join(' bzw. ')} laesst ${erlaubt.join('/')} zu, Vorlage sagt ${z.type}`,
                     );
                 }
             });
@@ -252,12 +252,12 @@ describe('Die Vorlagen und ihre Datentypen', () => {
     it('lassen keinen Zustand ohne Typ, wo der Platz einen verlangt', () => {
         const ohne = [];
         vorlagen.forEach(v => {
-            if (!v.geraetetyp || !musterVon(v.geraetetyp)) {
+            if (!v.deviceType || !musterVon(v.deviceType)) {
                 return;
             }
-            (v.zustaende || []).forEach(z => {
-                const erlaubt = typenFuerRolle(v.geraetetyp, z.rolle);
-                if (erlaubt.length && !z.typ) {
+            (v.points || []).forEach(z => {
+                const erlaubt = typenFuerRolle(v.deviceType, z.role);
+                if (erlaubt.length && !z.type) {
                     ohne.push(`${v.id}/${z.name}: Platz laesst ${erlaubt.join('/')} zu, Vorlage nennt keinen`);
                 }
             });
@@ -585,7 +585,7 @@ describe('Die Vorlagen', () => {
     });
 
     it('stehen vollzaehlig in index.json und umgekehrt', () => {
-        const gelistet = index.vorlagen || [];
+        const gelistet = index.templates || [];
         const fehltInListe = dateien.filter(f => gelistet.indexOf(f) === -1);
         const fehltAlsDatei = gelistet.filter(f => dateien.indexOf(f) === -1);
         expect(fehltInListe, `liegt da, wird aber nie geladen: ${fehltInListe.join(', ')}`).to.be.empty;
@@ -616,14 +616,14 @@ describe('Die Vorlagen', () => {
         dateien.forEach(f => {
             const v = liesJson(path.join(dir, f));
             paar(v.hinweis, `${f} hinweis`);
-            if (v.erkennung) {
-                paar(v.erkennung.hinweis, `${f} erkennung.hinweis`);
-                if (v.erkennung.namenshinweis !== undefined &&
-                    typeof v.erkennung.namenshinweis !== 'string') {
+            if (v.detection) {
+                paar(v.detection.note, `${f} detection.note`);
+                if (v.detection.nameHint !== undefined &&
+                    typeof v.detection.nameHint !== 'string') {
                     schief.push(`${f} namenshinweis`);
                 }
             }
-            (v.zustaende || []).forEach(z => paar(z.hinweis, `${f}/${z.name}`));
+            (v.points || []).forEach(z => paar(z.note, `${f}/${z.name}`));
         });
         expect(schief, schief.join(' | ')).to.be.empty;
     });
@@ -980,11 +980,11 @@ describe('Der eingebackene Detektor', () => {
         ['messpunkt', 'tasmota-lampe', 'tasmota-mehrfach', 'tasmota-steckdose']
             .forEach(name => {
                 const v = liesJson(path.join(wurzel, 'admin', 'vorlagen', name + '.json'));
-                const zeile = (v.zustaende || v.states || [])
+                const zeile = (v.points || [])
                     .find(z => z.name === 'CONSUMPTION');
                 expect(zeile, name + ' hat keine CONSUMPTION-Zeile mehr')
                     .to.not.equal(undefined);
-                expect(zeile.rolle, name + ' schreibt die durchgestrichene Rolle')
+                expect(zeile.role, name + ' schreibt die durchgestrichene Rolle')
                     .to.equal('value.energy.consumed');
             });
     });
@@ -1830,7 +1830,8 @@ describe('Die Umstellung auf englische Bezeichner', () => {
     const bis = quelle.indexOf('/* Schreiben.');
     const code = quelle.slice(von, bis).split('export ').join('');
     const t = new Function(code + '; return { INSTANZ_NAMEN, ALIAS_NAMEN, '
-        + 'instanzBefunde, aliasBefunde, nativeUmgestellt };')();
+        + 'instanzBefunde, aliasBefunde, nativeUmgestellt, vorlageUmgestellt, '
+        + 'istAlteVorlage, vorlagenBefunde };')();
 
     it('nennt genau die vier Einstellungen, die mcm1957 benannt hat', () => {
         expect(t.INSTANZ_NAMEN).to.deep.equal({
@@ -1869,9 +1870,9 @@ describe('Die Umstellung auf englische Bezeichner', () => {
     });
 
     it('nimmt die eigenen Vorlagen mit, Inhalt unangetastet', () => {
-        /* Der Schluessel wandert von `vorlagen` nach `templates`, die
-           Vorlage darin bleibt Zeichen fuer Zeichen gleich - ihre
-           Feldnamen sind Schicht C und noch nicht dran. */
+        /* `nativeUmgestellt` tauscht nur den SCHLUESSEL `vorlagen` gegen
+           `templates`. Den Inhalt jeder Vorlage stellt danach
+           `vorlageUmgestellt` um - eigener Test weiter unten. */
         const vorlagen = [{ id: 'eigene', version: 2, zustaende: [{ name: 'SET', rolle: 'switch' }] }];
         const raus = t.nativeUmgestellt({ ikonRaeume: true, vorlagen, fremd: 'bleibt' });
         expect(raus.templates).to.deep.equal(vorlagen);
@@ -1981,6 +1982,83 @@ describe('Die Umstellung auf englische Bezeichner', () => {
         expect(t.aliasBefunde({})).to.be.empty;
         expect(t.aliasBefunde(null)).to.be.empty;
         expect(t.aliasBefunde(undefined)).to.be.empty;
+    });
+
+    /* Das Vorlagenformat (Schicht C2, 21.11.2026). */
+    const alteVorlage = () => ({
+        id: 'probe', version: 3, rang: 20, name: { de: 'Probe', en: 'Probe' },
+        geraetetyp: 'socket', funktion: 'socket', kanalname: 'POWER%N%',
+        mehrfach: { platzhalter: '%N%' },
+        hinweis: { de: 'h', en: 'h' },
+        erkennung: { erforderlich: ['stat.POWER'], verboten: ['x'],
+            inhalt: { 'tele.SENSOR': 'ENERGY' }, namenshinweis: 'dose', hinweis: { de: 'e' } },
+        nebenwirkungen: [{ art: 'mqtt-publish', punkt: 'cmnd.POWER' }],
+        weiterePunkte: { 'tele.RSSI': 'value.rssi' },
+        zustaende: [
+            { name: 'SET', rolle: 'switch', typ: 'boolean', lesen: 'stat.POWER',
+                schreiben: 'cmnd.POWER', schreibformel: 'val ? "ON" : "OFF"', vorgabeAus: true,
+                lesenSonst: { punkt: 'tele.STATE', leseformel: 'x' } },
+            { name: 'E', rolle: 'value.power', typ: 'number', einheit: 'W', lesen: 'tele.SENSOR',
+                feld: 'ENERGY.Power', werteliste: { 0: 'a' }, beschriftung: 'c',
+                nachkommastellen: 1, absolut: true, schreibenAbs: true, optional: true,
+                _rolle: 'grund', hinweis: { de: 'z' },
+                lesenSonst: [{ punkt: 'a', feld: 'b', leseformel: 'c' }, { punkt: 'd' }] },
+        ],
+    });
+
+    it('stellt eine Vorlage auf allen Ebenen um', () => {
+        const neu = t.vorlageUmgestellt(alteVorlage());
+        expect(Object.keys(neu)).to.have.members(['id', 'version', 'priority', 'name',
+            'deviceType', 'enumFunction', 'channelName', 'multiple', 'note', 'detection',
+            'sideEffects', 'extraPoints', 'points']);
+        expect(neu.multiple).to.deep.equal({ placeholder: '%N%' });
+        expect(neu.detection).to.deep.equal({ required: ['stat.POWER'], forbidden: ['x'],
+            content: { 'tele.SENSOR': 'ENERGY' }, nameHint: 'dose', note: { de: 'e' } });
+        expect(neu.sideEffects).to.deep.equal([{ kind: 'mqtt-publish', point: 'cmnd.POWER' }]);
+        expect(neu.extraPoints).to.deep.equal({ 'tele.RSSI': 'value.rssi' });
+        expect(neu.points[0]).to.deep.equal({ name: 'SET', role: 'switch', type: 'boolean',
+            read: 'stat.POWER', write: 'cmnd.POWER', writeFormula: 'val ? "ON" : "OFF"',
+            offByDefault: true, readFallback: { point: 'tele.STATE', readFormula: 'x' } });
+        expect(neu.points[1]).to.deep.equal({ name: 'E', role: 'value.power', type: 'number',
+            unit: 'W', read: 'tele.SENSOR', jsonField: 'ENERGY.Power', valueList: { 0: 'a' },
+            caption: 'c', decimals: 1, absolute: true, writeAbsolute: true, optional: true,
+            _role: 'grund', note: { de: 'z' },
+            readFallback: [{ point: 'a', jsonField: 'b', readFormula: 'c' }, { point: 'd' }] });
+    });
+
+    it('laesst das Original unberuehrt und laeuft ein zweites Mal ohne Schaden', () => {
+        const alt = alteVorlage();
+        const vorher = JSON.stringify(alt);
+        const einmal = t.vorlageUmgestellt(alt);
+        expect(JSON.stringify(alt), 'das Original wurde veraendert').to.equal(vorher);
+        expect(t.vorlageUmgestellt(einmal)).to.deep.equal(einmal);
+    });
+
+    it('erkennt das alte Format - und nur das', () => {
+        expect(t.istAlteVorlage(alteVorlage())).to.equal(true);
+        expect(t.istAlteVorlage(t.vorlageUmgestellt(alteVorlage()))).to.equal(false);
+        // Eine Vorlage, die nur in den ZEILEN noch alt ist, ist auch alt.
+        expect(t.istAlteVorlage({ id: 'x', points: [{ name: 'A', rolle: 'switch' }] })).to.equal(true);
+        expect(t.istAlteVorlage(null)).to.equal(false);
+    });
+
+    it('findet alte eigene Vorlagen unter beiden Schluesseln', () => {
+        const alt = alteVorlage();
+        const neu = t.vorlageUmgestellt(alteVorlage());
+        expect(t.vorlagenBefunde({ native: { vorlagen: [alt] } })).to.deep.equal(['probe']);
+        expect(t.vorlagenBefunde({ native: { templates: [alt, neu] } })).to.deep.equal(['probe']);
+        expect(t.vorlagenBefunde({ native: { templates: [neu] } })).to.be.empty;
+        expect(t.vorlagenBefunde({ native: {} })).to.be.empty;
+    });
+
+    it('liefert alle mitgelieferten Vorlagen im neuen Format aus', () => {
+        const ix = liesJson(path.join(wurzel, 'admin', 'vorlagen', 'index.json'));
+        expect(ix.templates, 'index.json heisst nicht templates').to.be.an('array').that.is.not.empty;
+        ix.templates.forEach(f => {
+            const v = liesJson(path.join(wurzel, 'admin', 'vorlagen', f));
+            expect(t.istAlteVorlage(v), f + ' traegt noch das alte Format').to.equal(false);
+            expect(v.points, f + ' ohne points').to.be.an('array').that.is.not.empty;
+        });
     });
 
     it('kennt im uebrigen Adapter keinen alten Namen mehr', () => {

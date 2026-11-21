@@ -18,6 +18,7 @@ import { zeichneErgebnis } from './ergebnis.js';
 import { delKnopf } from './schreiben.js';
 
 import { rollenFeld } from './rollenwahl.js';
+import { istAlteVorlage } from './migration.js';
 
 
 /* ================== Vorlagen verwalten ==================
@@ -45,14 +46,14 @@ function ohneUnterstrich(tpl) {
   /* Halbfertige Ersatzquellen nicht mitspeichern: eine Zeile ohne
      Datenpunkt ist beim Bearbeiten nuetzlich, in der Vorlage waere sie
      nur Ballast. */
-  if (Array.isArray(tplKopie.zustaende)) {
-    tplKopie.zustaende = tplKopie.zustaende.map(function (tplZeile) {
-      if (!tplZeile || !tplZeile.lesenSonst) { return tplZeile; }
-      var liste = ersatzListe(tplZeile).filter(function (x) { return x && x.punkt; });
+  if (Array.isArray(tplKopie.points)) {
+    tplKopie.points = tplKopie.points.map(function (tplZeile) {
+      if (!tplZeile || !tplZeile.readFallback) { return tplZeile; }
+      var liste = ersatzListe(tplZeile).filter(function (x) { return x && x.point; });
       var kopie = {};
       Object.keys(tplZeile).forEach(function (f) { kopie[f] = tplZeile[f]; });
-      if (!liste.length) { delete kopie.lesenSonst; }
-      else { kopie.lesenSonst = (liste.length === 1) ? liste[0] : liste; }
+      if (!liste.length) { delete kopie.readFallback; }
+      else { kopie.readFallback = (liste.length === 1) ? liste[0] : liste; }
       return kopie;
     });
   }
@@ -176,7 +177,7 @@ function geraetetypFeld(tpl, eigen) {
   feldEin.type = 'text';
   feldEin.setAttribute('autocomplete', 'off');
   feldEin.disabled = !eigen;
-  feldEin.value = tpl.geraetetyp ? musterZeile(tpl.geraetetyp) : '';
+  feldEin.value = tpl.deviceType ? musterZeile(tpl.deviceType) : '';
   feldEin.placeholder = tr('tpls.noType');
   wrap.appendChild(feldEin);
   var liste = el('div', 'vorschlaege musterliste');
@@ -189,7 +190,7 @@ function geraetetypFeld(tpl, eigen) {
   var setzen = function (typ) {
     liste.hidden = true;
     feldEin.value = typ ? musterZeile(typ) : '';
-    vAendern(function (tplNeu, w) { tplNeu.geraetetyp = w || undefined; }, typ);
+    vAendern(function (tplNeu, w) { tplNeu.deviceType = w || undefined; }, typ);
   };
 
   var malen = function () {
@@ -197,7 +198,7 @@ function geraetetypFeld(tpl, eigen) {
        Suchtext, sonst saehe man nur den einen Eintrag und muesste erst
        loeschen, um wechseln zu koennen. */
     var roh = String(feldEin.value || '').trim();
-    var such = (roh && roh !== musterZeile(tpl.geraetetyp)) ? roh.toLowerCase() : '';
+    var such = (roh && roh !== musterZeile(tpl.deviceType)) ? roh.toLowerCase() : '';
     treffer = such
       ? alle.filter(function (t) {
         /* Ueber Rohnamen UND Beinamen: „steckdose" findet socket,
@@ -211,7 +212,7 @@ function geraetetypFeld(tpl, eigen) {
     /* „kein Typ" gehoert dazu — eine Vorlage ohne Geraetetyp ist
        erlaubt, und ohne diesen Eintrag kaeme man nicht mehr zurueck. */
     if (!such) {
-      var z0 = el('div', 'vz' + (tpl.geraetetyp ? '' : ' gewaehlt'));
+      var z0 = el('div', 'vz' + (tpl.deviceType ? '' : ' gewaehlt'));
       z0.appendChild(el('span', null, tr('tpls.noType')));
       z0.addEventListener('mousedown', function (ev) { ev.preventDefault(); setzen(''); });
       liste.appendChild(z0);
@@ -222,7 +223,7 @@ function geraetetypFeld(tpl, eigen) {
       liste.appendChild(leer);
     }
     treffer.forEach(function (t, n) {
-      var z = el('div', 'vz' + (n === markiert ? ' an' : '') + (t === tpl.geraetetyp ? ' gewaehlt' : ''));
+      var z = el('div', 'vz' + (n === markiert ? ' an' : '') + (t === tpl.deviceType ? ' gewaehlt' : ''));
       z.appendChild(el('span', null, musterZeile(t)));
       /* mousedown statt click: sonst greift der Fokusverlust zuerst und
          die Liste ist weg, bevor der Klick ankommt. */
@@ -240,7 +241,7 @@ function geraetetypFeld(tpl, eigen) {
        sonst bliebe ein halbgetippter Rest stehen. */
     setTimeout(function () {
       liste.hidden = true;
-      feldEin.value = tpl.geraetetyp ? musterZeile(tpl.geraetetyp) : '';
+      feldEin.value = tpl.deviceType ? musterZeile(tpl.deviceType) : '';
     }, 150);
   });
   feldEin.addEventListener('keydown', function (ev) {
@@ -257,7 +258,7 @@ function geraetetypFeld(tpl, eigen) {
       else if (treffer.length === 1) { setzen(treffer[0]); }
     } else if (ev.key === 'Escape') {
       liste.hidden = true;
-      feldEin.value = tpl.geraetetyp ? musterZeile(tpl.geraetetyp) : '';
+      feldEin.value = tpl.deviceType ? musterZeile(tpl.deviceType) : '';
     }
   });
   return wrap;
@@ -297,14 +298,14 @@ export function zeichneVorlagenBlatt(host) {
   unter.appendChild(el('span', 'chip ' + (eigen ? 'ok' : 'mut'),
     vEinlesen ? tr('tv.imported') : (eigen ? tr('tpl.own') : tr('tv.package'))));
   unter.appendChild(el('span', null, tpl.id + '  tpl' + (tpl.version || 1) +
-    '  ·  ' + tr('tv.rank', tpl.rang || 0)));
+    '  ·  ' + tr('tv.rank', tpl.priority || 0)));
   links.appendChild(unter);
   head.appendChild(links);
   host.appendChild(head);
 
   /* Der Kopfhinweis ist { de, en } oder eine Zeichenkette. Dieselbe
      Wahl wie beim Namen: eingestellte Sprache, sonst Englisch. */
-  var kopfHinweis = sprachtext(tpl.hinweis);
+  var kopfHinweis = sprachtext(tpl.note);
   if (kopfHinweis) {
     var khw = el('div', 'hint');
     khw.style.margin = '0 0 11px';
@@ -415,8 +416,8 @@ export function zeichneVorlagenBlatt(host) {
     function (tplNeu, w) { setzeName(tplNeu, 'de', w); }, '140px'));
   kb.appendChild(feld(tr('tpls.nameEn'), textIn(tpl.name, 'en'),
     function (tplNeu, w) { setzeName(tplNeu, 'en', w); }, '140px'));
-  kb.appendChild(feld(tr('tpls.rank'), tpl.rang || 0,
-    function (tplNeu, w) { tplNeu.rang = Number(w) || 0; }, '60px'));
+  kb.appendChild(feld(tr('tpls.rank'), tpl.priority || 0,
+    function (tplNeu, w) { tplNeu.priority = Number(w) || 0; }, '60px'));
   var rh = el('span', 'hint', eigen ? tr('tv.rankOwn') : tr('tv.rankPackage'));
   rh.style.flexBasis = '100%';
   kb.appendChild(rh);
@@ -440,13 +441,13 @@ export function zeichneVorlagenBlatt(host) {
   var sf = el('select', 'tx');
   sf.disabled = !eigen;
   sf.appendChild(opt('', tr('tpls.noFunction')));
-  funktionsAuswahl(tpl.funktion).forEach(function (x) {
+  funktionsAuswahl(tpl.enumFunction).forEach(function (x) {
     var o = opt(x.wert, x.text);
     if (x.gewaehlt) { o.selected = true; }
     sf.appendChild(o);
   });
   sf.addEventListener('change', function () {
-    vAendern(function (tplNeu, w) { tplNeu.funktion = w || undefined; }, sf.value);
+    vAendern(function (tplNeu, w) { tplNeu.enumFunction = w || undefined; }, sf.value);
   });
   lf.appendChild(sf);
   if (katalogFehlt) { lf.appendChild(el('span', 'hint', tr('catalog.missing'))); }
@@ -456,12 +457,12 @@ export function zeichneVorlagenBlatt(host) {
 
   var nb = el('div');
   nb.style.padding = '0 12px 11px';
-  nb.appendChild(feld(tr('tpls.nameHint'), (tpl.erkennung || {}).namenshinweis || '',
-    function (tplNeu, w) { tplNeu.erkennung = tplNeu.erkennung || {}; if (w) { tplNeu.erkennung.namenshinweis = w; } else { delete tplNeu.erkennung.namenshinweis; } }, '260px'));
+  nb.appendChild(feld(tr('tpls.nameHint'), (tpl.detection || {}).nameHint || '',
+    function (tplNeu, w) { tplNeu.detection = tplNeu.detection || {}; if (w) { tplNeu.detection.nameHint = w; } else { delete tplNeu.detection.nameHint; } }, '260px'));
   /* Der Text ist ein Ausdruck, und ein unbrauchbarer Ausdruck faellt
      sonst nirgends auf: Er wird still zu „trifft nicht", und die Vorlage
      verliert leise ihren Namensbonus. Also hier sagen, wo er steht. */
-  if (!hinweisTaugt((tpl.erkennung || {}).namenshinweis || '')) {
+  if (!hinweisTaugt((tpl.detection || {}).nameHint || '')) {
     var nbw = el('div', 'hint');
     nbw.style.color = 'var(--bad)';
     nbw.textContent = tr('tpls.nameHintBad');
@@ -476,12 +477,12 @@ export function zeichneVorlagenBlatt(host) {
   ek.style.marginBottom = '11px';
   var eh = el('div', 'ch');
   eh.appendChild(el('span', 'typ', tr('tv.detection')));
-  var erf = (tpl.erkennung || {}).erforderlich || [];
+  var erf = (tpl.detection || {}).required || [];
   eh.appendChild(el('span', 'chip mut', tr('tv.requiredCount', erf.length)));
   ek.appendChild(eh);
   var eb = el('div');
   eb.style.padding = '9px 12px 11px';
-  var erkHinweis = sprachtext((tpl.erkennung || {}).hinweis);
+  var erkHinweis = sprachtext((tpl.detection || {}).note);
   if (erkHinweis) {
     var ehw = el('div', 'hint');
     ehw.style.whiteSpace = 'pre-wrap';
@@ -501,26 +502,26 @@ export function zeichneVorlagenBlatt(host) {
       .filter(function (t) { return !!t; });
   };
   eb.appendChild(listenFeld(tr('tv.required2'), erf.join(', '), function (tplNeu, wert) {
-    tplNeu.erkennung = tplNeu.erkennung || {};
-    tplNeu.erkennung.erforderlich = alsListe(wert);
+    tplNeu.detection = tplNeu.detection || {};
+    tplNeu.detection.required = alsListe(wert);
   }, tr('tv.requiredHelp')));
   if (!erf.length) {
     eb.appendChild(el('div', 'hint', tr('tpls.noRequired')));
   }
-  var inh = (tpl.erkennung || {}).inhalt || {};
+  var inh = (tpl.detection || {}).content || {};
   Object.keys(inh).forEach(function (punkt) {
     var z = el('div', 'hint', tr('tpls.contentRow', punkt, inh[punkt]));
     z.style.fontFamily = 'var(--mono)';
     eb.appendChild(z);
   });
-  eb.appendChild(listenFeld(tr('tv.forbidden'), ((tpl.erkennung || {}).verboten || []).join(', '),
+  eb.appendChild(listenFeld(tr('tv.forbidden'), ((tpl.detection || {}).forbidden || []).join(', '),
     function (tplNeu, wert) {
-      tplNeu.erkennung = tplNeu.erkennung || {};
+      tplNeu.detection = tplNeu.detection || {};
       var l = alsListe(wert);
-      if (l.length) { tplNeu.erkennung.verboten = l; } else { delete tplNeu.erkennung.verboten; }
+      if (l.length) { tplNeu.detection.forbidden = l; } else { delete tplNeu.detection.forbidden; }
     }, tr('tv.forbiddenHelp')));
-  if (tpl.mehrfach) {
-    eb.appendChild(el('div', 'hint', tr('tv.multi', tpl.kanalname || 'POWER%N%')));
+  if (tpl.multiple) {
+    eb.appendChild(el('div', 'hint', tr('tv.multi', tpl.channelName || 'POWER%N%')));
   }
   ek.appendChild(eb);
   host.appendChild(ek);
@@ -530,7 +531,7 @@ export function zeichneVorlagenBlatt(host) {
   zk.style.marginBottom = '11px';
   var zh = el('div', 'ch');
   zh.appendChild(el('span', 'typ', tr('tpls.states')));
-  zh.appendChild(el('span', 'chip mut', tr('tpls.statesCount', (tpl.zustaende || []).length)));
+  zh.appendChild(el('span', 'chip mut', tr('tpls.statesCount', (tpl.points || []).length)));
   /* Aufklappen geht bei allen Vorlagen, auch bei den mitgelieferten —
      dort nur zum Ansehen.
 
@@ -544,21 +545,21 @@ export function zeichneVorlagenBlatt(host) {
   zh.appendChild(el('span', 'luecke'));
   zh.appendChild(el('span', 'hint', eigen ? tr('tv.clickRow') : tr('tv.clickRowRead')));
   zk.appendChild(zh);
-  (tpl.zustaende || []).forEach(function (tplZeile, nr) {
+  (tpl.points || []).forEach(function (tplZeile, nr) {
     var auf = (vOffeneZeile === nr);
     var r = el('div', 'slot vklick' + (auf ? ' offen' : ''));
     r.style.gridTemplateColumns = '1fr 1.1fr 1.2fr 90px 15px';
-    var zeilenHinweis = sprachtext(tplZeile.hinweis);
+    var zeilenHinweis = sprachtext(tplZeile.note);
     if (zeilenHinweis) { r.title = zeilenHinweis; }
     r.appendChild(el('span', 'sn', tplZeile.name));
-    r.appendChild(el('span', 'rx', tplZeile.rolle || '\u2014'));
+    r.appendChild(el('span', 'rx', tplZeile.role || '\u2014'));
     var pw = el('span', 'rx');
     pw.style.fontFamily = 'var(--mono)';
-    pw.appendChild(document.createTextNode(tplZeile.lesen + (tplZeile.feld ? ' \u00b7 ' + tplZeile.feld : '')));
+    pw.appendChild(document.createTextNode(tplZeile.read + (tplZeile.jsonField ? ' \u00b7 ' + tplZeile.jsonField : '')));
     /* Der Schreibpfad ist ein Pfad wie der Lesepfad davor, keine
        Statusmarke - als Chip las er sich wie \u201eVorgabe" daneben. */
-    if (tplZeile.schreiben) { pw.appendChild(el('span', 'leise', ' \u2192 ' + tplZeile.schreiben)); }
-    if (tplZeile.absolut) { pw.appendChild(el('span', 'chip warn', tr('tpls.absolute'))); }
+    if (tplZeile.write) { pw.appendChild(el('span', 'leise', ' \u2192 ' + tplZeile.write)); }
+    if (tplZeile.absolute) { pw.appendChild(el('span', 'chip warn', tr('tpls.absolute'))); }
     /* Dass eine Zeile Ersatzwege hat, stand hier nicht \u2014 man sah nur den
        ersten (\u201eIP \u00b7 text \u00b7 tele.STATE \u00b7 IPAddress") und haette nie
        vermutet, dass drei weitere dahinterliegen. Die Zahl ist die
@@ -573,7 +574,7 @@ export function zeichneVorlagenBlatt(host) {
        und dieselben Woerter — vorher stand hier „Pflicht/freiwillig"
        und dort „Vorgabe / muss da sein", fuer genau dieselbe Sache. */
     var mm = el('span', 'rx');
-    if (!tplZeile.vorgabeAus) { mm.appendChild(el('span', 'chip mut', tr('tpls.colDefault'))); }
+    if (!tplZeile.offByDefault) { mm.appendChild(el('span', 'chip mut', tr('tpls.colDefault'))); }
     if (istPflichtpunkt(tplZeile)) { mm.appendChild(el('span', 'chip ok', tr('tpls.colRequired'))); }
     r.appendChild(mm);
     r.appendChild(el('span', 'ca2', auf ? '\u25be' : '\u25b8'));
@@ -591,9 +592,9 @@ export function zeichneVorlagenBlatt(host) {
     var nKnopf = el('button', 'btn schmal', tr('tv.addState'));
     nKnopf.addEventListener('click', function () {
       vAendern(function (tplNeu) {
-        tplNeu.zustaende = tplNeu.zustaende || [];
-        tplNeu.zustaende.push({ name: 'NEU', typ: 'mixed', lesen: '', optional: true });
-        vOffeneZeile = tplNeu.zustaende.length - 1;
+        tplNeu.points = tplNeu.points || [];
+        tplNeu.points.push({ name: 'NEU', type: 'mixed', read: '', optional: true });
+        vOffeneZeile = tplNeu.points.length - 1;
       });
     });
     np.appendChild(nKnopf);
@@ -601,10 +602,10 @@ export function zeichneVorlagenBlatt(host) {
   }
   /* Das Rollenwissen ist kein Zeilenbestand - nur ein Vermerk, dass es
      da ist und wo es greift. */
-  if (tpl.weiterePunkte && Object.keys(tpl.weiterePunkte).length) {
+  if (tpl.extraPoints && Object.keys(tpl.extraPoints).length) {
     var ww = el('div', 'hint');
     ww.style.padding = '7px 12px 10px';
-    ww.textContent = tr('tpls.wissen', Object.keys(tpl.weiterePunkte).length);
+    ww.textContent = tr('tpls.wissen', Object.keys(tpl.extraPoints).length);
     zk.appendChild(ww);
   }
   host.appendChild(zk);
@@ -853,11 +854,11 @@ function istPflichtpunkt(tplZeile) {
 /* lesenSonst darf ein Punktname, ein Objekt oder eine Liste sein — alle
    drei Formen kommen in Vorlagen vor. Nach innen immer eine Liste. */
 function ersatzListe(tplZeile) {
-  var s0 = tplZeile.lesenSonst;
+  var s0 = tplZeile.readFallback;
   if (!s0) { return []; }
   var arr = Array.isArray(s0) ? s0 : [s0];
   return arr.map(function (x) {
-    return (typeof x === 'string') ? { punkt: x } : x;
+    return (typeof x === 'string') ? { point: x } : x;
   });
 }
 
@@ -865,14 +866,14 @@ function ersatzListe(tplZeile) {
    man nie eine anlegen, weil sie im selben Atemzug wieder verschwaende.
    Weggeworfen wird sie erst beim Ablegen, in ohneUnterstrich. */
 function schreibeErsatz(tplZeile, liste) {
-  if (!liste.length) { delete tplZeile.lesenSonst; return; }
-  tplZeile.lesenSonst = (liste.length === 1) ? liste[0] : liste;
+  if (!liste.length) { delete tplZeile.readFallback; return; }
+  tplZeile.readFallback = (liste.length === 1) ? liste[0] : liste;
 }
 
 function vZeilenDetail(tplZeile, nr, eigen) {
   var tplJetzt = vArbeitsstand();
   var d = el('div', 'detail');
-  var zeilenHinweis = sprachtext(tplZeile.hinweis);
+  var zeilenHinweis = sprachtext(tplZeile.note);
   if (zeilenHinweis) {
     var hw0 = el('div', 'hint');
     hw0.style.whiteSpace = 'pre-wrap';
@@ -887,7 +888,7 @@ function vZeilenDetail(tplZeile, nr, eigen) {
      koennte. */
   var setz = function (feldname, wandeln) {
     return function (tpl, wert) {
-      var tplZeileFrisch = tpl.zustaende[nr];
+      var tplZeileFrisch = tpl.points[nr];
       var w = wandeln ? wandeln(wert) : wert;
       if (w === '' || w === undefined || w === null) { delete tplZeileFrisch[feldname]; }
       else { tplZeileFrisch[feldname] = w; }
@@ -913,8 +914,8 @@ function vZeilenDetail(tplZeile, nr, eigen) {
   /* --- liest aus, mit JSON-Feld daneben --- */
   var qf = el('div', 'fields');
   qf.appendChild(dtFeld(tr('detail.datapoint'),
-    eingabe(tplZeile.lesen, 'lesen', '260px', tplZeile.absolut ? '0_userdata.0.\u2026' : 'stat.POWER')));
-  qf.appendChild(dtFeld(tr('detail.jsonField'), eingabe(tplZeile.feld, 'feld', '150px', '\u2014')));
+    eingabe(tplZeile.read, 'read', '260px', tplZeile.absolute ? '0_userdata.0.\u2026' : 'stat.POWER')));
+  qf.appendChild(dtFeld(tr('detail.jsonField'), eingabe(tplZeile.jsonField, 'jsonField', '150px', '\u2014')));
   dtZeile(d, tr('detail.readsFrom'), qf);
 
   /* --- Ersatzquellen --- 
@@ -932,34 +933,34 @@ function vZeilenDetail(tplZeile, nr, eigen) {
 
     var setzeErsatz = function (teil, wert) {
       vAendern(function (tpl) {
-        var tplZeileFrisch = tpl.zustaende[nr];
+        var tplZeileFrisch = tpl.points[nr];
         var liste = ersatzListe(tplZeileFrisch);
         if (!liste[wi]) { return; }
         if (wert === '') { delete liste[wi][teil]; } else { liste[wi][teil] = wert; }
-        if (!liste[wi].punkt) { liste.splice(wi, 1); }
+        if (!liste[wi].point) { liste.splice(wi, 1); }
         schreibeErsatz(tplZeileFrisch, liste);
       }, wert);
     };
 
     var ip1 = el('input', 'tx');
-    ip1.type = 'text'; ip1.value = ersatz.punkt || ''; ip1.style.width = '210px';
+    ip1.type = 'text'; ip1.value = ersatz.point || ''; ip1.style.width = '210px';
     ip1.placeholder = 'tele.STATE';
     ip1.addEventListener('click', function (ev) { ev.stopPropagation(); });
-    ip1.addEventListener('change', function () { setzeErsatz('punkt', ip1.value); });
+    ip1.addEventListener('change', function () { setzeErsatz('point', ip1.value); });
     zeile.appendChild(dtFeld(tr('detail.datapoint'), ip1));
 
     var ip2 = el('input', 'tx');
-    ip2.type = 'text'; ip2.value = ersatz.feld || ''; ip2.style.width = '150px';
+    ip2.type = 'text'; ip2.value = ersatz.jsonField || ''; ip2.style.width = '150px';
     ip2.placeholder = '—';
     ip2.addEventListener('click', function (ev) { ev.stopPropagation(); });
-    ip2.addEventListener('change', function () { setzeErsatz('feld', ip2.value); });
+    ip2.addEventListener('change', function () { setzeErsatz('jsonField', ip2.value); });
     zeile.appendChild(dtFeld(tr('detail.jsonField'), ip2));
 
     var ip3 = el('input', 'tx');
-    ip3.type = 'text'; ip3.value = ersatz.leseformel || ''; ip3.style.width = '230px';
+    ip3.type = 'text'; ip3.value = ersatz.readFormula || ''; ip3.style.width = '230px';
     ip3.placeholder = tr('detail.formulaPlaceholder');
     ip3.addEventListener('click', function (ev) { ev.stopPropagation(); });
-    ip3.addEventListener('change', function () { setzeErsatz('leseformel', ip3.value); });
+    ip3.addEventListener('change', function () { setzeErsatz('readFormula', ip3.value); });
     zeile.appendChild(dtFeld(tr('detail.formula'), ip3));
 
     var x1 = el('button', 'btn schmal', tr('tv.removeFallback'));
@@ -967,7 +968,7 @@ function vZeilenDetail(tplZeile, nr, eigen) {
     x1.addEventListener('click', function (ev) {
       ev.stopPropagation();
       vAendern(function (tpl) {
-        var tplZeileFrisch = tpl.zustaende[nr];
+        var tplZeileFrisch = tpl.points[nr];
         var liste = ersatzListe(tplZeileFrisch);
         liste.splice(wi, 1);
         schreibeErsatz(tplZeileFrisch, liste);
@@ -983,9 +984,9 @@ function vZeilenDetail(tplZeile, nr, eigen) {
   plus.addEventListener('click', function (ev) {
     ev.stopPropagation();
     vAendern(function (tpl) {
-      var tplZeileFrisch = tpl.zustaende[nr];
+      var tplZeileFrisch = tpl.points[nr];
       var liste = ersatzListe(tplZeileFrisch);
-      liste.push({ punkt: '' });
+      liste.push({ point: '' });
       schreibeErsatz(tplZeileFrisch, liste);
     }, null);
   });
@@ -994,38 +995,38 @@ function vZeilenDetail(tplZeile, nr, eigen) {
   dtZeile(d, tr('tv.fallback'), sb);
 
   dtZeile(d, tr('detail.writesTo'),
-    eingabe(tplZeile.schreiben, 'schreiben', '260px', tr('detail.noWrite')));
+    eingabe(tplZeile.write, 'write', '260px', tr('detail.noWrite')));
 
   var fb = el('div');
-  fb.appendChild(eingabe(tplZeile.leseformel, 'leseformel', '100%', tr('detail.formulaPlaceholder')));
-  if ((tplZeile.typ || '') === 'boolean') {
+  fb.appendChild(eingabe(tplZeile.readFormula, 'readFormula', '100%', tr('detail.formulaPlaceholder')));
+  if ((tplZeile.type || '') === 'boolean') {
     fb.appendChild(el('div', 'sugg', tr('detail.formulaHint')));
   }
   dtZeile(d, tr('detail.formula'), fb);
 
-  if (tplZeile.schreiben) {
+  if (tplZeile.write) {
     var wb = el('div');
-    wb.appendChild(eingabe(tplZeile.schreibformel, 'schreibformel', '100%', tr('detail.writeFormulaPlaceholder')));
+    wb.appendChild(eingabe(tplZeile.writeFormula, 'writeFormula', '100%', tr('detail.writeFormulaPlaceholder')));
     wb.appendChild(el('div', 'sugg', tr('detail.writeFormulaHint')));
     dtZeile(d, tr('detail.writeFormula'), wb);
   }
 
-  dtZeile(d, tr('detail.role'), rollenBlock(tplZeile.rolle, tplJetzt.geraetetyp, function (neu) {
-    setzeFeld('rolle', neu);
-  }, tplZeile.typ, function (t) { setzeFeld('typ', t); }));
+  dtZeile(d, tr('detail.role'), rollenBlock(tplZeile.role, tplJetzt.deviceType, function (neu) {
+    setzeFeld('role', neu);
+  }, tplZeile.type, function (t) { setzeFeld('type', t); }));
 
   dtZeile(d, tr('detail.display'), anzeigeBlock(
     function (was) {
-      if (was === 'einheit') { return tplZeile.einheit; }
-      if (was === 'dec') { return tplZeile.nachkommastellen; }
-      if (was === 'caption') { return tplZeile.beschriftung; }
-      return tplZeile.typ;
+      if (was === 'einheit') { return tplZeile.unit; }
+      if (was === 'dec') { return tplZeile.decimals; }
+      if (was === 'caption') { return tplZeile.caption; }
+      return tplZeile.type;
     },
     function (was, wert) {
-      if (was === 'einheit') { return setzeFeld('einheit', wert); }
-      if (was === 'dec') { return setzeFeld('nachkommastellen', wert, function (w) { return w === '' ? '' : Number(w); }); }
-      if (was === 'caption') { return setzeFeld('beschriftung', wert); }
-      setzeFeld('typ', wert);
+      if (was === 'einheit') { return setzeFeld('unit', wert); }
+      if (was === 'dec') { return setzeFeld('decimals', wert, function (w) { return w === '' ? '' : Number(w); }); }
+      if (was === 'caption') { return setzeFeld('caption', wert); }
+      setzeFeld('type', wert);
     }, tplZeile.name));
 
   var haken = function (label, an, tut) {
@@ -1037,7 +1038,7 @@ function vZeilenDetail(tplZeile, nr, eigen) {
     c.type = 'checkbox';
     c.checked = an;
     c.addEventListener('click', function (ev) { ev.stopPropagation(); });
-    c.addEventListener('change', function () { vAendern(function (tpl) { tut(tpl.zustaende[nr], c.checked); }); });
+    c.addEventListener('change', function () { vAendern(function (tpl) { tut(tpl.points[nr], c.checked); }); });
     l.appendChild(c);
     l.appendChild(el('span', null, label));
     return l;
@@ -1047,8 +1048,8 @@ function vZeilenDetail(tplZeile, nr, eigen) {
   /* Beide Haken laufen in dieselbe Richtung wie im Speichern-Dialog:
      angehakt heisst „ja". Vorher stand hier „freiwillig" und „Vorgabe
      aus" — also zweimal die Umkehrung, was niemand zusammenbringt. */
-  zeile2.appendChild(haken(tr('tpls.colDefault'), !tplZeile.vorgabeAus,
-    function (tplZeileFrisch, an) { if (an) { delete tplZeileFrisch.vorgabeAus; } else { tplZeileFrisch.vorgabeAus = true; } }));
+  zeile2.appendChild(haken(tr('tpls.colDefault'), !tplZeile.offByDefault,
+    function (tplZeileFrisch, an) { if (an) { delete tplZeileFrisch.offByDefault; } else { tplZeileFrisch.offByDefault = true; } }));
 
   /* Der Haken setzt nur noch `optional` an der Zeile — also genau das,
      was er behauptet.
@@ -1066,11 +1067,11 @@ function vZeilenDetail(tplZeile, nr, eigen) {
     if (an) { delete tplZeileFrisch.optional; } else { tplZeileFrisch.optional = true; }
   }));
 
-  zeile2.appendChild(haken(tr('tpls.absolute'), !!tplZeile.absolut,
-    function (tplZeileFrisch, an) { if (an) { tplZeileFrisch.absolut = true; } else { delete tplZeileFrisch.absolut; } }));
+  zeile2.appendChild(haken(tr('tpls.absolute'), !!tplZeile.absolute,
+    function (tplZeileFrisch, an) { if (an) { tplZeileFrisch.absolute = true; } else { delete tplZeileFrisch.absolute; } }));
   var wKnopf = el('button', 'btn schmal', tr('tv.removeState'));
   wKnopf.addEventListener('click', function () {
-    vAendern(function (tpl) { tpl.zustaende.splice(nr, 1); vOffeneZeile = null; });
+    vAendern(function (tpl) { tpl.points.splice(nr, 1); vOffeneZeile = null; });
   });
   zeile2.appendChild(wKnopf);
   dtZeile(d, tr('tv.inTemplate'), zeile2);
@@ -1105,7 +1106,7 @@ function vDuplizieren(tpl, gleicheKennung) {
   } else {
     tplKopie.id = freierSchluessel(tplKopie.id + '-kopie');
     tplKopie.version = 1;
-    tplKopie.rang = eigenerMaxRang() + 10;
+    tplKopie.priority = eigenerMaxRang() + 10;
     tplKopie.name = { de: textIn(tplKopie.name, 'de') + ' (Kopie)', en: textIn(tplKopie.name, 'en') + ' (copy)' };
   }
   if (typeof tplKopie.name === 'string') { tplKopie.name = { de: tplKopie.name, en: tplKopie.name }; }
@@ -1172,14 +1173,19 @@ export function vEinlesenDatei(datei) {
    wird zur Liste gemacht. Abgewiesen wird nur, was keinen Sinn ergibt. */
 function vPruefeEingelesen(tpl) {
   if (!tpl || typeof tpl !== 'object' || Array.isArray(tpl)) { return tr('tv.badNotObject'); }
+  /* Alte Dateien werden abgewiesen, nicht umgesetzt - Ricardos
+     Entscheidung vom 21.11.2026. Erkennen muessen wir sie trotzdem:
+     sonst kaeme gleich danach „keine Zeilen", weil `points` fehlt, und
+     niemand wuesste, dass es am Format liegt und nicht an der Datei. */
+  if (istAlteVorlage(tpl)) { return tr('tv.badOldFormat'); }
   if (!tpl.id || typeof tpl.id !== 'string') { return tr('tv.badNoId'); }
-  if (!Array.isArray(tpl.zustaende) || !tpl.zustaende.length) { return tr('tv.badNoStates'); }
+  if (!Array.isArray(tpl.points) || !tpl.points.length) { return tr('tv.badNoStates'); }
   /* Lese- ODER Schreibpfad, wie beim Speichern und Anwenden. Eine Zeile
      nur mit `schreiben` (ein Befehl ohne Rueckmeldung, frueher auch der
      STOP am Rollladen) ist gueltig; bis 19.09.2026 wies das Einlesen sie
      ab, und die Werkbank gab Dateien aus, die sie selbst nicht wieder
      annahm (I7). */
-  var schlecht = tpl.zustaende.filter(function (tplZeile) { return !tplZeile || !tplZeile.name || !(tplZeile.lesen || tplZeile.schreiben); });
+  var schlecht = tpl.points.filter(function (tplZeile) { return !tplZeile || !tplZeile.name || !(tplZeile.read || tplZeile.write); });
   if (schlecht.length) { return tr('tv.badState', schlecht.length); }
 
   if (tpl.name !== undefined &&
@@ -1187,12 +1193,12 @@ function vPruefeEingelesen(tpl) {
         (tpl.name && typeof tpl.name === 'object' && !Array.isArray(tpl.name)))) {
     return tr('tv.badName');
   }
-  if (tpl.erkennung !== undefined &&
-      (!tpl.erkennung || typeof tpl.erkennung !== 'object' || Array.isArray(tpl.erkennung))) {
+  if (tpl.detection !== undefined &&
+      (!tpl.detection || typeof tpl.detection !== 'object' || Array.isArray(tpl.detection))) {
     return tr('tv.badRecog');
   }
-  var erk = tpl.erkennung || {};
-  var listen = ['erforderlich', 'verboten'];
+  var erk = tpl.detection || {};
+  var listen = ['required', 'forbidden'];
   for (var i = 0; i < listen.length; i++) {
     var w = erk[listen[i]];
     if (w === undefined) { continue; }
@@ -1201,20 +1207,20 @@ function vPruefeEingelesen(tpl) {
       return tr('tv.badList', listen[i]);
     }
   }
-  if (erk.inhalt !== undefined &&
-      (!erk.inhalt || typeof erk.inhalt !== 'object' || Array.isArray(erk.inhalt))) {
+  if (erk.content !== undefined &&
+      (!erk.content || typeof erk.content !== 'object' || Array.isArray(erk.content))) {
     return tr('tv.badContent');
   }
-  if (erk.namenshinweis !== undefined &&
-      (typeof erk.namenshinweis !== 'string' || !hinweisTaugt(erk.namenshinweis))) {
+  if (erk.nameHint !== undefined &&
+      (typeof erk.nameHint !== 'string' || !hinweisTaugt(erk.nameHint))) {
     return tr('tv.badNameHint');
   }
   /* Ein Musternamen, den dieser Detector nicht kennt, wirft spaeter in
      der Musterwahl — und der Entwurf wird dann gar nicht erst
      gezeichnet. Lieber hier abweisen, wo noch jemand zusieht. */
-  if (tpl.geraetetyp !== undefined &&
-      (typeof tpl.geraetetyp !== 'string' || (tpl.geraetetyp && !musterVon(tpl.geraetetyp)))) {
-    return tr('tv.badType', String(tpl.geraetetyp));
+  if (tpl.deviceType !== undefined &&
+      (typeof tpl.deviceType !== 'string' || (tpl.deviceType && !musterVon(tpl.deviceType)))) {
+    return tr('tv.badType', String(tpl.deviceType));
   }
   return null;
 }
@@ -1333,8 +1339,8 @@ function ausgangsVorspaenne(zeilen, dlgKopf) {
   var kn = String(dlgKopf.kanalname || 'POWER%N%');
   if (kn.indexOf('%N%') !== -1) { dazu(kn.split('%N%')[0]); }
 
-  ((dlgKopf.quelle && dlgKopf.quelle.zustaende) || []).forEach(function (tplZeile) {
-    [tplZeile.lesen, tplZeile.schreiben].forEach(function (pf) {
+  ((dlgKopf.quelle && dlgKopf.quelle.points) || []).forEach(function (tplZeile) {
+    [tplZeile.read, tplZeile.write].forEach(function (pf) {
       String(pf || '').split('.').forEach(function (t) {
         var n = t.indexOf('%N%');
         if (n > 0) { dazu(t.slice(0, n)); }
@@ -1442,7 +1448,7 @@ function schluesselAus(text) {
 function eigenerMaxRang() {
   var m = 0;
   S.VORLAGEN.forEach(function (tpl) {
-    if (tpl._quelle === 'benutzer' && (tpl.rang || 0) > m) { m = tpl.rang || 0; }
+    if (tpl._quelle === 'benutzer' && (tpl.priority || 0) > m) { m = tpl.priority || 0; }
   });
   return m;
 }
@@ -1460,7 +1466,7 @@ export function vorlagenVorbereiten(e) {
   S.VORLAGEN.forEach(function (tpl) { if (tpl.id === e.vorlage) { quellTpl = tpl; } });
   var maxRang = eigenerMaxRang();
 
-  var mehrfach = !!(quellTpl && quellTpl.mehrfach);
+  var mehrfach = !!(quellTpl && quellTpl.multiple);
   var inst = mehrfach ? e.instanz : null;
 
   var zeilen = [];
@@ -1485,7 +1491,7 @@ export function vorlagenVorbereiten(e) {
     var w = ePunkt.srcW ? relZu(ePunkt.srcW, e.kanal) : null;
     var tplZeile = null;
     if (quellTpl && ePunkt.ausVorlage) {
-      (quellTpl.zustaende || []).forEach(function (kandidat) { if (kandidat.name === ePunkt.ausVorlage) { tplZeile = kandidat; } });
+      (quellTpl.points || []).forEach(function (kandidat) { if (kandidat.name === ePunkt.ausVorlage) { tplZeile = kandidat; } });
     }
     /* Steht der Punkt in der Erkennung der Vorlage, muss er da sein -
        auch wenn seine Zeile optional ist. `hm-rollladen` fuehrt STOP als
@@ -1494,9 +1500,9 @@ export function vorlagenVorbereiten(e) {
        nach `optional`, und wer die Vorlage aktualisierte, ohne selbst
        nachzuhaken, speicherte eine, die schon bei LEVEL allein greift -
        im Probelauf 23 Geraete statt der Rolllaeden (I20). */
-    var erfQ = (quellTpl && quellTpl.erkennung && quellTpl.erkennung.erforderlich) || [];
-    var inErkennung = !!(tplZeile && ((tplZeile.lesen && erfQ.indexOf(tplZeile.lesen) > -1) ||
-                                (tplZeile.schreiben && erfQ.indexOf(tplZeile.schreiben) > -1)));
+    var erfQ = (quellTpl && quellTpl.detection && quellTpl.detection.required) || [];
+    var inErkennung = !!(tplZeile && ((tplZeile.read && erfQ.indexOf(tplZeile.read) > -1) ||
+                                (tplZeile.write && erfQ.indexOf(tplZeile.write) > -1)));
     zeilen.push({
       s: ePunkt,
       name: ePunkt.n,
@@ -1530,13 +1536,13 @@ export function vorlagenVorbereiten(e) {
     inhalte.forEach(function (x) { if (x.punkt === dlgZeile.lesenRoh && x.feld === oben) { da = true; } });
     if (!da) { inhalte.push({ punkt: dlgZeile.lesenRoh, feld: oben, an: false }); }
   });
-  if (quellTpl && quellTpl.erkennung && quellTpl.erkennung.inhalt) {
-    Object.keys(quellTpl.erkennung.inhalt).forEach(function (p) {
+  if (quellTpl && quellTpl.detection && quellTpl.detection.content) {
+    Object.keys(quellTpl.detection.content).forEach(function (p) {
       var da = false;
       inhalte.forEach(function (x) {
-        if (x.punkt === p) { da = true; x.an = true; x.feld = quellTpl.erkennung.inhalt[p]; }
+        if (x.punkt === p) { da = true; x.an = true; x.feld = quellTpl.detection.content[p]; }
       });
-      if (!da) { inhalte.push({ punkt: p, feld: quellTpl.erkennung.inhalt[p], an: true }); }
+      if (!da) { inhalte.push({ punkt: p, feld: quellTpl.detection.content[p], an: true }); }
     });
   }
 
@@ -1551,21 +1557,21 @@ export function vorlagenVorbereiten(e) {
       id: quellTpl ? quellTpl.id : freierSchluessel(schluesselAus(geraetName)),
       nameDe: quellTpl ? textIn(quellTpl.name, 'de') : geraetName,
       nameEn: quellTpl ? textIn(quellTpl.name, 'en') : geraetName,
-      geraetetyp: e.want || (quellTpl ? quellTpl.geraetetyp : '') || '',
+      geraetetyp: e.want || (quellTpl ? quellTpl.deviceType : '') || '',
       /* Was die Vorlage schon sagt, gilt; sonst das, was am Geraet
          eingestellt ist. Wer eine Vorlage aus einem Geraet baut, hat die
          Funktion dort meist gerade gesetzt - sie noch einmal auswaehlen
          zu muessen waere Arbeit ohne Gewinn. */
-      funktion: (quellTpl && quellTpl.funktion) || kennungZuFunktion(e.funktion) || '',
-      namenshinweis: quellTpl ? ((quellTpl.erkennung || {}).namenshinweis || '') : '',
-      rang: quellTpl ? (quellTpl.rang || 0) : maxRang + 10,
+      funktion: (quellTpl && quellTpl.enumFunction) || kennungZuFunktion(e.funktion) || '',
+      namenshinweis: quellTpl ? ((quellTpl.detection || {}).nameHint || '') : '',
+      rang: quellTpl ? (quellTpl.priority || 0) : maxRang + 10,
       maxRang: maxRang,
       mehrfach: mehrfach,
       instanz: mehrfach ? String(inst === null || inst === undefined ? '' : inst)
                         : rateInstanz(zeilen, geraetName,
-                            String((quellTpl && quellTpl.kanalname) || 'POWER%N%').split('%N%')[0]),
-      kanalname: (quellTpl && quellTpl.kanalname) ? quellTpl.kanalname : 'POWER%N%',
-      verboten: quellTpl ? (((quellTpl.erkennung || {}).verboten) || []).join(', ') : '',
+                            String((quellTpl && quellTpl.channelName) || 'POWER%N%').split('%N%')[0]),
+      kanalname: (quellTpl && quellTpl.channelName) ? quellTpl.channelName : 'POWER%N%',
+      verboten: quellTpl ? (((quellTpl.detection || {}).forbidden) || []).join(', ') : '',
       geraetName: geraetName
     }
   };
@@ -1577,11 +1583,11 @@ export function baueVorlage(dlg) {
   var tpl = {
     id: dlgKopf.id,
     version: dlgKopf.modus === 'update' && dlgKopf.quelle ? (dlgKopf.quelle.version || 1) + 1 : 1,
-    rang: Number(dlgKopf.rang) || 0,
+    priority: Number(dlgKopf.rang) || 0,
     name: { de: dlgKopf.nameDe || dlgKopf.id, en: dlgKopf.nameEn || dlgKopf.nameDe || dlgKopf.id },
-    geraetetyp: dlgKopf.geraetetyp || undefined,
-    funktion: dlgKopf.funktion || undefined,
-    erkennung: {}
+    deviceType: dlgKopf.geraetetyp || undefined,
+    enumFunction: dlgKopf.funktion || undefined,
+    detection: {}
   };
 
   var erf = [];
@@ -1592,7 +1598,7 @@ export function baueVorlage(dlg) {
     if (erf.indexOf(lp) === -1) { erf.push(lp); }
     if (sp && !dlgZeile.schreibenAbs && erf.indexOf(sp) === -1) { erf.push(sp); }
   });
-  tpl.erkennung.erforderlich = erf;
+  tpl.detection.required = erf;
 
   var verb = String(dlgKopf.verboten || '').split(',').map(function (x) { return x.trim(); })
     .filter(function (x) { return !!x; });
@@ -1601,56 +1607,56 @@ export function baueVorlage(dlg) {
      traegt unten „darf es nicht geben" ein und vergisst, dass derselbe
      Punkt oben schon „muss da sein" ist. */
   tpl.widerspruch = verb.filter(function (x) { return erf.indexOf(x) !== -1; });
-  if (verb.length) { tpl.erkennung.verboten = verb; }
+  if (verb.length) { tpl.detection.forbidden = verb; }
 
   var inh = {};
   dlg.inhalte.forEach(function (x) { if (x.an) { inh[x.punkt] = x.feld; } });
-  if (Object.keys(inh).length) { tpl.erkennung.inhalt = inh; }
-  if (dlgKopf.namenshinweis) { tpl.erkennung.namenshinweis = dlgKopf.namenshinweis; }
+  if (Object.keys(inh).length) { tpl.detection.content = inh; }
+  if (dlgKopf.namenshinweis) { tpl.detection.nameHint = dlgKopf.namenshinweis; }
   /* Was die Erkennung der Ursprungsvorlage sonst traegt - der Hinweis,
      warum ein Punkt Pflicht ist, etwa - bleibt erhalten. Der Dialog
      zeigt es nicht, also darf er es auch nicht verlieren (I20). */
-  if (dlgKopf.modus === 'update' && dlgKopf.quelle && dlgKopf.quelle.erkennung) {
-    Object.keys(dlgKopf.quelle.erkennung).forEach(function (feld) {
-      if (['erforderlich', 'verboten', 'inhalt', 'namenshinweis'].indexOf(feld) > -1) { return; }
-      tpl.erkennung[feld] = dlgKopf.quelle.erkennung[feld];
+  if (dlgKopf.modus === 'update' && dlgKopf.quelle && dlgKopf.quelle.detection) {
+    Object.keys(dlgKopf.quelle.detection).forEach(function (feld) {
+      if (['required', 'forbidden', 'content', 'nameHint'].indexOf(feld) > -1) { return; }
+      tpl.detection[feld] = dlgKopf.quelle.detection[feld];
     });
   }
 
   if (dlgKopf.mehrfach && dlgKopf.instanz) {
-    tpl.mehrfach = { platzhalter: '%N%' };
-    tpl.kanalname = dlgKopf.kanalname || 'POWER%N%';
+    tpl.multiple = { placeholder: '%N%' };
+    tpl.channelName = dlgKopf.kanalname || 'POWER%N%';
   }
 
-  tpl.zustaende = dlg.zeilen.filter(function (dlgZeile) { return !dlgZeile.weg; }).map(function (dlgZeile) {
+  tpl.points = dlg.zeilen.filter(function (dlgZeile) { return !dlgZeile.weg; }).map(function (dlgZeile) {
     var ePunkt = dlgZeile.s;
     var f = feldAusFormel(ePunkt.f);
     var tplZeile = {
       name: dlgZeile.name,
-      rolle: ePunkt.role || undefined,
-      typ: ePunkt.typ || undefined,
-      einheit: ePunkt.unit || undefined
+      role: ePunkt.role || undefined,
+      type: ePunkt.typ || undefined,
+      unit: ePunkt.unit || undefined
     };
     /* Ohne Lesequelle kein `lesen` - sonst stuende dort ein leerer
        Pfad, und `wendeAn` suchte einen Punkt namens "". */
-    if (dlgZeile.lesenRoh) { tplZeile.lesen = zPfad(dlgZeile, dlgKopf, false, dlg.zeilen); }
-    if (dlgZeile.lesenAbs) { tplZeile.absolut = true; }
-    if (dlgZeile.schreibenRoh) { tplZeile.schreiben = zPfad(dlgZeile, dlgKopf, true, dlg.zeilen); }
-    if (f) { tplZeile.feld = f; } else if (ePunkt.f) { tplZeile.leseformel = ePunkt.f; }
-    if (ePunkt.fw && dlgZeile.schreibenRoh) { tplZeile.schreibformel = ePunkt.fw; }
+    if (dlgZeile.lesenRoh) { tplZeile.read = zPfad(dlgZeile, dlgKopf, false, dlg.zeilen); }
+    if (dlgZeile.lesenAbs) { tplZeile.absolute = true; }
+    if (dlgZeile.schreibenRoh) { tplZeile.write = zPfad(dlgZeile, dlgKopf, true, dlg.zeilen); }
+    if (f) { tplZeile.jsonField = f; } else if (ePunkt.f) { tplZeile.readFormula = ePunkt.f; }
+    if (ePunkt.fw && dlgZeile.schreibenRoh) { tplZeile.writeFormula = ePunkt.fw; }
     if (!dlgZeile.pflicht || dlgZeile.optionalBleibt) { tplZeile.optional = true; }
-    if (dlgZeile.aus) { tplZeile.vorgabeAus = true; }
-    if (ePunkt.caption) { tplZeile.beschriftung = ePunkt.caption; }
-    if (ePunkt.dec !== undefined && ePunkt.dec !== '') { tplZeile.nachkommastellen = Number(ePunkt.dec); }
-    if (ePunkt.states) { tplZeile.werteliste = ePunkt.states; }
-    if (ePunkt.hinweis) { tplZeile.hinweis = ePunkt.hinweis; }
+    if (dlgZeile.aus) { tplZeile.offByDefault = true; }
+    if (ePunkt.caption) { tplZeile.caption = ePunkt.caption; }
+    if (ePunkt.dec !== undefined && ePunkt.dec !== '') { tplZeile.decimals = Number(ePunkt.dec); }
+    if (ePunkt.states) { tplZeile.valueList = ePunkt.states; }
+    if (ePunkt.hinweis) { tplZeile.note = ePunkt.hinweis; }
     /* Was die Vorlage sonst noch als Lesequelle kannte. Der gerade
        genommene Weg steht schon in `lesen` und faellt hier weg. */
     if (ePunkt.wege && ePunkt.wege.length > 1) {
-      var rest = ePunkt.wege.filter(function (ersatz) { return ersatz.punkt !== tplZeile.lesen; })
-        .map(function (ersatz) {
-          var ersatzNeu = { punkt: ersatz.punkt };
-          if (ersatz.feld) { ersatzNeu.feld = ersatz.feld; }
+      var rest = ePunkt.wege.filter(function (weg) { return weg.punkt !== tplZeile.read; })
+        .map(function (weg) {
+          var ersatzNeu = { point: weg.punkt };
+          if (weg.feld) { ersatzNeu.jsonField = weg.feld; }
           /* `leseformel`, nicht `formel`. `wendeAn` legt die Wege mit
              dem Schluessel `formel` ab, jeder Leser sucht in
              `lesenSonst` aber `leseformel` (vorlagen.js:462,
@@ -1659,10 +1665,10 @@ export function baueVorlage(dlg) {
              landete der boolesche Alias an Geraeten ohne `stat.POWER`
              danach auf dem rohen JSON-Text von `tele.STATE` statt auf
              `POWER` (gemessen 09.09.2026). */
-          if (ersatz.formel) { ersatzNeu.leseformel = ersatz.formel; }
+          if (weg.formel) { ersatzNeu.readFormula = weg.formel; }
           return ersatzNeu;
         });
-      if (rest.length) { tplZeile.lesenSonst = (rest.length === 1) ? rest[0] : rest; }
+      if (rest.length) { tplZeile.readFallback = (rest.length === 1) ? rest[0] : rest; }
     }
     return tplZeile;
   });
@@ -1680,7 +1686,7 @@ export function baueVorlage(dlg) {
     if (dlgZeile.lesenRoh && !dlgZeile.lesenAbs) { zeilenQuellen[dlgZeile.lesenRoh] = true; }
     if (dlgZeile.schreibenRoh && !dlgZeile.schreibenAbs) { zeilenQuellen[dlgZeile.schreibenRoh] = true; }
   });
-  var altesWissen = (dlgKopf.modus === 'update' && dlgKopf.quelle && dlgKopf.quelle.weiterePunkte) || {};
+  var altesWissen = (dlgKopf.modus === 'update' && dlgKopf.quelle && dlgKopf.quelle.extraPoints) || {};
   var wissen = {};
   kindZustaende(dlg.e.kanal).forEach(function (id) {
     var rel = relZu(id, dlg.e.kanal);
@@ -1699,14 +1705,14 @@ export function baueVorlage(dlg) {
   Object.keys(altesWissen).forEach(function (pf) {
     if (!zeilenQuellen[pf] && !wissen[pf]) { wissen[pf] = altesWissen[pf]; }
   });
-  if (Object.keys(wissen).length) { tpl.weiterePunkte = wissen; }
+  if (Object.keys(wissen).length) { tpl.extraPoints = wissen; }
 
   /* Was die Ursprungsvorlage sonst noch mitbringt — etwa
      nebenwirkungen — bleibt erhalten. Sonst fiele beim Aktualisieren
      still unter den Tisch, was der Dialog gar nicht anzeigt. */
-  var bekannt = { id: 1, version: 1, rang: 1, name: 1, geraetetyp: 1,
-                  funktion: 1, erkennung: 1, mehrfach: 1, kanalname: 1,
-                  zustaende: 1, weiterePunkte: 1 };
+  var bekannt = { id: 1, version: 1, priority: 1, name: 1, deviceType: 1,
+                  enumFunction: 1, detection: 1, multiple: 1, channelName: 1,
+                  points: 1, extraPoints: 1 };
   if (dlgKopf.modus === 'update' && dlgKopf.quelle) {
     Object.keys(dlgKopf.quelle).forEach(function (feld) {
       if (feld.charAt(0) === '_' || bekannt[feld]) { return; }
@@ -1722,10 +1728,10 @@ export function baueVorlage(dlg) {
    hatPunkt fuer tausende Knoten die Kleinschreibkarte aufbauen, und das
    dauert auf einer grossen Anlage sichtbar lange. */
 function kandidatenFuer(tpl) {
-  var erk = tpl.erkennung || {};
-  var erf = erk.erforderlich || [];
+  var erk = tpl.detection || {};
+  var erf = erk.required || [];
   if (!erf.length) { return []; }
-  var ph = tpl.mehrfach ? (tpl.mehrfach.platzhalter || '%N%') : null;
+  var ph = tpl.multiple ? (tpl.multiple.placeholder || '%N%') : null;
   var raus = {};
 
   function sammle(pfad) {
@@ -1769,7 +1775,7 @@ function kandidatenFuer(tpl) {
      waere sonst kein Kandidat — der Probelauf einer Mehrfach-Vorlage
      fand ein Geraet statt vier. Was am Ende wirklich passt, entscheidet
      `pruefeVorlage`; hier geht es nur darum, niemanden zu uebersehen. */
-  Object.keys(erk.inhalt || {}).forEach(sammle);
+  Object.keys(erk.content || {}).forEach(sammle);
 
   return Object.keys(raus).sort();
 }
@@ -1788,8 +1794,8 @@ function kandidatenFuer(tpl) {
 var probeGeholt = {};
 
 function probeWerteHolen(tpl, danach) {
-  var erk = tpl.erkennung || {};
-  var ph = tpl.mehrfach ? (tpl.mehrfach.platzhalter || '%N%') : null;
+  var erk = tpl.detection || {};
+  var ph = tpl.multiple ? (tpl.multiple.placeholder || '%N%') : null;
 
   /* Nicht nur die Erkennungspunkte, sondern auch die, aus denen die
      ZEILEN lesen — samt ihrer Ersatzwege.
@@ -1801,14 +1807,14 @@ function probeWerteHolen(tpl, danach) {
      14.09.2026). Eine Zahl, die von der Vorgeschichte abhaengt, ist
      keine. Hier soll dasselbe herauskommen wie beim „Alias anlegen",
      und dort sind alle Werte des Geraets geladen. */
-  var pfade = Object.keys(erk.inhalt || {});
-  (tpl.zustaende || []).forEach(function (tplZeile) {
-    if (tplZeile.absolut) { return; }
-    if (tplZeile.lesen) { pfade.push(tplZeile.lesen); }
-    var sonst = tplZeile.lesenSonst;
+  var pfade = Object.keys(erk.content || {});
+  (tpl.points || []).forEach(function (tplZeile) {
+    if (tplZeile.absolute) { return; }
+    if (tplZeile.read) { pfade.push(tplZeile.read); }
+    var sonst = tplZeile.readFallback;
     if (!sonst) { return; }
     (Array.isArray(sonst) ? sonst : [sonst]).forEach(function (x) {
-      var pf = (typeof x === 'string') ? x : x.punkt;
+      var pf = (typeof x === 'string') ? x : x.point;
       if (pf) { pfade.push(pf); }
     });
   });
@@ -1995,7 +2001,7 @@ export function zeichneVorlagenDialog() {
           dlgKopf.rang = dlgKopf.maxRang + 10;
         } else {
           dlgKopf.id = dlgKopf.quelle.id;
-          dlgKopf.rang = dlgKopf.quelle.rang || 0;
+          dlgKopf.rang = dlgKopf.quelle.priority || 0;
         }
         zeichneVorlagenDialog();
       });
@@ -2326,7 +2332,7 @@ export function zeichneVorlagenDialog() {
   var ph = el('div', 'ch');
   ph.appendChild(el('span', 'typ', tr('tpls.tryout')));
   var treffer = [];
-  var fehlerErk = !neu.erkennung.erforderlich.length;
+  var fehlerErk = !neu.detection.required.length;
   if (!fehlerErk) {
     probeWerteHolen(neu, zeichneVorlagenDialog);
     treffer = probelauf(neu, true);
@@ -2426,7 +2432,7 @@ export function sperrgruende(dlg) {
   var dlgKopf = dlg.kopf;
   var neu = baueVorlage(dlg);
   var gruende = [];
-  if (!neu.erkennung.erforderlich.length) { gruende.push(tr('tpls.lockNoRequired')); }
+  if (!neu.detection.required.length) { gruende.push(tr('tpls.lockNoRequired')); }
   if (!dlgKopf.id) { gruende.push(tr('tpls.lockNoId')); }
   var fremd = fremdeMitId(dlgKopf);
   if (fremd) { gruende.push(tr('tpls.lockIdTaken', fremd.id)); }

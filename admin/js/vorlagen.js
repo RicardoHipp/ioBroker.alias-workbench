@@ -71,13 +71,13 @@ export function setzeMeta() {
 
 export function ladeVorlagen(fertig) {
   fetch('./vorlagen/index.json').then(function (r) { return r.json(); }).then(function (ix) {
-    var offen = ix.vorlagen.length;
+    var offen = ix.templates.length;
     if (!offen) { return dazu([]); }
     /* Reihenfolge aus index.json festhalten. Vorher entschied bei
        gleichwertigen Vorlagen, welche Datei zufaellig zuerst fertig
        geladen war — dasselbe Geraet wurde mal Lampe, mal Steckdose. */
-    var platz = new Array(ix.vorlagen.length);
-    ix.vorlagen.forEach(function (datei, i) {
+    var platz = new Array(ix.templates.length);
+    ix.templates.forEach(function (datei, i) {
       fetch('./vorlagen/' + datei).then(function (r) { return r.json(); }).then(function (v) {
         v._datei = datei;
         platz[i] = v;
@@ -164,10 +164,10 @@ export function aendereVorlagen(id, vorlage, fertig) {
 /* Welche Ausgangsnummern gibt es? Aus dem Bestand gelesen, nicht
    hochgezaehlt — die Ventilinsel hat POWER1, POWER3, POWER4. */
 export function instanzenVon(tpl, kanal) {
-  var mf = tpl.mehrfach;
+  var mf = tpl.multiple;
   if (!mf) { return [null]; }
-  var ph = mf.platzhalter || '%N%';
-  var erf = (tpl.erkennung || {}).erforderlich || [];
+  var ph = mf.placeholder || '%N%';
+  var erf = (tpl.detection || {}).required || [];
   var mitPh = erf.filter(function (e) { return e.indexOf(ph) > -1; });
 
   var kurzNamen = geraetePunkte(kanal).map(function (p) { return p.rel; });
@@ -179,7 +179,7 @@ export function instanzenVon(tpl, kanal) {
      eingebundenen Mehrfachgeraet keinen einzigen Ausgang und laesst
      die Vorlage ins Leere laufen. */
   var ausJson = [];
-  var inh = (tpl.erkennung || {}).inhalt || {};
+  var inh = (tpl.detection || {}).content || {};
   Object.keys(inh).forEach(function (punkt) {
     if (String(inh[punkt]).indexOf(ph) === -1) { return; }
     var id = hatPunkt(kanal, punkt);
@@ -243,8 +243,8 @@ export function instanzenVon(tpl, kanal) {
 }
 
 export function setzeInstanz(text, tpl, n) {
-  if (!tpl.mehrfach || n === null || n === undefined) { return text; }
-  return String(text).split(tpl.mehrfach.platzhalter || '%N%').join(n);
+  if (!tpl.multiple || n === null || n === undefined) { return text; }
+  return String(text).split(tpl.multiple.placeholder || '%N%').join(n);
 }
 
 /* Aus welchem Geraet ist dieser Alias gebaut?
@@ -356,12 +356,12 @@ export function hinweisTaugt(hinweis) {
 }
 
 export function pruefeVorlage(tpl, kanal, instanz) {
-  var erk = tpl.erkennung || {};
+  var erk = tpl.detection || {};
   var gruende = [];
   var fehler = [];
 
   var inst = instanz;
-  if (tpl.mehrfach && (inst === undefined || inst === null)) {
+  if (tpl.multiple && (inst === undefined || inst === null)) {
     var alle = instanzenVon(tpl, kanal);
     if (!alle.length) {
       return { vorlage: tpl, passt: false, fehler: [tr('tpl.noOutputs')], instanzen: [] };
@@ -375,29 +375,29 @@ export function pruefeVorlage(tpl, kanal, instanz) {
      liess sich das nur ueber den Rang erraten. Bewusst zaehlt ein
      nicht vorhandener Punkt *nicht* als Beleg: sonst liesse sich die
      Bewertung mit einer Liste erfundener Ausschluesse aufblasen. */
-  var verbotenDa = ((erk.verboten || []).map(auf)).filter(function (e) { return hatPunkt(kanal, e); });
+  var verbotenDa = ((erk.forbidden || []).map(auf)).filter(function (e) { return hatPunkt(kanal, e); });
   verbotenDa.forEach(function (e) { fehler.push(tr('tpl.forbiddenThere', e)); });
 
-  var fehlt = (erk.erforderlich || []).map(auf).filter(function (e) { return !punktErfuellt(kanal, e); });
+  var fehlt = (erk.required || []).map(auf).filter(function (e) { return !punktErfuellt(kanal, e); });
   fehlt.forEach(function (e) { fehler.push(tr('tpl.missingPoint', e)); });
-  (erk.erforderlich || []).map(auf).forEach(function (e) {
+  (erk.required || []).map(auf).forEach(function (e) {
     if (fehlt.indexOf(e) !== -1) { return; }
     /* Im „Warum" auseinanderhalten, worauf die Erkennung beruht: ein
        vorhandener Punkt ist eine Tatsache, ein moeglicher eine
        Schlussfolgerung. */
     gruende.push(hatPunkt(kanal, e) ? tr('tpl.presentIn', e) : tr('tpl.possibleIn', e));
   });
-  var ausgaenge = tpl.mehrfach ? instanzenVon(tpl, kanal) : [];
-  if (tpl.mehrfach) {
+  var ausgaenge = tpl.multiple ? instanzenVon(tpl, kanal) : [];
+  if (tpl.multiple) {
     gruende.push(tr('tpl.outputsFound', ausgaenge.join(', ')));
   }
 
-  if (erk.inhalt) {
-    Object.keys(erk.inhalt).forEach(function (punkt0) {
+  if (erk.content) {
+    Object.keys(erk.content).forEach(function (punkt0) {
       /* Auch hier den Platzhalter ersetzen — ein Mehrfachgeraet nennt
          sein Feld POWER%N%, und ohne Ersetzung suchte die Pruefung nach
          einem Feld, das woertlich so heisst. */
-      var punkt = auf(punkt0), feld = auf(erk.inhalt[punkt0]);
+      var punkt = auf(punkt0), feld = auf(erk.content[punkt0]);
       var id = hatPunkt(kanal, punkt);
       var j = id ? jsonVon(id) : null;
       if (!id) { fehler.push(tr('tpl.missingPoint', punkt)); }
@@ -424,16 +424,16 @@ export function pruefeVorlage(tpl, kanal, instanz) {
      weil deren Wort zufaellig im Geraetenamen stand. Die Abstaende sind
      so gross, dass sich die Stufen nie ueberholen koennen. */
   var name = kanal.split('.').pop();
-  var belege = (erk.erforderlich || []).length *
-               (tpl.mehrfach ? Math.max(1, ausgaenge.length) : 1) +
-               Object.keys(erk.inhalt || {}).length;
-  var namenstreffer = !!(erk.namenshinweis && hinweisTrifft(erk.namenshinweis, name));
+  var belege = (erk.required || []).length *
+               (tpl.multiple ? Math.max(1, ausgaenge.length) : 1) +
+               Object.keys(erk.content || {}).length;
+  var namenstreffer = !!(erk.nameHint && hinweisTrifft(erk.nameHint, name));
   if (namenstreffer) { gruende.push(tr('tpl.nameHint', sprachtext(tpl.name))); }
   var eigen = tpl._quelle === 'benutzer';
   var punkte = belege * 1000000 +
                (namenstreffer ? 10000 : 0) +
                (eigen ? 1000 : 0) +
-               Math.min(tpl.rang || 0, 999);
+               Math.min(tpl.priority || 0, 999);
   return { vorlage: tpl, passt: true, punkte: punkte, gruende: gruende, fehler: [],
            belege: belege, namenstreffer: namenstreffer, eigen: eigen,
            instanz: inst, instanzen: ausgaenge };
@@ -442,9 +442,9 @@ export function pruefeVorlage(tpl, kanal, instanz) {
 /* Wohin ein Zustand schreibt. Gibt es den Punkt, ist es seine ID; kennt
    das Geraet den Befehl bloss, ist es die ID, die er bekommen wird. */
 export function schreibZiel(tplZeile, kanal, auf) {
-  if (!tplZeile.schreiben) { return ''; }
-  var pfad = auf(tplZeile.schreiben);
-  if (tplZeile.schreibenAbs || tplZeile.absolut) { return S.objects[pfad] ? pfad : ''; }
+  if (!tplZeile.write) { return ''; }
+  var pfad = auf(tplZeile.write);
+  if (tplZeile.writeAbsolute || tplZeile.absolute) { return S.objects[pfad] ? pfad : ''; }
   var da = hatPunkt(kanal, pfad);
   if (da) { return da; }
   return befehlMoeglich(kanal, pfad) ? (kanal + '.' + pfad) : '';
@@ -463,12 +463,12 @@ export function schreibZiel(tplZeile, kanal, auf) {
 export function wendeAn(tpl, kanal, gruende, instanz, auchOhneTreffer) {
   var auf = function (t) { return setzeInstanz(t, tpl, instanz); };
   var e = { kanal: kanal, states: [], pflichtFehlt: null,
-            want: tpl.geraetetyp, wantAuto: tpl.geraetetyp,
+            want: tpl.deviceType, wantAuto: tpl.deviceType,
             alleMuster: false, vorschlag: true, roh: false,
             vorlage: tpl.id, vorlageVersion: tpl.version, tplName: sprachtext(tpl.name),
             grund: (gruende || []).slice(), uebersprungen: [],
             instanz: (instanz === undefined ? null : instanz),
-            instanzen: tpl.mehrfach ? instanzenVon(tpl, kanal) : [],
+            instanzen: tpl.multiple ? instanzenVon(tpl, kanal) : [],
             /* Wie der Kanal je Ausgang heisst — steht in der Vorlage,
                nicht im Code. `kanalname` gilt fuer den gerade
                bearbeiteten Ausgang, `kanalnameRoh` fuer jeden anderen:
@@ -478,17 +478,17 @@ export function wendeAn(tpl, kanal, gruende, instanz, auchOhneTreffer) {
                nicht ging, stand 'POWER' + Nummer im Code — ein
                Homematic-Doppelaktor bekam so Ausgaenge namens POWER1
                und POWER2, obwohl er kein POWER kennt. */
-            kanalname: tpl.mehrfach ? auf(tpl.kanalname || 'POWER%N%') : null,
-            kanalnameRoh: tpl.mehrfach ? (tpl.kanalname || 'POWER%N%') : null,
-            platzhalter: tpl.mehrfach ? (tpl.mehrfach.platzhalter || '%N%') : null };
+            kanalname: tpl.multiple ? auf(tpl.channelName || 'POWER%N%') : null,
+            kanalnameRoh: tpl.multiple ? (tpl.channelName || 'POWER%N%') : null,
+            platzhalter: tpl.multiple ? (tpl.multiple.placeholder || '%N%') : null };
 
-  (tpl.zustaende || []).forEach(function (tplZeile) {
+  (tpl.points || []).forEach(function (tplZeile) {
     /* Ein absolut gespeicherter Punkt zeigt auf ein festes Objekt und
        wird nicht unter dem Kanal gesucht — etwa ein gemeinsamer
        Sollwert in 0_userdata. */
     var finde = function (pfad) {
       if (!pfad) { return null; }
-      if (tplZeile.absolut) { return S.objects[pfad] ? pfad : null; }
+      if (tplZeile.absolute) { return S.objects[pfad] ? pfad : null; }
       return hatPunkt(kanal, auf(pfad));
     };
     /* Ersatzquelle: dasselbe steht oft an zwei Stellen, und welche davon
@@ -503,15 +503,15 @@ export function wendeAn(tpl, kanal, gruende, instanz, auchOhneTreffer) {
        Feld drin. Vorher wurde der Ersatz nur genommen, wenn das Objekt
        ganz fehlte — gab es tele.INFO2 ohne die IP darin, fiel der Punkt
        weg, obwohl tele.STATE sie gehabt haette. */
-    var wege = [{ punkt: tplZeile.lesen, feld: tplZeile.feld, leseformel: tplZeile.leseformel }];
+    var wege = [{ punkt: tplZeile.read, feld: tplZeile.jsonField, leseformel: tplZeile.readFormula }];
     /* Ein Ersatzweg, mehrere Ersatzwege oder blosser Punktname — alles
        drei kommt in Vorlagen vor und soll gehen. */
-    var sonst = tplZeile.lesenSonst;
+    var sonst = tplZeile.readFallback;
     if (sonst) {
       (Array.isArray(sonst) ? sonst : [sonst]).forEach(function (ersatz) {
         wege.push(typeof ersatz === 'string'
-          ? { punkt: ersatz, feld: tplZeile.feld, leseformel: tplZeile.leseformel }
-          : { punkt: ersatz.punkt, feld: ersatz.feld, leseformel: ersatz.leseformel });
+          ? { punkt: ersatz, feld: tplZeile.jsonField, leseformel: tplZeile.readFormula }
+          : { punkt: ersatz.point, feld: ersatz.jsonField, leseformel: ersatz.readFormula });
       });
     }
 
@@ -557,29 +557,29 @@ export function wendeAn(tpl, kanal, gruende, instanz, auchOhneTreffer) {
        heraus, und KEIN EINZIGER Rollladen-Alias bekam je einen STOP
        (gefunden 09.09.2026). Der Platz im Muster verlangt auch nichts
        weiter als `write: true`. */
-    var nurSchreiben = !tplZeile.lesen && !!tplZeile.schreiben;
+    var nurSchreiben = !tplZeile.read && !!tplZeile.write;
     if (nurSchreiben && !quelle) {
       var ziel0 = schreibZiel(tplZeile, kanal, auf);
       if (!ziel0) {
-        e.uebersprungen.push(tr('tpl.skippedSource', tplZeile.name, auf(tplZeile.schreiben)));
+        e.uebersprungen.push(tr('tpl.skippedSource', tplZeile.name, auf(tplZeile.write)));
         if (!tplZeile.optional) { e.pflichtFehlt = tplZeile.name; }
         return;
       }
       e.states.push({
-        n: tplZeile.name, on: !tplZeile.vorgabeAus, role: tplZeile.rolle || '', typ: tplZeile.typ || '',
-        unit: tplZeile.einheit || '', wr: true,
+        n: tplZeile.name, on: !tplZeile.offByDefault, role: tplZeile.role || '', typ: tplZeile.type || '',
+        unit: tplZeile.unit || '', wr: true,
         /* Ein Knopf liest aus seinem Schreibziel mit (19.09.2026): der
            Alias sieht jeden Druck, `read: false` kommt aus der Rolle. */
-        srcR: /^button/.test(String(tplZeile.rolle || '')) ? ziel0 : '', srcW: ziel0,
-        f: '', fw: tplZeile.schreibformel ? auf(tplZeile.schreibformel) : '',
-        caption: tplZeile.beschriftung || '',
-        dec: tplZeile.nachkommastellen === undefined ? undefined : String(tplZeile.nachkommastellen),
-        states: tplZeile.werteliste || undefined,
+        srcR: /^button/.test(String(tplZeile.role || '')) ? ziel0 : '', srcW: ziel0,
+        f: '', fw: tplZeile.writeFormula ? auf(tplZeile.writeFormula) : '',
+        caption: tplZeile.caption || '',
+        dec: tplZeile.decimals === undefined ? undefined : String(tplZeile.decimals),
+        states: tplZeile.valueList || undefined,
         manuell: false, ausVorlage: tplZeile.name,
         /* Zeichenkette oder { de, en }. Ganz mitnehmen, nicht aufloesen:
            beim Speichern zurueck in eine Vorlage bleiben beide Sprachen,
            und die Anzeige waehlt ueber sprachtext. */
-        hinweis: tplZeile.hinweis || '', wege: []
+        hinweis: tplZeile.note || '', wege: []
       });
       return;
     }
@@ -591,7 +591,7 @@ export function wendeAn(tpl, kanal, gruende, instanz, auchOhneTreffer) {
         ? tr('tpl.skippedNowhere', tplZeile.name, gescheitert.join(tr('tpl.nor')))
         : (gruende.length
           ? tr('tpl.skippedWhy', tplZeile.name, gruende[0])
-          : tr('tpl.skippedSource', tplZeile.name, gescheitert[0] || auf(tplZeile.lesen))));
+          : tr('tpl.skippedSource', tplZeile.name, gescheitert[0] || auf(tplZeile.read))));
       /* Eine Pflichtzeile, die ihre Quelle nicht findet, heisst: die
          Vorlage passt zu diesem Geraet nicht. Die Erkennung sieht das
          nicht — sie prueft, ob die genannten *Punkte* da sind, nicht ob
@@ -631,11 +631,11 @@ export function wendeAn(tpl, kanal, gruende, instanz, auchOhneTreffer) {
 
     e.states.push({
       n: tplZeile.name,
-      on: !tplZeile.vorgabeAus,
-      role: tplZeile.rolle || '',
-      typ: tplZeile.typ || '',
-      unit: tplZeile.einheit || '',
-      wr: !!tplZeile.schreiben,
+      on: !tplZeile.offByDefault,
+      role: tplZeile.role || '',
+      typ: tplZeile.type || '',
+      unit: tplZeile.unit || '',
+      wr: !!tplZeile.write,
       srcR: quelle,
       /* Kennt das Geraet den Befehl, ist das Ziel bekannt — auch wenn
          der Punkt noch nicht angelegt ist. Sonst waere der Alias stumm,
@@ -646,16 +646,16 @@ export function wendeAn(tpl, kanal, gruende, instanz, auchOhneTreffer) {
          bis dahin eingestellt hat. */
       srcW: schreibZiel(tplZeile, kanal, auf),
       f: formel,
-      fw: tplZeile.schreibformel ? auf(tplZeile.schreibformel) : '',
-      caption: tplZeile.beschriftung || '',
-      dec: tplZeile.nachkommastellen === undefined ? undefined : String(tplZeile.nachkommastellen),
+      fw: tplZeile.writeFormula ? auf(tplZeile.writeFormula) : '',
+      caption: tplZeile.caption || '',
+      dec: tplZeile.decimals === undefined ? undefined : String(tplZeile.decimals),
       /* Plaetze mit statesDefined — EFFECT etwa — bleiben ohne
          Werteliste leer, egal wie gut Rolle und Typ passen. */
-      states: tplZeile.werteliste || undefined,
+      states: tplZeile.valueList || undefined,
       manuell: false,
       ausVorlage: tplZeile.name,
       /* Wie oben: das Sprachobjekt bleibt ganz, sprachtext waehlt. */
-      hinweis: tplZeile.hinweis || '',
+      hinweis: tplZeile.note || '',
       /* Alle Lesewege mitnehmen, nicht nur den, der heute gegriffen hat.
          Wer aus diesem Geraet eine Vorlage macht, soll die Ersatzquellen
          behalten — sonst faellt die neue Vorlage bei jedem Geraet um, das

@@ -86,7 +86,7 @@ function ausVorlage(punktId, neuKanal) {
   S.VORLAGEN.forEach(function (kandidat) { if (kandidat.id === nat.template) { tpl = kandidat; } });
   if (!tpl) { return null; }
   var tplZeile = null;
-  (tpl.zustaende || []).forEach(function (kandidat) {
+  (tpl.points || []).forEach(function (kandidat) {
     if (kandidat.name === nat.templateState) { tplZeile = kandidat; }
   });
   if (!tplZeile) { return null; }
@@ -95,9 +95,9 @@ function ausVorlage(punktId, neuKanal) {
     var id = neuKanal + '.' + rel;
     return S.objects[id] ? id : '';
   };
-  var r = mach(tplZeile.lesen);
-  if (!r && tplZeile.lesenSonst) { r = mach(tplZeile.lesenSonst.punkt); }
-  return { read: r, write: mach(tplZeile.schreiben) };
+  var r = mach(tplZeile.read);
+  if (!r && tplZeile.readFallback) { r = mach(tplZeile.readFallback.point); }
+  return { read: r, write: mach(tplZeile.write) };
 }
 
 /* Stufe 3: gleicher Punktname irgendwo unter dem neuen Geraet, oder

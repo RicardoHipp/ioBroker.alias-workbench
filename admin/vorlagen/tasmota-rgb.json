@@ -1,260 +1,260 @@
 {
   "id": "tasmota-rgb",
   "version": 6,
-  "rang": 25,
+  "priority": 25,
   "name": {
     "de": "Tasmota-Farblampe",
     "en": "Tasmota colour light"
   },
-  "geraetetyp": "rgbSingle",
-  "funktion": "light",
-  "erkennung": {
-    "erforderlich": [
+  "deviceType": "rgbSingle",
+  "enumFunction": "light",
+  "detection": {
+    "required": [
       "tele.STATE",
       "cmnd.Color"
     ],
-    "inhalt": {
+    "content": {
       "tele.STATE": "Color"
     },
-    "hinweis": {
+    "note": {
       "de": "Das Farbfeld in tele.STATE ist der Unterschied zu einer gewoehnlichen Tasmota. stat.POWER steht nicht in der Pflichtliste - der Punkt entsteht erst beim ersten Schalten, der Zustand steht solange in tele.STATE.",
       "en": "The colour field in tele.STATE is what sets this apart from an ordinary Tasmota. stat.POWER is not in the required list — the point only appears on the first switch, and until then the state is in tele.STATE."
     }
   },
-  "zustaende": [
+  "points": [
     {
       "name": "RGB",
-      "rolle": "level.color.rgb",
-      "typ": "string",
-      "lesen": "tele.STATE",
-      "leseformel": "JSON.parse(val)?.Color ? '#' + String(JSON.parse(val).Color).slice(0, 6) : null",
-      "schreiben": "cmnd.Color",
-      "schreibformel": "String(val).replace('#', '')",
-      "hinweis": {
+      "role": "level.color.rgb",
+      "type": "string",
+      "read": "tele.STATE",
+      "readFormula": "JSON.parse(val)?.Color ? '#' + String(JSON.parse(val).Color).slice(0, 6) : null",
+      "write": "cmnd.Color",
+      "writeFormula": "String(val).replace('#', '')",
+      "note": {
         "de": "Tasmota liefert die Farbe ohne Raute (F4FFCC), ioBroker und VIS erwarten sie mit. Bei RGBW-Geräten hängen weitere Kanäle hinten an, deshalb die ersten sechs Zeichen. Liest aus tele.STATE und schreibt nach cmnd — die Rückmeldung kommt deshalb erst mit der nächsten Telemetrie, bei TelePeriod 300 also bis zu fünf Minuten später. Tasmota antwortet zwar sofort auf stat/RESULT, aber dort steht nur der eine geänderte Schlüssel; als Lesequelle wäre das unbrauchbar. Abhilfe am Gerät: SetOption59 1 — dann schickt Tasmota tele/STATE bei jeder Änderung mit.",
         "en": "Tasmota delivers the colour without a hash (F4FFCC); ioBroker and VIS expect it with one. On RGBW devices further channels are appended, hence the first six characters. Reads from tele.STATE and writes to cmnd — the feedback therefore arrives only with the next telemetry, at TelePeriod 300 up to five minutes later. Tasmota does answer at once on stat/RESULT, but only the one changed key is in there; as a read source that would be useless. Remedy on the device: SetOption59 1 — then Tasmota sends tele/STATE on every change."
       }
     },
     {
       "name": "DIMMER",
-      "rolle": "level.dimmer",
-      "typ": "number",
-      "einheit": "%",
-      "lesen": "tele.STATE",
-      "feld": "Dimmer",
-      "schreiben": "cmnd.Dimmer",
-      "hinweis": {
+      "role": "level.dimmer",
+      "type": "number",
+      "unit": "%",
+      "read": "tele.STATE",
+      "jsonField": "Dimmer",
+      "write": "cmnd.Dimmer",
+      "note": {
         "de": "Liest aus tele.STATE und schreibt nach cmnd — die Rückmeldung kommt deshalb erst mit der nächsten Telemetrie, bei TelePeriod 300 also bis zu fünf Minuten später. Tasmota antwortet zwar sofort auf stat/RESULT, aber dort steht nur der eine geänderte Schlüssel; als Lesequelle wäre das unbrauchbar. Abhilfe am Gerät: SetOption59 1 — dann schickt Tasmota tele/STATE bei jeder Änderung mit.",
         "en": "Reads from tele.STATE and writes to cmnd — the feedback therefore arrives only with the next telemetry, at TelePeriod 300 up to five minutes later. Tasmota does answer at once on stat/RESULT, but only the one changed key is in there; as a read source that would be useless. Remedy on the device: SetOption59 1 — then Tasmota sends tele/STATE on every change."
       }
     },
     {
       "name": "ON",
-      "rolle": "switch.light",
-      "typ": "boolean",
-      "lesen": "stat.POWER",
-      "schreiben": "cmnd.POWER",
-      "schreibformel": "val ? \"ON\" : \"OFF\"",
-      "hinweis": {
+      "role": "switch.light",
+      "type": "boolean",
+      "read": "stat.POWER",
+      "write": "cmnd.POWER",
+      "writeFormula": "val ? \"ON\" : \"OFF\"",
+      "note": {
         "de": "getrennte Quellen: sonst zeigt der Schalter den Befehl statt des Zustands",
         "en": "separate sources: otherwise the switch shows the command instead of the state"
       },
-      "lesenSonst": {
-        "punkt": "tele.STATE",
-        "leseformel": "JSON.parse(val)?.POWER === 'ON'"
+      "readFallback": {
+        "point": "tele.STATE",
+        "readFormula": "JSON.parse(val)?.POWER === 'ON'"
       }
     },
     {
       "name": "ON_ACTUAL",
-      "rolle": "sensor.light",
-      "typ": "boolean",
-      "lesen": "stat.POWER",
-      "lesenSonst": {
-        "punkt": "tele.STATE",
-        "leseformel": "JSON.parse(val)?.POWER === 'ON'"
+      "role": "sensor.light",
+      "type": "boolean",
+      "read": "stat.POWER",
+      "readFallback": {
+        "point": "tele.STATE",
+        "readFormula": "JSON.parse(val)?.POWER === 'ON'"
       }
     },
     {
       "name": "EFFECT",
-      "rolle": "level.effect",
-      "typ": "number",
-      "lesen": "tele.STATE",
-      "feld": "Scheme",
-      "schreiben": "cmnd.Scheme",
+      "role": "level.effect",
+      "type": "number",
+      "read": "tele.STATE",
+      "jsonField": "Scheme",
+      "write": "cmnd.Scheme",
       "optional": true,
-      "werteliste": {
+      "valueList": {
         "0": "einfarbig",
         "1": "Aufwachen",
         "2": "Farben vorwärts",
         "3": "Farben rückwärts",
         "4": "zufällig"
       },
-      "hinweis": {
+      "note": {
         "de": "Der Platz EFFECT verlangt eine Werteliste — ohne common.states erkennt der type-detector ihn nicht. Liest aus tele.STATE und schreibt nach cmnd — die Rückmeldung kommt deshalb erst mit der nächsten Telemetrie, bei TelePeriod 300 also bis zu fünf Minuten später. Tasmota antwortet zwar sofort auf stat/RESULT, aber dort steht nur der eine geänderte Schlüssel; als Lesequelle wäre das unbrauchbar. Abhilfe am Gerät: SetOption59 1 — dann schickt Tasmota tele/STATE bei jeder Änderung mit.",
         "en": "The EFFECT slot requires a value list — without common.states the type-detector does not recognise it. Reads from tele.STATE and writes to cmnd — the feedback therefore arrives only with the next telemetry, at TelePeriod 300 up to five minutes later. Tasmota does answer at once on stat/RESULT, but only the one changed key is in there; as a read source that would be useless. Remedy on the device: SetOption59 1 — then Tasmota sends tele/STATE on every change."
       }
     },
     {
       "name": "FADE",
-      "rolle": "switch",
-      "typ": "boolean",
-      "lesen": "tele.STATE",
-      "feld": "Fade",
-      "schreiben": "cmnd.Fade",
-      "leseformel": "JSON.parse(val)?.Fade === \"ON\"",
-      "schreibformel": "val ? \"ON\" : \"OFF\"",
+      "role": "switch",
+      "type": "boolean",
+      "read": "tele.STATE",
+      "jsonField": "Fade",
+      "write": "cmnd.Fade",
+      "readFormula": "JSON.parse(val)?.Fade === \"ON\"",
+      "writeFormula": "val ? \"ON\" : \"OFF\"",
       "optional": true,
-      "vorgabeAus": true,
-      "hinweis": {
+      "offByDefault": true,
+      "note": {
         "de": "weiche Übergänge. Kein Platz im rgbSingle-Muster, landet im info-Gerät. Liest aus tele.STATE und schreibt nach cmnd — die Rückmeldung kommt deshalb erst mit der nächsten Telemetrie, bei TelePeriod 300 also bis zu fünf Minuten später. Tasmota antwortet zwar sofort auf stat/RESULT, aber dort steht nur der eine geänderte Schlüssel; als Lesequelle wäre das unbrauchbar. Abhilfe am Gerät: SetOption59 1 — dann schickt Tasmota tele/STATE bei jeder Änderung mit.",
         "en": "Soft transitions. No slot in the rgbSingle pattern, so it lands in the info device. Reads from tele.STATE and writes to cmnd — the feedback therefore arrives only with the next telemetry, at TelePeriod 300 up to five minutes later. Tasmota does answer at once on stat/RESULT, but only the one changed key is in there; as a read source that would be useless. Remedy on the device: SetOption59 1 — then Tasmota sends tele/STATE on every change."
       }
     },
     {
       "name": "SPEED",
-      "rolle": "level",
-      "typ": "number",
-      "lesen": "tele.STATE",
-      "feld": "Speed",
-      "schreiben": "cmnd.Speed",
+      "role": "level",
+      "type": "number",
+      "read": "tele.STATE",
+      "jsonField": "Speed",
+      "write": "cmnd.Speed",
       "optional": true,
-      "vorgabeAus": true,
-      "hinweis": {
+      "offByDefault": true,
+      "note": {
         "de": "Geschwindigkeit des Effekts, 1 bis 40. Liest aus tele.STATE und schreibt nach cmnd — die Rückmeldung kommt deshalb erst mit der nächsten Telemetrie, bei TelePeriod 300 also bis zu fünf Minuten später. Tasmota antwortet zwar sofort auf stat/RESULT, aber dort steht nur der eine geänderte Schlüssel; als Lesequelle wäre das unbrauchbar. Abhilfe am Gerät: SetOption59 1 — dann schickt Tasmota tele/STATE bei jeder Änderung mit.",
         "en": "Speed of the effect, 1 to 40. Reads from tele.STATE and writes to cmnd — the feedback therefore arrives only with the next telemetry, at TelePeriod 300 up to five minutes later. Tasmota does answer at once on stat/RESULT, but only the one changed key is in there; as a read source that would be useless. Remedy on the device: SetOption59 1 — then Tasmota sends tele/STATE on every change."
       }
     },
     {
       "name": "UNREACH",
-      "rolle": "indicator.maintenance.unreach",
-      "typ": "boolean",
-      "lesen": "tele.LWT",
-      "leseformel": "val !== \"Online\"",
+      "role": "indicator.maintenance.unreach",
+      "type": "boolean",
+      "read": "tele.LWT",
+      "readFormula": "val !== \"Online\"",
       "optional": true
     },
     {
       "name": "RSSI",
-      "rolle": "value.rssi",
-      "typ": "number",
-      "einheit": "dBm",
-      "lesen": "tele.STATE",
-      "feld": "Wifi.Signal",
+      "role": "value.rssi",
+      "type": "number",
+      "unit": "dBm",
+      "read": "tele.STATE",
+      "jsonField": "Wifi.Signal",
       "optional": true,
-      "vorgabeAus": true
+      "offByDefault": true
     },
     {
       "name": "UPTIME",
-      "rolle": "value",
-      "typ": "number",
-      "einheit": "s",
-      "lesen": "tele.STATE",
-      "feld": "UptimeSec",
+      "role": "value",
+      "type": "number",
+      "unit": "s",
+      "read": "tele.STATE",
+      "jsonField": "UptimeSec",
       "optional": true,
-      "vorgabeAus": true,
-      "hinweis": {
+      "offByDefault": true,
+      "note": {
         "de": "Sekunden seit dem letzten Start. Fällt der Wert ständig zurück, startet das Gerät neu.",
         "en": "Seconds since the last start. If the value keeps falling back, the device is restarting."
       }
     },
     {
       "name": "LAST_REPORT",
-      "rolle": "text",
-      "typ": "string",
-      "lesen": "tele.STATE",
-      "feld": "Time",
+      "role": "text",
+      "type": "string",
+      "read": "tele.STATE",
+      "jsonField": "Time",
       "optional": true,
-      "vorgabeAus": true
+      "offByDefault": true
     },
     {
       "name": "HEAP",
-      "rolle": "value",
-      "typ": "number",
-      "einheit": "kB",
-      "lesen": "tele.STATE",
-      "feld": "Heap",
+      "role": "value",
+      "type": "number",
+      "unit": "kB",
+      "read": "tele.STATE",
+      "jsonField": "Heap",
       "optional": true,
-      "vorgabeAus": true
+      "offByDefault": true
     },
     {
       "name": "WIFI_QUALITY",
-      "rolle": "value",
-      "typ": "number",
-      "einheit": "%",
-      "lesen": "tele.STATE",
-      "feld": "Wifi.RSSI",
+      "role": "value",
+      "type": "number",
+      "unit": "%",
+      "read": "tele.STATE",
+      "jsonField": "Wifi.RSSI",
       "optional": true,
-      "vorgabeAus": true
+      "offByDefault": true
     },
     {
       "name": "WIFI_SSID",
-      "rolle": "text",
-      "typ": "string",
-      "lesen": "tele.STATE",
-      "feld": "Wifi.SSId",
+      "role": "text",
+      "type": "string",
+      "read": "tele.STATE",
+      "jsonField": "Wifi.SSId",
       "optional": true,
-      "vorgabeAus": true
+      "offByDefault": true
     },
     {
       "name": "WIFI_LINKCOUNT",
-      "rolle": "value",
-      "typ": "number",
-      "lesen": "tele.STATE",
-      "feld": "Wifi.LinkCount",
+      "role": "value",
+      "type": "number",
+      "read": "tele.STATE",
+      "jsonField": "Wifi.LinkCount",
       "optional": true,
-      "vorgabeAus": true
+      "offByDefault": true
     },
     {
       "name": "WIFI_DOWNTIME",
-      "rolle": "text",
-      "typ": "string",
-      "lesen": "tele.STATE",
-      "feld": "Wifi.Downtime",
+      "role": "text",
+      "type": "string",
+      "read": "tele.STATE",
+      "jsonField": "Wifi.Downtime",
       "optional": true,
-      "vorgabeAus": true
+      "offByDefault": true
     },
     {
       "name": "IP",
-      "rolle": "text",
-      "typ": "string",
-      "lesen": "tele.STATE",
-      "feld": "IPAddress",
+      "role": "text",
+      "type": "string",
+      "read": "tele.STATE",
+      "jsonField": "IPAddress",
       "optional": true,
-      "vorgabeAus": true,
-      "lesenSonst": [
+      "offByDefault": true,
+      "readFallback": [
         {
-          "punkt": "tele.INFO2",
-          "feld": "Info2.IPAddress"
+          "point": "tele.INFO2",
+          "jsonField": "Info2.IPAddress"
         },
         {
-          "punkt": "tele.INFO2",
-          "feld": "IPAddress"
+          "point": "tele.INFO2",
+          "jsonField": "IPAddress"
         },
         {
-          "punkt": "stat.STATUS5",
-          "feld": "StatusNET.IPAddress"
+          "point": "stat.STATUS5",
+          "jsonField": "StatusNET.IPAddress"
         }
       ],
-      "hinweis": {
+      "note": {
         "de": "Drei Wege, weil keiner allein reicht. tele.STATE steht zuerst, weil es alle paar Minuten frisch kommt und einem Adresswechsel folgt - allerdings fuehrt es die IP erst ab neuerer Firmware mit (gemessen: 12.5.0 nein, 15.5.0 ja). tele.INFO2 schickt eine Tasmota beim Start und laesst es retained stehen; das steht auch bei alter Firmware da, ist aber ein Standbild vom letzten Boot. stat.STATUS5 entsteht, wenn jemand den Status abfragt. Aeltere Firmware schreibt die Felder in tele.INFO2 ohne die Huelle Info2 - deshalb derselbe Punkt zweimal, einmal mit und einmal ohne (gemessen 20.09.2026 am Badlicht: {WebServerMode, Hostname, IPAddress}).",
         "en": "Three paths, because none of them is enough on its own. tele.STATE comes first, because it arrives fresh every few minutes and follows an address change — though it only carries the IP from newer firmware on (measured: 12.5.0 no, 15.5.0 yes). tele.INFO2 is sent by a Tasmota at start and left retained; it is there on old firmware too, but it is a snapshot from the last boot. stat.STATUS5 appears when someone queries the status. Older firmware writes the fields into tele.INFO2 without the Info2 wrapper — hence the same point twice, once with and once without (measured 20.09.2026 on Badlicht: {WebServerMode, Hostname, IPAddress})."
       }
     }
   ],
-  "nebenwirkungen": [
+  "sideEffects": [
     {
-      "art": "mqtt-publish",
-      "punkt": "cmnd.POWER"
+      "kind": "mqtt-publish",
+      "point": "cmnd.POWER"
     },
     {
-      "art": "mqtt-publish",
-      "punkt": "cmnd.Color"
+      "kind": "mqtt-publish",
+      "point": "cmnd.Color"
     },
     {
-      "art": "mqtt-publish",
-      "punkt": "cmnd.Dimmer"
+      "kind": "mqtt-publish",
+      "point": "cmnd.Dimmer"
     }
   ],
-  "weiterePunkte": {
+  "extraPoints": {
     "tele.LWT": "text",
     "tele.STATE": "json",
     "tele.SENSOR": "json",

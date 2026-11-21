@@ -1,100 +1,100 @@
 {
   "id": "hm-fensterkontakt-hm",
   "version": 2,
-  "rang": 40,
+  "priority": 40,
   "name": {
     "de": "Homematic Fensterkontakt (ältere Reihe)",
     "en": "Homematic window contact (classic)"
   },
-  "geraetetyp": "window",
-  "funktion": "window",
-  "hinweis": {
+  "deviceType": "window",
+  "enumFunction": "window",
+  "note": {
     "de": "HM-Sec-SCo und Verwandte aus der Reihe vor HmIP. Anders als der HmIP-Kontakt meldet dieser schon einen Wahrheitswert — es braucht keine Umrechnung.",
     "en": "HM-Sec-SCo and relatives from the generation before HmIP. Unlike the HmIP contact this one already reports a boolean, so no conversion is needed."
   },
-  "erkennung": {
-    "erforderlich": [
+  "detection": {
+    "required": [
       "1.STATE",
       "1.ERROR"
     ],
-    "verboten": [
+    "forbidden": [
       "1.WORKING"
     ],
-    "hinweis": {
+    "note": {
       "de": "1.ERROR gibt es beim HmIP-Kontakt nicht - daran trennen sich die beiden Fassungen. 1.WORKING bleibt verboten, damit kein Schaltaktor hier hereinrutscht.",
       "en": "1.ERROR does not exist on the HmIP contact — that is what separates the two variants. 1.WORKING stays forbidden so no switch actuator slips in here."
     }
   },
-  "zustaende": [
+  "points": [
     {
       "name": "ACTUAL",
-      "rolle": "sensor.window",
-      "typ": "boolean",
-      "lesen": "1.STATE"
+      "role": "sensor.window",
+      "type": "boolean",
+      "read": "1.STATE"
     },
     {
       "name": "ERROR",
-      "rolle": "indicator.error",
-      "typ": "number",
-      "lesen": "1.ERROR",
+      "role": "indicator.error",
+      "type": "number",
+      "read": "1.ERROR",
       "optional": true,
-      "vorgabeAus": true,
-      "hinweis": {
+      "offByDefault": true,
+      "note": {
         "de": "0 heisst in Ordnung, 7 Sabotage. Das window-Muster hat keinen Platz dafuer - angehakt landet der Punkt im info-Geraet.",
         "en": "0 means OK, 7 sabotage. The window pattern has no slot for it — ticked, the point lands in the info device."
       }
     },
     {
       "name": "LOWBAT",
-      "rolle": "indicator.lowbat",
-      "typ": "boolean",
-      "lesen": "0.LOWBAT",
-      "lesenSonst": {
-        "punkt": "1.LOWBAT"
+      "role": "indicator.lowbat",
+      "type": "boolean",
+      "read": "0.LOWBAT",
+      "readFallback": {
+        "point": "1.LOWBAT"
       },
       "optional": true,
-      "hinweis": {
+      "note": {
         "de": "Dieses Geraet fuehrt LOWBAT zweimal, an Kanal 0 und an Kanal 1. Kanal 0 ist der Wartungskanal und die richtige Adresse.",
         "en": "This device carries LOWBAT twice, on channel 0 and on channel 1. Channel 0 is the maintenance channel and the right address."
       }
     },
     {
       "name": "UNREACH",
-      "rolle": "indicator.maintenance.unreach",
-      "typ": "boolean",
-      "lesen": "0.UNREACH",
+      "role": "indicator.maintenance.unreach",
+      "type": "boolean",
+      "read": "0.UNREACH",
       "optional": true
     },
     {
       "name": "STICKY_UNREACH",
-      "rolle": "indicator.maintenance.unreach",
-      "typ": "boolean",
-      "lesen": "0.STICKY_UNREACH",
+      "role": "indicator.maintenance.unreach",
+      "type": "boolean",
+      "read": "0.STICKY_UNREACH",
       "optional": true,
-      "vorgabeAus": true,
-      "hinweis": {
+      "offByDefault": true,
+      "note": {
         "de": "Bleibt stehen, bis jemand sie zuruecksetzt - zeigt also auch einen Ausfall an, der schon wieder vorbei ist.",
         "en": "Stays set until someone clears it — so it also shows a failure that has already passed."
       }
     },
     {
       "name": "RSSI",
-      "rolle": "value.rssi",
-      "typ": "number",
-      "einheit": "dBm",
-      "lesen": "0.RSSI_DEVICE",
-      "lesenSonst": {
-        "punkt": "0.RSSI_PEER"
+      "role": "value.rssi",
+      "type": "number",
+      "unit": "dBm",
+      "read": "0.RSSI_DEVICE",
+      "readFallback": {
+        "point": "0.RSSI_PEER"
       },
       "optional": true,
-      "vorgabeAus": true,
-      "hinweis": {
+      "offByDefault": true,
+      "note": {
         "de": "RSSI_DEVICE steht zuerst: es ist der Pegel, den die Zentrale vom Geraet empfaengt. RSSI_PEER ist bei Batteriegeraeten oft unbelegt und traegt dann Grenzwerte wie -2147483648.",
         "en": "RSSI_DEVICE comes first: it is the level the central unit receives from the device. RSSI_PEER is often empty on battery devices and then carries sentinel values such as -2147483648."
       }
     }
   ],
-  "weiterePunkte": {
+  "extraPoints": {
     "*.ACTIVE_PROFILE": "level.mode",
     "*.ACTUAL_TEMPERATURE": "value.temperature",
     "*.ACTUAL_TEMPERATURE_STATUS": "value",

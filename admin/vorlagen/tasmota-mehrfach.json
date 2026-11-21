@@ -1,228 +1,228 @@
 {
   "id": "tasmota-mehrfach",
   "version": 7,
-  "rang": 30,
+  "priority": 30,
   "name": {
     "de": "Tasmota mit mehreren Ausgängen",
     "en": "Tasmota with multiple outputs"
   },
-  "geraetetyp": "socket",
-  "funktion": "socket",
-  "hinweis": {
+  "deviceType": "socket",
+  "enumFunction": "socket",
+  "note": {
     "de": "Steckdosenleiste, Ventilinsel, Relaisplatine. Je Ausgang entsteht ein eigenes Gerät, weil ein socket genau ein SET hat. %N% steht für die Ausgangsnummer und wird aus dem Bestand gelesen — Lücken sind erlaubt.",
     "en": "Power strip, valve manifold, relay board. Each output becomes its own device because a socket has exactly one SET. %N% stands for the output number and is read from what exists — gaps are allowed."
   },
-  "mehrfach": {
-    "platzhalter": "%N%"
+  "multiple": {
+    "placeholder": "%N%"
   },
-  "kanalname": "POWER%N%",
-  "erkennung": {
-    "erforderlich": [
+  "channelName": "POWER%N%",
+  "detection": {
+    "required": [
       "cmnd.POWER%N%"
     ],
-    "inhalt": {
+    "content": {
       "tele.STATE": "POWER%N%"
     },
-    "hinweis": {
+    "note": {
       "de": "stat.POWER steht bewusst nicht in der Pflichtliste: den Punkt legt der mqtt-Adapter erst an, wenn das Geraet zum ersten Mal geschaltet hat. Vorher haette die Vorlage nie gegriffen, obwohl der Schaltzustand die ganze Zeit in tele.STATE steht - von dort liest sie ersatzweise. cmnd.POWER bleibt dagegen Pflicht: es ist der Beleg dafuer, dass hier ueberhaupt etwas zu schalten ist. Ohne ihn wuerde jeder blosse Messpunkt mit Relaismeldung als Steckdose durchgehen. Die Nummern der Ausgaenge liest die Vorlage aus den Feldern POWER1, POWER2 ... in tele.STATE, nicht aus vorhandenen Objekten.",
       "en": "stat.POWER is deliberately not in the required list: the mqtt adapter only creates the point once the device has been switched for the first time. Before that the template would never have matched, even though the switch state has been in tele.STATE the whole time — that is where it reads from instead. cmnd.POWER stays required: it is the evidence that there is anything to switch here at all. Without it every bare measuring point with a relay report would pass as a socket. The template reads the output numbers from the fields POWER1, POWER2 ... in tele.STATE, not from objects that already exist."
     }
   },
-  "zustaende": [
+  "points": [
     {
       "name": "SET",
-      "rolle": "switch",
-      "typ": "boolean",
-      "lesen": "stat.POWER%N%",
-      "schreiben": "cmnd.POWER%N%",
-      "schreibformel": "val ? \"ON\" : \"OFF\"",
-      "lesenSonst": {
-        "punkt": "tele.STATE",
-        "leseformel": "JSON.parse(val)?.POWER%N% === 'ON'"
+      "role": "switch",
+      "type": "boolean",
+      "read": "stat.POWER%N%",
+      "write": "cmnd.POWER%N%",
+      "writeFormula": "val ? \"ON\" : \"OFF\"",
+      "readFallback": {
+        "point": "tele.STATE",
+        "readFormula": "JSON.parse(val)?.POWER%N% === 'ON'"
       }
     },
     {
       "name": "ACTUAL",
-      "rolle": "sensor.switch",
-      "typ": "boolean",
-      "lesen": "stat.POWER%N%",
-      "lesenSonst": {
-        "punkt": "tele.STATE",
-        "leseformel": "JSON.parse(val)?.POWER%N% === 'ON'"
+      "role": "sensor.switch",
+      "type": "boolean",
+      "read": "stat.POWER%N%",
+      "readFallback": {
+        "point": "tele.STATE",
+        "readFormula": "JSON.parse(val)?.POWER%N% === 'ON'"
       }
     },
     {
       "name": "ELECTRIC_POWER",
-      "rolle": "value.power",
-      "typ": "number",
-      "einheit": "W",
-      "lesen": "tele.SENSOR",
-      "feld": "ENERGY.Power",
+      "role": "value.power",
+      "type": "number",
+      "unit": "W",
+      "read": "tele.SENSOR",
+      "jsonField": "ENERGY.Power",
       "optional": true,
-      "hinweis": {
+      "note": {
         "de": "Die meisten Mehrfachsteckdosen messen nur gesamt. Angehakt bekaeme jeder Ausgang denselben Wert, und die Summe erschiene vierfach. Nur anhaken, wenn dieses Modell je Ausgang misst.",
         "en": "Most multi-output sockets measure only the total. Ticked, every output would get the same value, and the total would appear four times. Tick it only if this model measures per output."
       },
-      "vorgabeAus": true
+      "offByDefault": true
     },
     {
       "name": "CONSUMPTION",
-      "rolle": "value.energy.consumed",
-      "_rolle": "value.energy.consumed is the current role for a consumed amount of energy: the unit is Wh, which is energy and not power, so it belongs under value.energy.* rather than under value.power.* (that one holds W and kW). The ioBroker state roles list strikes value.power.consumption through for exactly that reason. @iobroker/type-detector accepts both roles at the CONSUMPTION place since 6.0.3 (typePatterns.js, pattern 'consumption', issue 334, PR 339) and has value.energy.consumed as its defaultRole. Note for anyone reading such an alias with a detector older than 6.0.3: there the place accepts the struck-through role only, so the point drops out of the detected device - update the reading adapter.",
-      "typ": "number",
-      "einheit": "kWh",
-      "lesen": "tele.SENSOR",
-      "feld": "ENERGY.Total",
+      "role": "value.energy.consumed",
+      "_role": "value.energy.consumed is the current role for a consumed amount of energy: the unit is Wh, which is energy and not power, so it belongs under value.energy.* rather than under value.power.* (that one holds W and kW). The ioBroker state roles list strikes value.power.consumption through for exactly that reason. @iobroker/type-detector accepts both roles at the CONSUMPTION place since 6.0.3 (typePatterns.js, pattern 'consumption', issue 334, PR 339) and has value.energy.consumed as its defaultRole. Note for anyone reading such an alias with a detector older than 6.0.3: there the place accepts the struck-through role only, so the point drops out of the detected device - update the reading adapter.",
+      "type": "number",
+      "unit": "kWh",
+      "read": "tele.SENSOR",
+      "jsonField": "ENERGY.Total",
       "optional": true,
-      "vorgabeAus": true,
-      "hinweis": {
+      "offByDefault": true,
+      "note": {
         "de": "Die meisten Mehrfachsteckdosen messen nur gesamt. Angehakt bekaeme jeder Ausgang denselben Wert, und die Summe erschiene vierfach. Nur anhaken, wenn dieses Modell je Ausgang misst.",
         "en": "Most multi-output sockets measure only the total. Ticked, every output would get the same value, and the total would appear four times. Tick it only if this model measures per output."
       }
     },
     {
       "name": "UNREACH",
-      "rolle": "indicator.maintenance.unreach",
-      "typ": "boolean",
-      "lesen": "tele.LWT",
-      "leseformel": "val !== \"Online\"",
+      "role": "indicator.maintenance.unreach",
+      "type": "boolean",
+      "read": "tele.LWT",
+      "readFormula": "val !== \"Online\"",
       "optional": true
     },
     {
       "name": "RSSI",
-      "rolle": "value.rssi",
-      "typ": "number",
-      "einheit": "dBm",
-      "lesen": "tele.STATE",
-      "feld": "Wifi.Signal",
+      "role": "value.rssi",
+      "type": "number",
+      "unit": "dBm",
+      "read": "tele.STATE",
+      "jsonField": "Wifi.Signal",
       "optional": true,
-      "vorgabeAus": true
+      "offByDefault": true
     },
     {
       "name": "UPTIME",
-      "rolle": "value",
-      "typ": "number",
-      "einheit": "s",
-      "lesen": "tele.STATE",
-      "feld": "UptimeSec",
+      "role": "value",
+      "type": "number",
+      "unit": "s",
+      "read": "tele.STATE",
+      "jsonField": "UptimeSec",
       "optional": true,
-      "vorgabeAus": true,
-      "hinweis": {
+      "offByDefault": true,
+      "note": {
         "de": "Sekunden seit dem letzten Start. Faellt der Wert staendig zurueck, startet das Geraet neu.",
         "en": "Seconds since the last start. If the value keeps falling back, the device is restarting."
       }
     },
     {
       "name": "LAST_REPORT",
-      "rolle": "text",
-      "typ": "string",
-      "lesen": "tele.STATE",
-      "feld": "Time",
+      "role": "text",
+      "type": "string",
+      "read": "tele.STATE",
+      "jsonField": "Time",
       "optional": true,
-      "vorgabeAus": true,
-      "hinweis": {
+      "offByDefault": true,
+      "note": {
         "de": "Zeitstempel der letzten Telemetrie des Geraets, nicht der von ioBroker.",
         "en": "Timestamp of the device's last telemetry, not ioBroker's."
       }
     },
     {
       "name": "HEAP",
-      "rolle": "value",
-      "typ": "number",
-      "einheit": "kB",
-      "lesen": "tele.STATE",
-      "feld": "Heap",
+      "role": "value",
+      "type": "number",
+      "unit": "kB",
+      "read": "tele.STATE",
+      "jsonField": "Heap",
       "optional": true,
-      "vorgabeAus": true,
-      "hinweis": {
+      "offByDefault": true,
+      "note": {
         "de": "Freier Speicher. Wird er klein, wird das Geraet unzuverlaessig.",
         "en": "Free memory. If it gets small, the device becomes unreliable."
       }
     },
     {
       "name": "WIFI_QUALITY",
-      "rolle": "value",
-      "typ": "number",
-      "einheit": "%",
-      "lesen": "tele.STATE",
-      "feld": "Wifi.RSSI",
+      "role": "value",
+      "type": "number",
+      "unit": "%",
+      "read": "tele.STATE",
+      "jsonField": "Wifi.RSSI",
       "optional": true,
-      "vorgabeAus": true,
-      "hinweis": {
+      "offByDefault": true,
+      "note": {
         "de": "Guete 0 bis 100. RSSI in dBm steht getrennt daneben.",
         "en": "Quality 0 to 100. RSSI in dBm is listed separately beside it."
       }
     },
     {
       "name": "WIFI_SSID",
-      "rolle": "text",
-      "typ": "string",
-      "lesen": "tele.STATE",
-      "feld": "Wifi.SSId",
+      "role": "text",
+      "type": "string",
+      "read": "tele.STATE",
+      "jsonField": "Wifi.SSId",
       "optional": true,
-      "vorgabeAus": true
+      "offByDefault": true
     },
     {
       "name": "WIFI_LINKCOUNT",
-      "rolle": "value",
-      "typ": "number",
-      "lesen": "tele.STATE",
-      "feld": "Wifi.LinkCount",
+      "role": "value",
+      "type": "number",
+      "read": "tele.STATE",
+      "jsonField": "Wifi.LinkCount",
       "optional": true,
-      "vorgabeAus": true,
-      "hinweis": {
+      "offByDefault": true,
+      "note": {
         "de": "Wie oft die WLAN-Verbindung seit dem Start neu aufgebaut wurde.",
         "en": "How often the Wi-Fi connection has been re-established since start."
       }
     },
     {
       "name": "WIFI_DOWNTIME",
-      "rolle": "text",
-      "typ": "string",
-      "lesen": "tele.STATE",
-      "feld": "Wifi.Downtime",
+      "role": "text",
+      "type": "string",
+      "read": "tele.STATE",
+      "jsonField": "Wifi.Downtime",
       "optional": true,
-      "vorgabeAus": true,
-      "hinweis": {
+      "offByDefault": true,
+      "note": {
         "de": "Summe der Ausfallzeit seit dem Start.",
         "en": "Total downtime since start."
       }
     },
     {
       "name": "IP",
-      "rolle": "text",
-      "typ": "string",
-      "lesen": "tele.STATE",
-      "feld": "IPAddress",
+      "role": "text",
+      "type": "string",
+      "read": "tele.STATE",
+      "jsonField": "IPAddress",
       "optional": true,
-      "vorgabeAus": true,
-      "hinweis": {
+      "offByDefault": true,
+      "note": {
         "de": "Drei Wege, weil keiner allein reicht. tele.STATE steht zuerst, weil es alle paar Minuten frisch kommt und einem Adresswechsel folgt - allerdings fuehrt es die IP erst ab neuerer Firmware mit (gemessen: 12.5.0 nein, 15.5.0 ja). tele.INFO2 schickt eine Tasmota beim Start und laesst es retained stehen; das steht auch bei alter Firmware da, ist aber ein Standbild vom letzten Boot. stat.STATUS5 entsteht, wenn jemand den Status abfragt. Aeltere Firmware schreibt die Felder in tele.INFO2 ohne die Huelle Info2 - deshalb derselbe Punkt zweimal, einmal mit und einmal ohne (gemessen 20.09.2026 am Badlicht: {WebServerMode, Hostname, IPAddress}).",
         "en": "Three paths, because none of them is enough on its own. tele.STATE comes first, because it arrives fresh every few minutes and follows an address change — though it only carries the IP from newer firmware on (measured: 12.5.0 no, 15.5.0 yes). tele.INFO2 is sent by a Tasmota at start and left retained; it is there on old firmware too, but it is a snapshot from the last boot. stat.STATUS5 appears when someone queries the status. Older firmware writes the fields into tele.INFO2 without the Info2 wrapper — hence the same point twice, once with and once without (measured 20.09.2026 on Badlicht: {WebServerMode, Hostname, IPAddress})."
       },
-      "lesenSonst": [
+      "readFallback": [
         {
-          "punkt": "tele.INFO2",
-          "feld": "Info2.IPAddress"
+          "point": "tele.INFO2",
+          "jsonField": "Info2.IPAddress"
         },
         {
-          "punkt": "tele.INFO2",
-          "feld": "IPAddress"
+          "point": "tele.INFO2",
+          "jsonField": "IPAddress"
         },
         {
-          "punkt": "stat.STATUS5",
-          "feld": "StatusNET.IPAddress"
+          "point": "stat.STATUS5",
+          "jsonField": "StatusNET.IPAddress"
         }
       ]
     }
   ],
-  "nebenwirkungen": [
+  "sideEffects": [
     {
-      "art": "mqtt-publish",
-      "punkt": "cmnd.POWER%N%"
+      "kind": "mqtt-publish",
+      "point": "cmnd.POWER%N%"
     }
   ],
-  "weiterePunkte": {
+  "extraPoints": {
     "tele.LWT": "text",
     "tele.STATE": "json",
     "tele.SENSOR": "json",

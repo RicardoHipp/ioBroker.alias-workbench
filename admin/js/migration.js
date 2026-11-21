@@ -94,6 +94,14 @@ export function instanzBefunde(obj) {
   });
 }
 
+/* Welche eigenen Vorlagen noch das alte Format tragen - unter dem neuen
+   Schluessel `templates` oder noch unter `vorlagen`. */
+export function vorlagenBefunde(obj) {
+  var nat = (obj && obj.native) || {};
+  var liste = [].concat(nat.templates || [], nat.vorlagen || []);
+  return liste.filter(istAlteVorlage).map(function (v) { return v.id || '?'; });
+}
+
 /* Welche Alias-Objekte noch alte Felder tragen.
 
    Nur `alias.*` und nur Objekte mit mindestens einem unserer Felder.
@@ -108,6 +116,116 @@ export function aliasBefunde(objects) {
     if (felder.length) { raus.push({ id: id, felder: felder }); }
   });
   return raus;
+}
+
+/* ================== Das Vorlagenformat ==================
+
+   Alt -> neu, je Ebene. Nicht nur uebersetzt, sondern besser benannt
+   (Ricardo, 21.11.2026): `rang` sagt nicht, wozu die Zahl da ist -
+   `priority`; `zustaende` verwechselt sich mit `common.states` und den
+   Plaetzen des Detektors - eine Vorlage beschreibt `points`; `feld`
+   verschweigt, dass es ein Pfad IN EINEM JSON ist - `jsonField`;
+   `funktion` waere als `function` ein JS-Schluesselwort und meint die
+   ioBroker-Aufzaehlung - `enumFunction`.
+
+   Diese Tabellen sind die einzige Stelle, an der das alte Format noch
+   bekannt ist. Mit ihnen werden die eigenen Vorlagen der Nutzer
+   migriert, und mit ihnen wurden am 21.11.2026 auch die 17
+   mitgelieferten Dateien umgestellt - eine Tabelle, nicht zwei. */
+export var VORLAGE_NAMEN = {
+  rang: 'priority',
+  geraetetyp: 'deviceType',
+  funktion: 'enumFunction',
+  kanalname: 'channelName',
+  mehrfach: 'multiple',
+  hinweis: 'note',
+  weiterePunkte: 'extraPoints',
+  nebenwirkungen: 'sideEffects',
+  erkennung: 'detection',
+  zustaende: 'points'
+};
+export var ERKENNUNG_NAMEN = {
+  erforderlich: 'required',
+  verboten: 'forbidden',
+  inhalt: 'content',
+  namenshinweis: 'nameHint',
+  hinweis: 'note'
+};
+export var ZEILE_NAMEN = {
+  rolle: 'role',
+  typ: 'type',
+  einheit: 'unit',
+  lesen: 'read',
+  schreiben: 'write',
+  leseformel: 'readFormula',
+  schreibformel: 'writeFormula',
+  lesenSonst: 'readFallback',
+  feld: 'jsonField',
+  werteliste: 'valueList',
+  vorgabeAus: 'offByDefault',
+  beschriftung: 'caption',
+  nachkommastellen: 'decimals',
+  hinweis: 'note',
+  _rolle: '_role',
+  absolut: 'absolute',
+  schreibenAbs: 'writeAbsolute'
+};
+export var ERSATZ_NAMEN = { punkt: 'point', feld: 'jsonField', leseformel: 'readFormula' };
+export var MEHRFACH_NAMEN = { platzhalter: 'placeholder' };
+export var NEBENWIRKUNG_NAMEN = { art: 'kind', punkt: 'point' };
+
+/* Schluessel eines Objekts umbenennen, Reihenfolge und Werte bleiben.
+   Steht schon der neue Name da UND der alte, gewinnt der alte - aus
+   demselben Grund wie bei den Einstellungen: ein Nebeneinander kann
+   nur entstehen, solange noch nicht umgestellt ist. */
+function umbenannt(o, namen) {
+  if (!o || typeof o !== 'object' || Array.isArray(o)) { return o; }
+  var verdraengt = {};
+  Object.keys(namen).forEach(function (a) { if (o[a] !== undefined) { verdraengt[namen[a]] = true; } });
+  var raus = {};
+  Object.keys(o).forEach(function (k) {
+    if (namen[k]) { raus[namen[k]] = o[k]; return; }
+    if (verdraengt[k]) { return; }
+    raus[k] = o[k];
+  });
+  return raus;
+}
+
+/* Eine Vorlage ins neue Format. Rein, ohne Nebenwirkung - das Original
+   bleibt, wie es ist. */
+export function vorlageUmgestellt(v) {
+  if (!v || typeof v !== 'object') { return v; }
+  var raus = umbenannt(v, VORLAGE_NAMEN);
+  if (raus.detection) { raus.detection = umbenannt(raus.detection, ERKENNUNG_NAMEN); }
+  if (raus.multiple) { raus.multiple = umbenannt(raus.multiple, MEHRFACH_NAMEN); }
+  if (Array.isArray(raus.sideEffects)) {
+    raus.sideEffects = raus.sideEffects.map(function (n) { return umbenannt(n, NEBENWIRKUNG_NAMEN); });
+  }
+  if (Array.isArray(raus.points)) {
+    raus.points = raus.points.map(function (z) {
+      var neu = umbenannt(z, ZEILE_NAMEN);
+      /* `readFallback` kommt mal als Objekt, mal als Liste vor. Das
+         bleibt so, nur die Namen darin wechseln. */
+      if (Array.isArray(neu && neu.readFallback)) {
+        neu.readFallback = neu.readFallback.map(function (e) { return umbenannt(e, ERSATZ_NAMEN); });
+      } else if (neu && neu.readFallback) {
+        neu.readFallback = umbenannt(neu.readFallback, ERSATZ_NAMEN);
+      }
+      return neu;
+    });
+  }
+  return raus;
+}
+
+/* Traegt diese Vorlage noch das alte Format? Fuer die Migration und fuer
+   das Einlesen, das alte Dateien abweist - aber erkennen muss es sie,
+   sonst kaeme nur „Pflichtfeld fehlt" und niemand wuesste, warum. */
+export function istAlteVorlage(v) {
+  if (!v || typeof v !== 'object') { return false; }
+  if (Object.keys(VORLAGE_NAMEN).some(function (k) { return v[k] !== undefined; })) { return true; }
+  return Array.isArray(v.points) && v.points.some(function (z) {
+    return z && Object.keys(ZEILE_NAMEN).some(function (k) { return z[k] !== undefined; });
+  });
 }
 
 /* Das umgestellte `native` bauen - ohne das Objekt anzufassen.
@@ -161,6 +279,11 @@ export function nativeUmgestellt(nat, namen) {
 function schreibeObjekt(kennung, obj, namen, fertig) {
   var neu = JSON.parse(JSON.stringify(obj));
   neu.native = nativeUmgestellt(obj.native || {}, namen);
+  /* Die eigenen Vorlagen tragen das Format in sich - nach dem Schluessel
+     auch ihren Inhalt umstellen. */
+  if (namen === INSTANZ_NAMEN && Array.isArray(neu.native.templates)) {
+    neu.native.templates = neu.native.templates.map(vorlageUmgestellt);
+  }
   socket.emit('setObject', kennung, neu, function (err) { fertig(err || null); });
 }
 
@@ -203,7 +326,7 @@ function zeigeFrage(lage) {
   koerper.innerHTML = '';
 
   koerper.appendChild(el('p', null, tr('migr.lead',
-    String(lage.instanz.length), String(lage.aliase.length))));
+    String(lage.instanz.length), String(lage.aliase.length), String(lage.vorlagen.length))));
 
   /* Die Namenspaare einmal auflisten - wer wissen will, was da
      umbenannt wird, soll es sehen und nicht glauben muessen. */
@@ -215,6 +338,9 @@ function zeigeFrage(lage) {
   var liste = el('ul', 'migr-liste');
   Object.keys(paare).sort().forEach(function (alt) {
     liste.appendChild(el('li', null, alt + '  →  ' + paare[alt]));
+  });
+  lage.vorlagen.forEach(function (id) {
+    liste.appendChild(el('li', null, tr('migr.templateRow', id)));
   });
   koerper.appendChild(liste);
 
@@ -242,7 +368,9 @@ function zeigeSperre(lage) {
 function zeigeErgebnis(fehler, lage) {
   var koerper = $('#migr-body');
   koerper.innerHTML = '';
-  var zahl = lage.instanz.length + lage.aliase.length;
+  /* Gezaehlt werden geschriebene OBJEKTE - die Instanz einmal, egal wie
+     viele Schluessel und Vorlagen darin wechseln. */
+  var zahl = lage.aufgabenZahl || 0;
 
   if (fehler.length) {
     koerper.appendChild(el('p', 'warn',
@@ -270,12 +398,13 @@ function fuehreAus(lage) {
   go.textContent = tr('migr.running');
 
   var aufgaben = [];
-  if (lage.instanz.length) {
+  if (lage.instanz.length || lage.vorlagen.length) {
     aufgaben.push({ kennung: lage.kennung, obj: lage.instanzObj, namen: INSTANZ_NAMEN });
   }
   lage.aliase.forEach(function (b) {
     aufgaben.push({ kennung: b.id, obj: lage.objects[b.id], namen: ALIAS_NAMEN });
   });
+  lage.aufgabenZahl = aufgaben.length;
 
   reihum(aufgaben, function (a, fertig) {
     schreibeObjekt(a.kennung, a.obj, a.namen, fertig);
@@ -298,9 +427,10 @@ export function migrationNoetig(obj, kennung, objects) {
     instanzObj: obj,
     objects: objects || {},
     instanz: instanzBefunde(obj),
-    aliase: aliasBefunde(objects)
+    aliase: aliasBefunde(objects),
+    vorlagen: vorlagenBefunde(obj)
   };
-  if (!lage.instanz.length && !lage.aliase.length) { return false; }
+  if (!lage.instanz.length && !lage.aliase.length && !lage.vorlagen.length) { return false; }
   zeigeFrage(lage);
   return true;
 }
