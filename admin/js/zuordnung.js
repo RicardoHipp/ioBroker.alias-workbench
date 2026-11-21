@@ -848,11 +848,11 @@ export function unterschiede(e) {
     if (s.ausAnsicht) { return false; }
     if (!vorlage) { return true; }          /* ohne Vorlage zaehlt jedes Abwaehlen */
     var tplZeile = null;
-    (vorlage.points || []).forEach(function (x) {
+    (vorlage.zustaende || []).forEach(function (x) {
       if (x.name === (s.ausVorlage || s.n)) { tplZeile = x; }
     });
     if (!tplZeile) { return true; }
-    return !tplZeile.offByDefault;
+    return !tplZeile.vorgabeAus;
   }
   var zielBasis = e.ziel || e.kanal;
 
