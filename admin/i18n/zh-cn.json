@@ -234,6 +234,8 @@
   "list.buttonOnly": "仅写入",
   "list.byHand": "手工",
   "list.changed": "已更改",
+  "list.comesNew": "将添加",
+  "list.goesAway": "将删除",
   "list.colOn": "在……上",
   "list.colRole": "角色",
   "list.colState": "州",

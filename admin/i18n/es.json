@@ -234,6 +234,8 @@
   "list.buttonOnly": "solo escritura",
   "list.byHand": "a mano",
   "list.changed": "modificado",
+  "list.comesNew": "se añadirá",
+  "list.goesAway": "se eliminará",
   "list.colOn": "en",
   "list.colRole": "Función",
   "list.colState": "Estado",

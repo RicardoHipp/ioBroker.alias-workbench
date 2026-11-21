@@ -234,6 +234,8 @@
   "list.buttonOnly": "только для записи",
   "list.byHand": "вручную",
   "list.changed": "изменился",
+  "list.comesNew": "будет добавлен",
+  "list.goesAway": "будет удалён",
   "list.colOn": "на",
   "list.colRole": "Роль",
   "list.colState": "Штат",

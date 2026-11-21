@@ -467,6 +467,10 @@
     border-bottom:1px solid var(--line);
   }
   .erow .geae.tplabw { color:var(--ink-3); background:var(--surface-2); }
+  /* Neu in den Alias / faellt heraus - gruen und rot wie in der
+     Aenderungskarte, damit beide dasselbe sagen (21.11.2026). */
+  .erow .geae.kommt { color:var(--ok, #2e7d32); border-color:currentColor; background:transparent; }
+  .erow .geae.geht { color:var(--bad, #c62828); border-color:currentColor; background:transparent; }
   .leerhilfe .lh2 { margin-top:11px; font-size:12px; color:var(--ink-3); }
 
   .footbar {

@@ -234,6 +234,8 @@
   "list.buttonOnly": "write only",
   "list.byHand": "by hand",
   "list.changed": "changed",
+  "list.comesNew": "will be added",
+  "list.goesAway": "will be removed",
   "list.colOn": "on",
   "list.colRole": "Role",
   "list.colState": "State",

@@ -234,6 +234,8 @@
   "list.buttonOnly": "tylko do zapisu",
   "list.byHand": "ręcznie",
   "list.changed": "zmieniono",
+  "list.comesNew": "zostanie dodany",
+  "list.goesAway": "zostanie usunięty",
   "list.colOn": "na",
   "list.colRole": "Rola",
   "list.colState": "Stan",

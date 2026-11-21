@@ -11,7 +11,7 @@ import { el, $ } from './basis.js';
 import { tr, sprachtext } from './sprache.js';
 import { erkenneEntwurf, musterVon, rolleVonPlatz, typKonflikte, plaetzeFuerRolle, typPasstZuPlatz, fehlendePflicht } from './erkennung.js';
 import { kindZustaende, wertVon, fmt } from './werte.js';
-import { steuerKanaele, vorlagenAbweichung, bestandsAbweichung, waehle, quelleHier, quellenVerteilung } from './entwurf.js';
+import { steuerKanaele, vorlagenAbweichung, bestandsAbweichung, waehle, quelleHier, quellenVerteilung, knotenDa } from './entwurf.js';
 import { musterName } from './musternamen.js';
 import { detailZeile } from './detail.js';
 import { rateAnzahl, rateZurueck, rateZurueckEine, rateBehalten } from './vorschlagen.js';
@@ -515,6 +515,21 @@ export function baueListe(host, e, pl, rateKnopf, musterBlock) {
     if (titel.length) { n3.title = titel.join('\n\n'); }
     if (s.manuell) { n3.appendChild(el('span', 'hand', tr('list.byHand'))); }
     if (s.geaendert) { n3.appendChild(el('span', 'geae', tr('list.changed'))); }
+    /* Kommt die Zeile neu in den Alias, oder faellt sie heraus?
+
+       Bisher sah ein frisch angehakter Punkt genauso aus wie einer, der
+       schon immer im Alias steht; erst die Aenderungskarte beim
+       Aktualisieren sagte „neu". Nach „Auf Vorlage zuruecksetzen" an
+       `alias.0.Bastelzimmer.Schreibtischlampe` kam eine Zeile dazu, und
+       nichts zeigte welche (Ricardo, 21.11.2026). Dieselbe Regel wie
+       `verwaiste` und `neu` in schreiben.js: Ziel ist `e.ziel || e.kanal`,
+       der Punkt heisst `ziel.n`, und nur unter einem Alias, den es gibt. */
+    var bZiel = e.ziel || e.kanal;
+    if (s.n && bZiel && bZiel.indexOf('alias.') === 0 && knotenDa(bZiel)) {
+      var imAlias = !!S.objects[bZiel + '.' + s.n];
+      if (s.on && !imAlias) { n3.appendChild(el('span', 'geae kommt', tr('list.comesNew'))); }
+      if (!s.on && imAlias) { n3.appendChild(el('span', 'geae geht', tr('list.goesAway'))); }
+    }
     /* Was die Vorlage anders will, steht an der Zeile - sonst sieht man
        es erst im Trockenlauf (Ricardo, 25.08.2026).
 
