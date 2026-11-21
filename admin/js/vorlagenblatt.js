@@ -1142,8 +1142,15 @@ export function vEinlesenDatei(datei) {
       var host = $('#res');
       host.textContent = '';
       var w = el('div', 'aside w');
-      w.appendChild(el('b', null, tr('tv.importBad')));
-      w.appendChild(document.createTextNode(' ' + fehler));
+      /* Eine alte Datei IST eine Vorlage, nur im alten Format - davor
+         „Diese Datei ist keine Vorlage" zu setzen widerspraeche dem Satz
+         dahinter. Dann steht nur der eine Satz da. */
+      if (istAlteVorlage(roh)) {
+        w.appendChild(el('b', null, fehler));
+      } else {
+        w.appendChild(el('b', null, tr('tv.importBad')));
+        w.appendChild(document.createTextNode(' ' + fehler));
+      }
       host.appendChild(w);
       return;
     }

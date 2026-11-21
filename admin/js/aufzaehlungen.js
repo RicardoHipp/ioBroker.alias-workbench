@@ -344,8 +344,8 @@ export function funktionVorschlag(e) {
   if (e.vorlage) {
     var vq = null;
     S.VORLAGEN.forEach(function (v) { if (v.id === e.vorlage) { vq = v; } });
-    if (vq && vq.funktion) {
-      var ausVorlage = funktionZuKennung(vq.funktion);
+    if (vq && vq.enumFunction) {
+      var ausVorlage = funktionZuKennung(vq.enumFunction);
       if (ausVorlage) { return ausVorlage; }
     }
   }

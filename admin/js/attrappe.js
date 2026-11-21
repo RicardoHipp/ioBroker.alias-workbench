@@ -32,8 +32,15 @@ import { INSTANZ_ID } from './vorlagen.js';
    Dass der Wert vom eigenen Block an den Eintrag wanderte (12.10.2026),
    hat sie NICHT erhoeht: zu dem Zeitpunkt war keine Datei im Umlauf, es
    gab das Einlesen noch nicht, und gelesen hat das Format nur der eigene
-   Pruefpunkt Z2. Ab jetzt waere derselbe Schritt ein Versionssprung. */
-export var FORMAT = 1;
+   Pruefpunkt Z2. Ab jetzt waere derselbe Schritt ein Versionssprung.
+
+   Format 2 (21.11.2026): die Feldnamen sind englisch - `root`,
+   `createdAt`, `createdBy`, `source`, `nativeIncluded`, `objects`, je
+   Eintrag `path`, `virtual`, `value`, dazu `valuesRemoved`. Eine Datei
+   im Format 1 wird abgewiesen, mit dem Satz, dass sie aus einer aelteren
+   Fassung stammt - Ricardo hat entschieden, alte Dateien nicht mehr zu
+   lesen, wie bei den Vorlagen. */
+export var FORMAT = 2;
 
 /* Nur diese Felder aus `common` gehen mit.
 
@@ -108,13 +115,13 @@ function relativ(wurzel, id) {
 
 /* Die beiden Versionen, die in die Datei gehoeren.
 
-   `erzeugtVon` sagt, welche Werkbank die Datei geschrieben hat — wichtig,
+   `createdBy` sagt, welche Werkbank die Datei geschrieben hat — wichtig,
    wenn jemand eine Datei schickt und etwas fehlt, das eine neuere Fassung
    mitschreibt.
 
-   `quelle` ist die wichtigere: der Aufbau der Objekte kommt vom
+   `source` ist die wichtigere: der Aufbau der Objekte kommt vom
    Quelladapter, und derselbe `tele.SENSOR` sieht unter zwei Fassungen des
-   mqtt-Adapters verschieden aus. Aus `wurzel` liest man die Instanz ab,
+   mqtt-Adapters verschieden aus. Aus `root` liest man die Instanz ab,
    ihre Version nicht.
 
    `system.adapter.*` steht NICHT in S.objects — der Reiter laedt die
@@ -151,7 +158,7 @@ export function sammle(wurzel, versionen) {
   var objekte = [];
 
   virtuelleEbenen(wurzel, ids).forEach(function (id) {
-    objekte.push({ pfad: relativ(wurzel, id), virtuell: true });
+    objekte.push({ path: relativ(wurzel, id), virtual: true });
   });
 
   /* Der Wert steht AM Eintrag, nicht in einem eigenen Block.
@@ -167,25 +174,25 @@ export function sammle(wurzel, versionen) {
   ids.forEach(function (id) {
     var o = S.objects[id] || {};
     var eintrag = {
-      pfad: relativ(wurzel, id),
+      path: relativ(wurzel, id),
       type: o.type,
       common: gesiebtesCommon(o.common),
     };
     var st = S.werte[id];
-    if (st && st.val !== undefined && st.val !== null) { eintrag.wert = st.val; }
+    if (st && st.val !== undefined && st.val !== null) { eintrag.value = st.val; }
     objekte.push(eintrag);
   });
-  objekte.sort(function (a, b) { return a.pfad.localeCompare(b.pfad); });
+  objekte.sort(function (a, b) { return a.path.localeCompare(b.path); });
 
   var v = versionen || {};
   return {
     format: FORMAT,
-    wurzel: wurzel,
-    erzeugt: new Date().toISOString(),
-    erzeugtVon: v.erzeugtVon || null,
-    quelle: v.quelle || null,
-    nativeEnthalten: false,
-    objekte: objekte,
+    root: wurzel,
+    createdAt: new Date().toISOString(),
+    createdBy: v.erzeugtVon || null,
+    source: v.quelle || null,
+    nativeIncluded: false,
+    objects: objekte,
   };
 }
 
@@ -256,19 +263,19 @@ export function auffaellig(wert) {
    Pruefpunkt, damit „was die Vorschau zeigt, steht auch in der Datei"
    nicht zwei Rechenwege hat. */
 export function vorschauZeilen(daten) {
-  return daten.objekte.map(function (o) {
+  return daten.objects.map(function (o) {
     var c = o.common || {};
     return {
-      pfad: o.pfad,
-      type: o.virtuell ? '(ohne Objekt)' : o.type,
-      virtuell: !!o.virtuell,
+      pfad: o.path,
+      type: o.virtual ? '(ohne Objekt)' : o.type,
+      virtuell: !!o.virtual,
       name: typeof c.name === 'string' ? c.name : (c.name ? JSON.stringify(c.name) : ''),
       rolle: c.role || '',
       datentyp: c.type || '',
       einheit: c.unit || '',
-      hatWert: 'wert' in o,
-      wert: 'wert' in o ? o.wert : undefined,
-      auffaellig: 'wert' in o ? auffaellig(o.wert) : [],
+      hatWert: 'value' in o,
+      wert: 'value' in o ? o.value : undefined,
+      auffaellig: 'value' in o ? auffaellig(o.value) : [],
     };
   });
 }
@@ -276,24 +283,24 @@ export function vorschauZeilen(daten) {
 /* Kennungen stehen nicht nur in den Werten.
 
    Gemessen am 12.10.2026 an `hm-rega.0.QEQ0695220`: die Seriennummer
-   steht in `wurzel` und in zwoelf `common.name`-Werten, obwohl `native`
+   steht in `root` und in zwoelf `common.name`-Werten, obwohl `native`
    nachweislich fehlt. Das Weglassen von `native` entfernt also keine
    Kennung, die auch im Namen oder im Pfad steht — und davon muss die
    Vorschau sprechen, sonst verspricht sie mehr, als sie halten kann. */
 export function auffaelligImGeruest(daten) {
   var raus = [];
-  if (auffaellig(daten.wurzel).length) { raus.push({ wo: 'wurzel', text: daten.wurzel }); }
-  daten.objekte.forEach(function (o) {
+  if (auffaellig(daten.root).length) { raus.push({ wo: 'wurzel', text: daten.root }); }
+  daten.objects.forEach(function (o) {
     var c = o.common || {};
     var n = typeof c.name === 'string' ? c.name : (c.name ? JSON.stringify(c.name) : '');
-    if (n && auffaellig(n).length) { raus.push({ wo: o.pfad || '(Wurzel)', text: n }); }
+    if (n && auffaellig(n).length) { raus.push({ wo: o.path || '(Wurzel)', text: n }); }
   });
   return raus;
 }
 
 /* Gleiche Bauweise wie `vAusgeben` im Vorlagenblatt. */
 function dateiGeben(daten) {
-  var name = String(daten.wurzel).split('.').pop() || 'attrappe';
+  var name = String(daten.root).split('.').pop() || 'attrappe';
   var text = JSON.stringify(daten, null, 2) + '\n';
   var a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
@@ -318,16 +325,16 @@ export function ausgeben(wurzel, fertig) {
 
 /* Abgewaehlte Werte herausnehmen.
 
-   Der Wert faellt weg, das Objekt bleibt — und `werteAbgewaehlt` sagt,
+   Der Wert faellt weg, das Objekt bleibt — und `valuesRemoved` sagt,
    dass jemand ihn entfernt hat. Ohne diese Liste saehe ein entfernter
    Wert aus wie ein Punkt, der gerade nichts liefert. */
 export function ohneAbgewaehlte(daten, abgewaehlt) {
   var raus = JSON.parse(JSON.stringify(daten));
   var weg = [];
-  raus.objekte.forEach(function (o) {
-    if (abgewaehlt.indexOf(o.pfad) > -1 && 'wert' in o) { delete o.wert; weg.push(o.pfad); }
+  raus.objects.forEach(function (o) {
+    if (abgewaehlt.indexOf(o.path) > -1 && 'value' in o) { delete o.value; weg.push(o.path); }
   });
-  if (weg.length) { raus.werteAbgewaehlt = weg.sort(); }
+  if (weg.length) { raus.valuesRemoved = weg.sort(); }
   return raus;
 }
 
@@ -355,11 +362,11 @@ function baueVorschau(daten) {
   var abgewaehlt = [];
 
   var kopf = el('div', 'mk-kopf');
-  kopf.appendChild(el('div', 'mk-wurzel', daten.wurzel));
+  kopf.appendChild(el('div', 'mk-wurzel', daten.root));
   kopf.appendChild(el('div', 'mk-zahlen', tr('mock.counts',
     zeilen.length, mitWert.length,
-    (daten.erzeugtVon && daten.erzeugtVon.version) || '?',
-    (daten.quelle && (daten.quelle.adapter + ' ' + daten.quelle.version)) || '—')));
+    (daten.createdBy && daten.createdBy.version) || '?',
+    (daten.source && (daten.source.adapter + ' ' + daten.source.version)) || '—')));
   kopf.appendChild(el('div', 'mk-ohne', tr('mock.noNative')));
   body.appendChild(kopf);
 
@@ -570,13 +577,14 @@ export var ATTRAPPEN_WURZEL = '0_userdata.0.wb-attrappe';
    zurueck, wenn sie taugt, sonst den Grund. */
 export function pruefeDatei(roh) {
   if (!roh || typeof roh !== 'object') { return tr('mockin.badJson'); }
+  if (roh.format === 1) { return tr('mockin.oldFormat'); }
   if (roh.format !== FORMAT) { return tr('mockin.badFormat', String(roh.format), String(FORMAT)); }
-  if (!Array.isArray(roh.objekte) || !roh.objekte.length) { return tr('mockin.badObjects'); }
-  var schlecht = roh.objekte.filter(function (o) {
-    return !o || typeof o !== 'object' || typeof o.pfad !== 'string';
+  if (!Array.isArray(roh.objects) || !roh.objects.length) { return tr('mockin.badObjects'); }
+  var schlecht = roh.objects.filter(function (o) {
+    return !o || typeof o !== 'object' || typeof o.path !== 'string';
   });
   if (schlecht.length) { return tr('mockin.badEntry', schlecht.length); }
-  if (!roh.objekte.some(function (o) { return o.pfad === ''; })) { return tr('mockin.noRoot'); }
+  if (!roh.objects.some(function (o) { return o.path === ''; })) { return tr('mockin.noRoot'); }
   return null;
 }
 
@@ -590,15 +598,15 @@ function nameAus(wurzel) {
    als `VIR` an. */
 export function baueAttrappe(daten, name) {
   var basis = ATTRAPPEN_WURZEL + '.' + name;
-  return daten.objekte.filter(function (o) { return !o.virtuell; }).map(function (o) {
-    var id = o.pfad ? basis + '.' + o.pfad : basis;
+  return daten.objects.filter(function (o) { return !o.virtual; }).map(function (o) {
+    var id = o.path ? basis + '.' + o.path : basis;
     var obj = {
       type: o.type || 'folder',
       common: JSON.parse(JSON.stringify(o.common || {})),
-      native: { createdBy: 'alias-workbench', mockedFrom: daten.wurzel },
+      native: { createdBy: 'alias-workbench', mockedFrom: daten.root },
     };
-    if (!obj.common.name) { obj.common.name = o.pfad || name; }
-    return { id: id, obj: obj, hatWert: 'wert' in o, wert: o.wert, schonDa: !!S.objects[id] };
+    if (!obj.common.name) { obj.common.name = o.path || name; }
+    return { id: id, obj: obj, hatWert: 'value' in o, wert: o.value, schonDa: !!S.objects[id] };
   });
 }
 
@@ -647,11 +655,11 @@ function zeigeEinlesen(daten, fehler) {
   }
   neuerKnopf.disabled = false;
 
-  var name = nameAus(daten.wurzel);
+  var name = nameAus(daten.root);
   var kopf = el('div', 'mk-kopf');
-  kopf.appendChild(el('div', 'mk-ohne', tr('mockin.from', daten.wurzel,
-    (daten.erzeugtVon && daten.erzeugtVon.version) || '?',
-    (daten.quelle && (daten.quelle.adapter + ' ' + daten.quelle.version)) || '—')));
+  kopf.appendChild(el('div', 'mk-ohne', tr('mockin.from', daten.root,
+    (daten.createdBy && daten.createdBy.version) || '?',
+    (daten.source && (daten.source.adapter + ' ' + daten.source.version)) || '—')));
 
   var zeile = el('div', 'mk-namenszeile');
   zeile.appendChild(el('span', 'mk-lbl', tr('mockin.name')));
