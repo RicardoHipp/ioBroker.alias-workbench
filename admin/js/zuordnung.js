@@ -847,12 +847,12 @@ export function unterschiede(e) {
        Gemeldet wird er erst, wenn jemand ihn anhakt. */
     if (s.ausAnsicht) { return false; }
     if (!vorlage) { return true; }          /* ohne Vorlage zaehlt jedes Abwaehlen */
-    var z = null;
-    (vorlage.zustaende || []).forEach(function (x) {
-      if (x.name === (s.ausVorlage || s.n)) { z = x; }
+    var tplZeile = null;
+    (vorlage.points || []).forEach(function (x) {
+      if (x.name === (s.ausVorlage || s.n)) { tplZeile = x; }
     });
-    if (!z) { return true; }
-    return !z.vorgabeAus;
+    if (!tplZeile) { return true; }
+    return !tplZeile.offByDefault;
   }
   var zielBasis = e.ziel || e.kanal;
 
