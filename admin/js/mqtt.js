@@ -313,21 +313,28 @@ export function telePeriode(kanal, merken) {
 
 /* Gemerkt wird am Abfragepunkt selbst — dort, wo gefragt wurde. Kein
    eigenes Objekt, und beim Aufraeumen verschwindet es mit. Dieselbe
-   Bauart wie `gemerktesSo59`. */
+   Bauart wie `gemerktesSo59`.
+
+   Diese beiden Felder hiessen bis 21.11.2026 `takt` und `taktZeit`.
+   Sie wandern NICHT durch die Migration: Sie sitzen am Punkt des
+   mqtt-client, also in einem fremden Namensraum, und dort noch einmal
+   zu schreiben waere das Gegenteil von dem, was die Umstellung
+   bezweckt. Sie sind ohnehin nur ein Zwischenspeicher - beim naechsten
+   Nachfragen stehen sie neu da. */
 export function gemerkterTakt(kanal) {
   var id = hatPunkt(kanal, 'cmnd.TelePeriod');
   var n = id && S.objects[id] && S.objects[id].native;
-  if (!n || n.takt === undefined) { return null; }
-  return { wert: n.takt, zeit: n.taktZeit || 0 };
+  if (!n || n.telemetryPeriod === undefined) { return null; }
+  return { wert: n.telemetryPeriod, zeit: n.telemetryPeriodAt || 0 };
 }
 
 function merkeTakt(kanal, wert) {
   var id = hatPunkt(kanal, 'cmnd.TelePeriod');
   if (!id || !S.objects[id]) { return; }
   var n = S.objects[id].native || (S.objects[id].native = {});
-  if (n.takt === wert) { return; }
-  n.takt = wert;
-  n.taktZeit = neueZeit();
+  if (n.telemetryPeriod === wert) { return; }
+  n.telemetryPeriod = wert;
+  n.telemetryPeriodAt = neueZeit();
   var kopie = JSON.parse(JSON.stringify(S.objects[id]));
   socket.emit('setObject', id, kopie, function () {});
 }
@@ -961,8 +968,9 @@ function frageTakt(kanal, g) {
               unit: 's', desc: tr('mq.createdBy'), custom: mqttCustom(g, thema) },
     /* Einen schon gemerkten Takt nicht wegwerfen, nur weil erneut
        gefragt wird. */
-    native: { topic: thema, takt: alt && alt.native ? alt.native.takt : undefined,
-              taktZeit: alt && alt.native ? alt.native.taktZeit : undefined }
+    native: { topic: thema,
+              telemetryPeriod: alt && alt.native ? alt.native.telemetryPeriod : undefined,
+              telemetryPeriodAt: alt && alt.native ? alt.native.telemetryPeriodAt : undefined }
   };
   socket.emit('setObject', id, obj, function (err) {
     if (err) { return; }

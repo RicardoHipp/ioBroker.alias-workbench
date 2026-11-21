@@ -249,7 +249,7 @@ export function setzeInstanz(text, v, n) {
 
 /* Aus welchem Geraet ist dieser Alias gebaut?
 
-   Zwei Wege, und der zweite ist der wichtigere. `native.quelle` steht am
+   Zwei Wege, und der zweite ist der wichtigere. `native.source` steht am
    Kanal, seit die Werkbank ihn schreibt - das ist die verlaessliche
    Auskunft. Einen von Hand gebauten Alias hat aber niemand so vermerkt;
    dort bleibt nur, den Punkten zu folgen: worauf ihre `alias.id` zeigt,

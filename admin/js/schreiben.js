@@ -237,12 +237,12 @@ export function baueObjekte(e) {
      Erkennung, und nichts mehr, woran ein Nachziehen der Versionen
      greifen koennte. Gemessen 09.09.2026: aus fuenf Feldern wurde eins. */
   var kanalNative = JSON.parse(JSON.stringify(altN));
-  if (!ausAlias) { kanalNative.quelle = e.kanal; }
+  if (!ausAlias) { kanalNative.source = e.kanal; }
   if (e.vorlage) {
-    kanalNative.vorlage = e.vorlage;
-    kanalNative.vorlageVersion = e.vorlageVersion;
-    kanalNative.geraetetyp = e.want;
-    if (e.want !== e.wantAuto) { kanalNative.musterVonHand = true; }
+    kanalNative.template = e.vorlage;
+    kanalNative.templateVersion = e.vorlageVersion;
+    kanalNative.deviceType = e.want;
+    if (e.want !== e.wantAuto) { kanalNative.deviceTypeManual = true; }
   }
   /* Einen von Hand vergebenen Kanalnamen nicht durch die Kennung
      ersetzen. */
@@ -315,8 +315,8 @@ export function baueObjekte(e) {
          sonst schreibt ihn ein Aktualisieren der Vorlage zu, aus der er
          nie kam. */
       nat = altNat;
-    } else if (s.manuell) { nat.vonHand = true; }
-    else if (e.vorlage) { nat.vorlage = e.vorlage; nat.ausZustand = s.ausVorlage || s.n; }
+    } else if (s.manuell) { nat.manual = true; }
+    else if (e.vorlage) { nat.template = e.vorlage; nat.templateState = s.ausVorlage || s.n; }
     else if (altNat) {
       /* Aus dem Aliasmodus heraus gibt es keine Vorlage, und `manuell`
          steht nur beim frischen Hinzufuegen. Ohne diesen Fall schrieb
@@ -588,7 +588,7 @@ function leereEigeneEnums(liste, weg) {
   liste.slice().forEach(function (x) {
     if (!x.istEnum || !x.weg) { return; }
     var o = enums[x.id];
-    if (!o || !o.native || o.native.angelegtVon !== 'alias-workbench') { return; }
+    if (!o || !o.native || o.native.createdBy !== 'alias-workbench') { return; }
     if (((x.obj.common || {}).members || []).length) { return; }
     liste.splice(liste.indexOf(x), 1);
     if (!weg.some(function (y) { return y.id === x.id; })) {
@@ -979,12 +979,12 @@ export function zeigeTrockenlauf(alleAusgaenge) {
    das Geraet sei weg. */
 function geschwisterVon(ziel) {
   var o = S.objects[ziel];
-  var q = o && o.native && o.native.quelle;
+  var q = o && o.native && o.native.source;
   if (!q) { return []; }
   return S.keysSorted.filter(function (id) {
     if (id === ziel || id.indexOf('alias.') !== 0) { return false; }
     var x = S.objects[id];
-    return x && x.type === 'channel' && x.native && x.native.quelle === q;
+    return x && x.type === 'channel' && x.native && x.native.source === q;
   });
 }
 
@@ -1024,7 +1024,7 @@ function enumsDieLeerWuerden(alle) {
     });
     Object.keys(betroffen).forEach(function (eid) {
       var o = enums[eid];
-      if (!o || !o.native || o.native.angelegtVon !== 'alias-workbench') { return; }
+      if (!o || !o.native || o.native.createdBy !== 'alias-workbench') { return; }
       var uebrig = ((o.common && o.common.members) || []).filter(function (m) {
         return alle.indexOf(m) === -1;
       });
@@ -1286,7 +1286,7 @@ function leereEnumsRaeumen(eids, geloescht, fertig) {
     var uebrig = ((o && o.common && o.common.members) || []).filter(function (m) {
       return geloescht.indexOf(m) === -1;
     });
-    var eigene = !!(o && o.native && o.native.angelegtVon === 'alias-workbench');
+    var eigene = !!(o && o.native && o.native.createdBy === 'alias-workbench');
     if (!o || uebrig.length || !eigene) {
       if (--offen === 0) { fertig(); }
       return;

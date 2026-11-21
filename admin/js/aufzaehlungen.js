@@ -28,7 +28,7 @@ export function neueEnum(id, art) {
      Ohne Marke blieb `enum.functions.socket` als leere Huelle stehen
      (25.08.2026 am Produktivsystem gefunden). Fremde und vorbestehende
      Aufzaehlungen tragen sie nicht und bleiben darum unangetastet. */
-  return { type: 'enum', common: c, native: { angelegtVon: 'alias-workbench' } };
+  return { type: 'enum', common: c, native: { createdBy: 'alias-workbench' } };
 }
 
 /* Alle Aufzaehlungen einer Art, benutzte zuerst.

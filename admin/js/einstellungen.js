@@ -1,5 +1,6 @@
 import { migrationNoetig } from './migration.js';
 import { socket } from './verbindung.js';
+import { S } from './zustand.js';
 
 /* Die Einstellungen der Instanz.
 
@@ -41,7 +42,7 @@ export function ladeEinstellungen(danach) {
        durch ist, arbeitet die Werkbank nicht weiter. Der Rest des
        Adapters kennt nur die englischen Namen; `migration.js` ist die
        einzige Stelle, die die alten ueberhaupt noch kennt. */
-    if (!err && obj && migrationNoetig(obj, instanzId())) { return; }
+    if (!err && obj && migrationNoetig(obj, instanzId(), S.objects)) { return; }
     if (typeof danach === 'function') { danach(); }
   });
 }

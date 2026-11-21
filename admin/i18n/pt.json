@@ -777,13 +777,14 @@
   "write.writeSourceMissing": "{0}: o ponto de dados de envio {1} ainda não existe",
   "write.writing": "a escrever …",
   "migr.title": "Nomes antigos têm de ser convertidos",
-  "migr.lead": "Esta instância ainda tem {0} definição(ões) com os antigos nomes alemães. Vão ser convertidas para nomes ingleses; até lá a bancada não funciona.",
+  "migr.lead": "Esta instância ainda tem {0} definição(ões) e {1} objeto(s) de alias com os antigos nomes alemães. Vão ser convertidos para nomes ingleses; até lá a bancada não funciona.",
   "migr.noWayBack": "Não há volta atrás. Se quiser uma rede de segurança, faça primeiro uma cópia de segurança do ioBroker.",
   "migr.locked": "Sem a conversão a bancada não funciona. Até agora nada foi alterado.",
   "migr.go": "Converter",
   "migr.later": "Agora não",
   "migr.retry": "Tentar de novo",
   "migr.reload": "Recarregar",
-  "migr.done": "{0} definição(ões) convertida(s). Recarregue o separador.",
-  "migr.failed": "A conversão falhou: {0}"
+  "migr.done": "{0} objeto(s) convertido(s). Recarregue o separador.",
+  "migr.running": "A converter…",
+  "migr.partly": "{0} convertido(s), {1} não puderam ser escritos:"
 }

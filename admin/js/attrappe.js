@@ -595,7 +595,7 @@ export function baueAttrappe(daten, name) {
     var obj = {
       type: o.type || 'folder',
       common: JSON.parse(JSON.stringify(o.common || {})),
-      native: { angelegtVon: 'alias-workbench', attrappeAus: daten.wurzel },
+      native: { createdBy: 'alias-workbench', mockedFrom: daten.wurzel },
     };
     if (!obj.common.name) { obj.common.name = o.pfad || name; }
     return { id: id, obj: obj, hatWert: 'wert' in o, wert: o.wert, schonDa: !!S.objects[id] };

@@ -1827,8 +1827,8 @@ describe('Die Umstellung auf englische Bezeichner', () => {
     const von = quelle.indexOf('export var INSTANZ_NAMEN');
     const bis = quelle.indexOf('/* Schreiben.');
     const code = quelle.slice(von, bis).split('export ').join('');
-    const t = new Function(
-        code + '; return { INSTANZ_NAMEN, instanzBefunde, nativeUmgestellt };')();
+    const t = new Function(code + '; return { INSTANZ_NAMEN, ALIAS_NAMEN, '
+        + 'instanzBefunde, aliasBefunde, nativeUmgestellt };')();
 
     it('nennt genau die vier Einstellungen, die mcm1957 benannt hat', () => {
         expect(t.INSTANZ_NAMEN).to.deep.equal({
@@ -1911,7 +1911,8 @@ describe('Die Umstellung auf englische Bezeichner', () => {
 
     it('haelt die Dialogtexte in allen elf Sprachen bereit', () => {
         const noetig = ['migr.title', 'migr.lead', 'migr.noWayBack', 'migr.locked',
-            'migr.go', 'migr.later', 'migr.retry', 'migr.reload', 'migr.done', 'migr.failed'];
+            'migr.go', 'migr.later', 'migr.retry', 'migr.reload', 'migr.done',
+            'migr.running', 'migr.partly'];
         SPRACHEN.forEach(sp => {
             const d = liesJson(path.join(i18nDir, sp + '.json'));
             noetig.forEach(k => {
@@ -1920,22 +1921,96 @@ describe('Die Umstellung auf englische Bezeichner', () => {
         });
     });
 
+    it('benennt die Felder an den Alias-Objekten vollstaendig', () => {
+        expect(t.ALIAS_NAMEN).to.deep.equal({
+            quelle: 'source',
+            vorlage: 'template',
+            vorlageVersion: 'templateVersion',
+            ausZustand: 'templateState',
+            geraetetyp: 'deviceType',
+            musterVonHand: 'deviceTypeManual',
+            vonHand: 'manual',
+            angelegtVon: 'createdBy',
+            attrappeAus: 'mockedFrom',
+        });
+    });
+
+    it('findet nur Alias-Objekte mit unseren Feldern', () => {
+        const objects = {
+            'alias.0.a': { native: { vorlage: 'hm-dimmer', ausZustand: 'SET' } },
+            'alias.0.b': { native: { autocreated: 'by automatic ensure logic' } },
+            'alias.0.c': { native: {} },
+            'alias.0.d': {},
+            'matter.0.x': { native: { vorlage: 'egal' } },
+        };
+        const raus = t.aliasBefunde(objects);
+        expect(raus.map(b => b.id)).to.deep.equal(['alias.0.a']);
+        expect(raus[0].felder).to.have.members(['vorlage', 'ausZustand']);
+    });
+
+    it('laesst fremde Felder in Ruhe', () => {
+        /* `autocreated` schreibt bei Ricardo javascript.0, `topic` kommt
+           von MQTT, `TYPE` von hm-rpc. Nichts davon ist unseres - und
+           mcm1957s Regel nimmt fremde Systeme ausdruecklich aus. */
+        const raus = t.nativeUmgestellt(
+            { vorlage: 'hm-dimmer', autocreated: 'by logic', topic: 'x/y', TYPE: 'HM' },
+            t.ALIAS_NAMEN);
+        expect(raus).to.deep.equal({
+            template: 'hm-dimmer', autocreated: 'by logic', topic: 'x/y', TYPE: 'HM',
+        });
+    });
+
+    it('stellt ein Alias-Objekt vollstaendig um', () => {
+        const raus = t.nativeUmgestellt({
+            quelle: 'hm-rpc.0.ABC', vorlage: 'hm-dimmer', vorlageVersion: 3,
+            ausZustand: 'ACTUAL', geraetetyp: 'dimmer',
+        }, t.ALIAS_NAMEN);
+        expect(raus).to.deep.equal({
+            source: 'hm-rpc.0.ABC', template: 'hm-dimmer', templateVersion: 3,
+            templateState: 'ACTUAL', deviceType: 'dimmer',
+        });
+    });
+
+    it('nimmt den Objektvorrat auch leer oder fehlend', () => {
+        expect(t.aliasBefunde({})).to.be.empty;
+        expect(t.aliasBefunde(null)).to.be.empty;
+        expect(t.aliasBefunde(undefined)).to.be.empty;
+    });
+
     it('kennt im uebrigen Adapter keinen alten Namen mehr', () => {
         /* Der eigentliche Zweck des Moduls: Es ist die EINZIGE Stelle,
            die die alten Namen kennt. Taucht einer woanders auf, ist die
            Umstellung unvollstaendig. */
-        const alt = ['ikonRaeume', 'ikonFunktionen', 'ikonErsetzen', 'vorlagenVomAdmin'];
+        /* Beide Tabellen: die vier Einstellungen und die Felder an den
+           Alias-Objekten. `vorlage` und `quelle` stehen bewusst NICHT
+           in dieser Liste - die Woerter kommen im Code auch als
+           Entwurfsfeld, Vorlagenfeld und Variablenname vor und sind
+           dort voellig in Ordnung. Gesucht wird darum nach der
+           qualifizierten Form. */
+        const alt = ['ikonRaeume', 'ikonFunktionen', 'ikonErsetzen', 'vorlagenVomAdmin',
+            'native.quelle', 'native.vorlage', 'native.vorlageVersion',
+            'native.ausZustand', 'native.geraetetyp', 'native.angelegtVon',
+            'native.attrappeAus', 'native.takt', 'native.taktZeit',
+            'nat.vorlage', 'nat.ausZustand', 'nat.vonHand',
+            'kanalNative.quelle', 'kanalNative.vorlage', 'kanalNative.vorlageVersion',
+            'kanalNative.geraetetyp', 'kanalNative.musterVonHand'];
         const treffer = [];
         fs.readdirSync(jsDir).forEach(f => {
             if (!f.endsWith('.js') || f === 'migration.js') { return; }
             const inhalt = lies(path.join(jsDir, f));
-            alt.forEach(a => { if (inhalt.includes(a)) { treffer.push(f + ': ' + a); } });
+            /* Mit Wortgrenze suchen, sonst trifft `native.vorlage` auch
+               `native.vorlagen` - und das ist das Feld der eigenen
+               Vorlagen, das zu Schicht C gehoert und bleiben muss. */
+            alt.forEach(a => {
+                const re = new RegExp(a.replace(/\./g, '\\.') + '(?![A-Za-z])');
+                if (re.test(inhalt)) { treffer.push(f + ': ' + a); }
+            });
         });
         expect(treffer, 'alter Name ausserhalb von migration.js').to.be.empty;
 
         ['io-package.json', path.join('admin', 'jsonConfig.json')].forEach(rel => {
             const inhalt = lies(path.join(wurzel, rel));
-            alt.forEach(a => {
+            Object.keys(t.INSTANZ_NAMEN).forEach(a => {
                 expect(inhalt.includes(a), `${a} steht noch in ${rel}`).to.equal(false);
             });
         });

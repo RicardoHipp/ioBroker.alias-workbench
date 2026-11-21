@@ -516,7 +516,7 @@ export function quellenVerteilung(aliasId) {
 
 export function quelleVon(aliasId) {
   var o = S.objects[aliasId];
-  var q = o && o.native && o.native.quelle;
+  var q = o && o.native && o.native.source;
   if (q && knotenDa(q)) { return q; }
 
   var kandidaten = {};
@@ -866,7 +866,7 @@ export function rohEntwurf(id) {
    `alias.0.Geschirrspueler.Allgemeine_Informationen.Befehle`, beim
    dritten Druck noch eine Ebene tiefer (17.09.2026).
 
-   Woran man es erkennt: das gefundene Ziel fuehrt in `native.quelle`
+   Woran man es erkennt: das gefundene Ziel fuehrt in `native.source`
    einen KANAL der Quelle, nicht das Geraet. Dann ist es selbst ein
    Unterordner aus einem frueheren Durchgang, und der Behaelter ist sein
    Elternknoten. */
@@ -1248,8 +1248,8 @@ export function waehle(id, fertig, zweigeBehalten) {
          angelegte Vorlage ein fertiges Geraet still uebernehmen. */
       var fest = null;
       var vorh = aliasFuer(id);
-      if (vorh && S.objects[vorh] && S.objects[vorh].native && S.objects[vorh].native.vorlage) {
-        var gid = S.objects[vorh].native.vorlage;
+      if (vorh && S.objects[vorh] && S.objects[vorh].native && S.objects[vorh].native.template) {
+        var gid = S.objects[vorh].native.template;
         if (S.VORLAGEN.some(function (x) { return x.id === gid; })) { fest = gid; }
       }
       var v = vorschlag(id, fest);
@@ -1426,7 +1426,7 @@ var GERAETE_VERGLEICH = new Intl.Collator(undefined, { numeric: true, sensitivit
 
 /* Gibt es fuer diese Quelle schon einen Alias?
 
-   Zwei Wege, und der zweite ist der wichtigere. Ueber native.quelle
+   Zwei Wege, und der zweite ist der wichtigere. Ueber native.source
    findet man nur, was die Werkbank selbst angelegt hat. Von Hand
    gebaute Aliase — bei einer gewachsenen Anlage die Mehrheit — tragen
    den Vermerk nicht. Dann wird gesucht, wo es wirklich steht: in den
@@ -1457,8 +1457,8 @@ function alsQuelleKarten() {
   mitVorspann('alias.').forEach(function (id) {
     var o = S.objects[id];
     if (!o) { return; }
-    if (o.native && o.native.quelle && fest[o.native.quelle] === undefined) {
-      fest[o.native.quelle] = id;
+    if (o.native && o.native.source && fest[o.native.source] === undefined) {
+      fest[o.native.source] = id;
     }
     if (o.type !== 'state') { return; }
     var q = aliasQuellen(o);
@@ -1528,7 +1528,7 @@ export function ausgangsQuellen(e) {
    danach "✕ SET fehlt" an einem Geraet mit funktionierendem SET
    (C13, produktiv gemessen 16.09.2026).
 
-   Auch die Abkuerzung ueber `native.quelle` faellt in diesem Fall weg:
+   Auch die Abkuerzung ueber `native.source` faellt in diesem Fall weg:
    die zeigt auf das GERAET, nicht auf den Ausgang. */
 export function aliasFuer(quelle, ausgang) {
   if (ausgang && ausgang.length) {

@@ -6,13 +6,13 @@
    neue Geraet zeigen (Ricardos Punkt 17).
 
    Geaendert wird deshalb so wenig wie moeglich: je Punkt `common.alias.id`
-   und am Kanal `native.quelle`. Alles andere bleibt unberuehrt. Das ist
+   und am Kanal `native.source`. Alles andere bleibt unberuehrt. Das ist
    der ganze Unterschied zum Neu-Anlegen, das den Alias aus der Vorlage
    heraus neu baut und dabei Namen, Rollen und Formeln mitbringt.
 
    Zugeordnet wird in vier Stufen, absteigend nach Verlaesslichkeit:
      1. gleicher relativer Pfad  (…ABC.1.STATE → …XYZ.1.STATE)
-     2. ueber die Vorlage        (der Punkt weiss aus `native.ausZustand`,
+     2. ueber die Vorlage        (der Punkt weiss aus `native.templateState`,
                                   aus welcher Zeile er stammt)
      4. ueber den Alias-Punkt    (sein eigener Name und seine eigene
                                   Rolle - nicht die seiner alten Quelle)
@@ -50,7 +50,7 @@ function aliasPunkte(kanal) {
    laengste gemeinsame Wurzel aller Lesequellen. */
 export function alteQuelle(kanal) {
   var k = S.objects[kanal];
-  if (k && k.native && k.native.quelle) { return k.native.quelle; }
+  if (k && k.native && k.native.source) { return k.native.source; }
   var wurzeln = [];
   aliasPunkte(kanal).forEach(function (id) {
     var q = aliasQuellen(S.objects[id]);
@@ -77,17 +77,17 @@ export function alteQuelle(kanal) {
 }
 
 /* Stufe 2: Was sagt die Vorlage? Der Punkt merkt sich in
-   `native.vorlage`/`native.ausZustand`, aus welcher Zeile er kam. */
+   `native.template`/`native.templateState`, aus welcher Zeile er kam. */
 function ausVorlage(punktId, neuKanal) {
   var o = S.objects[punktId];
   var nat = (o && o.native) || {};
-  if (!nat.vorlage || !nat.ausZustand) { return null; }
+  if (!nat.template || !nat.templateState) { return null; }
   var v = null;
-  S.VORLAGEN.forEach(function (x) { if (x.id === nat.vorlage) { v = x; } });
+  S.VORLAGEN.forEach(function (x) { if (x.id === nat.template) { v = x; } });
   if (!v) { return null; }
   var zeile = null;
   (v.zustaende || []).forEach(function (z) {
-    if (z.name === nat.ausZustand) { zeile = z; }
+    if (z.name === nat.templateState) { zeile = z; }
   });
   if (!zeile) { return null; }
   var mach = function (rel) {
@@ -267,7 +267,7 @@ function ausAliasPunkt(punktId, name, neuKanal) {
 /* Die gemerkte Vorlage gegen die NEUE Quelle halten.
 
    Ein Alias merkt sich, aus welcher Vorlage er entstanden ist - am Kanal
-   `native.vorlage`, an jedem Punkt zusaetzlich `native.ausZustand`. Die
+   `native.template`, an jedem Punkt zusaetzlich `native.templateState`. Die
    Merkung ist stark: „sie bleibt, bis du sie ausdruecklich umstellst",
    und der Reiter wendet sie auch dann an, wenn die Erkennung sie nicht
    mehr findet (dann steht „erzwungen" daneben).
@@ -295,7 +295,7 @@ function ausAliasPunkt(punktId, name, neuKanal) {
    automatisch: die Werkbank sagt es und bietet es an. */
 export function merkungPruefen(kanal, neuKanal) {
   var k = S.objects[kanal];
-  var id = k && k.native && k.native.vorlage;
+  var id = k && k.native && k.native.template;
   if (!id || !neuKanal) { return null; }
   var v = null;
   (S.VORLAGEN || []).forEach(function (x) { if (x.id === id) { v = x; } });
@@ -324,12 +324,12 @@ export function merkungPruefen(kanal, neuKanal) {
 export function merkungStellen(kanal) {
   var raus = { kanal: false, punkte: [], formeln: [] };
   var k = S.objects[kanal];
-  if (k && k.native && (k.native.vorlage || k.native.vorlageVersion)) { raus.kanal = true; }
+  if (k && k.native && (k.native.template || k.native.templateVersion)) { raus.kanal = true; }
   aliasPunkte(kanal).forEach(function (id) {
     var o = S.objects[id];
     var n = (o && o.native) || {};
     var a = (o.common && o.common.alias) || {};
-    if (n.vorlage || n.ausZustand) { raus.punkte.push(id); }
+    if (n.template || n.templateState) { raus.punkte.push(id); }
     if (a.read || a.write) { raus.formeln.push(id); }
   });
   return raus;
@@ -628,11 +628,11 @@ export function tauschObjekte(kanal, neuKanal, plan, weg, merkungLoesen) {
     var kn = JSON.parse(JSON.stringify(k));
     delete kn.ts; delete kn.from; delete kn.user; delete kn.acl; delete kn._id;
     kn.native = kn.native || {};
-    kn.native.quelle = neuKanal;
+    kn.native.source = neuKanal;
     /* `geraetetyp` bleibt: der sagt, was das Geraet IST (socket), und das
        aendert sich beim Tausch der Quelle nicht. Weg muss nur, was auf
        die alte Bauart zeigt. */
-    if (merkungLoesen) { delete kn.native.vorlage; delete kn.native.vorlageVersion; }
+    if (merkungLoesen) { delete kn.native.template; delete kn.native.templateVersion; }
     raus.push({ id: kanal, neu: false, obj: kn });
   }
   plan.forEach(function (z) {
@@ -683,9 +683,9 @@ export function tauschObjekte(kanal, neuKanal, plan, weg, merkungLoesen) {
       delete a.read;
       delete a.write;
       neu.native = neu.native || {};
-      delete neu.native.vorlage;
-      delete neu.native.vorlageVersion;
-      delete neu.native.ausZustand;
+      delete neu.native.template;
+      delete neu.native.templateVersion;
+      delete neu.native.templateState;
     }
     /* Die Einheit - was der Nutzer dazu entschieden hat.
 
@@ -1571,7 +1571,7 @@ export function tauscheAus() {
 
   /* Der Kanal kommt zuletzt, und nur, wenn alles davor durchging.
 
-     Er traegt `native.quelle`, und daraus liest der Dialog beim naechsten
+     Er traegt `native.source`, und daraus liest der Dialog beim naechsten
      Oeffnen, was „heute" die Quelle ist (`alteQuelle`). Bis 19.09.2026
      ging er zusammen mit den Punkten hinaus, jeder fuer sich. Scheiterte
      ein Punkt, stand der Kanal trotzdem auf dem neuen Geraet: nach

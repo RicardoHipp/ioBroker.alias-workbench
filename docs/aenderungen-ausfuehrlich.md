@@ -8,6 +8,20 @@ sie beim Beheben notiert wurden — je Fassung ein Abschnitt, neueste zuerst.
 
 ### Deutsch
 
+* **Die Felder an den Alias-Objekten heißen englisch.** `quelle` → `source`, `vorlage` → `template`, `vorlageVersion` → `templateVersion`, `ausZustand` → `templateState`, `geraetetyp` → `deviceType`, `musterVonHand` → `deviceTypeManual`, `vonHand` → `manual`, `angelegtVon` → `createdBy`, `attrappeAus` → `mockedFrom`.
+
+  **`templateState`, nicht `fromState`.** Das Feld hält den Namen der Vorlagenzeile, aus der ein Punkt stammt — `SET`, `ACTUAL` —, und wird gegen `z.name` in den Zeilen der Vorlage verglichen. Der erste Entwurf nannte es `fromState`, was sich wie „Kennung der Quelle" liest; die ist aber `source`.
+
+  **Zwei Felder, die beim Zählen erst auffielen.** `vonHand` (ein beim Tausch von Hand zugeordneter Punkt) und `musterVonHand` (der Gerätetyp wurde nicht erkannt, sondern gewählt) standen in keiner Tabelle — sie kamen erst zum Vorschein, als alle Eigenschaften durchgezählt wurden, die überhaupt auf ein `native` geschrieben werden. Dieselbe Zählung zeigte auch, was **nicht** uns gehört: `autocreated` schreibt bei Ricardo `javascript.0`, `topic` kommt von MQTT, `TYPE` von hm-rpc. Das bleibt, wie mcm1957s Ausnahme für fremde Systeme es verlangt.
+
+  **Nicht migriert werden `telemetryPeriod` und `telemetryPeriodAt`** (vorher `takt`, `taktZeit`). Sie sitzen an Punkten des mqtt-client, also in einem fremden Namensraum; dort noch einmal zu schreiben wäre das Gegenteil dessen, was die Umstellung bezweckt. Umbenannt sind sie trotzdem — sie sind ein Zwischenspeicher und stehen beim nächsten Nachfragen neu da.
+
+  **Was die Migration anfasst, und was nicht.** Ausschließlich `native`. Das ganze Objekt geht mit `setObject` zurück, wobei der alte Schlüssel von selbst wegfällt; `common` wird dabei wortwörtlich durchgereicht. Am Testsystem gegen den Abzug vom selben Morgen gerechnet: 109 Objekte vorher wie nachher, keines verschwunden, `common` bei **allen 109** Byte für Byte gleich, `native` bei genau den 100 betroffenen geändert.
+
+  **Geschrieben wird nacheinander, nicht alles auf einmal.** 100 gleichzeitige Schreibvorgänge wecken jeden Leser gleichzeitig; einzeln ist ruhiger. Gemessen: 47 Objekte in 3 Sekunden. Was nicht geschrieben werden kann, wird gesammelt statt den Lauf abzubrechen — ein einzelnes verweigertes Objekt darf die anderen nicht aufhalten.
+
+  **Der Abbruch ist ein Prüffall, kein Unfall.** Beim Messen schloss die Messsitzung den Reiter mitten im Lauf: 53 umgestellt, 47 alt. Beim nächsten Öffnen nannte der Dialog genau diese 47 und machte sie fertig. Festgehalten als Prüfpunkt A11.
+
 * **Die vier Einstellungen heißen englisch, und eine Migration bringt den Bestand mit.** `ikonRaeume`, `ikonFunktionen`, `ikonErsetzen`, `vorlagenVomAdmin` → `iconRooms`, `iconFunctions`, `iconReplace`, `templatesFromAdmin`. Anlass ist die Durchsicht von PR 6634 am 17.11.2026: mcm1957 markierte den Punkt als `must be fixed` mit Frist 1.12.2026, seine Begründung lautet „Object Ids must use english names — unless they are directly supplied by external systems".
 
   **Warum Umbenennen allein Schaden gewesen wäre.** `einst(name)` liest aus `system.adapter.alias-workbench.0.native` und fällt auf eine Vorgabetabelle zurück, wenn ein Schlüssel fehlt. Alle vier Vorgaben stehen auf `true`. Nach einem bloßen Umbenennen hätte `einst('iconRooms')` den alten Schlüssel nicht mehr gefunden, wäre auf `true` gefallen — und eine abgeschaltete Einstellung wäre still wieder angegangen. Das ist genau die Art Fehler, die niemandem auffällt.
@@ -23,6 +37,20 @@ sie beim Beheben notiert wurden — je Fassung ein Abschnitt, neueste zuerst.
   Dazu ein zweiter Fehler im selben Atemzug: Der erste Versuch überschrieb den Zielschlüssel einfach, womit die Einfügereihenfolge im Objekt entschied, welcher Wert gewann. Die ist nirgends zugesichert. Jetzt werden nachgetragene Vorgaben übersprungen statt überschrieben, und beide Reihenfolgen geben dasselbe.
 
 ### English
+
+* **The fields on the alias objects carry English names.** `quelle` → `source`, `vorlage` → `template`, `vorlageVersion` → `templateVersion`, `ausZustand` → `templateState`, `geraetetyp` → `deviceType`, `musterVonHand` → `deviceTypeManual`, `vonHand` → `manual`, `angelegtVon` → `createdBy`, `attrappeAus` → `mockedFrom`.
+
+  **`templateState`, not `fromState`.** The field holds the name of the template row a point came from — `SET`, `ACTUAL` — and is matched against `z.name` in the template's rows. The first draft called it `fromState`, which reads like "the id of the source"; that one is `source`.
+
+  **Two fields that only showed up when counting.** `vonHand` (a point assigned by hand during a source swap) and `musterVonHand` (the device type was chosen rather than detected) appeared in no table — they surfaced only when every property ever written to a `native` was enumerated. The same count also showed what is **not** ours: `autocreated` is written by the user's `javascript.0`, `topic` comes from MQTT, `TYPE` from hm-rpc. Those stay, as mcm1957's exception for external systems requires.
+
+  **`telemetryPeriod` and `telemetryPeriodAt` are not migrated** (formerly `takt`, `taktZeit`). They sit on mqtt-client points, that is in a foreign namespace, and writing there again would be the opposite of what the conversion is for. They are renamed all the same — they are a cache and are rewritten on the next query.
+
+  **What the migration touches, and what it does not.** `native` and nothing else. The whole object goes back through `setObject`, which makes the old key fall away by itself, while `common` is passed through verbatim. Checked on the test system against the dump taken the same morning: 109 objects before and after, none gone, `common` byte for byte identical on **all 109**, `native` changed on exactly the 100 affected.
+
+  **Writes go one after another, not all at once.** 100 simultaneous writes wake every reader at the same time; one by one is quieter. Measured: 47 objects in 3 seconds. What cannot be written is collected rather than aborting the run — a single refused object must not hold up the others.
+
+  **The abort is a test case, not an accident.** While measuring, the session closed the tab mid-run: 53 converted, 47 still old. On the next open the dialog named exactly those 47 and finished them. Recorded as check point A11.
 
 * **The four settings carry English names, and a migration brings the existing ones along.** `ikonRaeume`, `ikonFunktionen`, `ikonErsetzen`, `vorlagenVomAdmin` → `iconRooms`, `iconFunctions`, `iconReplace`, `templatesFromAdmin`. The trigger was the review of PR 6634 on 2026-11-17: mcm1957 marked the point `must be fixed` with a deadline of 2026-12-01, his reasoning being "Object Ids must use english names — unless they are directly supplied by external systems".
 

@@ -421,7 +421,7 @@ var warumAuf = false;
       sprungZiel = quelleVon(S.current);
       sprungModus = 'quellen';
       if (!sprungZiel) {
-        var vermerkt = S.objects[S.current] && S.objects[S.current].native && S.objects[S.current].native.quelle;
+        var vermerkt = S.objects[S.current] && S.objects[S.current].native && S.objects[S.current].native.source;
         if (vermerkt) { sub.appendChild(el('span', 'chip warn', tr('result.sourceGone', vermerkt))); }
         /* Der Knopf bleibt sichtbar, aber gesperrt: verschwaende er, suchte
            man ihn; klickbar sprang er frueher irgendwohin (D10). */
@@ -855,8 +855,8 @@ var warumAuf = false;
         var fest = null;
         var vorh = aliasFuer(S.current);
         if (vorh && S.objects[vorh] && S.objects[vorh].native &&
-            S.objects[vorh].native.vorlage) {
-          var gid = S.objects[vorh].native.vorlage;
+            S.objects[vorh].native.template) {
+          var gid = S.objects[vorh].native.template;
           if (S.VORLAGEN.some(function (x) { return x.id === gid; })) { fest = gid; }
         }
         /* Ausgang und Handwahl gehoeren mit.
