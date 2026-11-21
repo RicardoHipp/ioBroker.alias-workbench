@@ -581,8 +581,35 @@ export function uebernehmeBestand(e) {
   var kenntQuelle = {};
   e.states.forEach(function (s) {
     if (s.n) { kennt[s.n] = s; }
-    if (s.srcR) { kenntQuelle[s.srcR] = s; }
+    if (s.srcR) { (kenntQuelle[s.srcR] = kenntQuelle[s.srcR] || []).push(s); }
   });
+
+  /* Welche Vorschlagszeile ist dieser Alias-Punkt?
+
+     Hier galt `kenntQuelle[s.srcR] = s` - bei mehreren Zeilen auf
+     derselben Quelle gewann die letzte. Die Vorlage
+     `hm-schaltaktor-lampe` hat zwei auf `1.STATE`: SET (schaltet) und
+     ON_ACTUAL (meldet nur). Der Alias-Punkt STATE an
+     `alias.0.Jonas_Schlafen.Licht` schaltet, bekam aber ON_ACTUAL - und
+     „Werte der Vorlage uebernehmen" machte daraus einen Melder ohne
+     Schreibziel: nach dem Aktualisieren war das Licht nicht mehr
+     schaltbar (Ricardo, 21.11.2026).
+
+     Jetzt zaehlt die Schreibrichtung: ein schreibender Alias-Punkt nimmt
+     die Zeile, die schreibt, ein lesender die, die nur liest. Passt
+     keine, bleibt es bei der letzten wie bisher. Zeilen, deren Name
+     schon im Alias steht oder die schon einen Punkt bekommen haben,
+     scheiden aus. */
+  function zeileZurQuelle(o) {
+    var q = aliasQuellen(o);
+    var frei = (kenntQuelle[q.read] || []).filter(function (s) {
+      return !S.objects[e.ziel + '.' + s.n];
+    });
+    if (!frei.length) { return null; }
+    var schreibt = !!zeileAusAlias(o, '').srcW;
+    var passend = frei.filter(function (s) { return !!s.srcW === schreibt; });
+    return (passend.length ? passend : frei)[(passend.length ? passend : frei).length - 1];
+  }
 
   /* Was im Alias steht, gilt - nicht nur, wie er heisst.
 
@@ -723,8 +750,8 @@ export function uebernehmeBestand(e) {
        `Licht_Bar_STATE` anlegen — jedes Widget und jedes Skript, das auf
        den alten Namen zeigt, liefe ins Leere. Was einmal steht, bleibt
        stehen; neue Punkte bekommen den neuen Namen. */
-    if (q.read && kenntQuelle[q.read] && !S.objects[e.ziel + '.' + kenntQuelle[q.read].n]) {
-      var vorhanden = kenntQuelle[q.read];
+    var vorhanden = q.read ? zeileZurQuelle(o) : null;
+    if (vorhanden) {
       /* Die Zeile bekommt den Namen aus dem Alias — und damit einen
          anderen, als die Erkennung eben gesehen hat. `platzVon` kennt
          noch den Vorlagennamen, die Zeile heisst jetzt anders, und die
