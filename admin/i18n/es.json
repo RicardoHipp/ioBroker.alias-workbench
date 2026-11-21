@@ -378,6 +378,7 @@
   "pattern.freeSlots": "Tragaperras gratuitas con el patrón {0}",
   "pattern.label": "Patrón",
   "pattern.manualInstead": "a mano en lugar de {0}",
+  "pattern.tplWantsOther": "la plantilla está hecha para {0}, el alias existente está creado como {1}",
   "pattern.missing": "Falta {0}",
   "pattern.noMatch": "No hay ningún patrón que coincida con «{0}»",
   "pattern.noPlaceBecauseType": "El patrón {0} no se aplica en este momento: {1} requiere {2}, pero {3} está establecido. Por eso ninguna fila tiene una ranura.",

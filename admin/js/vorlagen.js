@@ -779,7 +779,23 @@ export function anMusterAnpassen(e, neuTyp) {
     return s;
   }
 
+  /* Drei Grenzen seit 21.11.2026 (Ricardo, an `hm-rpc.2.LEQ0605723`,
+     produktiv: Steckdose → Licht):
+
+     - Abgehakte Zeilen bleiben, wie sie sind. Sie kommen nicht in den
+       Alias, und wer eine spaeter anhakt, soll die Vorlagenrolle sehen.
+       Vorher wurde die Schaltsperre INHIBIT (`switch`) zu SET mit
+       `switch.light` - angehakt waere sie der Lichtschalter gewesen.
+     - Eine Zeile, die schon im Alias steht, behaelt ihren Namen. Die
+       Rolle darf sich aendern, der Name nicht: aus STATE wurde SET, und
+       ein Aktualisieren haette STATE geloescht und SET neu angelegt -
+       alles, was auf STATE zeigt, liefe ins Leere.
+     - Kein Name wird zweimal vergeben. Es standen drei Zeilen „SET" da. */
+  var namen = {};
+  e.states.forEach(function (st) { if (st.n) { namen[st.n] = (namen[st.n] || 0) + 1; } });
+
   e.states.forEach(function (st) {
+    if (!st.on) { return; }
     var alterSlot = slotVon(alt, st.role);
     if (!alterSlot) { return; }
     var ziel = null;
@@ -789,7 +805,11 @@ export function anMusterAnpassen(e, neuTyp) {
     }
     if (ziel && ziel.defaultRole && ziel.defaultRole !== st.role) {
       st.role = ziel.defaultRole;
-      st.n = ziel.name;
+      if (!st.ausBestand && st.n !== ziel.name && !namen[ziel.name]) {
+        namen[st.n]--;
+        st.n = ziel.name;
+        namen[st.n] = 1;
+      }
     }
   });
   e.want = neuTyp;

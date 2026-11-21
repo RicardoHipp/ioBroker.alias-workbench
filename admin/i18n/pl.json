@@ -378,6 +378,7 @@
   "pattern.freeSlots": "Darmowe automaty o układzie {0}",
   "pattern.label": "Wzór",
   "pattern.manualInstead": "ręcznie zamiast {0}",
+  "pattern.tplWantsOther": "szablon jest przeznaczony dla {0}, istniejący alias jest utworzony jako {1}",
   "pattern.missing": "brakuje {0}",
   "pattern.noMatch": "żaden wzorzec nie pasuje do „{0}”",
   "pattern.noPlaceBecauseType": "Wzorzec {0} nie ma obecnie zastosowania: {1} wymaga {2}, ale ustawiono {3}. Dlatego żaden wiersz nie ma miejsca.",

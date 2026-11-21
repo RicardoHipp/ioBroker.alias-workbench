@@ -378,6 +378,7 @@
   "pattern.freeSlots": "Places libres selon le schéma « {0} »",
   "pattern.label": "Motif",
   "pattern.manualInstead": "à la main au lieu de {0}",
+  "pattern.tplWantsOther": "le modèle est conçu pour {0}, l’alias existant est créé comme {1}",
   "pattern.missing": "{0} manquant",
   "pattern.noMatch": "aucun motif ne correspond à « {0} »",
   "pattern.noPlaceBecauseType": "Le modèle « {0} » ne s'applique pas pour le moment : {1} nécessite {2}, mais {3} est défini. C'est pourquoi aucune ligne ne dispose d'un emplacement.",

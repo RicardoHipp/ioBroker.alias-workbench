@@ -378,6 +378,7 @@
   "pattern.freeSlots": "{0} 模式下的空位",
   "pattern.label": "图案",
   "pattern.manualInstead": "手动操作，而不是 {0}",
+  "pattern.tplWantsOther": "模板是为 {0} 构建的，现有别名按 {1} 创建",
   "pattern.missing": "缺少 {0}",
   "pattern.noMatch": "没有模式与“{0}”匹配",
   "pattern.noPlaceBecauseType": "{0} 模式目前不适用：{1} 需要 {2}，但 {3} 已被设置。这就是为什么没有行拥有插槽。",

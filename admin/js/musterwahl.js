@@ -616,6 +616,20 @@ export function baueMusterwahl(e, haupt, pflichtFehlt) {
   }
   if (e.want && e.wantAuto && e.want !== e.wantAuto) {
     meta.appendChild(el('span', 'chip warn', tr('pattern.manualInstead', e.wantAuto)));
+  } else if (e.vorlage && e.bestandGilt) {
+    /* Der bestehende Alias sagt ein anderes Muster als die Vorlage.
+
+       Am `alias.0.Jonas_Schlafen.Licht` hat STATE die Rolle `switch` -
+       fuer ioBroker eine Steckdose -, die Vorlage `hm-schaltaktor-lampe`
+       ist fuer Licht gebaut. Das Muster bleibt, wie der Alias es sagt
+       (das ist die Wahrheit ueber ihn), aber es steht da, dass die
+       Vorlage es anders meint (Ricardo, 21.11.2026). */
+    var tplM = (S.VORLAGEN || []).find(function (v0) { return v0.id === e.vorlage; });
+    var tplTyp = tplM && tplM.deviceType;
+    if (tplTyp && tplTyp !== e.want && musterVon(tplTyp)) {
+      meta.appendChild(el('span', 'chip warn', tr('pattern.tplWantsOther',
+        musterName(tplTyp) || tplTyp, musterName(e.want) || e.want)));
+    }
   }
   if (meta.childNodes.length) { vw.appendChild(meta); }
   /* Der Knopf „alle N Muster" stand frueher neben dem Auswahlfeld und

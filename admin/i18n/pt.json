@@ -378,6 +378,7 @@
   "pattern.freeSlots": "Slots livres no padrão «{0}»",
   "pattern.label": "Padrão",
   "pattern.manualInstead": "manualmente, em vez de {0}",
+  "pattern.tplWantsOther": "o modelo foi feito para {0}, o alias existente está criado como {1}",
   "pattern.missing": "{0} em falta",
   "pattern.noMatch": "nenhum padrão corresponde a «{0}»",
   "pattern.noPlaceBecauseType": "O padrão «{0}» não se aplica neste momento: o {1} requer o {2}, mas o {3} está definido. É por isso que nenhuma linha tem um espaço disponível.",

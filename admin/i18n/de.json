@@ -378,6 +378,7 @@
   "pattern.freeSlots": "Freie Plätze im {0}-Muster",
   "pattern.label": "Muster",
   "pattern.manualInstead": "von Hand statt {0}",
+  "pattern.tplWantsOther": "die Vorlage ist für {0} gebaut, der bestehende Alias ist als {1} angelegt",
   "pattern.missing": "{0} fehlt",
   "pattern.noMatch": "kein Muster passt zu „{0}“",
   "pattern.noPlaceBecauseType": "Das {0}-Muster greift gerade nicht: {1} verlangt {2}, eingestellt ist {3}. Deshalb hat keine Zeile einen Platz.",

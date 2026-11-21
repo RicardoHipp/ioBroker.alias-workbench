@@ -928,6 +928,12 @@ var warumAuf = false;
           bTpl.title = tr('tpl.applyTemplateHint');
           bTpl.addEventListener('click', function () {
             vorlageAnwenden(e);
+            /* Die Zeilen haben sich geaendert, also gilt die gemerkte
+               Aussicht nicht mehr. Ohne das sagte das Band nach dem
+               Uebernehmen „Mit Freie Plaetze vorschlagen wuerde es
+               greifen" - gerechnet auf den Rollen von VOR dem Klick
+               (21.11.2026, LEQ0605723). */
+            entwurfAngefasst();
             S.openRow = null;
             zeichneErgebnis();
           });

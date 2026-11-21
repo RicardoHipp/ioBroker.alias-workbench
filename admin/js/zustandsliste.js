@@ -831,7 +831,16 @@ export function baueListe(host, e, pl, rateKnopf, musterBlock) {
          passendem Typ gefragt, fiel er stillschweigend heraus, und die
          Legende nannte niemanden (Ricardo, 19.09.2026). Den Typ stellt
          der Knopf gleich mit. Passende Typen zuerst. */
-      var aus = e.states.filter(function (s) { return !s.on && s.n && passtAuf(st, s, false); });
+      /* Nicht, was die Vorlage selbst abgehakt hat. Sie sagt damit „gehoert
+         standardmaessig nicht dazu" - so eine Zeile ist kein Ersatz fuer
+         einen Pflichtplatz. Am `hm-schaltaktor-lampe` stand „INHIBIT passt
+         auf SET … anhaken": die Schaltsperre hat die Rolle `switch` und
+         waere der Schalter der Steckdose geworden (Ricardo, 21.11.2026). */
+      var aus = e.states.filter(function (s) {
+        if (s.on || !s.n || !passtAuf(st, s, false)) { return false; }
+        if (!e.vorlage) { return true; }
+        return s.vorlagenWert ? s.vorlagenWert.on !== false : s.onVorgabe !== false;
+      });
       aus.sort(function (a, b) { return (passtAuf(st, b, true) ? 1 : 0) - (passtAuf(st, a, true) ? 1 : 0); });
       var soll = Array.isArray(st.type) ? st.type[0] : st.type;
       fehlt.push({ platz: st.name, aus: aus, soll: soll,

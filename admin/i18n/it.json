@@ -378,6 +378,7 @@
   "pattern.freeSlots": "Slot liberi secondo lo schema {0}",
   "pattern.label": "Motivo",
   "pattern.manualInstead": "a mano invece di {0}",
+  "pattern.tplWantsOther": "il modello è fatto per {0}, l’alias esistente è creato come {1}",
   "pattern.missing": "{0} mancante",
   "pattern.noMatch": "nessun modello corrisponde a \"{0}\"",
   "pattern.noPlaceBecauseType": "Il modello {0} non è applicabile al momento: {1} richiede {2}, ma {3} è impostato. Ecco perché nessuna riga ha uno slot.",

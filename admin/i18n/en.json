@@ -378,6 +378,7 @@
   "pattern.freeSlots": "Free slots in the {0} pattern",
   "pattern.label": "Pattern",
   "pattern.manualInstead": "by hand instead of {0}",
+  "pattern.tplWantsOther": "the template is built for {0}, the existing alias is set up as {1}",
   "pattern.missing": "{0} missing",
   "pattern.noMatch": "no pattern matches \"{0}\"",
   "pattern.noPlaceBecauseType": "The {0} pattern does not apply right now: {1} requires {2}, but {3} is set. That is why no row has a slot.",

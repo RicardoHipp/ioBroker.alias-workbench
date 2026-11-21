@@ -11,7 +11,7 @@ import { zusatzName, setzeModus, zeichneBaum, merkeKlappstand } from './baum.js'
 import { kindZustaende, geraetePunkte, aliasQuellen, holeWerte, istZerlegt,
   mitVorspann, schreibQuelle, zeileAusAlias, statesText, statesGleich, istTaster as istTasterObjekt
 } from './werte.js';
-import { erkenneEntwurf } from './erkennung.js';
+import { erkenneEntwurf, musterVon } from './erkennung.js';
 import { vorschlag , pruefeVorlage, zeigeAbozahl, setzeInstanz } from './vorlagen.js';
 
 import { zeichneErgebnis } from './ergebnis.js';
@@ -1762,6 +1762,21 @@ export function vorlageAnwenden(e) {
     /* caption bleibt: der Anzeigename gehoert dem Nutzer. */
     if (anders) { s.geaendert = true; }
   });
+  /* Das Muster der Vorlage gehoert zu ihren Werten.
+
+     Uebernommen wurden bisher nur die Zeilen. Am `alias.0.Jonas_Schlafen.Licht`
+     (Bestand: STATE mit Rolle `switch`, also Muster Steckdose) wurde STATE
+     `switch.light` - das Muster blieb Steckdose, deren SET nimmt nur
+     `switch`, und das Band bot als Ausweg die Schaltsperre INHIBIT an
+     (Ricardo, 21.11.2026). Wer die Werte der Vorlage nimmt, nimmt auch
+     ihren Geraetetyp. `wantAuto` mit, damit der Kopf nicht „von Hand
+     statt …" sagt und `deviceTypeManual` nicht gesetzt wird - gewaehlt
+     hat die Vorlage, nicht der Nutzer, genau wie in `wendeAn`. */
+  var tpl = (S.VORLAGEN || []).find(function (v0) { return v0.id === e.vorlage; });
+  if (tpl && tpl.deviceType && musterVon(tpl.deviceType)) {
+    e.want = tpl.deviceType;
+    e.wantAuto = tpl.deviceType;
+  }
   e.bestandGilt = false;
   e.angefasst = true;
 }

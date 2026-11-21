@@ -378,6 +378,7 @@
   "pattern.freeSlots": "Gratis slots in het {0}-patroon",
   "pattern.label": "Patroon",
   "pattern.manualInstead": "met de hand in plaats van {0}",
+  "pattern.tplWantsOther": "het sjabloon is gemaakt voor {0}, de bestaande alias is aangemaakt als {1}",
   "pattern.missing": "{0} ontbreken",
   "pattern.noMatch": "er is geen patroon dat overeenkomt met „{0}“",
   "pattern.noPlaceBecauseType": "Het {0}-patroon is op dit moment niet van toepassing: {1} vereist {2}, maar {3} is ingesteld. Daarom heeft geen enkele rij een slot.",
