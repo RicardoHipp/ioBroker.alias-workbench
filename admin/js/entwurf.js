@@ -874,7 +874,7 @@ export function aufteilBehaelter(e) {
   var ordner = (e.zielOrdner || 'alias.0') + '.' + e.zielName;
   var ziel = e.ziel;
   if (!ziel) { return ordner; }
-  var q = ((S.objects[ziel] && S.objects[ziel].native) || {}).quelle;
+  var q = ((S.objects[ziel] && S.objects[ziel].native) || {}).source;
   if (q && e.kanal && q.indexOf(e.kanal + '.') === 0) {
     var p = ziel.lastIndexOf('.');
     if (p > 0) { return ziel.slice(0, p); }
