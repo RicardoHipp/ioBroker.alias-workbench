@@ -39,24 +39,24 @@ export function vorlageMitId(id) {
   return t;
 }
 
-function ohneUnterstrich(v) {
-  var k = {};
-  Object.keys(v).forEach(function (f) { if (f.charAt(0) !== '_') { k[f] = v[f]; } });
+function ohneUnterstrich(tpl) {
+  var tplKopie = {};
+  Object.keys(tpl).forEach(function (f) { if (f.charAt(0) !== '_') { tplKopie[f] = tpl[f]; } });
   /* Halbfertige Ersatzquellen nicht mitspeichern: eine Zeile ohne
      Datenpunkt ist beim Bearbeiten nuetzlich, in der Vorlage waere sie
      nur Ballast. */
-  if (Array.isArray(k.zustaende)) {
-    k.zustaende = k.zustaende.map(function (z) {
-      if (!z || !z.lesenSonst) { return z; }
-      var liste = ersatzListe(z).filter(function (x) { return x && x.punkt; });
+  if (Array.isArray(tplKopie.zustaende)) {
+    tplKopie.zustaende = tplKopie.zustaende.map(function (tplZeile) {
+      if (!tplZeile || !tplZeile.lesenSonst) { return tplZeile; }
+      var liste = ersatzListe(tplZeile).filter(function (x) { return x && x.punkt; });
       var kopie = {};
-      Object.keys(z).forEach(function (f) { kopie[f] = z[f]; });
+      Object.keys(tplZeile).forEach(function (f) { kopie[f] = tplZeile[f]; });
       if (!liste.length) { delete kopie.lesenSonst; }
       else { kopie.lesenSonst = (liste.length === 1) ? liste[0] : liste; }
       return kopie;
     });
   }
-  return k;
+  return tplKopie;
 }
 
 export function zeichneVorlagenListe() {
@@ -64,9 +64,9 @@ export function zeichneVorlagenListe() {
   host.textContent = '';
   var filter = ($('#q').value || '').trim().toLowerCase();
 
-  var liste = S.VORLAGEN.filter(function (v) {
+  var liste = S.VORLAGEN.filter(function (tpl) {
     if (!filter) { return true; }
-    return (v.id + ' ' + sprachtext(v.name)).toLowerCase().indexOf(filter) > -1;
+    return (tpl.id + ' ' + sprachtext(tpl.name)).toLowerCase().indexOf(filter) > -1;
   });
 
   if (vEinlesen) {
@@ -76,33 +76,33 @@ export function zeichneVorlagenListe() {
     host.appendChild(el('div', 'empty', tr('tree.nothingFound')));
     return;
   }
-  liste.forEach(function (v) { host.appendChild(vListenZeile(v, false)); });
+  liste.forEach(function (tpl) { host.appendChild(vListenZeile(tpl, false)); });
 }
 
-function vListenZeile(v, eingelesen) {
+function vListenZeile(tpl, eingelesen) {
   /* Zwei verschiedene Dinge, die im Objektbaum zwei verschiedene Klassen
      tragen: `pick` heisst waehlbar (Mauszeiger), `sel` heisst gewaehlt
      (Akzentfarbe). Diese Liste setzte nur `pick` — und `pick` faerbt
      nichts. Die angeklickte Vorlage stand deshalb unmarkiert da, waehrend
      rechts ihr Blatt aufgeschlagen war (26.08.2026). */
-  var gewaehlt = (!eingelesen && v.id === vGewaehlt && !vEinlesen) ||
+  var gewaehlt = (!eingelesen && tpl.id === vGewaehlt && !vEinlesen) ||
                  (eingelesen && vEinlesen);
   var d = el('div', 'node pick' + (gewaehlt ? ' sel' : ''));
   d.style.cursor = 'pointer';
   d.style.gap = '6px';
-  var eigen = v._quelle === 'benutzer';
+  var eigen = tpl._quelle === 'benutzer';
   d.appendChild(el('span', 'chip ' + (eingelesen ? 'warn' : (eigen ? 'ok' : 'mut')),
     eingelesen ? tr('tv.imported') : (eigen ? tr('tpl.own') : tr('tv.package'))));
-  var nm = el('span', 'nm', sprachtext(v.name));
+  var nm = el('span', 'nm', sprachtext(tpl.name));
   d.appendChild(nm);
-  var meta = el('span', null, v.id + '  v' + (v.version || 1));
+  var meta = el('span', null, tpl.id + '  tpl' + (tpl.version || 1));
   meta.style.fontFamily = 'var(--mono)';
   meta.style.fontSize = '10px';
   meta.style.color = 'var(--ink-3)';
   meta.style.marginLeft = 'auto';
   d.appendChild(meta);
   d.addEventListener('click', function () {
-    if (!eingelesen) { vEinlesen = null; vGewaehlt = v.id; }
+    if (!eingelesen) { vEinlesen = null; vGewaehlt = tpl.id; }
     vEntwurf = null;
     vLoeschFrage = false;
     vOffeneZeile = null;
@@ -123,15 +123,15 @@ function vArbeitsstand() {
 /* Den Namen einer Vorlage in einer Sprache setzen.
 
    Das Einlesen nimmt eine Datei auch ohne `name` an (die Liste zeigt dann
-   die Kennung). Die Namensfelder schrieben aber blind in `x.name.de` —
+   die Kennung). Die Namensfelder schrieben aber blind in `tpl.name.de` —
    ohne `name` warf das, `vAendern` brach ab, und die Eingabe ging
    verloren: den fehlenden Namen konnte man nie nachtragen (Ricardo,
    19.09.2026). Ein Name als blosser Text wird wie bisher zu beiden
    Sprachen. */
-function setzeName(x, sprache, w) {
-  if (typeof x.name === 'string') { x.name = { de: x.name, en: x.name }; }
-  if (!x.name || typeof x.name !== 'object' || Array.isArray(x.name)) { x.name = {}; }
-  x.name[sprache] = w;
+function setzeName(tpl, sprache, w) {
+  if (typeof tpl.name === 'string') { tpl.name = { de: tpl.name, en: tpl.name }; }
+  if (!tpl.name || typeof tpl.name !== 'object' || Array.isArray(tpl.name)) { tpl.name = {}; }
+  tpl.name[sprache] = w;
 }
 
 function vAendern(feld, wert) {
@@ -160,7 +160,7 @@ function vAendern(feld, wert) {
    eingebetteten Ansichten landet es neben dem Fenster. Ohne Bewertung
    allerdings: hier wird eine Vorlage bearbeitet, es gibt kein Geraet,
    gegen das sich etwas bewerten liesse. */
-function geraetetypFeld(v, eigen) {
+function geraetetypFeld(tpl, eigen) {
   var alle = (D ? Object.keys(D.patterns).sort() : []).map(function (m) {
     /* Der Wert ist der TYP, nicht der Musterschluessel — und beschriftet
        wird ebenfalls nach dem Typ. Fuer die drei Muster, die anders
@@ -176,7 +176,7 @@ function geraetetypFeld(v, eigen) {
   feldEin.type = 'text';
   feldEin.setAttribute('autocomplete', 'off');
   feldEin.disabled = !eigen;
-  feldEin.value = v.geraetetyp ? musterZeile(v.geraetetyp) : '';
+  feldEin.value = tpl.geraetetyp ? musterZeile(tpl.geraetetyp) : '';
   feldEin.placeholder = tr('tpls.noType');
   wrap.appendChild(feldEin);
   var liste = el('div', 'vorschlaege musterliste');
@@ -197,7 +197,7 @@ function geraetetypFeld(v, eigen) {
        Suchtext, sonst saehe man nur den einen Eintrag und muesste erst
        loeschen, um wechseln zu koennen. */
     var roh = String(feldEin.value || '').trim();
-    var such = (roh && roh !== musterZeile(v.geraetetyp)) ? roh.toLowerCase() : '';
+    var such = (roh && roh !== musterZeile(tpl.geraetetyp)) ? roh.toLowerCase() : '';
     treffer = such
       ? alle.filter(function (t) {
         /* Ueber Rohnamen UND Beinamen: „steckdose" findet socket,
@@ -211,7 +211,7 @@ function geraetetypFeld(v, eigen) {
     /* „kein Typ" gehoert dazu — eine Vorlage ohne Geraetetyp ist
        erlaubt, und ohne diesen Eintrag kaeme man nicht mehr zurueck. */
     if (!such) {
-      var z0 = el('div', 'vz' + (v.geraetetyp ? '' : ' gewaehlt'));
+      var z0 = el('div', 'vz' + (tpl.geraetetyp ? '' : ' gewaehlt'));
       z0.appendChild(el('span', null, tr('tpls.noType')));
       z0.addEventListener('mousedown', function (ev) { ev.preventDefault(); setzen(''); });
       liste.appendChild(z0);
@@ -222,7 +222,7 @@ function geraetetypFeld(v, eigen) {
       liste.appendChild(leer);
     }
     treffer.forEach(function (t, n) {
-      var z = el('div', 'vz' + (n === markiert ? ' an' : '') + (t === v.geraetetyp ? ' gewaehlt' : ''));
+      var z = el('div', 'vz' + (n === markiert ? ' an' : '') + (t === tpl.geraetetyp ? ' gewaehlt' : ''));
       z.appendChild(el('span', null, musterZeile(t)));
       /* mousedown statt click: sonst greift der Fokusverlust zuerst und
          die Liste ist weg, bevor der Klick ankommt. */
@@ -240,7 +240,7 @@ function geraetetypFeld(v, eigen) {
        sonst bliebe ein halbgetippter Rest stehen. */
     setTimeout(function () {
       liste.hidden = true;
-      feldEin.value = v.geraetetyp ? musterZeile(v.geraetetyp) : '';
+      feldEin.value = tpl.geraetetyp ? musterZeile(tpl.geraetetyp) : '';
     }, 150);
   });
   feldEin.addEventListener('keydown', function (ev) {
@@ -257,7 +257,7 @@ function geraetetypFeld(v, eigen) {
       else if (treffer.length === 1) { setzen(treffer[0]); }
     } else if (ev.key === 'Escape') {
       liste.hidden = true;
-      feldEin.value = v.geraetetyp ? musterZeile(v.geraetetyp) : '';
+      feldEin.value = tpl.geraetetyp ? musterZeile(tpl.geraetetyp) : '';
     }
   });
   return wrap;
@@ -277,34 +277,34 @@ export function zeichneVorlagenBlatt(host) {
   if (ba0) { ba0.hidden = true; }
   delKnopf(false);
 
-  var v = vArbeitsstand();
-  if (!v) {
+  var tpl = vArbeitsstand();
+  if (!tpl) {
     /* Dieselbe Erklaerung wie in den anderen beiden Modi. */
     var lh = el('div', 'empty leerhilfe');
     lh.appendChild(el('div', 'lh1', tr('help.templates')));
     host.appendChild(lh);
     return;
   }
-  var eigen = v._quelle === 'benutzer' || !!vEinlesen;
-  var vorhanden = vorlageMitId(v.id);
+  var eigen = tpl._quelle === 'benutzer' || !!vEinlesen;
+  var vorhanden = vorlageMitId(tpl.id);
   var geaendert = !!vEntwurf || !!vEinlesen;
 
   /* --- Kopf --- */
   var head = el('div', 'reshead');
   var links = el('div');
-  links.appendChild(el('div', 'ziel', sprachtext(v.name)));
+  links.appendChild(el('div', 'ziel', sprachtext(tpl.name)));
   var unter = el('div', 'unter');
   unter.appendChild(el('span', 'chip ' + (eigen ? 'ok' : 'mut'),
     vEinlesen ? tr('tv.imported') : (eigen ? tr('tpl.own') : tr('tv.package'))));
-  unter.appendChild(el('span', null, v.id + '  v' + (v.version || 1) +
-    '  ·  ' + tr('tv.rank', v.rang || 0)));
+  unter.appendChild(el('span', null, tpl.id + '  tpl' + (tpl.version || 1) +
+    '  ·  ' + tr('tv.rank', tpl.rang || 0)));
   links.appendChild(unter);
   head.appendChild(links);
   host.appendChild(head);
 
   /* Der Kopfhinweis ist { de, en } oder eine Zeichenkette. Dieselbe
      Wahl wie beim Namen: eingestellte Sprache, sonst Englisch. */
-  var kopfHinweis = sprachtext(v.hinweis);
+  var kopfHinweis = sprachtext(tpl.hinweis);
   if (kopfHinweis) {
     var khw = el('div', 'hint');
     khw.style.margin = '0 0 11px';
@@ -319,10 +319,10 @@ export function zeichneVorlagenBlatt(host) {
     iw.style.marginBottom = '11px';
     iw.appendChild(el('b', null, tr('tv.importTitle')));
     var was;
-    if (!vorhanden) { was = tr('tv.importNew', v.id); }
+    if (!vorhanden) { was = tr('tv.importNew', tpl.id); }
     else if (vorhanden._quelle === 'benutzer') {
-      was = tr('tv.importReplaces', v.id, vorhanden.version || 1, v.version || 1);
-    } else { was = tr('tv.importShadows', v.id); }
+      was = tr('tv.importReplaces', tpl.id, vorhanden.version || 1, tpl.version || 1);
+    } else { was = tr('tv.importShadows', tpl.id); }
     iw.appendChild(document.createTextNode(' ' + was));
     host.appendChild(iw);
   } else if (!eigen) {
@@ -359,11 +359,11 @@ export function zeichneVorlagenBlatt(host) {
      will man meist *abwandeln* — dann braucht die Kopie eine neue
      Kennung, sonst ueberschriebe sie das Vorbild. */
   var bd2 = el('button', 'btn', eigen ? tr('tv.duplicate') : tr('tv.makeOwn'));
-  bd2.addEventListener('click', function () { vDuplizieren(v, !eigen); });
+  bd2.addEventListener('click', function () { vDuplizieren(tpl, !eigen); });
   bar.appendChild(bd2);
 
   var ba = el('button', 'btn', tr('tv.export'));
-  ba.addEventListener('click', function () { vAusgeben(v); });
+  ba.addEventListener('click', function () { vAusgeben(tpl); });
   bar.appendChild(ba);
 
   if (eigen && !vEinlesen && vorhanden && vorhanden._quelle === 'benutzer') {
@@ -375,7 +375,7 @@ export function zeichneVorlagenBlatt(host) {
     }
     bl.addEventListener('click', function () {
       if (!vLoeschFrage) { vLoeschFrage = true; zeichneErgebnis(); return; }
-      vLoeschen(v.id);
+      vLoeschen(tpl.id);
     });
     bar.appendChild(bl);
     /* Verdeckt sie eine mitgelieferte, kommt die wieder zum Vorschein. */
@@ -411,11 +411,11 @@ export function zeichneVorlagenBlatt(host) {
     return l;
   }
 
-  kb.appendChild(feld(tr('tpls.nameDe'), textIn(v.name, 'de'),
+  kb.appendChild(feld(tr('tpls.nameDe'), textIn(tpl.name, 'de'),
     function (x, w) { setzeName(x, 'de', w); }, '140px'));
-  kb.appendChild(feld(tr('tpls.nameEn'), textIn(v.name, 'en'),
+  kb.appendChild(feld(tr('tpls.nameEn'), textIn(tpl.name, 'en'),
     function (x, w) { setzeName(x, 'en', w); }, '140px'));
-  kb.appendChild(feld(tr('tpls.rank'), v.rang || 0,
+  kb.appendChild(feld(tr('tpls.rank'), tpl.rang || 0,
     function (x, w) { x.rang = Number(w) || 0; }, '60px'));
   var rh = el('span', 'hint', eigen ? tr('tv.rankOwn') : tr('tv.rankPackage'));
   rh.style.flexBasis = '100%';
@@ -423,7 +423,7 @@ export function zeichneVorlagenBlatt(host) {
 
   var lt = el('label', 'feld');
   lt.appendChild(el('span', 'feldlabel', tr('tpls.deviceType')));
-  lt.appendChild(geraetetypFeld(v, eigen));
+  lt.appendChild(geraetetypFeld(tpl, eigen));
   kb.appendChild(lt);
 
   /* Wozu das Geraet zaehlt.
@@ -440,7 +440,7 @@ export function zeichneVorlagenBlatt(host) {
   var sf = el('select', 'tx');
   sf.disabled = !eigen;
   sf.appendChild(opt('', tr('tpls.noFunction')));
-  funktionsAuswahl(v.funktion).forEach(function (x) {
+  funktionsAuswahl(tpl.funktion).forEach(function (x) {
     var o = opt(x.wert, x.text);
     if (x.gewaehlt) { o.selected = true; }
     sf.appendChild(o);
@@ -456,12 +456,12 @@ export function zeichneVorlagenBlatt(host) {
 
   var nb = el('div');
   nb.style.padding = '0 12px 11px';
-  nb.appendChild(feld(tr('tpls.nameHint'), (v.erkennung || {}).namenshinweis || '',
+  nb.appendChild(feld(tr('tpls.nameHint'), (tpl.erkennung || {}).namenshinweis || '',
     function (x, w) { x.erkennung = x.erkennung || {}; if (w) { x.erkennung.namenshinweis = w; } else { delete x.erkennung.namenshinweis; } }, '260px'));
   /* Der Text ist ein Ausdruck, und ein unbrauchbarer Ausdruck faellt
      sonst nirgends auf: Er wird still zu „trifft nicht", und die Vorlage
      verliert leise ihren Namensbonus. Also hier sagen, wo er steht. */
-  if (!hinweisTaugt((v.erkennung || {}).namenshinweis || '')) {
+  if (!hinweisTaugt((tpl.erkennung || {}).namenshinweis || '')) {
     var nbw = el('div', 'hint');
     nbw.style.color = 'var(--bad)';
     nbw.textContent = tr('tpls.nameHintBad');
@@ -476,12 +476,12 @@ export function zeichneVorlagenBlatt(host) {
   ek.style.marginBottom = '11px';
   var eh = el('div', 'ch');
   eh.appendChild(el('span', 'typ', tr('tv.detection')));
-  var erf = (v.erkennung || {}).erforderlich || [];
+  var erf = (tpl.erkennung || {}).erforderlich || [];
   eh.appendChild(el('span', 'chip mut', tr('tv.requiredCount', erf.length)));
   ek.appendChild(eh);
   var eb = el('div');
   eb.style.padding = '9px 12px 11px';
-  var erkHinweis = sprachtext((v.erkennung || {}).hinweis);
+  var erkHinweis = sprachtext((tpl.erkennung || {}).hinweis);
   if (erkHinweis) {
     var ehw = el('div', 'hint');
     ehw.style.whiteSpace = 'pre-wrap';
@@ -507,20 +507,20 @@ export function zeichneVorlagenBlatt(host) {
   if (!erf.length) {
     eb.appendChild(el('div', 'hint', tr('tpls.noRequired')));
   }
-  var inh = (v.erkennung || {}).inhalt || {};
+  var inh = (tpl.erkennung || {}).inhalt || {};
   Object.keys(inh).forEach(function (punkt) {
     var z = el('div', 'hint', tr('tpls.contentRow', punkt, inh[punkt]));
     z.style.fontFamily = 'var(--mono)';
     eb.appendChild(z);
   });
-  eb.appendChild(listenFeld(tr('tv.forbidden'), ((v.erkennung || {}).verboten || []).join(', '),
+  eb.appendChild(listenFeld(tr('tv.forbidden'), ((tpl.erkennung || {}).verboten || []).join(', '),
     function (x, wert) {
       x.erkennung = x.erkennung || {};
       var l = alsListe(wert);
       if (l.length) { x.erkennung.verboten = l; } else { delete x.erkennung.verboten; }
     }, tr('tv.forbiddenHelp')));
-  if (v.mehrfach) {
-    eb.appendChild(el('div', 'hint', tr('tv.multi', v.kanalname || 'POWER%N%')));
+  if (tpl.mehrfach) {
+    eb.appendChild(el('div', 'hint', tr('tv.multi', tpl.kanalname || 'POWER%N%')));
   }
   ek.appendChild(eb);
   host.appendChild(ek);
@@ -530,7 +530,7 @@ export function zeichneVorlagenBlatt(host) {
   zk.style.marginBottom = '11px';
   var zh = el('div', 'ch');
   zh.appendChild(el('span', 'typ', tr('tpls.states')));
-  zh.appendChild(el('span', 'chip mut', tr('tpls.statesCount', (v.zustaende || []).length)));
+  zh.appendChild(el('span', 'chip mut', tr('tpls.statesCount', (tpl.zustaende || []).length)));
   /* Aufklappen geht bei allen Vorlagen, auch bei den mitgelieferten —
      dort nur zum Ansehen.
 
@@ -544,7 +544,7 @@ export function zeichneVorlagenBlatt(host) {
   zh.appendChild(el('span', 'luecke'));
   zh.appendChild(el('span', 'hint', eigen ? tr('tv.clickRow') : tr('tv.clickRowRead')));
   zk.appendChild(zh);
-  (v.zustaende || []).forEach(function (z, nr) {
+  (tpl.zustaende || []).forEach(function (z, nr) {
     var auf = (vOffeneZeile === nr);
     var r = el('div', 'slot vklick' + (auf ? ' offen' : ''));
     r.style.gridTemplateColumns = '1fr 1.1fr 1.2fr 90px 15px';
@@ -601,10 +601,10 @@ export function zeichneVorlagenBlatt(host) {
   }
   /* Das Rollenwissen ist kein Zeilenbestand - nur ein Vermerk, dass es
      da ist und wo es greift. */
-  if (v.weiterePunkte && Object.keys(v.weiterePunkte).length) {
+  if (tpl.weiterePunkte && Object.keys(tpl.weiterePunkte).length) {
     var ww = el('div', 'hint');
     ww.style.padding = '7px 12px 10px';
-    ww.textContent = tr('tpls.wissen', Object.keys(v.weiterePunkte).length);
+    ww.textContent = tr('tpls.wissen', Object.keys(tpl.weiterePunkte).length);
     zk.appendChild(ww);
   }
   host.appendChild(zk);
@@ -614,9 +614,9 @@ export function zeichneVorlagenBlatt(host) {
   pk.style.marginBottom = '11px';
   var ph2 = el('div', 'ch');
   ph2.appendChild(el('span', 'typ', tr('tpls.tryout')));
-  if (erf.length) { probeWerteHolen(ohneUnterstrich(v), zeichneErgebnis); }
+  if (erf.length) { probeWerteHolen(ohneUnterstrich(tpl), zeichneErgebnis); }
   var treffer = erf.length
-    ? probelauf(ohneUnterstrich(v), v._quelle === 'benutzer') : [];
+    ? probelauf(ohneUnterstrich(tpl), tpl._quelle === 'benutzer') : [];
   var gew = treffer.filter(function (t) { return t.gewinnt; }).length;
   ph2.appendChild(el('span', 'chip ' + (gew ? 'ok' : 'warn'), tr('tpls.hits', treffer.length, gew)));
   /* „Getroffen" heisst nur, dass die Erkennung anspringt. Wie oft die
@@ -693,7 +693,7 @@ export function zeichneVorlagenBlatt(host) {
     pre.style.margin = '9px 12px 11px';
     pre.style.whiteSpace = 'pre';
     pre.style.maxHeight = 'none';
-    pre.textContent = JSON.stringify(ohneUnterstrich(v), null, 2);
+    pre.textContent = JSON.stringify(ohneUnterstrich(tpl), null, 2);
     jk.appendChild(pre);
   }
   host.appendChild(jk);
@@ -846,14 +846,14 @@ function anzeigeBlock(hole, setze, platzhalter) {
 
    Die Erkennungsbedingungen stehen eigens im Kasten „Erkennung" darueber,
    samt Zaehler; sie brauchen diese Marke nicht. */
-function istPflichtpunkt(z) {
-  return !z.optional;
+function istPflichtpunkt(tplZeile) {
+  return !tplZeile.optional;
 }
 
 /* lesenSonst darf ein Punktname, ein Objekt oder eine Liste sein — alle
    drei Formen kommen in Vorlagen vor. Nach innen immer eine Liste. */
-function ersatzListe(z) {
-  var s0 = z.lesenSonst;
+function ersatzListe(tplZeile) {
+  var s0 = tplZeile.lesenSonst;
   if (!s0) { return []; }
   var arr = Array.isArray(s0) ? s0 : [s0];
   return arr.map(function (x) {
@@ -864,15 +864,15 @@ function ersatzListe(z) {
 /* Im Arbeitsstand bleibt eine noch leere Zeile stehen — sonst koennte
    man nie eine anlegen, weil sie im selben Atemzug wieder verschwaende.
    Weggeworfen wird sie erst beim Ablegen, in ohneUnterstrich. */
-function schreibeErsatz(z, liste) {
-  if (!liste.length) { delete z.lesenSonst; return; }
-  z.lesenSonst = (liste.length === 1) ? liste[0] : liste;
+function schreibeErsatz(tplZeile, liste) {
+  if (!liste.length) { delete tplZeile.lesenSonst; return; }
+  tplZeile.lesenSonst = (liste.length === 1) ? liste[0] : liste;
 }
 
-function vZeilenDetail(z, nr, eigen) {
+function vZeilenDetail(tplZeile, nr, eigen) {
   var v = vArbeitsstand();
   var d = el('div', 'detail');
-  var zeilenHinweis = sprachtext(z.hinweis);
+  var zeilenHinweis = sprachtext(tplZeile.hinweis);
   if (zeilenHinweis) {
     var hw0 = el('div', 'hint');
     hw0.style.whiteSpace = 'pre-wrap';
@@ -886,11 +886,11 @@ function vZeilenDetail(z, nr, eigen) {
      vorhandenen Objekten. Es gibt kein Geraet, an dem man das messen
      koennte. */
   var setz = function (feldname, wandeln) {
-    return function (x, wert) {
-      var zz = x.zustaende[nr];
+    return function (tpl, wert) {
+      var tplZeileFrisch = tpl.zustaende[nr];
       var w = wandeln ? wandeln(wert) : wert;
-      if (w === '' || w === undefined || w === null) { delete zz[feldname]; }
-      else { zz[feldname] = w; }
+      if (w === '' || w === undefined || w === null) { delete tplZeileFrisch[feldname]; }
+      else { tplZeileFrisch[feldname] = w; }
     };
   };
   var setzeFeld = function (feldname, wert, wandeln) {
@@ -908,13 +908,13 @@ function vZeilenDetail(z, nr, eigen) {
     return i;
   };
 
-  dtZeile(d, tr('detail.name'), eingabe(z.name, 'name', '260px', tr('detail.namePlaceholder')));
+  dtZeile(d, tr('detail.name'), eingabe(tplZeile.name, 'name', '260px', tr('detail.namePlaceholder')));
 
   /* --- liest aus, mit JSON-Feld daneben --- */
   var qf = el('div', 'fields');
   qf.appendChild(dtFeld(tr('detail.datapoint'),
-    eingabe(z.lesen, 'lesen', '260px', z.absolut ? '0_userdata.0.\u2026' : 'stat.POWER')));
-  qf.appendChild(dtFeld(tr('detail.jsonField'), eingabe(z.feld, 'feld', '150px', '\u2014')));
+    eingabe(tplZeile.lesen, 'lesen', '260px', tplZeile.absolut ? '0_userdata.0.\u2026' : 'stat.POWER')));
+  qf.appendChild(dtFeld(tr('detail.jsonField'), eingabe(tplZeile.feld, 'feld', '150px', '\u2014')));
   dtZeile(d, tr('detail.readsFrom'), qf);
 
   /* --- Ersatzquellen --- 
@@ -923,40 +923,40 @@ function vZeilenDetail(z, nr, eigen) {
      tele.INFO2, in tele.STATE oder in stat.STATUS5. Die Werkbank nimmt
      den ersten Weg, bei dem Objekt und Feld wirklich da sind. Ohne
      dieses Feld liess sich das nur in der ausgegebenen Datei aendern. */
-  var sonstListe = ersatzListe(z);
+  var sonstListe = ersatzListe(tplZeile);
 
   var sb = el('div');
-  sonstListe.forEach(function (w, wi) {
+  sonstListe.forEach(function (ersatz, wi) {
     var zeile = el('div', 'fields');
     zeile.style.marginBottom = '5px';
 
     var setzeErsatz = function (teil, wert) {
-      vAendern(function (x) {
-        var zz = x.zustaende[nr];
-        var liste = ersatzListe(zz);
+      vAendern(function (tpl) {
+        var tplZeileFrisch = tpl.zustaende[nr];
+        var liste = ersatzListe(tplZeileFrisch);
         if (!liste[wi]) { return; }
         if (wert === '') { delete liste[wi][teil]; } else { liste[wi][teil] = wert; }
         if (!liste[wi].punkt) { liste.splice(wi, 1); }
-        schreibeErsatz(zz, liste);
+        schreibeErsatz(tplZeileFrisch, liste);
       }, wert);
     };
 
     var ip1 = el('input', 'tx');
-    ip1.type = 'text'; ip1.value = w.punkt || ''; ip1.style.width = '210px';
+    ip1.type = 'text'; ip1.value = ersatz.punkt || ''; ip1.style.width = '210px';
     ip1.placeholder = 'tele.STATE';
     ip1.addEventListener('click', function (ev) { ev.stopPropagation(); });
     ip1.addEventListener('change', function () { setzeErsatz('punkt', ip1.value); });
     zeile.appendChild(dtFeld(tr('detail.datapoint'), ip1));
 
     var ip2 = el('input', 'tx');
-    ip2.type = 'text'; ip2.value = w.feld || ''; ip2.style.width = '150px';
+    ip2.type = 'text'; ip2.value = ersatz.feld || ''; ip2.style.width = '150px';
     ip2.placeholder = '—';
     ip2.addEventListener('click', function (ev) { ev.stopPropagation(); });
     ip2.addEventListener('change', function () { setzeErsatz('feld', ip2.value); });
     zeile.appendChild(dtFeld(tr('detail.jsonField'), ip2));
 
     var ip3 = el('input', 'tx');
-    ip3.type = 'text'; ip3.value = w.leseformel || ''; ip3.style.width = '230px';
+    ip3.type = 'text'; ip3.value = ersatz.leseformel || ''; ip3.style.width = '230px';
     ip3.placeholder = tr('detail.formulaPlaceholder');
     ip3.addEventListener('click', function (ev) { ev.stopPropagation(); });
     ip3.addEventListener('change', function () { setzeErsatz('leseformel', ip3.value); });
@@ -966,11 +966,11 @@ function vZeilenDetail(z, nr, eigen) {
     x1.type = 'button';
     x1.addEventListener('click', function (ev) {
       ev.stopPropagation();
-      vAendern(function (x) {
-        var zz = x.zustaende[nr];
-        var liste = ersatzListe(zz);
+      vAendern(function (tpl) {
+        var tplZeileFrisch = tpl.zustaende[nr];
+        var liste = ersatzListe(tplZeileFrisch);
         liste.splice(wi, 1);
-        schreibeErsatz(zz, liste);
+        schreibeErsatz(tplZeileFrisch, liste);
       }, null);
     });
     zeile.appendChild(dtFeld(' ', x1));
@@ -982,11 +982,11 @@ function vZeilenDetail(z, nr, eigen) {
   plus.type = 'button';
   plus.addEventListener('click', function (ev) {
     ev.stopPropagation();
-    vAendern(function (x) {
-      var zz = x.zustaende[nr];
-      var liste = ersatzListe(zz);
+    vAendern(function (tpl) {
+      var tplZeileFrisch = tpl.zustaende[nr];
+      var liste = ersatzListe(tplZeileFrisch);
       liste.push({ punkt: '' });
-      schreibeErsatz(zz, liste);
+      schreibeErsatz(tplZeileFrisch, liste);
     }, null);
   });
   sb.appendChild(plus);
@@ -994,39 +994,39 @@ function vZeilenDetail(z, nr, eigen) {
   dtZeile(d, tr('tv.fallback'), sb);
 
   dtZeile(d, tr('detail.writesTo'),
-    eingabe(z.schreiben, 'schreiben', '260px', tr('detail.noWrite')));
+    eingabe(tplZeile.schreiben, 'schreiben', '260px', tr('detail.noWrite')));
 
   var fb = el('div');
-  fb.appendChild(eingabe(z.leseformel, 'leseformel', '100%', tr('detail.formulaPlaceholder')));
-  if ((z.typ || '') === 'boolean') {
+  fb.appendChild(eingabe(tplZeile.leseformel, 'leseformel', '100%', tr('detail.formulaPlaceholder')));
+  if ((tplZeile.typ || '') === 'boolean') {
     fb.appendChild(el('div', 'sugg', tr('detail.formulaHint')));
   }
   dtZeile(d, tr('detail.formula'), fb);
 
-  if (z.schreiben) {
+  if (tplZeile.schreiben) {
     var wb = el('div');
-    wb.appendChild(eingabe(z.schreibformel, 'schreibformel', '100%', tr('detail.writeFormulaPlaceholder')));
+    wb.appendChild(eingabe(tplZeile.schreibformel, 'schreibformel', '100%', tr('detail.writeFormulaPlaceholder')));
     wb.appendChild(el('div', 'sugg', tr('detail.writeFormulaHint')));
     dtZeile(d, tr('detail.writeFormula'), wb);
   }
 
-  dtZeile(d, tr('detail.role'), rollenBlock(z.rolle, v.geraetetyp, function (neu) {
+  dtZeile(d, tr('detail.role'), rollenBlock(tplZeile.rolle, v.geraetetyp, function (neu) {
     setzeFeld('rolle', neu);
-  }, z.typ, function (t) { setzeFeld('typ', t); }));
+  }, tplZeile.typ, function (t) { setzeFeld('typ', t); }));
 
   dtZeile(d, tr('detail.display'), anzeigeBlock(
     function (was) {
-      if (was === 'einheit') { return z.einheit; }
-      if (was === 'dec') { return z.nachkommastellen; }
-      if (was === 'caption') { return z.beschriftung; }
-      return z.typ;
+      if (was === 'einheit') { return tplZeile.einheit; }
+      if (was === 'dec') { return tplZeile.nachkommastellen; }
+      if (was === 'caption') { return tplZeile.beschriftung; }
+      return tplZeile.typ;
     },
     function (was, wert) {
       if (was === 'einheit') { return setzeFeld('einheit', wert); }
       if (was === 'dec') { return setzeFeld('nachkommastellen', wert, function (w) { return w === '' ? '' : Number(w); }); }
       if (was === 'caption') { return setzeFeld('beschriftung', wert); }
       setzeFeld('typ', wert);
-    }, z.name));
+    }, tplZeile.name));
 
   var haken = function (label, an, tut) {
     var l = el('label', 'fld');
@@ -1037,7 +1037,7 @@ function vZeilenDetail(z, nr, eigen) {
     c.type = 'checkbox';
     c.checked = an;
     c.addEventListener('click', function (ev) { ev.stopPropagation(); });
-    c.addEventListener('change', function () { vAendern(function (x) { tut(x.zustaende[nr], c.checked); }); });
+    c.addEventListener('change', function () { vAendern(function (tpl) { tut(tpl.zustaende[nr], c.checked); }); });
     l.appendChild(c);
     l.appendChild(el('span', null, label));
     return l;
@@ -1047,8 +1047,8 @@ function vZeilenDetail(z, nr, eigen) {
   /* Beide Haken laufen in dieselbe Richtung wie im Speichern-Dialog:
      angehakt heisst „ja". Vorher stand hier „freiwillig" und „Vorgabe
      aus" — also zweimal die Umkehrung, was niemand zusammenbringt. */
-  zeile2.appendChild(haken(tr('tpls.colDefault'), !z.vorgabeAus,
-    function (zz, an) { if (an) { delete zz.vorgabeAus; } else { zz.vorgabeAus = true; } }));
+  zeile2.appendChild(haken(tr('tpls.colDefault'), !tplZeile.vorgabeAus,
+    function (tplZeileFrisch, an) { if (an) { delete tplZeileFrisch.vorgabeAus; } else { tplZeileFrisch.vorgabeAus = true; } }));
 
   /* Der Haken setzt nur noch `optional` an der Zeile — also genau das,
      was er behauptet.
@@ -1062,15 +1062,15 @@ function vZeilenDetail(z, nr, eigen) {
      `stat.POWER` gebunden, das es an einem frisch eingebundenen Geraet
      noch gar nicht gibt. Die Erkennungsliste wird im Kasten „Erkennung"
      darueber gepflegt, mit eigenem Feld. */
-  zeile2.appendChild(haken(tr('tpls.colRequired'), istPflichtpunkt(z), function (zz, an) {
-    if (an) { delete zz.optional; } else { zz.optional = true; }
+  zeile2.appendChild(haken(tr('tpls.colRequired'), istPflichtpunkt(tplZeile), function (tplZeileFrisch, an) {
+    if (an) { delete tplZeileFrisch.optional; } else { tplZeileFrisch.optional = true; }
   }));
 
-  zeile2.appendChild(haken(tr('tpls.absolute'), !!z.absolut,
-    function (zz, an) { if (an) { zz.absolut = true; } else { delete zz.absolut; } }));
+  zeile2.appendChild(haken(tr('tpls.absolute'), !!tplZeile.absolut,
+    function (tplZeileFrisch, an) { if (an) { tplZeileFrisch.absolut = true; } else { delete tplZeileFrisch.absolut; } }));
   var wKnopf = el('button', 'btn schmal', tr('tv.removeState'));
   wKnopf.addEventListener('click', function () {
-    vAendern(function (x) { x.zustaende.splice(nr, 1); vOffeneZeile = null; });
+    vAendern(function (tpl) { tpl.zustaende.splice(nr, 1); vOffeneZeile = null; });
   });
   zeile2.appendChild(wKnopf);
   dtZeile(d, tr('tv.inTemplate'), zeile2);
@@ -1088,7 +1088,7 @@ function vZeilenDetail(z, nr, eigen) {
      keine ungewollte Kopie im Bestand. */
   if (!eigen) {
     Array.prototype.forEach.call(d.querySelectorAll('input, select, textarea, button'),
-      function (x) { x.disabled = true; });
+      function (tpl) { tpl.disabled = true; });
     var ro = el('div', 'hint');
     ro.textContent = tr('tv.readOnlyRow');
     d.insertBefore(ro, d.firstChild);
@@ -1096,8 +1096,8 @@ function vZeilenDetail(z, nr, eigen) {
   return d;
 }
 
-function vDuplizieren(v, gleicheKennung) {
-  var k = JSON.parse(JSON.stringify(ohneUnterstrich(v)));
+function vDuplizieren(tpl, gleicheKennung) {
+  var k = JSON.parse(JSON.stringify(ohneUnterstrich(tpl)));
   if (gleicheKennung) {
     /* Uebernehmen statt abwandeln: gleiche Kennung, eine Version
        weiter — damit verdeckt sie die mitgelieferte. */
@@ -1120,11 +1120,11 @@ function vDuplizieren(v, gleicheKennung) {
 
 /* Ausgeben als Datei — dasselbe Format wie admin/vorlagen/*.json, damit
    eine gut gewordene Vorlage ohne Umbau ins Paket wandern kann. */
-function vAusgeben(v) {
-  var text = JSON.stringify(ohneUnterstrich(v), null, 2) + '\n';
+function vAusgeben(tpl) {
+  var text = JSON.stringify(ohneUnterstrich(tpl), null, 2) + '\n';
   var a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
-  a.download = v.id + '.json';
+  a.download = tpl.id + '.json';
   document.body.appendChild(a);
   a.click();
   setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
@@ -1170,28 +1170,28 @@ export function vEinlesenDatei(datei) {
    Listenfelder werden nicht abgewiesen, wenn ein einzelner Text
    gemeint sein kann: `erforderlich: "tele.STATE"` ist eindeutig und
    wird zur Liste gemacht. Abgewiesen wird nur, was keinen Sinn ergibt. */
-function vPruefeEingelesen(o) {
-  if (!o || typeof o !== 'object' || Array.isArray(o)) { return tr('tv.badNotObject'); }
-  if (!o.id || typeof o.id !== 'string') { return tr('tv.badNoId'); }
-  if (!Array.isArray(o.zustaende) || !o.zustaende.length) { return tr('tv.badNoStates'); }
+function vPruefeEingelesen(tpl) {
+  if (!tpl || typeof tpl !== 'object' || Array.isArray(tpl)) { return tr('tv.badNotObject'); }
+  if (!tpl.id || typeof tpl.id !== 'string') { return tr('tv.badNoId'); }
+  if (!Array.isArray(tpl.zustaende) || !tpl.zustaende.length) { return tr('tv.badNoStates'); }
   /* Lese- ODER Schreibpfad, wie beim Speichern und Anwenden. Eine Zeile
      nur mit `schreiben` (ein Befehl ohne Rueckmeldung, frueher auch der
      STOP am Rollladen) ist gueltig; bis 19.09.2026 wies das Einlesen sie
      ab, und die Werkbank gab Dateien aus, die sie selbst nicht wieder
      annahm (I7). */
-  var schlecht = o.zustaende.filter(function (z) { return !z || !z.name || !(z.lesen || z.schreiben); });
+  var schlecht = tpl.zustaende.filter(function (z) { return !z || !z.name || !(z.lesen || z.schreiben); });
   if (schlecht.length) { return tr('tv.badState', schlecht.length); }
 
-  if (o.name !== undefined &&
-      !(typeof o.name === 'string' ||
-        (o.name && typeof o.name === 'object' && !Array.isArray(o.name)))) {
+  if (tpl.name !== undefined &&
+      !(typeof tpl.name === 'string' ||
+        (tpl.name && typeof tpl.name === 'object' && !Array.isArray(tpl.name)))) {
     return tr('tv.badName');
   }
-  if (o.erkennung !== undefined &&
-      (!o.erkennung || typeof o.erkennung !== 'object' || Array.isArray(o.erkennung))) {
+  if (tpl.erkennung !== undefined &&
+      (!tpl.erkennung || typeof tpl.erkennung !== 'object' || Array.isArray(tpl.erkennung))) {
     return tr('tv.badRecog');
   }
-  var erk = o.erkennung || {};
+  var erk = tpl.erkennung || {};
   var listen = ['erforderlich', 'verboten'];
   for (var i = 0; i < listen.length; i++) {
     var w = erk[listen[i]];
@@ -1212,9 +1212,9 @@ function vPruefeEingelesen(o) {
   /* Ein Musternamen, den dieser Detector nicht kennt, wirft spaeter in
      der Musterwahl — und der Entwurf wird dann gar nicht erst
      gezeichnet. Lieber hier abweisen, wo noch jemand zusieht. */
-  if (o.geraetetyp !== undefined &&
-      (typeof o.geraetetyp !== 'string' || (o.geraetetyp && !musterVon(o.geraetetyp)))) {
-    return tr('tv.badType', String(o.geraetetyp));
+  if (tpl.geraetetyp !== undefined &&
+      (typeof tpl.geraetetyp !== 'string' || (tpl.geraetetyp && !musterVon(tpl.geraetetyp)))) {
+    return tr('tv.badType', String(tpl.geraetetyp));
   }
   return null;
 }
@@ -1230,8 +1230,8 @@ function vSpeichern() {
      zaehlte schon hoch, das Speichern nicht. */
   var alt = vorlageMitId(rein.id);
   if (alt) {
-    var ohneV = function (x) {
-      var k = JSON.parse(JSON.stringify(ohneUnterstrich(x)));
+    var ohneV = function (tpl) {
+      var k = JSON.parse(JSON.stringify(ohneUnterstrich(tpl)));
       delete k.version;
       return JSON.stringify(k);
     };
@@ -1325,16 +1325,16 @@ function zuPlatzhalter(pfad, inst, vorspaenne) {
    (`POWER%N%` → `POWER`), und was mit derselben Nummer mehrfach
    vorkommt — `cmnd.POWER2` und `stat.POWER2` sagen gemeinsam mehr als
    ein einzelnes `tele.INFO2`. */
-function ausgangsVorspaenne(zeilen, k) {
-  var i = (k.instanz === null || k.instanz === undefined) ? '' : String(k.instanz);
+function ausgangsVorspaenne(zeilen, dlgKopf) {
+  var i = (dlgKopf.instanz === null || dlgKopf.instanz === undefined) ? '' : String(dlgKopf.instanz);
   var raus = [];
   var dazu = function (v) { if (v && raus.indexOf(v) === -1) { raus.push(v); } };
 
-  var kn = String(k.kanalname || 'POWER%N%');
+  var kn = String(dlgKopf.kanalname || 'POWER%N%');
   if (kn.indexOf('%N%') !== -1) { dazu(kn.split('%N%')[0]); }
 
-  ((k.quelle && k.quelle.zustaende) || []).forEach(function (z) {
-    [z.lesen, z.schreiben].forEach(function (pf) {
+  ((dlgKopf.quelle && dlgKopf.quelle.zustaende) || []).forEach(function (tplZeile) {
+    [tplZeile.lesen, tplZeile.schreiben].forEach(function (pf) {
       String(pf || '').split('.').forEach(function (t) {
         var n = t.indexOf('%N%');
         if (n > 0) { dazu(t.slice(0, n)); }
@@ -1362,13 +1362,13 @@ function ausgangsVorspaenne(zeilen, k) {
 
 /* Welcher Pfad steht am Ende in der Vorlage? Bei einem Mehrfachgeraet
    tritt der Platzhalter an die Stelle der Ausgangsnummer. */
-function zPfad(r, k, schreibend, zeilen) {
-  var roh = schreibend ? r.schreibenRoh : r.lesenRoh;
-  var abs = schreibend ? r.schreibenAbs : r.lesenAbs;
+function zPfad(dlgZeile, dlgKopf, schreibend, zeilen) {
+  var roh = schreibend ? dlgZeile.schreibenRoh : dlgZeile.lesenRoh;
+  var abs = schreibend ? dlgZeile.schreibenAbs : dlgZeile.lesenAbs;
   if (!roh) { return ''; }
-  if (!k.mehrfach || abs || !k.instanz) { return roh; }
-  return zuPlatzhalter(roh, k.instanz,
-    ausgangsVorspaenne(zeilen || (S.tplZ && S.tplZ.zeilen) || [], k));
+  if (!dlgKopf.mehrfach || abs || !dlgKopf.instanz) { return roh; }
+  return zuPlatzhalter(roh, dlgKopf.instanz,
+    ausgangsVorspaenne(zeilen || (S.tplZ && S.tplZ.zeilen) || [], dlgKopf));
 }
 
 /* Endet die Nummer eines Ausgangs in den Pfaden? Haeufigste Zahl am
@@ -1456,36 +1456,36 @@ function freierSchluessel(basis) {
 }
 
 export function vorlagenVorbereiten(e) {
-  var quelle = null;
-  S.VORLAGEN.forEach(function (v) { if (v.id === e.vorlage) { quelle = v; } });
+  var quellTpl = null;
+  S.VORLAGEN.forEach(function (v) { if (v.id === e.vorlage) { quellTpl = v; } });
   var maxRang = eigenerMaxRang();
 
-  var mehrfach = !!(quelle && quelle.mehrfach);
+  var mehrfach = !!(quellTpl && quellTpl.mehrfach);
   var inst = mehrfach ? e.instanz : null;
 
   var zeilen = [];
-  e.states.forEach(function (s) {
+  e.states.forEach(function (ePunkt) {
     /* Eine Zeile braucht wenigstens ein Ziel - lesend oder schreibend.
        `STOP` am Rollladen hat nur ein Schreibziel: ein Tastendruck hat
-       keinen Zustand zum Lesen. Bis 11.09.2026 stand hier `!s.srcR`,
+       keinen Zustand zum Lesen. Bis 11.09.2026 stand hier `!ePunkt.srcR`,
        und solche Zeilen fielen beim Speichern lautlos weg. Dass das
        Anwenden diesen Fall kennt, steht seit dem 09.09.2026 in
        vorlagen.js - die Gegenrichtung war vergessen worden. */
-    if (!s.n || (!s.srcR && !s.srcW)) { return; }
-    var r = s.srcR ? relZu(s.srcR, e.kanal) : { p: '', abs: false };
+    if (!ePunkt.n || (!ePunkt.srcR && !ePunkt.srcW)) { return; }
+    var r = ePunkt.srcR ? relZu(ePunkt.srcR, e.kanal) : { p: '', abs: false };
     /* Das Schreibziel gehoert in die Vorlage, auch wenn es derselbe
        Punkt ist wie der gelesene. Bis 11.09.2026 stand hier zusaetzlich
-       `s.srcW !== s.srcR`, und genau das trifft auf jeden Aktor zu, der
+       `ePunkt.srcW !== ePunkt.srcR`, und genau das trifft auf jeden Aktor zu, der
        seinen eigenen Zustand fuehrt: Rollladen, Dimmer, Thermostat
        schreiben auf denselben Punkt, den sie lesen (1.LEVEL). Beim
        Speichern verschwand ihr Schreibweg - der Alias zeigte die
        Position an und liess sich nicht mehr verstellen. Aufgefallen
        bei Tasmota nie, weil dort tele.STATE gelesen und cmnd.POWER
        geschrieben wird. */
-    var w = s.srcW ? relZu(s.srcW, e.kanal) : null;
-    var zv = null;
-    if (quelle && s.ausVorlage) {
-      (quelle.zustaende || []).forEach(function (z) { if (z.name === s.ausVorlage) { zv = z; } });
+    var w = ePunkt.srcW ? relZu(ePunkt.srcW, e.kanal) : null;
+    var tplZeile = null;
+    if (quellTpl && ePunkt.ausVorlage) {
+      (quellTpl.zustaende || []).forEach(function (z) { if (z.name === ePunkt.ausVorlage) { tplZeile = z; } });
     }
     /* Steht der Punkt in der Erkennung der Vorlage, muss er da sein -
        auch wenn seine Zeile optional ist. `hm-rollladen` fuehrt STOP als
@@ -1494,12 +1494,12 @@ export function vorlagenVorbereiten(e) {
        nach `optional`, und wer die Vorlage aktualisierte, ohne selbst
        nachzuhaken, speicherte eine, die schon bei LEVEL allein greift -
        im Probelauf 23 Geraete statt der Rolllaeden (I20). */
-    var erfQ = (quelle && quelle.erkennung && quelle.erkennung.erforderlich) || [];
-    var inErkennung = !!(zv && ((zv.lesen && erfQ.indexOf(zv.lesen) > -1) ||
-                                (zv.schreiben && erfQ.indexOf(zv.schreiben) > -1)));
+    var erfQ = (quellTpl && quellTpl.erkennung && quellTpl.erkennung.erforderlich) || [];
+    var inErkennung = !!(tplZeile && ((tplZeile.lesen && erfQ.indexOf(tplZeile.lesen) > -1) ||
+                                (tplZeile.schreiben && erfQ.indexOf(tplZeile.schreiben) > -1)));
     zeilen.push({
-      s: s,
-      name: s.n,
+      s: ePunkt,
+      name: ePunkt.n,
       /* Roh heisst: relativ zum Geraet, aber noch mit der konkreten
          Ausgangsnummer. Der Platzhalter wird erst gesetzt, wenn er
          gebraucht wird — sonst liesse sich der Haken „mehrere
@@ -1508,16 +1508,16 @@ export function vorlagenVorbereiten(e) {
       lesenAbs: r.abs,
       schreibenRoh: w ? w.p : '',
       schreibenAbs: w ? w.abs : false,
-      aus: !s.on,
+      aus: !ePunkt.on,
       /* Vorschlag: was einen Schreibweg hat, traegt das Geraet. Was aus
          einer Vorlage kam, erbt deren Einstufung. Von Hand ergaenzte
          Punkte bleiben freiwillig — jeder Pflichtpunkt macht die
          Vorlage genauer und zugleich sproeder. */
-      pflicht: r.abs ? false : (zv ? (!zv.optional || inErkennung) : !!w),
+      pflicht: r.abs ? false : (tplZeile ? (!tplZeile.optional || inErkennung) : !!w),
       /* Die Zeile bleibt, was sie in der Vorlage war: optional fuer den
          Alias, Pflicht nur fuer die Erkennung. Der Haken „muss da sein"
          legt sonst beides zusammen fest. */
-      optionalBleibt: !!(zv && zv.optional && inErkennung)
+      optionalBleibt: !!(tplZeile && tplZeile.optional && inErkennung)
     });
   });
 
@@ -1530,13 +1530,13 @@ export function vorlagenVorbereiten(e) {
     inhalte.forEach(function (x) { if (x.punkt === z.lesenRoh && x.feld === oben) { da = true; } });
     if (!da) { inhalte.push({ punkt: z.lesenRoh, feld: oben, an: false }); }
   });
-  if (quelle && quelle.erkennung && quelle.erkennung.inhalt) {
-    Object.keys(quelle.erkennung.inhalt).forEach(function (p) {
+  if (quellTpl && quellTpl.erkennung && quellTpl.erkennung.inhalt) {
+    Object.keys(quellTpl.erkennung.inhalt).forEach(function (p) {
       var da = false;
       inhalte.forEach(function (x) {
-        if (x.punkt === p) { da = true; x.an = true; x.feld = quelle.erkennung.inhalt[p]; }
+        if (x.punkt === p) { da = true; x.an = true; x.feld = quellTpl.erkennung.inhalt[p]; }
       });
-      if (!da) { inhalte.push({ punkt: p, feld: quelle.erkennung.inhalt[p], an: true }); }
+      if (!da) { inhalte.push({ punkt: p, feld: quellTpl.erkennung.inhalt[p], an: true }); }
     });
   }
 
@@ -1546,111 +1546,111 @@ export function vorlagenVorbereiten(e) {
     zeilen: zeilen,
     inhalte: inhalte,
     kopf: {
-      modus: quelle ? 'update' : 'neu',
-      quelle: quelle,
-      id: quelle ? quelle.id : freierSchluessel(schluesselAus(geraetName)),
-      nameDe: quelle ? textIn(quelle.name, 'de') : geraetName,
-      nameEn: quelle ? textIn(quelle.name, 'en') : geraetName,
-      geraetetyp: e.want || (quelle ? quelle.geraetetyp : '') || '',
+      modus: quellTpl ? 'update' : 'neu',
+      quelle: quellTpl,
+      id: quellTpl ? quellTpl.id : freierSchluessel(schluesselAus(geraetName)),
+      nameDe: quellTpl ? textIn(quellTpl.name, 'de') : geraetName,
+      nameEn: quellTpl ? textIn(quellTpl.name, 'en') : geraetName,
+      geraetetyp: e.want || (quellTpl ? quellTpl.geraetetyp : '') || '',
       /* Was die Vorlage schon sagt, gilt; sonst das, was am Geraet
          eingestellt ist. Wer eine Vorlage aus einem Geraet baut, hat die
          Funktion dort meist gerade gesetzt - sie noch einmal auswaehlen
          zu muessen waere Arbeit ohne Gewinn. */
-      funktion: (quelle && quelle.funktion) || kennungZuFunktion(e.funktion) || '',
-      namenshinweis: quelle ? ((quelle.erkennung || {}).namenshinweis || '') : '',
-      rang: quelle ? (quelle.rang || 0) : maxRang + 10,
+      funktion: (quellTpl && quellTpl.funktion) || kennungZuFunktion(e.funktion) || '',
+      namenshinweis: quellTpl ? ((quellTpl.erkennung || {}).namenshinweis || '') : '',
+      rang: quellTpl ? (quellTpl.rang || 0) : maxRang + 10,
       maxRang: maxRang,
       mehrfach: mehrfach,
       instanz: mehrfach ? String(inst === null || inst === undefined ? '' : inst)
                         : rateInstanz(zeilen, geraetName,
-                            String((quelle && quelle.kanalname) || 'POWER%N%').split('%N%')[0]),
-      kanalname: (quelle && quelle.kanalname) ? quelle.kanalname : 'POWER%N%',
-      verboten: quelle ? (((quelle.erkennung || {}).verboten) || []).join(', ') : '',
+                            String((quellTpl && quellTpl.kanalname) || 'POWER%N%').split('%N%')[0]),
+      kanalname: (quellTpl && quellTpl.kanalname) ? quellTpl.kanalname : 'POWER%N%',
+      verboten: quellTpl ? (((quellTpl.erkennung || {}).verboten) || []).join(', ') : '',
       geraetName: geraetName
     }
   };
 }
 
 /* Der Entwurf als Vorlagenobjekt — genau das, was gespeichert wird. */
-export function baueVorlage(z) {
-  var k = z.kopf;
-  var v = {
-    id: k.id,
-    version: k.modus === 'update' && k.quelle ? (k.quelle.version || 1) + 1 : 1,
-    rang: Number(k.rang) || 0,
-    name: { de: k.nameDe || k.id, en: k.nameEn || k.nameDe || k.id },
-    geraetetyp: k.geraetetyp || undefined,
-    funktion: k.funktion || undefined,
+export function baueVorlage(dlg) {
+  var dlgKopf = dlg.kopf;
+  var tpl = {
+    id: dlgKopf.id,
+    version: dlgKopf.modus === 'update' && dlgKopf.quelle ? (dlgKopf.quelle.version || 1) + 1 : 1,
+    rang: Number(dlgKopf.rang) || 0,
+    name: { de: dlgKopf.nameDe || dlgKopf.id, en: dlgKopf.nameEn || dlgKopf.nameDe || dlgKopf.id },
+    geraetetyp: dlgKopf.geraetetyp || undefined,
+    funktion: dlgKopf.funktion || undefined,
     erkennung: {}
   };
 
   var erf = [];
-  z.zeilen.forEach(function (r) {
-    if (r.weg || !r.pflicht || r.lesenAbs) { return; }
-    var lp = zPfad(r, k, false, z.zeilen);
-    var sp = zPfad(r, k, true, z.zeilen);
+  dlg.zeilen.forEach(function (dlgZeile) {
+    if (dlgZeile.weg || !dlgZeile.pflicht || dlgZeile.lesenAbs) { return; }
+    var lp = zPfad(dlgZeile, dlgKopf, false, dlg.zeilen);
+    var sp = zPfad(dlgZeile, dlgKopf, true, dlg.zeilen);
     if (erf.indexOf(lp) === -1) { erf.push(lp); }
-    if (sp && !r.schreibenAbs && erf.indexOf(sp) === -1) { erf.push(sp); }
+    if (sp && !dlgZeile.schreibenAbs && erf.indexOf(sp) === -1) { erf.push(sp); }
   });
-  v.erkennung.erforderlich = erf;
+  tpl.erkennung.erforderlich = erf;
 
-  var verb = String(k.verboten || '').split(',').map(function (x) { return x.trim(); })
+  var verb = String(dlgKopf.verboten || '').split(',').map(function (x) { return x.trim(); })
     .filter(function (x) { return !!x; });
   /* Ein Punkt kann nicht zugleich Pflicht und verboten sein — so eine
      Vorlage passt auf gar nichts. Der Widerspruch entsteht leicht: man
      traegt unten „darf es nicht geben" ein und vergisst, dass derselbe
      Punkt oben schon „muss da sein" ist. */
-  v.widerspruch = verb.filter(function (x) { return erf.indexOf(x) !== -1; });
-  if (verb.length) { v.erkennung.verboten = verb; }
+  tpl.widerspruch = verb.filter(function (x) { return erf.indexOf(x) !== -1; });
+  if (verb.length) { tpl.erkennung.verboten = verb; }
 
   var inh = {};
-  z.inhalte.forEach(function (x) { if (x.an) { inh[x.punkt] = x.feld; } });
-  if (Object.keys(inh).length) { v.erkennung.inhalt = inh; }
-  if (k.namenshinweis) { v.erkennung.namenshinweis = k.namenshinweis; }
+  dlg.inhalte.forEach(function (x) { if (x.an) { inh[x.punkt] = x.feld; } });
+  if (Object.keys(inh).length) { tpl.erkennung.inhalt = inh; }
+  if (dlgKopf.namenshinweis) { tpl.erkennung.namenshinweis = dlgKopf.namenshinweis; }
   /* Was die Erkennung der Ursprungsvorlage sonst traegt - der Hinweis,
      warum ein Punkt Pflicht ist, etwa - bleibt erhalten. Der Dialog
      zeigt es nicht, also darf er es auch nicht verlieren (I20). */
-  if (k.modus === 'update' && k.quelle && k.quelle.erkennung) {
-    Object.keys(k.quelle.erkennung).forEach(function (feld) {
+  if (dlgKopf.modus === 'update' && dlgKopf.quelle && dlgKopf.quelle.erkennung) {
+    Object.keys(dlgKopf.quelle.erkennung).forEach(function (feld) {
       if (['erforderlich', 'verboten', 'inhalt', 'namenshinweis'].indexOf(feld) > -1) { return; }
-      v.erkennung[feld] = k.quelle.erkennung[feld];
+      tpl.erkennung[feld] = dlgKopf.quelle.erkennung[feld];
     });
   }
 
-  if (k.mehrfach && k.instanz) {
-    v.mehrfach = { platzhalter: '%N%' };
-    v.kanalname = k.kanalname || 'POWER%N%';
+  if (dlgKopf.mehrfach && dlgKopf.instanz) {
+    tpl.mehrfach = { platzhalter: '%N%' };
+    tpl.kanalname = dlgKopf.kanalname || 'POWER%N%';
   }
 
-  v.zustaende = z.zeilen.filter(function (r) { return !r.weg; }).map(function (r) {
-    var s = r.s;
-    var f = feldAusFormel(s.f);
-    var zu = {
-      name: r.name,
-      rolle: s.role || undefined,
-      typ: s.typ || undefined,
-      einheit: s.unit || undefined
+  tpl.zustaende = dlg.zeilen.filter(function (dlgZeile) { return !dlgZeile.weg; }).map(function (dlgZeile) {
+    var ePunkt = dlgZeile.s;
+    var f = feldAusFormel(ePunkt.f);
+    var tplZeile = {
+      name: dlgZeile.name,
+      rolle: ePunkt.role || undefined,
+      typ: ePunkt.typ || undefined,
+      einheit: ePunkt.unit || undefined
     };
     /* Ohne Lesequelle kein `lesen` - sonst stuende dort ein leerer
        Pfad, und `wendeAn` suchte einen Punkt namens "". */
-    if (r.lesenRoh) { zu.lesen = zPfad(r, k, false, z.zeilen); }
-    if (r.lesenAbs) { zu.absolut = true; }
-    if (r.schreibenRoh) { zu.schreiben = zPfad(r, k, true, z.zeilen); }
-    if (f) { zu.feld = f; } else if (s.f) { zu.leseformel = s.f; }
-    if (s.fw && r.schreibenRoh) { zu.schreibformel = s.fw; }
-    if (!r.pflicht || r.optionalBleibt) { zu.optional = true; }
-    if (r.aus) { zu.vorgabeAus = true; }
-    if (s.caption) { zu.beschriftung = s.caption; }
-    if (s.dec !== undefined && s.dec !== '') { zu.nachkommastellen = Number(s.dec); }
-    if (s.states) { zu.werteliste = s.states; }
-    if (s.hinweis) { zu.hinweis = s.hinweis; }
+    if (dlgZeile.lesenRoh) { tplZeile.lesen = zPfad(dlgZeile, dlgKopf, false, dlg.zeilen); }
+    if (dlgZeile.lesenAbs) { tplZeile.absolut = true; }
+    if (dlgZeile.schreibenRoh) { tplZeile.schreiben = zPfad(dlgZeile, dlgKopf, true, dlg.zeilen); }
+    if (f) { tplZeile.feld = f; } else if (ePunkt.f) { tplZeile.leseformel = ePunkt.f; }
+    if (ePunkt.fw && dlgZeile.schreibenRoh) { tplZeile.schreibformel = ePunkt.fw; }
+    if (!dlgZeile.pflicht || dlgZeile.optionalBleibt) { tplZeile.optional = true; }
+    if (dlgZeile.aus) { tplZeile.vorgabeAus = true; }
+    if (ePunkt.caption) { tplZeile.beschriftung = ePunkt.caption; }
+    if (ePunkt.dec !== undefined && ePunkt.dec !== '') { tplZeile.nachkommastellen = Number(ePunkt.dec); }
+    if (ePunkt.states) { tplZeile.werteliste = ePunkt.states; }
+    if (ePunkt.hinweis) { tplZeile.hinweis = ePunkt.hinweis; }
     /* Was die Vorlage sonst noch als Lesequelle kannte. Der gerade
        genommene Weg steht schon in `lesen` und faellt hier weg. */
-    if (s.wege && s.wege.length > 1) {
-      var rest = s.wege.filter(function (w) { return w.punkt !== zu.lesen; })
-        .map(function (w) {
-          var o = { punkt: w.punkt };
-          if (w.feld) { o.feld = w.feld; }
+    if (ePunkt.wege && ePunkt.wege.length > 1) {
+      var rest = ePunkt.wege.filter(function (ersatz) { return ersatz.punkt !== tplZeile.lesen; })
+        .map(function (ersatz) {
+          var ersatzNeu = { punkt: ersatz.punkt };
+          if (ersatz.feld) { ersatzNeu.feld = ersatz.feld; }
           /* `leseformel`, nicht `formel`. `wendeAn` legt die Wege mit
              dem Schluessel `formel` ab, jeder Leser sucht in
              `lesenSonst` aber `leseformel` (vorlagen.js:462,
@@ -1659,12 +1659,12 @@ export function baueVorlage(z) {
              landete der boolesche Alias an Geraeten ohne `stat.POWER`
              danach auf dem rohen JSON-Text von `tele.STATE` statt auf
              `POWER` (gemessen 09.09.2026). */
-          if (w.formel) { o.leseformel = w.formel; }
-          return o;
+          if (ersatz.formel) { ersatzNeu.leseformel = ersatz.formel; }
+          return ersatzNeu;
         });
-      if (rest.length) { zu.lesenSonst = (rest.length === 1) ? rest[0] : rest; }
+      if (rest.length) { tplZeile.lesenSonst = (rest.length === 1) ? rest[0] : rest; }
     }
-    return zu;
+    return tplZeile;
   });
 
   /* Das Rollenwissen: alles, was am Geraet liegt und keine Zeile der
@@ -1675,18 +1675,18 @@ export function baueVorlage(z) {
      gepflegte Wissen der Ursprungsvorlage, zuletzt die Geraeterolle.
      Ohne Rolle kein Eintrag - leeres Wissen hilft niemandem. */
   var zeilenQuellen = {};
-  z.zeilen.forEach(function (r) {
-    if (r.weg) { return; }
-    if (r.lesenRoh && !r.lesenAbs) { zeilenQuellen[r.lesenRoh] = true; }
-    if (r.schreibenRoh && !r.schreibenAbs) { zeilenQuellen[r.schreibenRoh] = true; }
+  dlg.zeilen.forEach(function (dlgZeile) {
+    if (dlgZeile.weg) { return; }
+    if (dlgZeile.lesenRoh && !dlgZeile.lesenAbs) { zeilenQuellen[dlgZeile.lesenRoh] = true; }
+    if (dlgZeile.schreibenRoh && !dlgZeile.schreibenAbs) { zeilenQuellen[dlgZeile.schreibenRoh] = true; }
   });
-  var altesWissen = (k.modus === 'update' && k.quelle && k.quelle.weiterePunkte) || {};
+  var altesWissen = (dlgKopf.modus === 'update' && dlgKopf.quelle && dlgKopf.quelle.weiterePunkte) || {};
   var wissen = {};
-  kindZustaende(z.e.kanal).forEach(function (id) {
-    var rel = relZu(id, z.e.kanal);
+  kindZustaende(dlg.e.kanal).forEach(function (id) {
+    var rel = relZu(id, dlg.e.kanal);
     if (rel.abs || zeilenQuellen[rel.p]) { return; }
     var zeilenRolle = '';
-    z.e.states.forEach(function (s0) {
+    dlg.e.states.forEach(function (s0) {
       if (!zeilenRolle && s0.srcR === id && s0.role) { zeilenRolle = s0.role; }
     });
     var o0 = S.objects[id];
@@ -1694,12 +1694,12 @@ export function baueVorlage(z) {
                 ((o0 && o0.common && o0.common.role) || '');
     if (rolle) { wissen[rel.p] = rolle; }
   });
-  /* Gepflegtes Wissen zu Punkten, die dieses eine Geraet gerade nicht
+  /* Gepflegtes Wissen tplZeile Punkten, die dieses eine Geraet gerade nicht
      hat, bleibt erhalten - andere Geraete des Typs haben sie. */
   Object.keys(altesWissen).forEach(function (pf) {
     if (!zeilenQuellen[pf] && !wissen[pf]) { wissen[pf] = altesWissen[pf]; }
   });
-  if (Object.keys(wissen).length) { v.weiterePunkte = wissen; }
+  if (Object.keys(wissen).length) { tpl.weiterePunkte = wissen; }
 
   /* Was die Ursprungsvorlage sonst noch mitbringt — etwa
      nebenwirkungen — bleibt erhalten. Sonst fiele beim Aktualisieren
@@ -1707,14 +1707,14 @@ export function baueVorlage(z) {
   var bekannt = { id: 1, version: 1, rang: 1, name: 1, geraetetyp: 1,
                   funktion: 1, erkennung: 1, mehrfach: 1, kanalname: 1,
                   zustaende: 1, weiterePunkte: 1 };
-  if (k.modus === 'update' && k.quelle) {
-    Object.keys(k.quelle).forEach(function (feld) {
+  if (dlgKopf.modus === 'update' && dlgKopf.quelle) {
+    Object.keys(dlgKopf.quelle).forEach(function (feld) {
       if (feld.charAt(0) === '_' || bekannt[feld]) { return; }
-      v[feld] = k.quelle[feld];
+      tpl[feld] = dlgKopf.quelle[feld];
     });
   }
 
-  return JSON.parse(JSON.stringify(v));      /* undefined weg */
+  return JSON.parse(JSON.stringify(tpl));      /* undefined weg */
 }
 
 /* Kandidaten fuer den Probelauf. Nicht jeder Knoten im Baum — nur die,
