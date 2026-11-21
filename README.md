@@ -157,8 +157,8 @@ order, so a failure leaves you with two aliases rather than none. Swapping the
 source keeps the alias untouched and only re-points it, which is what you want
 when a device dies. See [Swapping a source](#swapping-a-source).
 
-**Filling free slots.** A device that matches no pattern is often not an unknown
-device — a role is simply missing. **Suggest free slots** sets roles in the
+**Guessing missing places.** A device that matches no pattern is often not an unknown
+device — a role is simply missing. **Guess missing places** sets roles in the
 draft and lets the detector decide again. It only ever runs on that button, never
 during normal detection, every guessed row is marked, and while any guess is
 undecided the write buttons stay locked. Not deciding is no longer a silent yes.
@@ -631,6 +631,7 @@ imported, and that all eleven language files carry the same keys.
 * **“Apply template values” takes the template's pattern along.** An alias whose switch had the role `switch` opens as a socket. Applying a light template turned the point into `switch.light` but left the pattern on socket — whose SET only takes `switch` — so the pattern showed “not detected”. Now the button sets the pattern to the template's device type as well, and the header no longer claims it was chosen by hand.
 * **The pattern says when the template means another one.** An existing alias keeps the pattern its roles say — that is the truth about it — but the pattern header now adds “the template is built for Light, the existing alias is set up as Socket”.
 * **The blue button no longer turns white under the mouse**, and an empty line between the pattern note and the buttons below it is gone.
+* **Two buttons say what they do.** “Take template values” is now **“Reset to template”** — whatever differs from the template on the alias goes back to the template, the pattern included. “Suggest free slots” is now **“Guess missing places”**, because it is a guess, not knowledge. Found along the way: in five languages the guess button read “free slot machines” (Spanish, French, Dutch, Polish, Chinese), in four “free-of-charge slots” — all retranslated.
 * **The orange bar no longer offers a row the template switched off.** It read “INHIBIT fits on SET, but is not ticked — tick it”: the switch lock of a Homematic actuator has the role `switch`, and ticking it would have made the lock the socket's switch. A row the template leaves off by default is no substitute for a required place. Its claim “would work with ‘Suggest free places’” was also computed on the roles from before “Apply template values”; the forecast is now dropped when the rows change.
 
 ### 0.13.0 (2026-11-02)

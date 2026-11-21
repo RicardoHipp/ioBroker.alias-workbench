@@ -165,8 +165,8 @@ dich mit zwei Aliasen zurücklässt statt mit keinem. Der Quellentausch lässt d
 Alias unangetastet und biegt ihn nur um, was genau das ist, was man will, wenn
 ein Gerät stirbt. Siehe [Quelle tauschen](#quelle-tauschen).
 
-**Freie Plätze füllen.** Ein Gerät, auf das kein Muster passt, ist oft kein
-unbekanntes Gerät — es fehlt schlicht eine Rolle. **Freie Plätze vorschlagen**
+**Fehlende Plätze raten.** Ein Gerät, auf das kein Muster passt, ist oft kein
+unbekanntes Gerät — es fehlt schlicht eine Rolle. **Fehlende Plätze raten**
 setzt Rollen im Entwurf und lässt den Detektor noch einmal entscheiden. Das
 läuft nur auf diesen Knopf, nie während der normalen Erkennung, jede geratene
 Zeile ist markiert, und solange eine Vermutung unentschieden ist, bleiben die
@@ -650,6 +650,7 @@ alle elf Sprachdateien dieselben Schlüssel tragen.
 * **„Werte der Vorlage übernehmen“ nimmt das Muster der Vorlage mit.** Ein Alias, dessen Schalter die Rolle `switch` trägt, öffnet als Steckdose. Mit einer Licht-Vorlage übernommen wurde der Punkt `switch.light`, das Muster blieb aber Steckdose — deren SET nimmt nur `switch` —, und das Muster stand auf „nicht erkannt“. Jetzt stellt der Knopf auch das Muster auf den Gerätetyp der Vorlage, und der Kopf behauptet nicht, es sei von Hand gewählt.
 * **Das Muster sagt, wenn die Vorlage ein anderes meint.** Ein bestehender Alias behält das Muster, das seine Rollen sagen — das ist die Wahrheit über ihn —, aber im Musterkopf steht jetzt „die Vorlage ist für Licht gebaut, der bestehende Alias ist als Steckdose angelegt“.
 * **Der blaue Knopf wird unter der Maus nicht mehr weiß**, und die leere Zeile zwischen dem Musterhinweis und den Knöpfen darunter ist weg.
+* **Zwei Knöpfe heißen, was sie tun.** „Werte der Vorlage übernehmen“ heißt jetzt **„Auf Vorlage zurücksetzen“** — was am Alias anders ist als in der Vorlage, wird wie in der Vorlage, das Muster eingeschlossen. „Freie Plätze vorschlagen“ heißt **„Fehlende Plätze raten“**, weil es eine Vermutung ist und kein Wissen. Dabei aufgefallen: in fünf Sprachen stand für den Rateknopf „kostenlose Spielautomaten“ (Spanisch, Französisch, Niederländisch, Polnisch, Chinesisch), in vier „kostenlose Plätze“ — alle neu übersetzt.
 * **Das orange Band bietet keine Zeile mehr an, die die Vorlage abgehakt hat.** Dort stand „INHIBIT passt auf SET, ist aber nicht angehakt — anhaken“: die Schaltsperre eines Homematic-Aktors hat die Rolle `switch`, angehakt wäre die Sperre der Schalter der Steckdose geworden. Eine Zeile, die die Vorlage standardmäßig weglässt, ist kein Ersatz für einen Pflichtplatz. Auch „Mit „Freie Plätze vorschlagen“ würde es greifen“ war auf den Rollen von vor dem Übernehmen gerechnet; die Aussicht wird jetzt verworfen, wenn sich die Zeilen ändern.
 
 ### 0.13.0 (2026-11-02)
