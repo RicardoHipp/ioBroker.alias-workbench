@@ -82,22 +82,22 @@ function ausVorlage(punktId, neuKanal) {
   var o = S.objects[punktId];
   var nat = (o && o.native) || {};
   if (!nat.template || !nat.templateState) { return null; }
-  var v = null;
-  S.VORLAGEN.forEach(function (x) { if (x.id === nat.template) { v = x; } });
-  if (!v) { return null; }
-  var zeile = null;
-  (v.zustaende || []).forEach(function (z) {
-    if (z.name === nat.templateState) { zeile = z; }
+  var tpl = null;
+  S.VORLAGEN.forEach(function (kandidat) { if (kandidat.id === nat.template) { tpl = kandidat; } });
+  if (!tpl) { return null; }
+  var tplZeile = null;
+  (tpl.zustaende || []).forEach(function (kandidat) {
+    if (kandidat.name === nat.templateState) { tplZeile = kandidat; }
   });
-  if (!zeile) { return null; }
+  if (!tplZeile) { return null; }
   var mach = function (rel) {
     if (!rel) { return ''; }
     var id = neuKanal + '.' + rel;
     return S.objects[id] ? id : '';
   };
-  var r = mach(zeile.lesen);
-  if (!r && zeile.lesenSonst) { r = mach(zeile.lesenSonst.punkt); }
-  return { read: r, write: mach(zeile.schreiben) };
+  var r = mach(tplZeile.lesen);
+  if (!r && tplZeile.lesenSonst) { r = mach(tplZeile.lesenSonst.punkt); }
+  return { read: r, write: mach(tplZeile.schreiben) };
 }
 
 /* Stufe 3: gleicher Punktname irgendwo unter dem neuen Geraet, oder

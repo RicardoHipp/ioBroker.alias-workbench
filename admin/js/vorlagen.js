@@ -163,11 +163,11 @@ export function aendereVorlagen(id, vorlage, fertig) {
 
 /* Welche Ausgangsnummern gibt es? Aus dem Bestand gelesen, nicht
    hochgezaehlt — die Ventilinsel hat POWER1, POWER3, POWER4. */
-export function instanzenVon(v, kanal) {
-  var mf = v.mehrfach;
+export function instanzenVon(tpl, kanal) {
+  var mf = tpl.mehrfach;
   if (!mf) { return [null]; }
   var ph = mf.platzhalter || '%N%';
-  var erf = (v.erkennung || {}).erforderlich || [];
+  var erf = (tpl.erkennung || {}).erforderlich || [];
   var mitPh = erf.filter(function (e) { return e.indexOf(ph) > -1; });
 
   var kurzNamen = geraetePunkte(kanal).map(function (p) { return p.rel; });
@@ -179,7 +179,7 @@ export function instanzenVon(v, kanal) {
      eingebundenen Mehrfachgeraet keinen einzigen Ausgang und laesst
      die Vorlage ins Leere laufen. */
   var ausJson = [];
-  var inh = (v.erkennung || {}).inhalt || {};
+  var inh = (tpl.erkennung || {}).inhalt || {};
   Object.keys(inh).forEach(function (punkt) {
     if (String(inh[punkt]).indexOf(ph) === -1) { return; }
     var id = hatPunkt(kanal, punkt);
@@ -242,9 +242,9 @@ export function instanzenVon(v, kanal) {
     .sort(function (a, b) { return String(a).localeCompare(String(b), undefined, {numeric: true}); });
 }
 
-export function setzeInstanz(text, v, n) {
-  if (!v.mehrfach || n === null || n === undefined) { return text; }
-  return String(text).split(v.mehrfach.platzhalter || '%N%').join(n);
+export function setzeInstanz(text, tpl, n) {
+  if (!tpl.mehrfach || n === null || n === undefined) { return text; }
+  return String(text).split(tpl.mehrfach.platzhalter || '%N%').join(n);
 }
 
 /* Aus welchem Geraet ist dieser Alias gebaut?
@@ -355,20 +355,20 @@ export function hinweisTaugt(hinweis) {
   catch { return false; }
 }
 
-export function pruefeVorlage(v, kanal, instanz) {
-  var erk = v.erkennung || {};
+export function pruefeVorlage(tpl, kanal, instanz) {
+  var erk = tpl.erkennung || {};
   var gruende = [];
   var fehler = [];
 
   var inst = instanz;
-  if (v.mehrfach && (inst === undefined || inst === null)) {
-    var alle = instanzenVon(v, kanal);
+  if (tpl.mehrfach && (inst === undefined || inst === null)) {
+    var alle = instanzenVon(tpl, kanal);
     if (!alle.length) {
-      return { vorlage: v, passt: false, fehler: [tr('tpl.noOutputs')], instanzen: [] };
+      return { vorlage: tpl, passt: false, fehler: [tr('tpl.noOutputs')], instanzen: [] };
     }
     inst = alle[0];
   }
-  var auf = function (t) { return setzeInstanz(t, v, inst); };
+  var auf = function (t) { return setzeInstanz(t, tpl, inst); };
 
   /* Punkte, die es nicht geben darf. Das ist der ehrliche Unterschied
      zwischen einer einfachen und einer mehrfachen Steckdose — vorher
@@ -387,8 +387,8 @@ export function pruefeVorlage(v, kanal, instanz) {
        Schlussfolgerung. */
     gruende.push(hatPunkt(kanal, e) ? tr('tpl.presentIn', e) : tr('tpl.possibleIn', e));
   });
-  var ausgaenge = v.mehrfach ? instanzenVon(v, kanal) : [];
-  if (v.mehrfach) {
+  var ausgaenge = tpl.mehrfach ? instanzenVon(tpl, kanal) : [];
+  if (tpl.mehrfach) {
     gruende.push(tr('tpl.outputsFound', ausgaenge.join(', ')));
   }
 
@@ -412,7 +412,7 @@ export function pruefeVorlage(v, kanal, instanz) {
     /* Dieselbe Angabe kann aus erforderlich und inhalt kommen — einmal reicht. */
     var einmal = [];
     fehler.forEach(function (x) { if (einmal.indexOf(x) === -1) { einmal.push(x); } });
-    return { vorlage: v, passt: false, fehler: einmal };
+    return { vorlage: tpl, passt: false, fehler: einmal };
   }
 
   /* Bewertung. Zuerst zaehlt, was die Vorlage am Geraet wirklich
@@ -425,26 +425,26 @@ export function pruefeVorlage(v, kanal, instanz) {
      so gross, dass sich die Stufen nie ueberholen koennen. */
   var name = kanal.split('.').pop();
   var belege = (erk.erforderlich || []).length *
-               (v.mehrfach ? Math.max(1, ausgaenge.length) : 1) +
+               (tpl.mehrfach ? Math.max(1, ausgaenge.length) : 1) +
                Object.keys(erk.inhalt || {}).length;
   var namenstreffer = !!(erk.namenshinweis && hinweisTrifft(erk.namenshinweis, name));
-  if (namenstreffer) { gruende.push(tr('tpl.nameHint', sprachtext(v.name))); }
-  var eigen = v._quelle === 'benutzer';
+  if (namenstreffer) { gruende.push(tr('tpl.nameHint', sprachtext(tpl.name))); }
+  var eigen = tpl._quelle === 'benutzer';
   var punkte = belege * 1000000 +
                (namenstreffer ? 10000 : 0) +
                (eigen ? 1000 : 0) +
-               Math.min(v.rang || 0, 999);
-  return { vorlage: v, passt: true, punkte: punkte, gruende: gruende, fehler: [],
+               Math.min(tpl.rang || 0, 999);
+  return { vorlage: tpl, passt: true, punkte: punkte, gruende: gruende, fehler: [],
            belege: belege, namenstreffer: namenstreffer, eigen: eigen,
            instanz: inst, instanzen: ausgaenge };
 }
 
 /* Wohin ein Zustand schreibt. Gibt es den Punkt, ist es seine ID; kennt
    das Geraet den Befehl bloss, ist es die ID, die er bekommen wird. */
-export function schreibZiel(z, kanal, auf) {
-  if (!z.schreiben) { return ''; }
-  var pfad = auf(z.schreiben);
-  if (z.schreibenAbs || z.absolut) { return S.objects[pfad] ? pfad : ''; }
+export function schreibZiel(tplZeile, kanal, auf) {
+  if (!tplZeile.schreiben) { return ''; }
+  var pfad = auf(tplZeile.schreiben);
+  if (tplZeile.schreibenAbs || tplZeile.absolut) { return S.objects[pfad] ? pfad : ''; }
   var da = hatPunkt(kanal, pfad);
   if (da) { return da; }
   return befehlMoeglich(kanal, pfad) ? (kanal + '.' + pfad) : '';
@@ -460,15 +460,15 @@ export function schreibZiel(z, kanal, auf) {
    Wechsel scheiterte still (Ricardo). Die automatische Erkennung ruft ohne
    die Fahne auf und bleibt unveraendert — dort waere ein Entwurf ohne eine
    einzige Zeile ein Fehlgriff. */
-export function wendeAn(v, kanal, gruende, instanz, auchOhneTreffer) {
-  var auf = function (t) { return setzeInstanz(t, v, instanz); };
+export function wendeAn(tpl, kanal, gruende, instanz, auchOhneTreffer) {
+  var auf = function (t) { return setzeInstanz(t, tpl, instanz); };
   var e = { kanal: kanal, states: [], pflichtFehlt: null,
-            want: v.geraetetyp, wantAuto: v.geraetetyp,
+            want: tpl.geraetetyp, wantAuto: tpl.geraetetyp,
             alleMuster: false, vorschlag: true, roh: false,
-            vorlage: v.id, vorlageVersion: v.version, tplName: sprachtext(v.name),
+            vorlage: tpl.id, vorlageVersion: tpl.version, tplName: sprachtext(tpl.name),
             grund: (gruende || []).slice(), uebersprungen: [],
             instanz: (instanz === undefined ? null : instanz),
-            instanzen: v.mehrfach ? instanzenVon(v, kanal) : [],
+            instanzen: tpl.mehrfach ? instanzenVon(tpl, kanal) : [],
             /* Wie der Kanal je Ausgang heisst — steht in der Vorlage,
                nicht im Code. `kanalname` gilt fuer den gerade
                bearbeiteten Ausgang, `kanalnameRoh` fuer jeden anderen:
@@ -478,17 +478,17 @@ export function wendeAn(v, kanal, gruende, instanz, auchOhneTreffer) {
                nicht ging, stand 'POWER' + Nummer im Code — ein
                Homematic-Doppelaktor bekam so Ausgaenge namens POWER1
                und POWER2, obwohl er kein POWER kennt. */
-            kanalname: v.mehrfach ? auf(v.kanalname || 'POWER%N%') : null,
-            kanalnameRoh: v.mehrfach ? (v.kanalname || 'POWER%N%') : null,
-            platzhalter: v.mehrfach ? (v.mehrfach.platzhalter || '%N%') : null };
+            kanalname: tpl.mehrfach ? auf(tpl.kanalname || 'POWER%N%') : null,
+            kanalnameRoh: tpl.mehrfach ? (tpl.kanalname || 'POWER%N%') : null,
+            platzhalter: tpl.mehrfach ? (tpl.mehrfach.platzhalter || '%N%') : null };
 
-  (v.zustaende || []).forEach(function (z) {
+  (tpl.zustaende || []).forEach(function (tplZeile) {
     /* Ein absolut gespeicherter Punkt zeigt auf ein festes Objekt und
        wird nicht unter dem Kanal gesucht — etwa ein gemeinsamer
        Sollwert in 0_userdata. */
     var finde = function (pfad) {
       if (!pfad) { return null; }
-      if (z.absolut) { return S.objects[pfad] ? pfad : null; }
+      if (tplZeile.absolut) { return S.objects[pfad] ? pfad : null; }
       return hatPunkt(kanal, auf(pfad));
     };
     /* Ersatzquelle: dasselbe steht oft an zwei Stellen, und welche davon
@@ -503,15 +503,15 @@ export function wendeAn(v, kanal, gruende, instanz, auchOhneTreffer) {
        Feld drin. Vorher wurde der Ersatz nur genommen, wenn das Objekt
        ganz fehlte — gab es tele.INFO2 ohne die IP darin, fiel der Punkt
        weg, obwohl tele.STATE sie gehabt haette. */
-    var wege = [{ punkt: z.lesen, feld: z.feld, leseformel: z.leseformel }];
+    var wege = [{ punkt: tplZeile.lesen, feld: tplZeile.feld, leseformel: tplZeile.leseformel }];
     /* Ein Ersatzweg, mehrere Ersatzwege oder blosser Punktname — alles
        drei kommt in Vorlagen vor und soll gehen. */
-    var sonst = z.lesenSonst;
+    var sonst = tplZeile.lesenSonst;
     if (sonst) {
-      (Array.isArray(sonst) ? sonst : [sonst]).forEach(function (x) {
-        wege.push(typeof x === 'string'
-          ? { punkt: x, feld: z.feld, leseformel: z.leseformel }
-          : { punkt: x.punkt, feld: x.feld, leseformel: x.leseformel });
+      (Array.isArray(sonst) ? sonst : [sonst]).forEach(function (ersatz) {
+        wege.push(typeof ersatz === 'string'
+          ? { punkt: ersatz, feld: tplZeile.feld, leseformel: tplZeile.leseformel }
+          : { punkt: ersatz.punkt, feld: ersatz.feld, leseformel: ersatz.leseformel });
       });
     }
 
@@ -523,29 +523,29 @@ export function wendeAn(v, kanal, gruende, instanz, auchOhneTreffer) {
        (Ricardo, 20.09.2026; Lauf vom 19.09.2026, C45). */
     var quelle = null, feld = null, leseformel = null, gescheitert = [], gruende = [];
     for (var wi = 0; wi < wege.length; wi++) {
-      var w = wege[wi];
-      var id0 = finde(w.punkt);
-      var wo = auf(w.punkt) + (w.feld ? ' · ' + auf(w.feld) : '');
+      var weg = wege[wi];
+      var id0 = finde(weg.punkt);
+      var wo = auf(weg.punkt) + (weg.feld ? ' · ' + auf(weg.feld) : '');
       if (!id0) {
         gescheitert.push(wo);
-        gruende.push(tr('tpl.whyNoPoint', auf(w.punkt)));
+        gruende.push(tr('tpl.whyNoPoint', auf(weg.punkt)));
         continue;
       }
-      if (w.feld) {
-        var f0 = auf(w.feld);
+      if (weg.feld) {
+        var f0 = auf(weg.feld);
         var j0 = jsonVon(id0);
         if (!j0) {
           gescheitert.push(wo);
-          gruende.push(tr('tpl.whyNoJson', auf(w.punkt)));
+          gruende.push(tr('tpl.whyNoJson', auf(weg.punkt)));
           continue;
         }
         if (feldWert(j0, f0) === undefined) {
           gescheitert.push(wo);
-          gruende.push(tr('tpl.whyNoField', auf(w.punkt), f0));
+          gruende.push(tr('tpl.whyNoField', auf(weg.punkt), f0));
           continue;
         }
       }
-      quelle = id0; feld = w.feld; leseformel = w.leseformel;
+      quelle = id0; feld = weg.feld; leseformel = weg.leseformel;
       break;
     }
 
@@ -557,29 +557,29 @@ export function wendeAn(v, kanal, gruende, instanz, auchOhneTreffer) {
        heraus, und KEIN EINZIGER Rollladen-Alias bekam je einen STOP
        (gefunden 09.09.2026). Der Platz im Muster verlangt auch nichts
        weiter als `write: true`. */
-    var nurSchreiben = !z.lesen && !!z.schreiben;
+    var nurSchreiben = !tplZeile.lesen && !!tplZeile.schreiben;
     if (nurSchreiben && !quelle) {
-      var ziel0 = schreibZiel(z, kanal, auf);
+      var ziel0 = schreibZiel(tplZeile, kanal, auf);
       if (!ziel0) {
-        e.uebersprungen.push(tr('tpl.skippedSource', z.name, auf(z.schreiben)));
-        if (!z.optional) { e.pflichtFehlt = z.name; }
+        e.uebersprungen.push(tr('tpl.skippedSource', tplZeile.name, auf(tplZeile.schreiben)));
+        if (!tplZeile.optional) { e.pflichtFehlt = tplZeile.name; }
         return;
       }
       e.states.push({
-        n: z.name, on: !z.vorgabeAus, role: z.rolle || '', typ: z.typ || '',
-        unit: z.einheit || '', wr: true,
+        n: tplZeile.name, on: !tplZeile.vorgabeAus, role: tplZeile.rolle || '', typ: tplZeile.typ || '',
+        unit: tplZeile.einheit || '', wr: true,
         /* Ein Knopf liest aus seinem Schreibziel mit (19.09.2026): der
            Alias sieht jeden Druck, `read: false` kommt aus der Rolle. */
-        srcR: /^button/.test(String(z.rolle || '')) ? ziel0 : '', srcW: ziel0,
-        f: '', fw: z.schreibformel ? auf(z.schreibformel) : '',
-        caption: z.beschriftung || '',
-        dec: z.nachkommastellen === undefined ? undefined : String(z.nachkommastellen),
-        states: z.werteliste || undefined,
-        manuell: false, ausVorlage: z.name,
+        srcR: /^button/.test(String(tplZeile.rolle || '')) ? ziel0 : '', srcW: ziel0,
+        f: '', fw: tplZeile.schreibformel ? auf(tplZeile.schreibformel) : '',
+        caption: tplZeile.beschriftung || '',
+        dec: tplZeile.nachkommastellen === undefined ? undefined : String(tplZeile.nachkommastellen),
+        states: tplZeile.werteliste || undefined,
+        manuell: false, ausVorlage: tplZeile.name,
         /* Zeichenkette oder { de, en }. Ganz mitnehmen, nicht aufloesen:
            beim Speichern zurueck in eine Vorlage bleiben beide Sprachen,
            und die Anzeige waehlt ueber sprachtext. */
-        hinweis: z.hinweis || '', wege: []
+        hinweis: tplZeile.hinweis || '', wege: []
       });
       return;
     }
@@ -588,10 +588,10 @@ export function wendeAn(v, kanal, gruende, instanz, auchOhneTreffer) {
       /* Beide Wege nennen, nicht nur den letzten — sonst sucht man an der
          einen Stelle und die Vorlage hatte an zwei geschaut. */
       e.uebersprungen.push(gescheitert.length > 1
-        ? tr('tpl.skippedNowhere', z.name, gescheitert.join(tr('tpl.nor')))
+        ? tr('tpl.skippedNowhere', tplZeile.name, gescheitert.join(tr('tpl.nor')))
         : (gruende.length
-          ? tr('tpl.skippedWhy', z.name, gruende[0])
-          : tr('tpl.skippedSource', z.name, gescheitert[0] || auf(z.lesen))));
+          ? tr('tpl.skippedWhy', tplZeile.name, gruende[0])
+          : tr('tpl.skippedSource', tplZeile.name, gescheitert[0] || auf(tplZeile.lesen))));
       /* Eine Pflichtzeile, die ihre Quelle nicht findet, heisst: die
          Vorlage passt zu diesem Geraet nicht. Die Erkennung sieht das
          nicht — sie prueft, ob die genannten *Punkte* da sind, nicht ob
@@ -603,7 +603,7 @@ export function wendeAn(v, kanal, gruende, instanz, auchOhneTreffer) {
          Optionale Zeilen zaehlen nicht: sie duerfen fehlen, dafuer sind
          sie optional. Gemessen am Testsystem betrifft die Regel keine
          einzige der fuenfzehn uebrigen Vorlagen. */
-      if (!z.optional) { e.pflichtFehlt = z.name; }
+      if (!tplZeile.optional) { e.pflichtFehlt = tplZeile.name; }
       return;
     }
 
@@ -630,12 +630,12 @@ export function wendeAn(v, kanal, gruende, instanz, auchOhneTreffer) {
     }
 
     e.states.push({
-      n: z.name,
-      on: !z.vorgabeAus,
-      role: z.rolle || '',
-      typ: z.typ || '',
-      unit: z.einheit || '',
-      wr: !!z.schreiben,
+      n: tplZeile.name,
+      on: !tplZeile.vorgabeAus,
+      role: tplZeile.rolle || '',
+      typ: tplZeile.typ || '',
+      unit: tplZeile.einheit || '',
+      wr: !!tplZeile.schreiben,
       srcR: quelle,
       /* Kennt das Geraet den Befehl, ist das Ziel bekannt — auch wenn
          der Punkt noch nicht angelegt ist. Sonst waere der Alias stumm,
@@ -644,24 +644,24 @@ export function wendeAn(v, kanal, gruende, instanz, auchOhneTreffer) {
          ein Vermerk veraltet, sobald der Punkt entsteht, und zwingt zum
          Neuaufbau des ganzen Entwurfs — mitsamt allem, was der Nutzer
          bis dahin eingestellt hat. */
-      srcW: schreibZiel(z, kanal, auf),
+      srcW: schreibZiel(tplZeile, kanal, auf),
       f: formel,
-      fw: z.schreibformel ? auf(z.schreibformel) : '',
-      caption: z.beschriftung || '',
-      dec: z.nachkommastellen === undefined ? undefined : String(z.nachkommastellen),
+      fw: tplZeile.schreibformel ? auf(tplZeile.schreibformel) : '',
+      caption: tplZeile.beschriftung || '',
+      dec: tplZeile.nachkommastellen === undefined ? undefined : String(tplZeile.nachkommastellen),
       /* Plaetze mit statesDefined — EFFECT etwa — bleiben ohne
          Werteliste leer, egal wie gut Rolle und Typ passen. */
-      states: z.werteliste || undefined,
+      states: tplZeile.werteliste || undefined,
       manuell: false,
-      ausVorlage: z.name,
+      ausVorlage: tplZeile.name,
       /* Wie oben: das Sprachobjekt bleibt ganz, sprachtext waehlt. */
-      hinweis: z.hinweis || '',
+      hinweis: tplZeile.hinweis || '',
       /* Alle Lesewege mitnehmen, nicht nur den, der heute gegriffen hat.
          Wer aus diesem Geraet eine Vorlage macht, soll die Ersatzquellen
          behalten — sonst faellt die neue Vorlage bei jedem Geraet um, das
          seine IP an einer anderen Stelle fuehrt. */
-      wege: wege.map(function (w) {
-        return { punkt: w.punkt, feld: w.feld, formel: w.leseformel };
+      wege: wege.map(function (weg) {
+        return { punkt: weg.punkt, feld: weg.feld, formel: weg.leseformel };
       })
     });
   });

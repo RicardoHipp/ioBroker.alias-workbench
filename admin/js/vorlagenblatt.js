@@ -189,7 +189,7 @@ function geraetetypFeld(tpl, eigen) {
   var setzen = function (typ) {
     liste.hidden = true;
     feldEin.value = typ ? musterZeile(typ) : '';
-    vAendern(function (x, w) { x.geraetetyp = w || undefined; }, typ);
+    vAendern(function (tplNeu, w) { tplNeu.geraetetyp = w || undefined; }, typ);
   };
 
   var malen = function () {
@@ -412,11 +412,11 @@ export function zeichneVorlagenBlatt(host) {
   }
 
   kb.appendChild(feld(tr('tpls.nameDe'), textIn(tpl.name, 'de'),
-    function (x, w) { setzeName(x, 'de', w); }, '140px'));
+    function (tplNeu, w) { setzeName(tplNeu, 'de', w); }, '140px'));
   kb.appendChild(feld(tr('tpls.nameEn'), textIn(tpl.name, 'en'),
-    function (x, w) { setzeName(x, 'en', w); }, '140px'));
+    function (tplNeu, w) { setzeName(tplNeu, 'en', w); }, '140px'));
   kb.appendChild(feld(tr('tpls.rank'), tpl.rang || 0,
-    function (x, w) { x.rang = Number(w) || 0; }, '60px'));
+    function (tplNeu, w) { tplNeu.rang = Number(w) || 0; }, '60px'));
   var rh = el('span', 'hint', eigen ? tr('tv.rankOwn') : tr('tv.rankPackage'));
   rh.style.flexBasis = '100%';
   kb.appendChild(rh);
@@ -446,7 +446,7 @@ export function zeichneVorlagenBlatt(host) {
     sf.appendChild(o);
   });
   sf.addEventListener('change', function () {
-    vAendern(function (x, w) { x.funktion = w || undefined; }, sf.value);
+    vAendern(function (tplNeu, w) { tplNeu.funktion = w || undefined; }, sf.value);
   });
   lf.appendChild(sf);
   if (katalogFehlt) { lf.appendChild(el('span', 'hint', tr('catalog.missing'))); }
@@ -457,7 +457,7 @@ export function zeichneVorlagenBlatt(host) {
   var nb = el('div');
   nb.style.padding = '0 12px 11px';
   nb.appendChild(feld(tr('tpls.nameHint'), (tpl.erkennung || {}).namenshinweis || '',
-    function (x, w) { x.erkennung = x.erkennung || {}; if (w) { x.erkennung.namenshinweis = w; } else { delete x.erkennung.namenshinweis; } }, '260px'));
+    function (tplNeu, w) { tplNeu.erkennung = tplNeu.erkennung || {}; if (w) { tplNeu.erkennung.namenshinweis = w; } else { delete tplNeu.erkennung.namenshinweis; } }, '260px'));
   /* Der Text ist ein Ausdruck, und ein unbrauchbarer Ausdruck faellt
      sonst nirgends auf: Er wird still zu „trifft nicht", und die Vorlage
      verliert leise ihren Namensbonus. Also hier sagen, wo er steht. */
@@ -500,9 +500,9 @@ export function zeichneVorlagenBlatt(host) {
     return String(text).split(',').map(function (t) { return t.trim(); })
       .filter(function (t) { return !!t; });
   };
-  eb.appendChild(listenFeld(tr('tv.required2'), erf.join(', '), function (x, wert) {
-    x.erkennung = x.erkennung || {};
-    x.erkennung.erforderlich = alsListe(wert);
+  eb.appendChild(listenFeld(tr('tv.required2'), erf.join(', '), function (tplNeu, wert) {
+    tplNeu.erkennung = tplNeu.erkennung || {};
+    tplNeu.erkennung.erforderlich = alsListe(wert);
   }, tr('tv.requiredHelp')));
   if (!erf.length) {
     eb.appendChild(el('div', 'hint', tr('tpls.noRequired')));
@@ -514,10 +514,10 @@ export function zeichneVorlagenBlatt(host) {
     eb.appendChild(z);
   });
   eb.appendChild(listenFeld(tr('tv.forbidden'), ((tpl.erkennung || {}).verboten || []).join(', '),
-    function (x, wert) {
-      x.erkennung = x.erkennung || {};
+    function (tplNeu, wert) {
+      tplNeu.erkennung = tplNeu.erkennung || {};
       var l = alsListe(wert);
-      if (l.length) { x.erkennung.verboten = l; } else { delete x.erkennung.verboten; }
+      if (l.length) { tplNeu.erkennung.verboten = l; } else { delete tplNeu.erkennung.verboten; }
     }, tr('tv.forbiddenHelp')));
   if (tpl.mehrfach) {
     eb.appendChild(el('div', 'hint', tr('tv.multi', tpl.kanalname || 'POWER%N%')));
@@ -590,10 +590,10 @@ export function zeichneVorlagenBlatt(host) {
     np.style.padding = '9px 12px 11px';
     var nKnopf = el('button', 'btn schmal', tr('tv.addState'));
     nKnopf.addEventListener('click', function () {
-      vAendern(function (x) {
-        x.zustaende = x.zustaende || [];
-        x.zustaende.push({ name: 'NEU', typ: 'mixed', lesen: '', optional: true });
-        vOffeneZeile = x.zustaende.length - 1;
+      vAendern(function (tplNeu) {
+        tplNeu.zustaende = tplNeu.zustaende || [];
+        tplNeu.zustaende.push({ name: 'NEU', typ: 'mixed', lesen: '', optional: true });
+        vOffeneZeile = tplNeu.zustaende.length - 1;
       });
     });
     np.appendChild(nKnopf);

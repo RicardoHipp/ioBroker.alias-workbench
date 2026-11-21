@@ -1052,8 +1052,8 @@ function mqttCustom(g, thema) {
    durchsetzt — sie gilt ebenso fuer `Fade` und `LedTable`. Wo keine
    Formel steht, bleibt der genaue Typ: aus `number` zieht der Admin
    Min, Max und Einheit. */
-function punktTyp(w) {
-  return w.schreibformel ? 'mixed' : (w.typ || 'mixed');
+function punktTyp(befehl) {
+  return befehl.schreibformel ? 'mixed' : (befehl.typ || 'mixed');
 }
 
 export function mqttEinzelnStill(kanal, name, fertig) {
@@ -1089,19 +1089,19 @@ function mqttPunktBauen(kanal, name, was) {
     Object.keys(cu0).forEach(function (i) { if (/^mqtt/.test(i) && cu0[i]) { cu0[i].publish = true; cu0[i].enabled = true; } });
     obj.common.custom = cu0;
   } else {
-    var w0 = befehlsWissen(name) || {};
+    var befehl0 = befehlsWissen(name) || {};
     var thema0 = mqttThema(g, 'cmnd', name);
     id = punktKennung(kanal, 'cmnd.' + name);
     var common0 = {
       name: name,
-      role: w0.rolle || 'state',
-      type: punktTyp(w0),
+      role: befehl0.rolle || 'state',
+      type: punktTyp(befehl0),
       read: true, write: true,
       desc: tr('mq.createdBy'),
       custom: mqttCustom(g, thema0)
     };
-    if (w0.einheit) { common0.unit = w0.einheit; }
-    if (w0.werteliste) { common0.states = w0.werteliste; }
+    if (befehl0.einheit) { common0.unit = befehl0.einheit; }
+    if (befehl0.werteliste) { common0.states = befehl0.werteliste; }
     obj = { type: 'state', common: common0, native: { topic: thema0 } };
   }
   return { id: id, obj: obj };
@@ -1123,19 +1123,19 @@ export function mqttEinzeln(kanal, name, was, knopf) {
     Object.keys(cu).forEach(function (i) { if (/^mqtt/.test(i) && cu[i]) { cu[i].publish = true; cu[i].enabled = true; } });
     obj.common.custom = cu;
   } else {
-    var w = befehlsWissen(name) || {};
+    var befehl = befehlsWissen(name) || {};
     var thema = mqttThema(g, 'cmnd', name);
     id = punktKennung(kanal, 'cmnd.' + name);
     var common = {
       name: name,
-      role: w.rolle || 'state',
-      type: punktTyp(w),
+      role: befehl.rolle || 'state',
+      type: punktTyp(befehl),
       read: true, write: true,
       desc: tr('mq.createdBy'),
       custom: mqttCustom(g, thema)
     };
-    if (w.einheit) { common.unit = w.einheit; }
-    if (w.werteliste) { common.states = w.werteliste; }
+    if (befehl.einheit) { common.unit = befehl.einheit; }
+    if (befehl.werteliste) { common.states = befehl.werteliste; }
     obj = { type: 'state', common: common, native: { topic: thema } };
   }
 
@@ -1157,10 +1157,10 @@ export function zeigeMqttDialog(kanal) {
   mqttStand.kanal = kanal;
   mqttAuswahl = {};
   l.fehlen.forEach(function (x) {
-    var w = befehlsWissen(x.name);
+    var befehl = befehlsWissen(x.name);
     /* Vorgehakt nur, was eine Geraetefunktion ist: bekannt, keine
        Dopplung und keine blosse Einstellung des Geraets. */
-    mqttAuswahl['neu:' + x.name] = !!w && !w.vorgabeAus && !istDopplung(x.name, l);
+    mqttAuswahl['neu:' + x.name] = !!befehl && !befehl.vorgabeAus && !istDopplung(x.name, l);
   });
   l.stumm.forEach(function (x) { mqttAuswahl['fix:' + x.name] = true; });
   zeichneMqttDialog();
@@ -1170,10 +1170,10 @@ export function zeigeMqttDialog(kanal) {
 /* HSBColor und Channel beschreiben dieselbe Farbe wie Color. Alle drei
    anzulegen ergibt drei Punkte, die sich gegenseitig ueberschreiben. */
 function istDopplung(name, l) {
-  var w = befehlsWissen(name);
-  if (!w || !w.dopplung) { return false; }
-  return l.fehlen.some(function (x) { return x.name === w.dopplung; }) ||
-         l.da.indexOf(w.dopplung) > -1;
+  var befehl = befehlsWissen(name);
+  if (!befehl || !befehl.dopplung) { return false; }
+  return l.fehlen.some(function (x) { return x.name === befehl.dopplung; }) ||
+         l.da.indexOf(befehl.dopplung) > -1;
 }
 
 function zeichneMqttDialog() {
@@ -1203,7 +1203,7 @@ function zeichneMqttDialog() {
       tr('mq.selectedOf', gewaehlt, l.fehlen.length)));
     nk.appendChild(nh);
     l.fehlen.forEach(function (x) {
-      var w = befehlsWissen(x.name);
+      var befehl = befehlsWissen(x.name);
       var r = el('div', 'slot');
       r.style.gridTemplateColumns = '24px 1fr 1.2fr 1fr';
       var cw = el('span');
@@ -1218,9 +1218,9 @@ function zeichneMqttDialog() {
       var nm = el('span', 'sn', 'cmnd.' + x.name);
       nm.style.fontFamily = 'var(--mono)';
       r.appendChild(nm);
-      r.appendChild(el('span', 'rx', w ? (w.rolle || '—') + (w.einheit ? '  ' + w.einheit : '') : tr('mq.unknownCommand')));
-      var wz = el('span', 'rx', w && w.was ? w.was : (tr('mq.nowValue') + ' ' + JSON.stringify(x.wert)));
-      if (w && w.dopplung) { wz.appendChild(el('span', 'chip warn', tr('mq.duplicate', w.dopplung))); }
+      r.appendChild(el('span', 'rx', befehl ? (befehl.rolle || '—') + (befehl.einheit ? '  ' + befehl.einheit : '') : tr('mq.unknownCommand')));
+      var wz = el('span', 'rx', befehl && befehl.was ? befehl.was : (tr('mq.nowValue') + ' ' + JSON.stringify(x.wert)));
+      if (befehl && befehl.dopplung) { wz.appendChild(el('span', 'chip warn', tr('mq.duplicate', befehl.dopplung))); }
       r.appendChild(wz);
       nk.appendChild(r);
     });
@@ -1290,9 +1290,9 @@ function mqttZuSchreiben() {
   var raus = [];
   l.fehlen.forEach(function (x) {
     if (!mqttAuswahl['neu:' + x.name]) { return; }
-    var w = befehlsWissen(x.name) || {};
+    var befehl = befehlsWissen(x.name) || {};
     var thema = mqttThema(l.geraet, 'cmnd', x.name);
-    /* Derselbe Typ wie auf dem Einzelweg — `punktTyp`, nicht `w.typ`.
+    /* Derselbe Typ wie auf dem Einzelweg — `punktTyp`, nicht `befehl.typ`.
 
        Die Regel „Schreibformel heisst mixed" stand seit dem 15.09.2026 in
        `punktTyp` und wurde in `mqttPunktBauen` benutzt; hier blieb die
@@ -1302,14 +1302,14 @@ function mqttZuSchreiben() {
        auf der Leitung stand `true` statt `ON` (H18, gemessen 20.09.2026). */
     var common = {
       name: x.name,
-      role: w.rolle || 'state',
-      type: punktTyp(w),
+      role: befehl.rolle || 'state',
+      type: punktTyp(befehl),
       read: true, write: true,
       desc: tr('mq.createdBy'),
       custom: mqttCustom(l.geraet, thema)
     };
-    if (w.einheit) { common.unit = w.einheit; }
-    if (w.werteliste) { common.states = w.werteliste; }
+    if (befehl.einheit) { common.unit = befehl.einheit; }
+    if (befehl.werteliste) { common.states = befehl.werteliste; }
     raus.push({ id: punktKennung(kanal, 'cmnd.' + x.name), obj: { type: 'state', common: common, native: { topic: thema } }, neu: true });
   });
   l.stumm.forEach(function (x) {

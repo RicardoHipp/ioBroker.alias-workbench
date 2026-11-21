@@ -277,9 +277,9 @@ export function alleUndVorlage(kanal, vorlagenId, instanz) {
      schlicht leer (Ricardos Heizgruppen-Bild, 25.08.2026). Nur die
      Rohzeilen der Alle-Ansicht werden angereichert; an den sichtbaren
      Vorlagenzeilen und an der Erkennung aendert sich nichts. */
-  var vq = null;
-  S.VORLAGEN.forEach(function (x) { if (x.id === v.vorlage) { vq = x; } });
-  var wissen = (vq && vq.weiterePunkte) || null;
+  var tpl = null;
+  S.VORLAGEN.forEach(function (kandidat) { if (kandidat.id === v.vorlage) { tpl = kandidat; } });
+  var wissen = (tpl && tpl.weiterePunkte) || null;
   var wissenRolle = function (rel) {
     if (!wissen) { return ''; }
     if (wissen[rel]) { return wissen[rel]; }
@@ -1194,9 +1194,9 @@ export function waehle(id, fertig, zweigeBehalten) {
   /* Vorlagen duerfen aus festen Objekten ausserhalb des Kanals lesen.
      Deren Werte muessen vorliegen, bevor die Vorlage geprueft wird —
      sonst faellt ein JSON-Feld durch, bloss weil noch nichts da war. */
-  S.VORLAGEN.forEach(function (v) {
-    (v.zustaende || []).forEach(function (z) {
-      if (z.absolut && z.lesen && S.objects[z.lesen]) { quellen.push(z.lesen); }
+  S.VORLAGEN.forEach(function (tpl) {
+    (tpl.zustaende || []).forEach(function (tplZeile) {
+      if (tplZeile.absolut && tplZeile.lesen && S.objects[tplZeile.lesen]) { quellen.push(tplZeile.lesen); }
     });
   });
 
@@ -1495,20 +1495,20 @@ function alsQuelleKarten() {
    dorthin. */
 export function ausgangsQuellen(e) {
   if (!e || e.instanz === null || e.instanz === undefined || !e.kanal) { return null; }
-  var v = null;
-  S.VORLAGEN.forEach(function (x) { if (x.id === e.vorlage) { v = x; } });
-  if (!v || !v.mehrfach) { return null; }
-  var platz = (v.mehrfach && v.mehrfach.platzhalter) || '%N%';
+  var tpl = null;
+  S.VORLAGEN.forEach(function (kandidat) { if (kandidat.id === e.vorlage) { tpl = kandidat; } });
+  if (!tpl || !tpl.mehrfach) { return null; }
+  var platz = (tpl.mehrfach && tpl.mehrfach.platzhalter) || '%N%';
   var raus = [];
   var dazu = function (p) {
     if (!p) { return; }
     var voll = e.kanal + '.' + p;
     if (raus.indexOf(voll) === -1) { raus.push(voll); }
   };
-  (v.zustaende || []).forEach(function (z) {
-    [z.lesen, z.schreiben].forEach(function (p) {
+  (tpl.zustaende || []).forEach(function (tplZeile) {
+    [tplZeile.lesen, tplZeile.schreiben].forEach(function (p) {
       if (!p || String(p).indexOf(platz) === -1) { return; }
-      dazu(setzeInstanz(p, v, e.instanz));
+      dazu(setzeInstanz(p, tpl, e.instanz));
       if (String(e.instanz) === '1') { dazu(String(p).split(platz).join('')); }
     });
   });

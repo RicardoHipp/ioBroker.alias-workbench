@@ -1315,17 +1315,19 @@ describe('Der Typ eines Sendepunktes', () => {
        (H18, 20.09.2026). */
     const quelle = fs.readFileSync(path.join(jsDir, 'mqtt.js'), 'utf8');
     it('entsteht auf allen drei Wegen aus punktTyp', () => {
-        const treffer = quelle.match(/type: punktTyp\(w0?\)/g) || [];
+        const treffer = quelle.match(/type: punktTyp\(befehl0?\)/g) || [];
         expect(treffer.length).to.equal(3);
     });
     it('wird nirgends mehr roh aus dem Befehlswissen genommen', () => {
-        expect(quelle).to.not.include("type: w.typ || 'mixed'");
-        expect(quelle).to.not.include("type: w0.typ || 'mixed'");
+        // Der Traeger heisst seit 21.11.2026 `befehl` statt `w` - in
+        // mqtt.js stand `w` fuer sechs verschiedene Dinge.
+        expect(quelle).to.not.include("type: befehl.typ || 'mixed'");
+        expect(quelle).to.not.include("type: befehl0.typ || 'mixed'");
     });
     it('ist mixed, sobald eine Schreibformel im Spiel ist', () => {
-        const fn = quelle.match(/function punktTyp\(w\) \{[\s\S]*?\}/);
+        const fn = quelle.match(/function punktTyp\(befehl\) \{[\s\S]*?\}/);
         expect(fn).to.not.equal(null);
-        expect(fn[0]).to.include("w.schreibformel ? 'mixed'");
+        expect(fn[0]).to.include("befehl.schreibformel ? 'mixed'");
     });
 });
 
