@@ -640,15 +640,17 @@ export function detailZeile(e, s, idx) {
        waere ACTUAL gewesen (Ricardo, 19.09.2026). */
     var besetztVon = treffer && !treffer.multiple && belegtVon[treffer.name] &&
       belegtVon[treffer.name] !== s.n ? belegtVon[treffer.name] : null;
-    if (treffer) {
-      hin.appendChild(document.createTextNode(tr('pattern.fitsOn')));
-      hin.appendChild(el('b', null, String(treffer.role)));
-      hin.appendChild(document.createTextNode(tr('pattern.toSlot', treffer.name, musterName(e.want) || e.want)));
-      if (!besetztVon && erlaubt.length) {
-        hin.appendChild(document.createTextNode(
-          tr('pattern.expectsType', erlaubt.join(tr('pattern.typeOr')))));
-      }
-    } else if (!eigenerPlatz) {
+    /* Hier stand „passt auf /^switch(\.active)?$|^state$/ → Platz SET …" -
+       der reguläre Ausdruck des type-detector. Den versteht keiner
+       (Ricardo, 21.11.2026); genannt wird jetzt die Rolle der Zeile. */
+    /* Ist der Platz belegt, sagt der gelbe Satz darunter dasselbe schon
+       mit Rolle und Platz - zweimal hintereinander las es sich doppelt. */
+    if (treffer && !besetztVon) {
+      hin.textContent = erlaubt.length
+        ? tr('pattern.roleToSlotType', s.role, treffer.name, musterName(e.want) || e.want,
+          erlaubt.join(tr('pattern.typeOr')))
+        : tr('pattern.roleToSlot', s.role, treffer.name, musterName(e.want) || e.want);
+    } else if (!treffer && !eigenerPlatz) {
       hin.textContent = tr('pattern.noPlaceLong', musterName(e.want) || e.want);
     }
     /* Findet die Rollenliste nichts, hat die Zeile aber doch einen Platz,

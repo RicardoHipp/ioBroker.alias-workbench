@@ -760,14 +760,13 @@ function rollenBlock(rolle, geraetetyp, setzen, typJetzt, setzeTyp) {
     var treffer = platzFuerRolle(geraetetyp, rolle, typJetzt);
     var erlaubt = typenFuerRolle(geraetetyp, rolle);
     var hin = el('div', 'sugg');
+    /* Wie am Gerät: die Rolle nennen, nicht den regulären Ausdruck des
+       type-detector (Ricardo, 21.11.2026). */
     if (treffer) {
-      hin.appendChild(document.createTextNode(tr('pattern.fitsOn')));
-      hin.appendChild(el('b', null, String(treffer.role)));
-      hin.appendChild(document.createTextNode(tr('pattern.toSlot', treffer.name, musterName(geraetetyp) || geraetetyp)));
-      if (erlaubt.length) {
-        hin.appendChild(document.createTextNode(
-          tr('pattern.expectsType', erlaubt.join(tr('pattern.typeOr')))));
-      }
+      hin.textContent = erlaubt.length
+        ? tr('pattern.roleToSlotType', rolle, treffer.name, musterName(geraetetyp) || geraetetyp,
+          erlaubt.join(tr('pattern.typeOr')))
+        : tr('pattern.roleToSlot', rolle, treffer.name, musterName(geraetetyp) || geraetetyp);
     } else {
       hin.textContent = tr('pattern.noPlaceLong', musterName(geraetetyp) || geraetetyp);
     }
