@@ -1735,9 +1735,28 @@ export function vorlagenAbweichung(s) {
   return raus;
 }
 
+/* Haette die Vorlage diese Zeile angehakt, und sie ist es nicht?
+
+   `vorlagenWert.on` haelt fest, was die Vorlage wollte, bevor der Bestand
+   die Haken setzte; ohne Bestand steht dasselbe in `onVorgabe`. */
+export function vorlageHaktAn(e, s) {
+  if (!e || !e.vorlage || s.on || !s.n) { return false; }
+  return s.vorlagenWert ? s.vorlagenWert.on === true : s.onVorgabe === true;
+}
+
 /* Den Vorlagenstand herstellen - alles ausser der Beschriftung. */
 export function vorlageAnwenden(e) {
   if (!e || !e.states) { return; }
+  /* Auch die Haken: was die Vorlage anhaken wuerde, wird angehakt.
+     Am `alias.0.Jonas_Schlafen.Licht` stand nur STATE im Alias; die
+     Vorlage will WORKING, LOWBAT und UNREACH dazu, und „Auf Vorlage
+     zuruecksetzen" liess sie aus (Ricardo, 21.11.2026: „ja, auch
+     anhaken, was die Vorlage anhaken wuerde"). Abgehakt wird nichts -
+     ein Punkt, der im Alias steht, verschwindet nicht durch diesen
+     Knopf. */
+  e.states.forEach(function (s) {
+    if (vorlageHaktAn(e, s)) { s.on = true; }
+  });
   e.states.forEach(function (s) {
     var v = s.vorlagenWert;
     if (!v) { return; }

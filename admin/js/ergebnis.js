@@ -34,6 +34,7 @@ import {
   opt,
   vorlagenAbweichung,
   vorlageAnwenden,
+  vorlageHaktAn,
   bestandVorrang,
   kanalGruppen,
   aufteilBehaelter,
@@ -920,8 +921,9 @@ var warumAuf = false;
          Vorlage etwas anderes, steht hier der Weg dorthin - als bewusster
          Klick, nicht als stille Aenderung (Ricardo, 25.08.2026). */
       if (e.bestandGilt) {
+        /* Gezaehlt wird auch, was der Knopf neu anhakt. */
         var anders = e.states.filter(function (s0) {
-          return s0.on && vorlagenAbweichung(s0).length;
+          return (s0.on && vorlagenAbweichung(s0).length) || vorlageHaktAn(e, s0);
         }).length;
         if (anders) {
           var bTpl = el('button', 'btn mini wichtig', tr('tpl.applyTemplate', anders));
