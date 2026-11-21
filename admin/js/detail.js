@@ -663,16 +663,19 @@ export function detailZeile(e, s, idx) {
        an einem Tasmota-Stromzaehler passiert (I33). */
     /* Gelb wie die Typ-Warnung: in beiden Faellen bekommt die Zeile keinen
        Platz. Als grauer Nachsatz ging es unter (Ricardo, 19.09.2026). */
-    /* Platz und Zeile heissen oft gleich - „SET hat schon SET" las sich
-       wie Unsinn. Darum ausdruecklich „Platz … Zeile …", und dazu, woher
-       die belegende Zeile liest: daran findet man sie in der Liste
-       (Ricardo, 21.11.2026). */
+    /* Erst wer es ausloest (die Rolle), dann woran es scheitert, dann was
+       daraus folgt. „SET hat schon SET" las sich wie Unsinn, und auch
+       „Den Platz SET hat schon die Zeile …" versteht keiner (Ricardo,
+       21.11.2026). Lesen beide Zeilen denselben Datenpunkt, ist die Zeile
+       nur eine Doppelung - das wird gesagt statt eines Platzrats. */
     if (besetztVon) {
       var halter = (e.states || []).find(function (x) { return x !== s && x.n === besetztVon; });
-      var halterQuelle = halter ? (halter.srcR || halter.srcW || '') : '';
-      rb.appendChild(el('div', 'aside w', halterQuelle
-        ? tr('pattern.slotHeldBySource', treffer.name, besetztVon, halterQuelle)
-        : tr('pattern.slotHeldBy', treffer.name, besetztVon)));
+      var gleicheQuelle = !!(halter && halter.srcR && halter.srcR === s.srcR);
+      var mName = musterName(e.want) || e.want;
+      rb.appendChild(el('div', 'aside w', gleicheQuelle
+        ? tr('pattern.slotHeldSame', s.role, s.n, treffer.name, mName, besetztVon,
+          String(s.srcR).split('.').slice(-2).join('.'))
+        : tr('pattern.slotHeldBy', s.role, s.n, treffer.name, mName, besetztVon)));
     }
     if (treffer && !besetztVon && s.typ && erlaubt.length && erlaubt.indexOf(s.typ) === -1) {
       rb.appendChild(el('div', 'aside w',
