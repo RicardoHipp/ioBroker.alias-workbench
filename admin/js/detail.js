@@ -663,8 +663,16 @@ export function detailZeile(e, s, idx) {
        an einem Tasmota-Stromzaehler passiert (I33). */
     /* Gelb wie die Typ-Warnung: in beiden Faellen bekommt die Zeile keinen
        Platz. Als grauer Nachsatz ging es unter (Ricardo, 19.09.2026). */
+    /* Platz und Zeile heissen oft gleich - „SET hat schon SET" las sich
+       wie Unsinn. Darum ausdruecklich „Platz … Zeile …", und dazu, woher
+       die belegende Zeile liest: daran findet man sie in der Liste
+       (Ricardo, 21.11.2026). */
     if (besetztVon) {
-      rb.appendChild(el('div', 'aside w', tr('pattern.slotHeldBy', treffer.name, besetztVon)));
+      var halter = (e.states || []).find(function (x) { return x !== s && x.n === besetztVon; });
+      var halterQuelle = halter ? (halter.srcR || halter.srcW || '') : '';
+      rb.appendChild(el('div', 'aside w', halterQuelle
+        ? tr('pattern.slotHeldBySource', treffer.name, besetztVon, halterQuelle)
+        : tr('pattern.slotHeldBy', treffer.name, besetztVon)));
     }
     if (treffer && !besetztVon && s.typ && erlaubt.length && erlaubt.indexOf(s.typ) === -1) {
       rb.appendChild(el('div', 'aside w',
