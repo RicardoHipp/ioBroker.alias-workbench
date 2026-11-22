@@ -8,6 +8,8 @@ Deutsch: [aenderungen-ausfuehrlich.md](aenderungen-ausfuehrlich.md)
 
 ## Not yet released
 
+## 0.14.1 (2026-11-22)
+
 * **What goes into the database is English; what is only shown follows your language.** Three places were still German. The value list of the Tasmota colour effects (`Scheme`, slot EFFECT of the colour light template) is now `single colour, wake up, cycle colours up, cycle colours down, random` — it is written into the alias and the send point and stays there, so it is English like the value lists of the device adapters; the template is now version 7, and an existing alias shows the difference and takes the new list with "Reset to template". A send point the workbench creates now carries the fixed description `created by the Alias Workbench` instead of a text in the language of whoever clicked. And the descriptions in the "Create send points" dialog ("brightness 0 to 100" …) come from the language files, in all eleven languages. The command knowledge file has English field names.
 
   **How it was found.** Asked whether `tasmota-befehle.json` should be converted too, a search of the whole adapter for German text that users get to see turned up three places the English conversion of 0.14.0 had missed: the `was` descriptions in that file (shown in the dialog), the effect value list in that file and in `tasmota-rgb.json` (written into objects), and the description of created send points, which came from the dictionary and was written into objects in the UI language. Everything else — all UI strings in the code, the template names, the settings page, the enumerations — already goes through the language files or carries an English version.

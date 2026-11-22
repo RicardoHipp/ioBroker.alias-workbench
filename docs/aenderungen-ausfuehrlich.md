@@ -8,6 +8,8 @@ English: [changes-detailed.md](changes-detailed.md)
 
 ## Noch nicht veröffentlicht
 
+## 0.14.1 (2026-11-22)
+
 * **Was in die Datenbank geht, ist englisch; was nur angezeigt wird, folgt der Sprache.** Drei Stellen waren noch deutsch. Die Werteliste der Tasmota-Farbeffekte (`Scheme`, Platz EFFECT der Farblampen-Vorlage) heißt jetzt `single colour, wake up, cycle colours up, cycle colours down, random` — sie wird in den Alias und den Sendepunkt geschrieben und bleibt dort, also ist sie englisch wie die Wertelisten der Geräte-Adapter; die Vorlage steht auf Version 7, ein bestehender Alias zeigt die Abweichung und bekommt die neue Liste mit „Auf Vorlage zurücksetzen“. Ein Sendepunkt, den die Werkbank anlegt, trägt jetzt fest die Beschreibung `created by the Alias Workbench` statt eines Texts in der Sprache dessen, der gerade klickte. Und die Beschreibungen im Dialog „Sendepunkte anlegen“ („Helligkeit 0 bis 100“ …) kommen aus den Sprachdateien, in allen elf Sprachen. Die Datei mit dem Befehlswissen hat englische Feldnamen.
 
   **Wie es auffiel.** Auf die Frage, ob `tasmota-befehle.json` auch umgestellt werden soll, wurde der ganze Adapter nach deutschem Text durchsucht, den Nutzer zu sehen bekommen. Dabei kamen drei Stellen heraus, die die Umstellung von 0.14.0 übersehen hatte: die `was`-Beschreibungen in dieser Datei (im Dialog angezeigt), die Effekt-Werteliste dort und in `tasmota-rgb.json` (in Objekte geschrieben) und die Beschreibung angelegter Sendepunkte, die aus dem Wörterbuch kam und in der Oberflächensprache ins Objekt geschrieben wurde. Alles andere — sämtliche Oberflächentexte im Code, die Vorlagennamen, die Einstellungsseite, die Aufzählungen — läuft schon über die Sprachdateien oder hat eine englische Fassung.
