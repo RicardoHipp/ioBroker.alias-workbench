@@ -1028,6 +1028,29 @@ export function aboErgaenzen(quellen) {
 
 /* Die gewaehlten Zweige als volle Kennungen - eine Liste, auch wenn es
    nur einer ist. */
+/* Was fuer einen ausgewaehlten Knoten abonniert wird.
+
+   Sonst das Muster `knoten.*`. Unter `alias.` aber nur, solange jeder
+   Alias-Punkt darunter ein Ziel hat: Ein Punkt ohne `common.alias.id`
+   laesst den Controller das ganze Abo ablehnen, und der Admin schreibt
+   bei jeder Auswahl `Error on "subscribeForeignStates": Alias … has no
+   target` ins Protokoll (gefunden 22.11.2026 im Log des Testsystems,
+   Pruefpunkt T25 - ein halbfertiger Alias genuegt). Dann werden die
+   Punkte MIT Ziel einzeln abonniert, die ohne gar nicht: Sie haben
+   keinen Wert, der sich aendern koennte. */
+export function aboMusterFuer(knoten) {
+  if (knoten.indexOf('alias.') !== 0) { return [knoten + '.*']; }
+  var mitZiel = [];
+  var ohneZiel = false;
+  (S.keysSorted || []).forEach(function (k) {
+    if (k !== knoten && k.indexOf(knoten + '.') !== 0) { return; }
+    var o = S.objects[k];
+    if (!o || o.type !== 'state') { return; }
+    if (aliasQuellen(o).read || aliasQuellen(o).write) { mitZiel.push(k); } else { ohneZiel = true; }
+  });
+  return ohneZiel ? mitZiel : [knoten + '.*'];
+}
+
 export function zweigPfade() {
   if (!S.current) { return []; }
   if (!S.zweige || !S.zweige.length) { return [S.current]; }
@@ -1169,7 +1192,8 @@ export function waehle(id, fertig, zweigeBehalten) {
   /* Bei mehreren Zweigen nur diese, nicht den ganzen Elternknoten. Der
      traegt oft mehr, als zum Geraet gehoert - bei Matter den Kanal
      `info` mit der Verbindungsmeldung, anderswo gleich mehrere Geraete. */
-  S.abo = zweigPfade().map(function (p) { return p + '.*'; });
+  S.abo = [];
+  zweigPfade().forEach(function (p) { S.abo = S.abo.concat(aboMusterFuer(p)); });
   S.abo.forEach(function (m) { socket.emit('subscribe', m); });
   if (id.indexOf('alias.') === 0) {
     var ausAlias = [];
@@ -1797,7 +1821,9 @@ export function vorlageAnwenden(e) {
      ihren Geraetetyp. `wantAuto` mit, damit der Kopf nicht „von Hand
      statt …" sagt und `deviceTypeManual` nicht gesetzt wird - gewaehlt
      hat die Vorlage, nicht der Nutzer, genau wie in `wendeAn`. */
-  var tpl = (S.VORLAGEN || []).find(function (v0) { return v0.id === e.vorlage; });
+  var tpl = e.vorlage
+    ? (S.VORLAGEN || []).find(function (v0) { return v0.id === e.vorlage; })
+    : null;
   if (tpl && tpl.deviceType && musterVon(tpl.deviceType)) {
     e.want = tpl.deviceType;
     e.wantAuto = tpl.deviceType;

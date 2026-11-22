@@ -295,16 +295,35 @@ function schreibeObjekt(kennung, obj, namen, fertig) {
    nicht geschrieben werden konnte, wird gesammelt statt den Lauf
    abzubrechen: Ein einzelnes verweigertes Objekt darf die anderen 103
    nicht aufhalten. */
+/* Jeder Schritt meldet sich genau einmal zurueck - auch wenn er wirft
+   oder die Antwort ausbleibt. Bis 22.11.2026 blieb der Dialog sonst auf
+   „Wird umgestellt..." stehen: Ricardo klickte am Testsystem, waehrend
+   ein Messskript seine Test-Aliase gerade wieder geloescht hatte; das
+   Objekt fehlte, `JSON.parse(JSON.stringify(undefined))` warf, und
+   `fertig` kam nie. */
+var SCHRITT_FRIST_MS = 15000;
+
 function reihum(aufgaben, schritt, fertig) {
   var fehler = [];
   var i = 0;
   function weiter() {
     if (i >= aufgaben.length) { return fertig(fehler); }
     var a = aufgaben[i++];
-    schritt(a, function (err) {
+    var erledigt = false;
+    var uhr = null;
+    function zurueck(err) {
+      if (erledigt) { return; }
+      erledigt = true;
+      if (uhr) { clearTimeout(uhr); }
       if (err) { fehler.push({ id: a.kennung, grund: String(err) }); }
-      weiter();
-    });
+      setTimeout(weiter, 0);
+    }
+    uhr = setTimeout(function () { zurueck(tr('migr.timeout')); }, SCHRITT_FRIST_MS);
+    try {
+      schritt(a, zurueck);
+    } catch (x) {
+      zurueck((x && x.message) || x);
+    }
   }
   weiter();
 }
@@ -402,12 +421,25 @@ function fuehreAus(lage) {
     aufgaben.push({ kennung: lage.kennung, obj: lage.instanzObj, namen: INSTANZ_NAMEN });
   }
   lage.aliase.forEach(function (b) {
-    aufgaben.push({ kennung: b.id, obj: lage.objects[b.id], namen: ALIAS_NAMEN });
+    aufgaben.push({ kennung: b.id, namen: ALIAS_NAMEN });
   });
   lage.aufgabenZahl = aufgaben.length;
 
+  /* Jedes Objekt frisch aus der Datenbank, nicht aus dem Bild vom Start:
+     Zwischen Frage und Klick kann es geloescht oder schon umgestellt
+     worden sein. Weg heisst: nichts mehr umzustellen, das ist kein
+     Fehler - es wird nur nicht mitgezaehlt. Neu anlegen darf die
+     Umstellung es auf keinen Fall. */
   reihum(aufgaben, function (a, fertig) {
-    schreibeObjekt(a.kennung, a.obj, a.namen, fertig);
+    if (a.obj) { return schreibeObjekt(a.kennung, a.obj, a.namen, fertig); }
+    socket.emit('getObject', a.kennung, function (err, obj) {
+      if (err) { return fertig(err); }
+      if (!obj || !alteFelder(obj.native, a.namen).length) {
+        lage.aufgabenZahl--;
+        return fertig(null);
+      }
+      schreibeObjekt(a.kennung, obj, a.namen, fertig);
+    });
   }, function (fehler) {
     go.disabled = false;
     go.textContent = tr('migr.go');

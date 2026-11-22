@@ -12,6 +12,7 @@ import { hatPunkt, jsonVon, geraetePunkte, punktKennung, istZerlegt } from './we
 import './entwurf.js';
 import { zeichneErgebnis } from './ergebnis.js';
 import { holeZweig, holeObjekt, uebernimmObjekt } from './objekte.js';
+import { einst, frischeEinstellungen, oeffneEinstellungen } from './einstellungen.js';
 
 /* ================== MQTT-Geraete ==================
    Ein Tasmota sendet nur nach stat und tele — cmnd ist sein Posteingang,
@@ -335,6 +336,8 @@ function merkeTakt(kanal, wert) {
   if (n.telemetryPeriod === wert) { return; }
   n.telemetryPeriod = wert;
   n.telemetryPeriodAt = neueZeit();
+  /* Die Notiz steht am fremden Objekt - ohne Freigabe nur im Speicher. */
+  if (!einst('mqttObjects')) { return; }
   var kopie = JSON.parse(JSON.stringify(S.objects[id]));
   socket.emit('setObject', id, kopie, function () {});
 }
@@ -395,6 +398,7 @@ function merkeSo59(kanal, wert) {
   if (n.so59 === wert) { return; }
   n.so59 = wert;
   n.so59Zeit = neueZeit();
+  if (!einst('mqttObjects')) { return; }
   var kopie = JSON.parse(JSON.stringify(S.objects[id]));
   socket.emit('setObject', id, kopie, function () {});
 }
@@ -524,6 +528,20 @@ export function mqttKarte(host, kanal) {
   einl.style.marginBottom = '9px';
   einl.textContent = tr('mq.intro');
   b.appendChild(einl);
+
+  /* Ohne Freigabe sagt die Karte es gleich - nicht erst, wenn man auf
+     einen Knopf drueckt und sich wundert. Die Knoepfe bleiben trotzdem
+     da: sie zeigen, was zu tun waere, und ihr Klick erklaert den Rest. */
+  if (!einst('mqttObjects')) {
+    var sp = el('div', 'aside w');
+    sp.style.marginBottom = '9px';
+    sp.appendChild(document.createTextNode(tr('mq.lockHint') + ' '));
+    var sl0 = el('a', null, tr('mq.lockOpen'));
+    sl0.href = '#';
+    sl0.addEventListener('click', function (ev) { ev.preventDefault(); oeffneEinstellungen(); });
+    sp.appendChild(sl0);
+    b.appendChild(sp);
+  }
 
   if (zweigZahl) {
     var zh = el('div', 'hint');
@@ -798,6 +816,11 @@ var mqttAuf = false;
 /* Leere Nutzlast fragt nur, "1" schaltet ein. Beides ueber denselben
    Weg, damit es nur eine Stelle gibt, die das Objekt anlegt. */
 function so59(kanal, knopf, wert) {
+  mitMqttFreigabe([hatPunkt(kanal, 'cmnd.SetOption59') || punktKennung(kanal, 'cmnd.SetOption59')],
+    function () { so59Los(kanal, knopf, wert); });
+}
+
+function so59Los(kanal, knopf, wert) {
   var g = mqttGeraet(kanal);
   if (!g) { return; }
   so59Laeuft[kanal] = wert ? 'einschalten' : 'pruefen';
@@ -851,7 +874,13 @@ function so59(kanal, knopf, wert) {
 /* Status 11 aktiv anfordern. Eine Abfrage — sie schaltet nichts.
    Antwortet das Geraet nicht, muss das dranstehen: vorher klickte man
    und es passierte sichtbar gar nichts. */
-function mqttFragen(kanal, _knopf) {
+function mqttFragen(kanal, knopf) {
+  mitMqttFreigabe([hatPunkt(kanal, 'cmnd.Status') || punktKennung(kanal, 'cmnd.Status'),
+                   hatPunkt(kanal, 'cmnd.TelePeriod') || punktKennung(kanal, 'cmnd.TelePeriod')],
+    function () { mqttFragenLos(kanal, knopf); });
+}
+
+function mqttFragenLos(kanal, _knopf) {
   var g = mqttGeraet(kanal);
   if (!g) { return; }
   abfrageLaeuft[kanal] = true;
@@ -1057,6 +1086,10 @@ function punktTyp(befehl) {
 }
 
 export function mqttEinzelnStill(kanal, name, fertig) {
+  /* Gerufen aus dem Trockenlauf, der die Freigabe vorher frisch geholt
+     hat (`mitMqttFreigabe`). Hier nur die Sicherung, falls ein anderer
+     Weg einmal ohne sie hierher findet. */
+  if (!einst('mqttObjects')) { return fertig && fertig(tr('mq.lockTitle')); }
   var bau = mqttPunktBauen(kanal, name, 'neu');
   if (!bau) { return fertig && fertig(); }
   socket.emit('setObject', bau.id, bau.obj, function (err) {
@@ -1108,6 +1141,11 @@ function mqttPunktBauen(kanal, name, was) {
 }
 
 export function mqttEinzeln(kanal, name, was, knopf) {
+  mitMqttFreigabe([hatPunkt(kanal, 'cmnd.' + name) || punktKennung(kanal, 'cmnd.' + name)],
+    function () { mqttEinzelnLos(kanal, name, was, knopf); });
+}
+
+function mqttEinzelnLos(kanal, name, was, knopf) {
   var g = mqttGeraet(kanal);
   if (!g) { return; }
   knopf.disabled = true;
@@ -1151,6 +1189,14 @@ export function mqttEinzeln(kanal, name, was, knopf) {
 }
 
 export function zeigeMqttDialog(kanal) {
+  var l = mqttLage(kanal);
+  if (!l) { return; }
+  var ids = l.fehlen.map(function (x) { return punktKennung(kanal, 'cmnd.' + x.name); })
+    .concat(l.stumm.map(function (x) { return x.id; }));
+  mitMqttFreigabe(ids, function () { zeigeMqttDialogLos(kanal); });
+}
+
+function zeigeMqttDialogLos(kanal) {
   var l = mqttLage(kanal);
   if (!l) { return; }
   mqttStand = l;
@@ -1328,6 +1374,10 @@ function mqttZuSchreiben() {
 export function mqttSchreiben() {
   var liste = mqttZuSchreiben();
   if (!liste.length) { return; }
+  if (!einst('mqttObjects')) {
+    $('#dlg-mqtt').close();
+    return zeigeMqttSperre(liste.map(function (x) { return x.id; }));
+  }
   var b = $('#btn-mqtt-write');
   if (b) { b.disabled = true; b.textContent = tr('write.writing'); }
   var offen = liste.length, fehler = [];
@@ -1354,4 +1404,51 @@ export function mqttSchreiben() {
       }
     });
   });
+}
+
+/* Datenpunkte im Bereich des MQTT-Adapters - nur mit Freigabe.
+
+   Ein Adapter schreibt eigentlich nur in seinen eigenen Namensraum. Die
+   Tasmota-Helfer brauchen aber `cmnd`-Punkte unter `mqtt-client.0.…`:
+   zum Nachfragen (Status, TelePeriod), fuer SetOption59 und als
+   Sendepunkt eines Alias. Ab Werk ist das aus; der Schalter steht in den
+   Instanz-Einstellungen (`mqttObjects`). Gelesen wird er hier frisch,
+   damit ein Umschalten in einem anderen Reiter sofort gilt.
+
+   `ids` nennt, was angelegt oder geaendert wuerde - der Dialog zeigt es,
+   damit man weiss, worueber man entscheidet. */
+export function mitMqttFreigabe(ids, weiter, abbruch) {
+  frischeEinstellungen(function () {
+    if (einst('mqttObjects')) { return weiter(); }
+    zeigeMqttSperre(ids);
+    if (typeof abbruch === 'function') { abbruch(); }
+  });
+}
+
+export function zeigeMqttSperre(ids) {
+  var d = $('#dlg-mqfrei');
+  var body = $('#mqfrei-body');
+  if (!d || !body) { return; }
+  body.textContent = '';
+  body.appendChild(el('div', null, tr('mq.lockText')));
+  var liste = (ids || []).filter(Boolean);
+  if (liste.length) {
+    var ul = el('ul');
+    ul.style.margin = '8px 0 0';
+    ul.style.paddingLeft = '18px';
+    liste.slice(0, 8).forEach(function (id) {
+      var li = el('li', null, id);
+      li.style.fontFamily = 'var(--mono)';
+      li.style.fontSize = '11.5px';
+      ul.appendChild(li);
+    });
+    if (liste.length > 8) { ul.appendChild(el('li', null, tr('mq.lockMore', liste.length - 8))); }
+    body.appendChild(ul);
+  }
+  var h = el('div', 'hint', tr('mq.lockWhere'));
+  h.style.marginTop = '10px';
+  body.appendChild(h);
+  var go = $('#btn-mqfrei-go');
+  if (go) { go.onclick = function () { d.close(); oeffneEinstellungen(); }; }
+  if (!d.open) { d.showModal(); }
 }

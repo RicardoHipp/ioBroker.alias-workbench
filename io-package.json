@@ -189,7 +189,8 @@
     "iconRooms": true,
     "iconFunctions": true,
     "iconReplace": true,
-    "templatesFromAdmin": true
+    "templatesFromAdmin": true,
+    "mqttObjects": false
   },
   "objects": [
     {

@@ -100,6 +100,44 @@
       "md": 12,
       "lg": 12,
       "xl": 12
+    },
+    "_mqttKopf": {
+      "type": "header",
+      "size": 3,
+      "text": "Tasmota devices via MQTT",
+      "newLine": true,
+      "xs": 12,
+      "sm": 12,
+      "md": 12,
+      "lg": 12,
+      "xl": 12
+    },
+    "_mqttText": {
+      "type": "staticText",
+      "text": "The Tasmota helpers need command points (cmnd.…) in the MQTT adapter's tree — to query a device, to switch on SetOption59, and as the send point of an alias. An adapter normally writes only into its own area, which is why this is off by default. With it off, the workbench still reads everything and builds aliases on points that already exist; it just creates and changes nothing in the MQTT adapter.",
+      "style": {
+        "marginBottom": 8,
+        "fontSize": 12,
+        "opacity": 0.7
+      },
+      "newLine": true,
+      "xs": 12,
+      "sm": 12,
+      "md": 12,
+      "lg": 12,
+      "xl": 12
+    },
+    "mqttObjects": {
+      "type": "checkbox",
+      "label": "Allow creating and changing data points in the MQTT adapter",
+      "help": "Creates cmnd points under mqtt-client.0.… and enables sending on existing ones. Takes effect immediately, without reloading the workbench.",
+      "default": false,
+      "newLine": true,
+      "xs": 12,
+      "sm": 12,
+      "md": 12,
+      "lg": 12,
+      "xl": 12
     }
   }
 }

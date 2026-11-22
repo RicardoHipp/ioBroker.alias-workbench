@@ -29,7 +29,7 @@ import { zeichneErgebnis } from './ergebnis.js';
 
 import { uebernehmeBestand , enumAenderungen, setzeZiel } from './zuordnung.js';
 
-import { mqttEinzelnStill } from './mqtt.js';
+import { mqttEinzelnStill, mitMqttFreigabe } from './mqtt.js';
 import { sucheInSkripten, sucheInSkriptenMehrere, skriptListe } from './verwendung.js';
 
 import { rateBehalten } from './vorschlagen.js';
@@ -799,6 +799,12 @@ export function zeigeTrockenlauf(alleAusgaenge) {
       kb.style.marginTop = '9px';
       var kn2 = el('button', 'btn', tr('write.createSendPoints', fehlend.length));
       kn2.addEventListener('click', function () {
+        /* Die Sendepunkte liegen im Bereich des MQTT-Adapters - ohne
+           Freigabe in den Einstellungen erklaert ein Dialog das, statt
+           zu schreiben. */
+        mitMqttFreigabe(fehlend, sendepunkteAnlegen);
+      });
+      var sendepunkteAnlegen = function () {
         kn2.disabled = true;
         kn2.textContent = tr('write.writing');
         var offen2 = fehlend.length;
@@ -856,7 +862,7 @@ export function zeigeTrockenlauf(alleAusgaenge) {
             }
           });
         });
-      });
+      };
       kb.appendChild(kn2);
       pw.appendChild(kb);
     }

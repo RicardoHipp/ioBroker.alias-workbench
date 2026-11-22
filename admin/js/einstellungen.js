@@ -19,7 +19,15 @@ var EINST_VORGABE = {
   iconRooms: true,
   iconFunctions: true,
   iconReplace: true,
-  templatesFromAdmin: true
+  templatesFromAdmin: true,
+  /* Ab Werk aus: Datenpunkte im Bereich des MQTT-Adapters anlegen und
+     aendern. Ein Adapter schreibt eigentlich nur in seinen eigenen
+     Namensraum (bei der Werkbank `alias.*` und `enum.*`); die
+     Tasmota-Helfer brauchen aber `cmnd`-Punkte unter `mqtt-client.0.…`.
+     Im Aufnahmeantrag ins ioBroker-Repository als Ausnahme vermerkt und
+     angenommen - hier wird sie zur bewussten Entscheidung dessen, der
+     die Werkbank betreibt (22.11.2026). */
+  mqttObjects: false
 };
 var einstellungen = {};
 
@@ -45,4 +53,28 @@ export function ladeEinstellungen(danach) {
     if (!err && obj && migrationNoetig(obj, instanzId(), S.objects)) { return; }
     if (typeof danach === 'function') { danach(); }
   });
+}
+
+/* Dasselbe, aber ohne Migration und ohne Rueckhalt: unmittelbar vor
+   einem Schreibvorgang, der an einer Einstellung haengt. Wer sie eben
+   in einem anderen Reiter umgestellt hat, soll nicht erst die Werkbank
+   neu laden muessen. Scheitert das Lesen, bleibt der alte Stand. */
+export function frischeEinstellungen(danach) {
+  socket.emit('getObject', instanzId(), function (err, obj) {
+    if (!err && obj && obj.native) { einstellungen = obj.native; }
+    danach();
+  });
+}
+
+/* Die Einstellungsseite der eigenen Instanz im Admin. Der Reiter laeuft
+   als iframe im Admin, vom selben Ursprung - also kann er die
+   Admin-Seite selbst umlenken. Steht er allein im Fenster, gilt
+   dasselbe fuer dieses. */
+export function einstellungsAdresse() {
+  return location.origin + '/#tab-instances/config/' + instanzId();
+}
+
+export function oeffneEinstellungen() {
+  var ziel = einstellungsAdresse();
+  try { (window.top || window).location.href = ziel; } catch { window.open(ziel, '_blank'); }
 }

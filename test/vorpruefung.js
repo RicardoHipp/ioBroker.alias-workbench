@@ -1814,6 +1814,56 @@ describe('Die Werteliste', () => {
 });
 
 
+/* Die Umstellung bleibt nicht haengen (22.11.2026).
+
+   Ricardo klickte am Testsystem „Umstellen", waehrend ein Messskript
+   seine Test-Aliase gerade wieder geloescht hatte. Das Objekt fehlte,
+   der Schritt warf, `fertig` kam nie, und der Knopf stand fuer immer auf
+   „Wird umgestellt...". Jetzt meldet sich jeder Schritt genau einmal
+   zurueck: geworfen, ausgeblieben oder doppelt geantwortet. */
+describe('Die Umstellung bleibt nicht haengen', () => {
+    const quelle = lies(path.join(jsDir, 'migration.js'));
+    const von = quelle.indexOf('var SCHRITT_FRIST_MS');
+    const bis = quelle.indexOf('/* ================== Der Dialog');
+    // Frist fuer den Test auf 30 ms, sonst wartet er 15 s.
+    const code = quelle.slice(von, bis).replace(/SCHRITT_FRIST_MS = \d+/, 'SCHRITT_FRIST_MS = 30');
+    const reihum = new Function('tr', code + '; return reihum;')((k) => k);
+
+    it('ein Schritt, der wirft, wird Fehler - die anderen laufen weiter', (fertig) => {
+        const gesehen = [];
+        reihum([{ kennung: 'a' }, { kennung: 'b' }, { kennung: 'c' }], (a, zurueck) => {
+            gesehen.push(a.kennung);
+            if (a.kennung === 'b') { JSON.parse(JSON.stringify(undefined)); }
+            zurueck(null);
+        }, (fehler) => {
+            expect(gesehen).to.deep.equal(['a', 'b', 'c']);
+            expect(fehler.map((f) => f.id)).to.deep.equal(['b']);
+            fertig();
+        });
+    });
+
+    it('ein Schritt ohne Antwort wird nach der Frist Fehler', (fertig) => {
+        reihum([{ kennung: 'still' }, { kennung: 'gut' }], (a, zurueck) => {
+            if (a.kennung === 'gut') { zurueck(null); }
+        }, (fehler) => {
+            expect(fehler).to.deep.equal([{ id: 'still', grund: 'migr.timeout' }]);
+            fertig();
+        });
+    });
+
+    it('eine doppelte oder verspaetete Antwort zaehlt nur einmal', (fertig) => {
+        let ende = 0;
+        reihum([{ kennung: 'x' }], (a, zurueck) => {
+            zurueck(null); zurueck('zweimal');
+            setTimeout(() => zurueck('spaet'), 60);
+        }, (fehler) => {
+            ende++;
+            expect(fehler).to.be.empty;
+            setTimeout(() => { expect(ende).to.equal(1); fertig(); }, 100);
+        });
+    });
+});
+
 /* Die Umstellung auf englische Bezeichner.
 
    `admin/js/migration.js` ist die einzige Stelle im Adapter, die die
