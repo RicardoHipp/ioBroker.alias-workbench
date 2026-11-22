@@ -150,10 +150,15 @@ den Weg dorthin:
   beim Gerät nach (Status 11). Eine reine Abfrage, die nichts schaltet und
   nichts ändert.
 
-Anlegen, Freischalten, Nachfragen und SetOption59 schreiben in den Bereich des
-MQTT-Adapters. Das ist **ab Werk aus** und wird in den Instanz-Einstellungen
-freigegeben (*Datenpunkte im MQTT-Adapter anlegen und ändern erlauben*);
-ohne Freigabe zeigt die Werkbank, was zu tun wäre, und schreibt nichts.
+**Bekannte Ausnahme: Schreiben im Bereich des MQTT-Adapters.** Sonst schreibt
+die Werkbank nur in `alias.*` und `enum.*`. Die Tasmota-Helfer sind die einzige
+Ausnahme. Einen Sendepunkt anlegen, das Senden freischalten, beim Gerät
+nachfragen und SetOption59 brauchen jeweils einen `cmnd`-Datenpunkt unter
+`mqtt-client.0.…`, und den legt die Werkbank dort an oder ändert ihn. Das ist
+**ab Werk aus**. Freigegeben wird es in den Instanz-Einstellungen
+(*Datenpunkte im MQTT-Adapter anlegen und ändern erlauben*). Ohne Freigabe
+zeigt die Werkbank, was zu tun wäre, und schreibt nichts außerhalb ihres
+eigenen Bereichs.
 
 Wer seine Tasmota-Geräte so einbindet, braucht für die Gerätestruktur keinen
 eigenen Adapter: MQTT liefert die Daten, die Werkbank macht daraus Geräte.

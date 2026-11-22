@@ -143,10 +143,14 @@ device:
   the device (Status 11). A plain query that switches nothing and changes
   nothing.
 
-Creating, enabling, querying and SetOption59 write into the MQTT adapter's
-area. That is **off by default** and is allowed in the instance settings
-(*Allow creating and changing data points in the MQTT adapter*); without it
-the workbench shows what would need doing and writes nothing.
+**Known exception: writing into the MQTT adapter's namespace.** Normally the
+workbench writes only to `alias.*` and `enum.*`. The Tasmota helpers are the
+one exception. Creating a send point, enabling sending, querying the device and
+SetOption59 all need a `cmnd` data point under `mqtt-client.0.…`, and the
+workbench creates or changes it there. This is **off by default**. It is
+enabled in the instance settings (*Allow creating and changing data points in
+the MQTT adapter*). Without it, the workbench shows what would need doing and
+writes nothing outside its own namespace.
 
 Bind your Tasmota devices this way and you need no separate adapter for the
 device structure: MQTT delivers the data, the workbench turns it into devices.
