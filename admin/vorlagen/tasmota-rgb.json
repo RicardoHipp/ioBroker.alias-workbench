@@ -1,6 +1,6 @@
 {
   "id": "tasmota-rgb",
-  "version": 6,
+  "version": 7,
   "priority": 25,
   "name": {
     "de": "Tasmota-Farblampe",
@@ -83,11 +83,11 @@
       "write": "cmnd.Scheme",
       "optional": true,
       "valueList": {
-        "0": "einfarbig",
-        "1": "Aufwachen",
-        "2": "Farben vorwärts",
-        "3": "Farben rückwärts",
-        "4": "zufällig"
+        "0": "single colour",
+        "1": "wake up",
+        "2": "cycle colours up",
+        "3": "cycle colours down",
+        "4": "random"
       },
       "note": {
         "de": "Der Platz EFFECT verlangt eine Werteliste — ohne common.states erkennt der type-detector ihn nicht. Liest aus tele.STATE und schreibt nach cmnd — die Rückmeldung kommt deshalb erst mit der nächsten Telemetrie, bei TelePeriod 300 also bis zu fünf Minuten später. Tasmota antwortet zwar sofort auf stat/RESULT, aber dort steht nur der eine geänderte Schlüssel; als Lesequelle wäre das unbrauchbar. Abhilfe am Gerät: SetOption59 1 — dann schickt Tasmota tele/STATE bei jeder Änderung mit.",

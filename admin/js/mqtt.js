@@ -24,11 +24,18 @@ import { einst, frischeEinstellungen, oeffneEinstellungen } from './einstellunge
 
 var TASMOTA_BEFEHLE = null;        /* Geraetewissen, aus einer Datei */
 
+/* Wer einen Punkt angelegt hat - fest englisch, nicht in der Sprache der
+   Oberflaeche. Bis 0.14.0 kam der Text aus dem Woerterbuch (mq.createdBy), und weil das
+   Ergebnis IN DAS OBJEKT geschrieben wird, blieb es dort fuer immer in
+   der Sprache dessen, der gerade klickte („von der Alias-Werkbank
+   angelegt"). Es ist eine Herkunftsmarke, kein Text zum Lesen. */
+var ANGELEGT_VON = 'created by the Alias Workbench';
+
 export function ladeBefehlswissen(fertig) {
   fetch('./geraetewissen/tasmota-befehle.json')
     .then(function (r) { return r.json(); })
     .then(function (j) { TASMOTA_BEFEHLE = j; fertig(); })
-    .catch(function () { TASMOTA_BEFEHLE = { befehle: {}, keineBefehle: [] }; fertig(); });
+    .catch(function () { TASMOTA_BEFEHLE = { commands: {}, notCommands: [] }; fertig(); });
 }
 
 /* Die MQTT-Einstellung eines Objekts — sie sitzt je Objekt, nicht an der
@@ -157,7 +164,7 @@ export function tasmotaBefehle(kanal) {
   });
   if (!aus) { return null; }
 
-  var weg = (TASMOTA_BEFEHLE && TASMOTA_BEFEHLE.keineBefehle) || [];
+  var weg = (TASMOTA_BEFEHLE && TASMOTA_BEFEHLE.notCommands) || [];
   var liste = [];
   Object.keys(aus).forEach(function (f) {
     if (weg.indexOf(f) > -1) { return; }
@@ -175,11 +182,17 @@ export function tasmotaBefehle(kanal) {
 
 /* Was das Geraetewissen zu einem Befehl sagt — mit %N% fuer POWER1..n. */
 export function befehlsWissen(name) {
-  var b = (TASMOTA_BEFEHLE && TASMOTA_BEFEHLE.befehle) || {};
-  if (b[name]) { return b[name]; }
+  var b = (TASMOTA_BEFEHLE && TASMOTA_BEFEHLE.commands) || {};
+  var schluessel = b[name] ? name : null;
   var m = /^([A-Za-z_]+?)(\d{1,2})$/.exec(name);
-  if (m && b[m[1] + '%N%']) { return b[m[1] + '%N%']; }
-  return null;
+  if (!schluessel && m && b[m[1] + '%N%']) { schluessel = m[1] + '%N%'; }
+  if (!schluessel) { return null; }
+  /* Die Beschreibung steht nicht in der Datei, sondern in admin/i18n -
+     sie wird nur angezeigt und soll der Sprache der Oberflaeche folgen.
+     Schluessel `cmd.<Befehl>`, `%N%` als `N`. Fehlt er, bleibt sie leer. */
+  var k = 'cmd.' + schluessel.replace('%N%', 'N');
+  var text = tr(k);
+  return Object.assign({}, b[schluessel], { description: text !== k ? text : '' });
 }
 
 /* Welche Zeilen haengen ueberhaupt am Telemetrietakt?
@@ -841,7 +854,7 @@ function so59Los(kanal, knopf, wert) {
   var obj = {
     type: 'state',
     common: { name: 'SetOption59', type: 'mixed', read: true, write: true, role: 'text',
-              desc: tr('mq.createdBy'), custom: mqttCustom(g, thema) },
+              desc: ANGELEGT_VON, custom: mqttCustom(g, thema) },
     native: { topic: thema }
   };
   socket.emit('setObject', id, obj, function (err) {
@@ -895,7 +908,7 @@ function mqttFragenLos(kanal, _knopf) {
     type: 'state',
     common: {
       name: 'Status', type: 'mixed', read: true, write: true, role: 'text',
-      desc: tr('mq.createdBy'),
+      desc: ANGELEGT_VON,
       custom: mqttCustom(g, thema)
     },
     native: { topic: thema }
@@ -994,7 +1007,7 @@ function frageTakt(kanal, g) {
   var obj = {
     type: 'state',
     common: { name: 'TelePeriod', type: 'mixed', read: true, write: true, role: 'level',
-              unit: 's', desc: tr('mq.createdBy'), custom: mqttCustom(g, thema) },
+              unit: 's', desc: ANGELEGT_VON, custom: mqttCustom(g, thema) },
     /* Einen schon gemerkten Takt nicht wegwerfen, nur weil erneut
        gefragt wird. */
     native: { topic: thema,
@@ -1082,7 +1095,7 @@ function mqttCustom(g, thema) {
    Formel steht, bleibt der genaue Typ: aus `number` zieht der Admin
    Min, Max und Einheit. */
 function punktTyp(befehl) {
-  return befehl.schreibformel ? 'mixed' : (befehl.typ || 'mixed');
+  return befehl.writeFormula ? 'mixed' : (befehl.type || 'mixed');
 }
 
 export function mqttEinzelnStill(kanal, name, fertig) {
@@ -1127,14 +1140,14 @@ function mqttPunktBauen(kanal, name, was) {
     id = punktKennung(kanal, 'cmnd.' + name);
     var common0 = {
       name: name,
-      role: befehl0.rolle || 'state',
+      role: befehl0.role || 'state',
       type: punktTyp(befehl0),
       read: true, write: true,
-      desc: tr('mq.createdBy'),
+      desc: ANGELEGT_VON,
       custom: mqttCustom(g, thema0)
     };
-    if (befehl0.einheit) { common0.unit = befehl0.einheit; }
-    if (befehl0.werteliste) { common0.states = befehl0.werteliste; }
+    if (befehl0.unit) { common0.unit = befehl0.unit; }
+    if (befehl0.states) { common0.states = befehl0.states; }
     obj = { type: 'state', common: common0, native: { topic: thema0 } };
   }
   return { id: id, obj: obj };
@@ -1166,14 +1179,14 @@ function mqttEinzelnLos(kanal, name, was, knopf) {
     id = punktKennung(kanal, 'cmnd.' + name);
     var common = {
       name: name,
-      role: befehl.rolle || 'state',
+      role: befehl.role || 'state',
       type: punktTyp(befehl),
       read: true, write: true,
-      desc: tr('mq.createdBy'),
+      desc: ANGELEGT_VON,
       custom: mqttCustom(g, thema)
     };
-    if (befehl.einheit) { common.unit = befehl.einheit; }
-    if (befehl.werteliste) { common.states = befehl.werteliste; }
+    if (befehl.unit) { common.unit = befehl.unit; }
+    if (befehl.states) { common.states = befehl.states; }
     obj = { type: 'state', common: common, native: { topic: thema } };
   }
 
@@ -1206,7 +1219,7 @@ function zeigeMqttDialogLos(kanal) {
     var befehl = befehlsWissen(x.name);
     /* Vorgehakt nur, was eine Geraetefunktion ist: bekannt, keine
        Dopplung und keine blosse Einstellung des Geraets. */
-    mqttAuswahl['neu:' + x.name] = !!befehl && !befehl.vorgabeAus && !istDopplung(x.name, l);
+    mqttAuswahl['neu:' + x.name] = !!befehl && !befehl.offByDefault && !istDopplung(x.name, l);
   });
   l.stumm.forEach(function (x) { mqttAuswahl['fix:' + x.name] = true; });
   zeichneMqttDialog();
@@ -1217,9 +1230,9 @@ function zeigeMqttDialogLos(kanal) {
    anzulegen ergibt drei Punkte, die sich gegenseitig ueberschreiben. */
 function istDopplung(name, l) {
   var befehl = befehlsWissen(name);
-  if (!befehl || !befehl.dopplung) { return false; }
-  return l.fehlen.some(function (x) { return x.name === befehl.dopplung; }) ||
-         l.da.indexOf(befehl.dopplung) > -1;
+  if (!befehl || !befehl.duplicateOf) { return false; }
+  return l.fehlen.some(function (x) { return x.name === befehl.duplicateOf; }) ||
+         l.da.indexOf(befehl.duplicateOf) > -1;
 }
 
 function zeichneMqttDialog() {
@@ -1264,9 +1277,9 @@ function zeichneMqttDialog() {
       var nm = el('span', 'sn', 'cmnd.' + x.name);
       nm.style.fontFamily = 'var(--mono)';
       r.appendChild(nm);
-      r.appendChild(el('span', 'rx', befehl ? (befehl.rolle || '—') + (befehl.einheit ? '  ' + befehl.einheit : '') : tr('mq.unknownCommand')));
-      var wz = el('span', 'rx', befehl && befehl.was ? befehl.was : (tr('mq.nowValue') + ' ' + JSON.stringify(x.wert)));
-      if (befehl && befehl.dopplung) { wz.appendChild(el('span', 'chip warn', tr('mq.duplicate', befehl.dopplung))); }
+      r.appendChild(el('span', 'rx', befehl ? (befehl.role || '—') + (befehl.unit ? '  ' + befehl.unit : '') : tr('mq.unknownCommand')));
+      var wz = el('span', 'rx', befehl && befehl.description ? befehl.description : (tr('mq.nowValue') + ' ' + JSON.stringify(x.wert)));
+      if (befehl && befehl.duplicateOf) { wz.appendChild(el('span', 'chip warn', tr('mq.duplicate', befehl.duplicateOf))); }
       r.appendChild(wz);
       nk.appendChild(r);
     });
@@ -1348,14 +1361,14 @@ function mqttZuSchreiben() {
        auf der Leitung stand `true` statt `ON` (H18, gemessen 20.09.2026). */
     var common = {
       name: x.name,
-      role: befehl.rolle || 'state',
+      role: befehl.role || 'state',
       type: punktTyp(befehl),
       read: true, write: true,
-      desc: tr('mq.createdBy'),
+      desc: ANGELEGT_VON,
       custom: mqttCustom(l.geraet, thema)
     };
-    if (befehl.einheit) { common.unit = befehl.einheit; }
-    if (befehl.werteliste) { common.states = befehl.werteliste; }
+    if (befehl.unit) { common.unit = befehl.unit; }
+    if (befehl.states) { common.states = befehl.states; }
     raus.push({ id: punktKennung(kanal, 'cmnd.' + x.name), obj: { type: 'state', common: common, native: { topic: thema } }, neu: true });
   });
   l.stumm.forEach(function (x) {

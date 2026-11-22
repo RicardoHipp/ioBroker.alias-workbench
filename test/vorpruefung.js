@@ -1321,13 +1321,54 @@ describe('Der Typ eines Sendepunktes', () => {
     it('wird nirgends mehr roh aus dem Befehlswissen genommen', () => {
         // Der Traeger heisst seit 21.11.2026 `befehl` statt `w` - in
         // mqtt.js stand `w` fuer sechs verschiedene Dinge.
-        expect(quelle).to.not.include("type: befehl.typ || 'mixed'");
-        expect(quelle).to.not.include("type: befehl0.typ || 'mixed'");
+        expect(quelle).to.not.include("type: befehl.type || 'mixed'");
+        expect(quelle).to.not.include("type: befehl0.type || 'mixed'");
     });
     it('ist mixed, sobald eine Schreibformel im Spiel ist', () => {
         const fn = quelle.match(/function punktTyp\(befehl\) \{[\s\S]*?\}/);
         expect(fn).to.not.equal(null);
-        expect(fn[0]).to.include("befehl.schreibformel ? 'mixed'");
+        expect(fn[0]).to.include("befehl.writeFormula ? 'mixed'");
+    });
+});
+
+describe('Was ins Objekt geht, ist englisch', () => {
+    /* Bis 0.14.0 stand im Befehlswissen und in der RGB-Vorlage die
+       Werteliste der Farbeffekte auf Deutsch ("Aufwachen", "Farben
+       vorwaerts"), und die Beschreibung angelegter Sendepunkte kam aus
+       `tr()` - beides landete in der Sprache des Klickenden in der
+       Datenbank und blieb dort. Angezeigte Texte dagegen gehoeren in die
+       elf Sprachdateien (22.11.2026). */
+    const wissen = JSON.parse(fs.readFileSync(path.join(wurzel, 'admin', 'geraetewissen', 'tasmota-befehle.json'), 'utf8'));
+    const rgb = JSON.parse(fs.readFileSync(path.join(wurzel, 'admin', 'vorlagen', 'tasmota-rgb.json'), 'utf8'));
+    const quelle = fs.readFileSync(path.join(jsDir, 'mqtt.js'), 'utf8');
+    const deutsch = /[äöüÄÖÜß]|\b(einfarbig|Aufwachen|Farben|zufaellig|Ausgang|Helligkeit)\b/;
+    it('das Befehlswissen hat englische Feldnamen und keine Anzeigetexte', () => {
+        expect(Object.keys(wissen)).to.deep.equal(['note', 'notCommands', 'commands']);
+        const erlaubt = ['role', 'type', 'unit', 'states', 'writeFormula', 'offByDefault', 'duplicateOf'];
+        Object.keys(wissen.commands).forEach((n) => {
+            Object.keys(wissen.commands[n]).forEach((f) => expect(erlaubt, n + '.' + f).to.include(f));
+        });
+        expect(JSON.stringify(wissen)).to.not.match(deutsch);
+    });
+    it('die Wertelisten sind englisch, in Befehlswissen und Vorlage gleich', () => {
+        const effekt = rgb.points.find((z) => z.name === 'EFFECT');
+        expect(effekt.valueList).to.deep.equal(wissen.commands.Scheme.states);
+        expect(JSON.stringify(effekt.valueList)).to.not.match(deutsch);
+        expect(effekt.valueList['1']).to.equal('wake up');
+    });
+    it('jede Beschreibung steht in allen elf Sprachdateien', () => {
+        ['en', 'de', 'ru', 'pt', 'nl', 'fr', 'it', 'es', 'pl', 'uk', 'zh-cn'].forEach((sp) => {
+            const w = JSON.parse(fs.readFileSync(path.join(wurzel, 'admin', 'i18n', sp + '.json'), 'utf8'));
+            Object.keys(wissen.commands).forEach((n) => {
+                const k = 'cmd.' + n.replace('%N%', 'N');
+                expect(w[k], sp + ' ' + k).to.be.a('string').and.not.equal('');
+            });
+        });
+    });
+    it('die Herkunftsmarke am Sendepunkt ist fest englisch', () => {
+        expect(quelle).to.include("var ANGELEGT_VON = 'created by the Alias Workbench';");
+        expect(quelle).to.not.match(/desc: tr\(/);
+        expect((quelle.match(/desc: ANGELEGT_VON/g) || []).length).to.equal(6);
     });
 });
 

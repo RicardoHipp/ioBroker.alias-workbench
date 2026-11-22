@@ -1,6 +1,6 @@
 {
-  "hinweis": "Gerätewissen, kein Programm. Die Schlüssel sind Tasmota-Befehlsnamen, wie sie in tele/STATE und StatusSTS stehen. %N% steht für die Ausgangsnummer, damit POWER1 bis POWER8 mit einem Eintrag abgedeckt sind.",
-  "keineBefehle": [
+  "note": "Device knowledge, not code. The keys are Tasmota command names as they appear in tele/STATE and StatusSTS. %N% stands for the output number, so one entry covers POWER1 to POWER8. The descriptions shown in the dialog live in admin/i18n (key cmd.<name>, %N% written as N).",
+  "notCommands": [
     "Time",
     "Uptime",
     "UptimeSec",
@@ -15,104 +15,89 @@
     "Vcc",
     "Command"
   ],
-  "befehle": {
+  "commands": {
     "POWER": {
-      "rolle": "switch",
-      "typ": "boolean",
-      "schreibformel": "val ? \"ON\" : \"OFF\"",
-      "was": "Ausgang schalten"
+      "role": "switch",
+      "type": "boolean",
+      "writeFormula": "val ? \"ON\" : \"OFF\""
     },
     "POWER%N%": {
-      "rolle": "switch",
-      "typ": "boolean",
-      "schreibformel": "val ? \"ON\" : \"OFF\"",
-      "was": "einzelner Ausgang eines Mehrfachgeräts"
+      "role": "switch",
+      "type": "boolean",
+      "writeFormula": "val ? \"ON\" : \"OFF\""
     },
     "Dimmer": {
-      "rolle": "level.dimmer",
-      "typ": "number",
-      "einheit": "%",
-      "was": "Helligkeit 0 bis 100"
+      "role": "level.dimmer",
+      "type": "number",
+      "unit": "%"
     },
     "Color": {
-      "rolle": "level.color.rgb",
-      "typ": "string",
-      "was": "Farbe als Hex, etwa F4FFCC"
+      "role": "level.color.rgb",
+      "type": "string"
     },
     "HSBColor": {
-      "rolle": "level.color.hue",
-      "typ": "string",
-      "was": "dieselbe Farbe als Ton, Sättigung, Helligkeit",
-      "dopplung": "Color"
+      "role": "level.color.hue",
+      "type": "string",
+      "duplicateOf": "Color"
     },
     "Channel": {
-      "rolle": "level.dimmer",
-      "typ": "string",
-      "was": "dieselbe Farbe als Kanalliste",
-      "dopplung": "Color"
+      "role": "level.dimmer",
+      "type": "string",
+      "duplicateOf": "Color"
     },
     "CT": {
-      "rolle": "level.color.temperature",
-      "typ": "number",
-      "einheit": "mired",
-      "was": "Farbtemperatur 153 bis 500"
+      "role": "level.color.temperature",
+      "type": "number",
+      "unit": "mired"
     },
     "White": {
-      "rolle": "level.dimmer",
-      "typ": "number",
-      "einheit": "%",
-      "was": "Weißkanal"
+      "role": "level.dimmer",
+      "type": "number",
+      "unit": "%"
     },
     "Scheme": {
-      "rolle": "level.effect",
-      "typ": "number",
-      "werteliste": {
-        "0": "einfarbig",
-        "1": "Aufwachen",
-        "2": "Farben vorwärts",
-        "3": "Farben rückwärts",
-        "4": "zufällig"
-      },
-      "was": "Effekt"
+      "role": "level.effect",
+      "type": "number",
+      "states": {
+        "0": "single colour",
+        "1": "wake up",
+        "2": "cycle colours up",
+        "3": "cycle colours down",
+        "4": "random"
+      }
     },
     "Speed": {
-      "rolle": "level",
-      "typ": "number",
-      "was": "Geschwindigkeit des Effekts, 1 bis 40",
-      "vorgabeAus": true
+      "role": "level",
+      "type": "number",
+      "offByDefault": true
     },
     "Fade": {
-      "rolle": "switch",
-      "typ": "boolean",
-      "schreibformel": "val ? \"ON\" : \"OFF\"",
-      "was": "weiche Übergänge"
+      "role": "switch",
+      "type": "boolean",
+      "writeFormula": "val ? \"ON\" : \"OFF\""
     },
     "LedTable": {
-      "rolle": "switch",
-      "typ": "boolean",
-      "schreibformel": "val ? \"ON\" : \"OFF\"",
-      "was": "Helligkeitskorrektur für LEDs",
-      "vorgabeAus": true
+      "role": "switch",
+      "type": "boolean",
+      "writeFormula": "val ? \"ON\" : \"OFF\"",
+      "offByDefault": true
     },
     "Sleep": {
-      "rolle": "level",
-      "typ": "number",
-      "einheit": "ms",
-      "was": "Ruhezeit je Durchlauf — nur ändern, wenn man weiß warum",
-      "vorgabeAus": true
+      "role": "level",
+      "type": "number",
+      "unit": "ms",
+      "offByDefault": true
     },
     "TelePeriod": {
-      "rolle": "level",
-      "typ": "number",
-      "einheit": "s",
-      "was": "wie oft das Gerät von sich aus meldet",
-      "vorgabeAus": true
+      "role": "level",
+      "type": "number",
+      "unit": "s",
+      "offByDefault": true
     },
     "SleepMode": {
-      "rolle": "text",
-      "typ": "string",
-      "was": "Dynamic oder Normal - Einstellung, keine Geraetefunktion",
-      "vorgabeAus": true
+      "role": "text",
+      "type": "string",
+      "offByDefault": true
     }
   }
 }
