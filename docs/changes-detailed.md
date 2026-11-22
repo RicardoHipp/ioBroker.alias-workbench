@@ -8,6 +8,8 @@ Deutsch: [aenderungen-ausfuehrlich.md](aenderungen-ausfuehrlich.md)
 
 ## Not yet released
 
+## 0.14.0 (2026-11-22)
+
 * **Creating data points in the MQTT adapter is a setting, off by default.** In the review of PR 6634 the checker bot noted under "MQTT helper creates objects in external adapter namespace" that `admin/js/mqtt.js` creates objects under `mqtt-client.0.…` — outside its own areas `alias.*` and `enum.*`. mcm1957 accepted it as an exception ("acceptable"). On 2026-11-22 Ricardo decided to make it the operator's decision anyway: `native.mqttObjects`, in the instance settings "Allow creating and changing data points in the MQTT adapter", default `false`.
 
   **What falls under it.** Not only "create send point". Querying needs a created `cmnd` object too — `cmnd.Status` for Status 5 and 11, `cmnd.TelePeriod` for the period — and so does SetOption59. Six paths are therefore locked: the single "create" and "allow sending" buttons, "Create missing" (the collective dialog), "Ask the device", the two SetOption59 buttons and "Create the N missing send points" in the dry run. The values remembered on the foreign object (`so59`, `telemetryPeriod`) stay in memory only without permission.

@@ -8,6 +8,8 @@ English: [changes-detailed.md](changes-detailed.md)
 
 ## Noch nicht veröffentlicht
 
+## 0.14.0 (2026-11-22)
+
 * **Datenpunkte im MQTT-Adapter anzulegen ist eine Einstellung, ab Werk aus.** Bei der Durchsicht von PR 6634 vermerkte der Prüfer-Bot unter „MQTT helper creates objects in external adapter namespace", dass `admin/js/mqtt.js` Objekte unter `mqtt-client.0.…` anlegt — außerhalb der eigenen Bereiche `alias.*` und `enum.*`. mcm1957 nahm es als Ausnahme an („acceptable"). Ricardo hat am 22.11.2026 entschieden, daraus trotzdem eine Entscheidung des Betreibers zu machen: `native.mqttObjects`, in den Instanz-Einstellungen „Datenpunkte im MQTT-Adapter anlegen und ändern erlauben", Vorgabe `false`.
 
   **Was alles darunter fällt.** Nicht nur „Sendepunkt anlegen". Auch das Nachfragen braucht ein angelegtes `cmnd`-Objekt — `cmnd.Status` für Status 5 und 11, `cmnd.TelePeriod` für den Takt —, ebenso SetOption59. Gesperrt sind deshalb sechs Wege: Einzelknopf „anlegen" und „senden erlauben", „Fehlendes anlegen" (Sammeldialog), „Beim Gerät nachfragen", die beiden SetOption59-Knöpfe und „Die N fehlenden Sendepunkte anlegen" im Trockenlauf. Die gemerkten Werte am fremden Objekt (`so59`, `telemetryPeriod`) bleiben ohne Freigabe nur im Speicher.
