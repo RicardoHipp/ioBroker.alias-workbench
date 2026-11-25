@@ -130,20 +130,44 @@ export function pruefungZielKann(e) {
 export function pruefErgebnisse(e, haupt, pflichtFehlt) {
   var an = e.states.filter(function (s) { return s.on; });
   var ohneQuelle = an.filter(function (s) { return s.srcR && !S.objects[s.srcR]; });
-  var ohneWert = an.filter(function (s) { return s.srcR && S.objects[s.srcR] && !S.werte[s.srcR]; });
-  var formelKaputt = an.filter(function (s) { var a = wertVon(s); return s.srcR && !a.ok && (a.fehler || a.leer); });
+  /* Eine Taste (`button…`) meldet erst, wenn sie gedrueckt wird - ohne
+     Wert ist sie kein Fehler, sondern nur noch nie benutzt. Am
+     BILRESA-Taster stand rot „Quelle hat einen Wert: PRESS, PRESS_LONG"
+     (Ricardo, 26.11.2026). Eine Formel, die auf nichts trifft, ist dort
+     aus demselben Grund kein Fehler; eine, die WIRFT, schon. */
+  var taste = function (s) { return /^button/.test(s.role || ''); };
+  var ohneWert = an.filter(function (s) { return s.srcR && S.objects[s.srcR] && !S.werte[s.srcR] && !taste(s); });
+  var tastenOhneWert = an.filter(function (s) { return s.srcR && S.objects[s.srcR] && !S.werte[s.srcR] && taste(s); });
+  var formelKaputt = an.filter(function (s) {
+    var a = wertVon(s);
+    return s.srcR && !a.ok && (a.fehler || (a.leer && !taste(s)));
+  });
 
+  /* `tf`: wie die Pruefung heisst, wenn sie scheitert. Der Titel ist als
+     Aussage formuliert („Quelle hat einen Wert"); im Dialog steht ein ✕
+     davor, in der Ampel und am Zeichen der Zeile aber nicht - dort las
+     sich „Quelle hat einen Wert: PRESS" wie das Gegenteil dessen, was
+     gemeint ist (Ricardo, 26.11.2026). */
   var items = [
-    { s: ohneQuelle.length ? 'bad' : 'ok', t: tr('check.sourceExists'),
+    { s: ohneQuelle.length ? 'bad' : 'ok', t: tr('check.sourceExists'), tf: tr('check.sourceExistsFails'),
       d: ohneQuelle.length ? ohneQuelle.map(function (x) { return x.n; }).join(', ') : tr('check.checked', an.length),
       zeilen: ohneQuelle.map(function (x) { return x.n; }) },
-    { s: ohneWert.length ? 'bad' : 'ok', t: tr('check.sourceHasValue'),
-      d: ohneWert.length ? ohneWert.map(function (x) { return x.n; }).join(', ') : tr('check.allDeliver'),
-      zeilen: ohneWert.map(function (x) { return x.n; }) },
-    { s: formelKaputt.length ? 'bad' : 'ok', t: tr('check.formulaYields'),
+    ohneWert.length
+      ? { s: 'bad', t: tr('check.sourceHasValue'), tf: tr('check.sourceHasValueFails'),
+          d: ohneWert.map(function (x) { return x.n; }).join(', '),
+          zeilen: ohneWert.map(function (x) { return x.n; }) }
+      /* Tasten ohne Wert: ein Hinweis, kein Fehler - gesagt werden soll
+         es trotzdem (Ricardo, 26.11.2026: „der Hinweis sollte schon
+         bleiben"). */
+      : (tastenOhneWert.length
+        ? { s: 'warn', t: tr('check.sourceHasValue'), tf: tr('check.buttonNoValue'),
+            d: tr('check.buttonNoValueWhy', tastenOhneWert.map(function (x) { return x.n; }).join(', ')),
+            zeilen: tastenOhneWert.map(function (x) { return x.n; }) }
+        : { s: 'ok', t: tr('check.sourceHasValue'), d: tr('check.allDeliver'), zeilen: [] }),
+    { s: formelKaputt.length ? 'bad' : 'ok', t: tr('check.formulaYields'), tf: tr('check.formulaYieldsFails'),
       d: formelKaputt.length ? formelKaputt.map(function (x) { return x.n; }).join(', ') : tr('check.allFine'),
       zeilen: formelKaputt.map(function (x) { return x.n; }) },
-    { s: haupt && !pflichtFehlt.length ? 'ok' : 'bad', t: tr('check.rolesMakeDevice'),
+    { s: haupt && !pflichtFehlt.length ? 'ok' : 'bad', t: tr('check.rolesMakeDevice'), tf: tr('check.rolesMakeDeviceFails'),
       d: haupt ? (pflichtFehlt.length
             ? tr('pattern.missing', pflichtFehlt.map(function (x) { return x.name; }).join(', '))
             : haupt.type) : tr('check.noPatternFits') },
@@ -152,6 +176,12 @@ export function pruefErgebnisse(e, haupt, pflichtFehlt) {
     pruefungZielKann(e),
     pruefungDopplung(e)
   ];
+  var nachTitel = {};
+  nachTitel[tr('check.publish')] = tr('check.publishFails');
+  nachTitel[tr('check.feedback')] = tr('check.feedbackFails');
+  nachTitel[tr('check.targetCan')] = tr('check.targetCanFails');
+  nachTitel[tr('check.duplicate')] = tr('check.duplicateFails');
+  items.forEach(function (c) { if (!c.tf && nachTitel[c.t]) { c.tf = nachTitel[c.t]; } });
   return items;
 }
 
@@ -168,7 +198,7 @@ export function zeilenBefunde(items) {
   (items || []).forEach(function (c) {
     if ((c.s !== 'bad' && c.s !== 'warn') || !c.zeilen) { return; }
     c.zeilen.forEach(function (n) {
-      var text = c.t + ': ' + ((c.texte && c.texte[n]) || c.d);
+      var text = (c.tf || c.t) + ': ' + ((c.texte && c.texte[n]) || c.d);
       (raus[n] = raus[n] || []).push({ s: c.s, text: text });
     });
   });

@@ -859,5 +859,15 @@
   "short.noRoom": "Комната не назначена",
   "short.noRoomWhy": "Alexa, vis и адаптер устройств не найдут устройство по комнате",
   "short.noFunction": "Функция не назначена",
-  "short.noFunctionWhy": "устройства не будет в группах вроде «весь свет»"
+  "short.noFunctionWhy": "устройства не будет в группах вроде «весь свет»",
+  "check.sourceExistsFails": "Источник отсутствует",
+  "check.sourceHasValueFails": "У источника ещё нет значения",
+  "check.formulaYieldsFails": "Формула чтения ничего не возвращает",
+  "check.rolesMakeDeviceFails": "Роли не образуют устройство",
+  "check.publishFails": "Точка отправки",
+  "check.feedbackFails": "Обратная связь",
+  "check.targetCanFails": "Цель записи",
+  "check.duplicateFails": "Дублирующиеся точки",
+  "check.buttonNoValue": "Кнопка ещё не нажималась",
+  "check.buttonNoValueWhy": "{0} — значения пока нет, она сообщает только при нажатии"
 }

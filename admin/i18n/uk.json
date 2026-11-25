@@ -859,5 +859,15 @@
   "short.noRoom": "Кімнату не призначено",
   "short.noRoomWhy": "Alexa, vis і адаптер пристроїв не знайдуть пристрій за кімнатою",
   "short.noFunction": "Функцію не призначено",
-  "short.noFunctionWhy": "його не буде в групах на кшталт «усе світло»"
+  "short.noFunctionWhy": "його не буде в групах на кшталт «усе світло»",
+  "check.sourceExistsFails": "Джерело відсутнє",
+  "check.sourceHasValueFails": "Джерело ще не має значення",
+  "check.formulaYieldsFails": "Формула читання нічого не повертає",
+  "check.rolesMakeDeviceFails": "Ролі не утворюють пристрій",
+  "check.publishFails": "Точка надсилання",
+  "check.feedbackFails": "Зворотний зв’язок",
+  "check.targetCanFails": "Ціль запису",
+  "check.duplicateFails": "Дубльовані точки",
+  "check.buttonNoValue": "Кнопку ще не натискали",
+  "check.buttonNoValueWhy": "{0} — значення ще немає, вона повідомляє лише під час натискання"
 }

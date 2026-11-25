@@ -859,5 +859,15 @@
   "short.noRoom": "Geen ruimte toegewezen",
   "short.noRoomWhy": "Alexa, vis en de apparaatadapter vinden het apparaat dan niet per ruimte",
   "short.noFunction": "Geen functie toegewezen",
-  "short.noFunctionWhy": "het ontbreekt in groepen zoals „alle lampen”"
+  "short.noFunctionWhy": "het ontbreekt in groepen zoals „alle lampen”",
+  "check.sourceExistsFails": "Bron ontbreekt",
+  "check.sourceHasValueFails": "Bron heeft nog geen waarde",
+  "check.formulaYieldsFails": "Leesformule levert niets op",
+  "check.rolesMakeDeviceFails": "Rollen vormen geen apparaat",
+  "check.publishFails": "Zendpunt",
+  "check.feedbackFails": "Terugmelding",
+  "check.targetCanFails": "Schrijfdoel",
+  "check.duplicateFails": "Dubbele punten",
+  "check.buttonNoValue": "Knop nog nooit ingedrukt",
+  "check.buttonNoValueWhy": "{0} — nog geen waarde, hij meldt pas bij indrukken"
 }

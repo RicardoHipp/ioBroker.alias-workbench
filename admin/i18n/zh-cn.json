@@ -859,5 +859,15 @@
   "short.noRoom": "未分配房间",
   "short.noRoomWhy": "Alexa、vis 和设备适配器无法按房间找到该设备",
   "short.noFunction": "未分配功能",
-  "short.noFunctionWhy": "它不会出现在“所有灯”等分组中"
+  "short.noFunctionWhy": "它不会出现在“所有灯”等分组中",
+  "check.sourceExistsFails": "缺少数据源",
+  "check.sourceHasValueFails": "数据源尚无值",
+  "check.formulaYieldsFails": "读取公式无结果",
+  "check.rolesMakeDeviceFails": "角色无法构成设备",
+  "check.publishFails": "发送点",
+  "check.feedbackFails": "反馈",
+  "check.targetCanFails": "写入目标",
+  "check.duplicateFails": "重复的点",
+  "check.buttonNoValue": "按钮尚未按下",
+  "check.buttonNoValueWhy": "{0} — 尚无值，只有按下时才会上报"
 }

@@ -859,5 +859,15 @@
   "short.noRoom": "Nie przypisano pomieszczenia",
   "short.noRoomWhy": "Alexa, vis i adapter urządzeń nie znajdą urządzenia po pomieszczeniu",
   "short.noFunction": "Nie przypisano funkcji",
-  "short.noFunctionWhy": "brakuje go w grupach takich jak „wszystkie światła”"
+  "short.noFunctionWhy": "brakuje go w grupach takich jak „wszystkie światła”",
+  "check.sourceExistsFails": "Brak źródła",
+  "check.sourceHasValueFails": "Źródło nie ma jeszcze wartości",
+  "check.formulaYieldsFails": "Formuła odczytu nic nie zwraca",
+  "check.rolesMakeDeviceFails": "Role nie tworzą urządzenia",
+  "check.publishFails": "Punkt wysyłania",
+  "check.feedbackFails": "Informacja zwrotna",
+  "check.targetCanFails": "Cel zapisu",
+  "check.duplicateFails": "Zdublowane punkty",
+  "check.buttonNoValue": "Przycisk jeszcze nie naciśnięty",
+  "check.buttonNoValueWhy": "{0} — brak wartości, zgłasza dopiero po naciśnięciu"
 }

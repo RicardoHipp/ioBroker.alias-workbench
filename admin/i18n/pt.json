@@ -859,5 +859,15 @@
   "short.noRoom": "Nenhuma divisão atribuída",
   "short.noRoomWhy": "a Alexa, o vis e o adaptador de dispositivos não encontram o dispositivo por divisão",
   "short.noFunction": "Nenhuma função atribuída",
-  "short.noFunctionWhy": "fica de fora de grupos como «todas as luzes»"
+  "short.noFunctionWhy": "fica de fora de grupos como «todas as luzes»",
+  "check.sourceExistsFails": "Origem em falta",
+  "check.sourceHasValueFails": "A origem ainda não tem valor",
+  "check.formulaYieldsFails": "A fórmula de leitura não devolve nada",
+  "check.rolesMakeDeviceFails": "As funções não formam um dispositivo",
+  "check.publishFails": "Ponto de envio",
+  "check.feedbackFails": "Retorno",
+  "check.targetCanFails": "Destino de escrita",
+  "check.duplicateFails": "Pontos duplicados",
+  "check.buttonNoValue": "Botão ainda não premido",
+  "check.buttonNoValueWhy": "{0} — ainda sem valor, só informa quando é premido"
 }

@@ -251,7 +251,7 @@ function baueAmpel(e, haupt, pflichtFehlt) {
       ul.appendChild(li);
     };
     sperren.forEach(function (t) { eintrag(t, { oben: true }); });
-    schlecht.concat(warn).forEach(function (c) { eintrag(c.t + ': ' + c.d, zielVon(c)); });
+    schlecht.concat(warn).forEach(function (c) { eintrag((c.tf || c.t) + ': ' + c.d, zielVon(c)); });
     txtTeil.appendChild(ul);
     if (erstesZiel) {
       var weiter = el('button', 'klink', tr('short.showInDetail'));

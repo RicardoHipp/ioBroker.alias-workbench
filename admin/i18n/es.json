@@ -859,5 +859,15 @@
   "short.noRoom": "Sin habitación asignada",
   "short.noRoomWhy": "Alexa, vis y el adaptador de dispositivos no encuentran el dispositivo por habitación",
   "short.noFunction": "Sin función asignada",
-  "short.noFunctionWhy": "falta en grupos como «todas las luces»"
+  "short.noFunctionWhy": "falta en grupos como «todas las luces»",
+  "check.sourceExistsFails": "Falta el origen",
+  "check.sourceHasValueFails": "El origen aún no tiene valor",
+  "check.formulaYieldsFails": "La fórmula de lectura no devuelve nada",
+  "check.rolesMakeDeviceFails": "Los roles no forman un dispositivo",
+  "check.publishFails": "Punto de envío",
+  "check.feedbackFails": "Respuesta",
+  "check.targetCanFails": "Destino de escritura",
+  "check.duplicateFails": "Puntos duplicados",
+  "check.buttonNoValue": "Botón aún no pulsado",
+  "check.buttonNoValueWhy": "{0} — aún sin valor, solo informa al pulsarlo"
 }

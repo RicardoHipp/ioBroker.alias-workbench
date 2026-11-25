@@ -859,5 +859,15 @@
   "short.noRoom": "No room assigned",
   "short.noRoomWhy": "Alexa, vis and the device adapter cannot find the device by room",
   "short.noFunction": "No function assigned",
-  "short.noFunctionWhy": "it is missing from groups such as \"all lights\""
+  "short.noFunctionWhy": "it is missing from groups such as \"all lights\"",
+  "check.sourceExistsFails": "Source missing",
+  "check.sourceHasValueFails": "Source has no value yet",
+  "check.formulaYieldsFails": "Read formula yields nothing",
+  "check.rolesMakeDeviceFails": "Roles make no device",
+  "check.publishFails": "Send point",
+  "check.feedbackFails": "Feedback",
+  "check.targetCanFails": "Write target",
+  "check.duplicateFails": "Duplicate points",
+  "check.buttonNoValue": "Button not pressed yet",
+  "check.buttonNoValueWhy": "{0} — no value yet, it only reports when pressed"
 }

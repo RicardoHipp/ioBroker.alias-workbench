@@ -859,5 +859,15 @@
   "short.noRoom": "Nessuna stanza assegnata",
   "short.noRoomWhy": "Alexa, vis e l’adattatore dei dispositivi non trovano il dispositivo per stanza",
   "short.noFunction": "Nessuna funzione assegnata",
-  "short.noFunctionWhy": "manca nei gruppi come «tutte le luci»"
+  "short.noFunctionWhy": "manca nei gruppi come «tutte le luci»",
+  "check.sourceExistsFails": "Sorgente mancante",
+  "check.sourceHasValueFails": "La sorgente non ha ancora un valore",
+  "check.formulaYieldsFails": "La formula di lettura non restituisce nulla",
+  "check.rolesMakeDeviceFails": "I ruoli non formano un dispositivo",
+  "check.publishFails": "Punto di invio",
+  "check.feedbackFails": "Riscontro",
+  "check.targetCanFails": "Destinazione di scrittura",
+  "check.duplicateFails": "Punti duplicati",
+  "check.buttonNoValue": "Pulsante mai premuto",
+  "check.buttonNoValueWhy": "{0} — ancora nessun valore, segnala solo quando viene premuto"
 }

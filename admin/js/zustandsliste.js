@@ -179,9 +179,23 @@ export function baueListe(host, e, pl, rateKnopf, musterBlock) {
      jede Zeile ihren Tag, gibt es keine Mehrheit mehr zu bestimmen. */
   var vert = aliasFuerMarke ? quellenVerteilung(aliasFuerMarke) : [];
   var alleTaggen = istAliasSicht && vert.length > 1;
+  /* Nachbarzweige dazugenommen (AA): links steht dann der gemeinsame
+     Elternknoten, und jede Zeile liegt darunter - fuer die Marke kam
+     also nichts „von woanders". Gerade hier will man aber sehen, welche
+     Zeile aus welchem Zweig liest; jede traegt deshalb ihren Zweig
+     (Ricardo, 26.11.2026). */
   var hauptQuelle = aliasFuerMarke
     ? (istAliasSicht ? '' : (quelleHier(aliasFuerMarke, S.current) || ''))
     : (e.kanal || '');
+
+  var zweigModus = !istAliasSicht && !!(S.zweige && S.zweige.length > 1);
+  /* Derselbe Fall von der anderen Seite: EIN Zweig angeklickt, aber der
+     vorhandene Alias liest aus mehreren - `quelleHier` liefert dann deren
+     gemeinsamen Elternknoten, und wieder lag jede Zeile „hier" (Ricardo
+     am GRILLPLATS-Stecker, 26.11.2026: „ich sehe gar nichts"). */
+  var zweigBasis = zweigModus ? S.current
+    : ((!istAliasSicht && hauptQuelle && hauptQuelle !== S.current &&
+        S.current.indexOf(hauptQuelle + '.') === 0) ? hauptQuelle : '');
 
   var platzVon = pl.platzVon, platzAnzahl = pl.platzAnzahl;
 
@@ -621,7 +635,12 @@ export function baueListe(host, e, pl, rateKnopf, musterBlock) {
        keinen Fehler, sie sagt, woher der Wert kommt. */
     var vonHier = !!hauptQuelle && s.srcR &&
       (s.srcR === hauptQuelle || s.srcR.indexOf(hauptQuelle + '.') === 0);
-    if (s.on && s.srcR && (alleTaggen || (hauptQuelle && !vonHier))) {
+    if (s.on && s.srcR && zweigBasis && s.srcR.indexOf(zweigBasis + '.') === 0) {
+      var zweigName = s.srcR.slice(zweigBasis.length + 1).split('.')[0];
+      var zq = el('span', 'geae fremdquelle', tr('list.otherSource', zweigName));
+      zq.title = tr('list.sourceHint', s.srcR);
+      n3.appendChild(zq);
+    } else if (s.on && s.srcR && (alleTaggen || (hauptQuelle && !vonHier))) {
       /* Der Tag nennt die QUELLE, nicht den Adapter.
 
          Er trug erst nur `mqtt-client.0` - was reichte, solange nur die

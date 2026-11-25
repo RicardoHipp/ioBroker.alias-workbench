@@ -859,5 +859,15 @@
   "short.noRoom": "Kein Raum zugeordnet",
   "short.noRoomWhy": "Alexa, vis und der Geräte-Adapter finden das Gerät dann nicht nach Räumen",
   "short.noFunction": "Keine Funktion zugeordnet",
-  "short.noFunctionWhy": "es fehlt in Gruppen wie „alle Lichter“"
+  "short.noFunctionWhy": "es fehlt in Gruppen wie „alle Lichter“",
+  "check.sourceExistsFails": "Quelle fehlt",
+  "check.sourceHasValueFails": "Quelle hat noch keinen Wert",
+  "check.formulaYieldsFails": "Leseformel liefert nichts",
+  "check.rolesMakeDeviceFails": "Rollen ergeben kein Gerät",
+  "check.publishFails": "Sendepunkt",
+  "check.feedbackFails": "Rückmeldung",
+  "check.targetCanFails": "Schreibziel",
+  "check.duplicateFails": "Doppelte Punkte",
+  "check.buttonNoValue": "Taste noch nie gedrückt",
+  "check.buttonNoValueWhy": "{0} — noch kein Wert, sie meldet erst beim Drücken"
 }

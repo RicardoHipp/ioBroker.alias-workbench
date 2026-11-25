@@ -859,5 +859,15 @@
   "short.noRoom": "Aucune pièce attribuée",
   "short.noRoomWhy": "Alexa, vis et l’adaptateur d’appareils ne trouvent pas l’appareil par pièce",
   "short.noFunction": "Aucune fonction attribuée",
-  "short.noFunctionWhy": "il manque dans les groupes comme « toutes les lumières »"
+  "short.noFunctionWhy": "il manque dans les groupes comme « toutes les lumières »",
+  "check.sourceExistsFails": "Source manquante",
+  "check.sourceHasValueFails": "La source n’a pas encore de valeur",
+  "check.formulaYieldsFails": "La formule de lecture ne donne rien",
+  "check.rolesMakeDeviceFails": "Les rôles ne forment pas d’appareil",
+  "check.publishFails": "Point d’envoi",
+  "check.feedbackFails": "Retour",
+  "check.targetCanFails": "Cible d’écriture",
+  "check.duplicateFails": "Points en double",
+  "check.buttonNoValue": "Bouton jamais pressé",
+  "check.buttonNoValueWhy": "{0} — pas encore de valeur, il ne signale qu’à l’appui"
 }

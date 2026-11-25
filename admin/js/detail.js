@@ -630,6 +630,17 @@ export function detailZeile(e, s, idx) {
   var must = e.want && musterVon(e.want);
   if (must) {
     var treffer = platzFuerRolle(e.want, s.role, s.typ);
+    /* Hat die Zeile laut Detektor einen eigenen Platz, gilt DER - nicht der
+       erste, auf den die Rolle passt. `button.long` passt im Muster
+       „Taste mit Rueckmeldung" auf PRESS und PRESS_LONG; PRESS hielt die
+       Zeile PRESS, und die Meldung behauptete „PRESS_LONG zaehlt nicht zum
+       Geraet", waehrend „Platz im Muster" darueber PRESS_LONG zeigte
+       (Ricardo am BILRESA-Taster, 26.11.2026). Passt es, ist es wie
+       immer: der graue Satz, keine gelbe Meldung. */
+    if (eigenerPlatz) {
+      var eigenSt = (must.states || []).filter(function (x) { return x.name === eigenerPlatz; })[0];
+      if (eigenSt) { treffer = eigenSt; }
+    }
     var erlaubt = typenFuerRolle(e.want, s.role);
     var hin = el('div', 'sugg');
     /* Hat den Platz schon eine ANDERE Zeile, hilft weder der Typ noch die
