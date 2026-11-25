@@ -2,7 +2,7 @@ import { S } from './zustand.js';
 import './start.js';
 import { socket } from './verbindung.js';
 import { D, $, el } from './basis.js';
-import { tr, sprachtext } from './sprache.js';
+import { tr, sprachtext, leerhilfe } from './sprache.js';
 import './einstellungen.js';
 import './enums.js';
 import { ausgangName, pruefeVorlage, vorschlag } from './vorlagen.js';
@@ -47,7 +47,7 @@ import './detail.js';
 import { zeigeTausch, tauscheAus } from './quellentausch.js';
 import { baueVerwendungKarte } from './verwendung.js';
 
-import { baueChecks } from './pruefungen.js';
+import { baueChecks, pruefErgebnisse, zeilenBefunde } from './pruefungen.js';
 import {
   zeigeTrockenlauf,
   zeigeLoeschen,
@@ -64,6 +64,7 @@ import { erkenneEntwurf } from './erkennung.js';
 import { zusatzName } from './baum.js';
 import './objekte.js';
 import './katalog.js';
+import { baueKurzkarte, markiereDetail, zeigeUmschalter, leisteFrisch, ansichtFuer } from './kurzansicht.js';
 
 /* Das Aufklapp-Flag von „Warum diese Vorlage“ - lag versehentlich im
    MQTT-Block und wanderte beim Schnitt mit; es gehoert hierher. */
@@ -204,12 +205,12 @@ var warumAuf = false;
       /* Was man in diesem Modus tun kann, steht dort, wo man es beim
          ersten Oeffnen sucht: auf der leeren rechten Seite. Die Reiter
          benennen die Absicht, hier steht der Weg (Ricardo, 25.08.2026). */
-      var k = el('div', 'empty leerhilfe');
+      /* Groesser und als Karte, mit Pfeil nach links und - beim Anlegen -
+         den drei Schritten (Ricardo, 25.11.2026: „gern groesser und
+         schoener"). */
       var modus = S.baumModus === 'aliase' ? 'aliases'
                 : (S.baumModus === 'vorlagen' ? 'templates' : 'sources');
-      k.appendChild(el('div', 'lh1', tr('help.' + modus)));
-      if (modus === 'aliases') { k.appendChild(el('div', 'lh2', tr('help.aliasesAdd'))); }
-      host.appendChild(k);
+      host.appendChild(leerhilfe(modus));
       /* Nichts gewaehlt heisst: keine Knoepfe fuer ein Geraet, das es
          gerade nicht gibt. Nach dem Loeschen eines Alias und nach der
          Rueckkehr aus dem Vorlagen-Tab stand hier weiter „Alias
@@ -722,7 +723,9 @@ var warumAuf = false;
       if (e.instanzen && e.instanzen.length > 1) {
         var la = el('label', 'feld');
         la.appendChild(el('span', 'feldlabel', tr('tpl.output')));
-        var selA = el('select', 'tx');
+        /* `ausgangwahl`: die Kurzansicht greift auf dieses Feld zu, statt
+           eine zweite Umschaltung zu bauen (kurzansicht.js). */
+        var selA = el('select', 'tx ausgangwahl');
         e.instanzen.forEach(function (n) {
           var o = opt(n, ausgangName(e, n));
           if (String(n) === String(e.instanz)) { o.selected = true; }
@@ -1122,6 +1125,8 @@ var warumAuf = false;
        Vorlagenansicht wuerde er sonst stehen bleiben. */
     var sg0 = $('#sperrgrund');
     if (sg0) { sg0.hidden = true; sg0.textContent = ''; }
+    /* Kurz/Detail gibt es nur an einem Entwurf - weiter unten wieder an. */
+    zeigeUmschalter(false);
     if (S.baumModus === 'vorlagen') { return zeichneVorlagenBlatt(host); }
     /* Eine Meldung aus dem Baum - einmal zeigen, dann weg. Sie steht
        ganz oben, weil sie auf einen Klick antwortet, der sonst wirkungslos
@@ -1138,6 +1143,8 @@ var warumAuf = false;
     if (!S.current || !S.entwurf) { return zeichneLeer(host); }
 
     var e = S.entwurf;
+    /* Ein anderes Geraet geht mit der eingestellten Ansicht auf. */
+    ansichtFuer(S.current);
 
     /* Ist das ueberhaupt ein Geraet? Ein Ordner mit vielen Geraeten darunter
        ergibt keinen Entwurf, sondern eine Uebersicht. Vorher landeten beim
@@ -1168,7 +1175,16 @@ var warumAuf = false;
 
     var istQuelle = baueZielleiste(host, e);
 
+    /* Ab hier beginnt, was die Kurzansicht ausblendet (kurzansicht.js).
+       Kopf, Raum/Funktion und Ziel darueber bleiben in beiden Ansichten. */
+    var detailAb = host.children.length;
+
     var kasten = baueVorlagenkasten(host, head, e, istQuelle, musterBlock, rateKnopf);
+    /* Ohne Vorlagenkasten landet die Musterwahl im Kopf - auch sie ist
+       Nachbessern, nicht Anlegen. */
+    if (kasten.musterBlock && kasten.musterBlock.parentNode === head) {
+      kasten.musterBlock.classList.add('nur-detail');
+    }
     musterBlock = kasten.musterBlock;
     rateKnopf = kasten.leistenKnopf;
 
@@ -1187,6 +1203,9 @@ var warumAuf = false;
     }
 
     var pl = berechnePlaetze(e, haupt);
+    /* Fuer die Zeichen an den Zeilen - dieselben Ergebnisse wie der
+       Dialog „Pruefungen", nur nach Zeilen sortiert. */
+    S.zeilenBefunde = zeilenBefunde(pruefErgebnisse(e, haupt, pflichtFehlt));
 
 
     baueListe(host, e, pl, rateKnopf, musterBlock);
@@ -1209,6 +1228,12 @@ var warumAuf = false;
 
     /* --- Prüfungen, Fusszeile, Knopfleiste --- */
     setzeKnoepfe(e, haupt, pflichtFehlt);
+
+    /* --- Kurzansicht: Detailteile markieren, Karte davor setzen --- */
+    markiereDetail(host, detailAb);
+    host.insertBefore(baueKurzkarte(e, haupt, pflichtFehlt), host.children[detailAb] || null);
+    zeigeUmschalter(true);
+    leisteFrisch();
   }
 
   /* Uebersicht ueber alle Geraete unterhalb eines Ordners. */

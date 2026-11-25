@@ -163,8 +163,17 @@ export function enumZeile(host, e) {
     ei.setAttribute('autocomplete', 'off');
     ei.placeholder = tr('enums.placeholder');
     ei.title = spec.hint;
+    ei.dataset.feld = spec.feld;
 
     var gew = e[spec.feld] || '';
+    /* Leer ist erlaubt, aber selten gewollt: ohne Raum kein „Licht im
+       Wohnzimmer" bei Alexa, ohne Funktion keine Gruppe „alle Lichter".
+       Orange statt rot - es ist kein Fehler, der Alias geht trotzdem
+       (Ricardo, 25.11.2026: „damit man etwas zur Ordnung erzogen wird"). */
+    if (!gew) {
+      ei.classList.add('enumleer');
+      ei.placeholder = tr(spec.feld === 'raum' ? 'enums.placeholderRoom' : 'enums.placeholderFunction');
+    }
     var nameVon = function (id) {
       if (!id) { return ''; }
       if (enums[id]) { return txt((enums[id].common || {}).name) || id.split('.').pop(); }

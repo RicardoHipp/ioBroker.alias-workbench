@@ -63,25 +63,27 @@
       <input class="search" id="q" type="search" placeholder="filter …" aria-label="Filter objects">
       <button class="klapp" id="btn-auf" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2m0 12H4V8h16z"/></svg></button>
       <button class="klapp" id="btn-zu" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8z"/></svg></button>
-      <button class="btn schmal" id="btn-einlesen" hidden>Import &hellip;</button>
+      <button class="btn schmal" id="btn-einlesen" hidden>Import</button>
       <input type="file" id="datei-einlesen" accept=".json,application/json" hidden>
     </div>
     <div class="scroll"><div class="tree" id="tree"><div class="empty">loading objects …</div></div></div>
   </div>
 
   <div class="respane">
-    <div class="panehead"><span class="lbl">What the type-detector makes of it</span></div>
+    <div class="panehead"><span class="lbl">What the type-detector makes of it</span>
+      <span class="ansicht" id="ansicht" role="group" hidden><button type="button" id="btn-ansicht-kurz">Short</button><button type="button" id="btn-ansicht-detail">Detail</button></span>
+    </div>
     <div class="resscroll"><div class="resinner" id="res">
       <div class="empty"></div>
     </div></div>
     <div class="footbar">
-      <button class="btn primary" id="btn-dry" disabled>Create alias &hellip;</button>
-      <button class="btn primary" id="btn-dry-alle" hidden>Create all &hellip;</button>
-      <button class="btn" id="btn-tpl" disabled>Save as template &hellip;</button>
+      <button class="btn primary" id="btn-dry" disabled>Create alias</button>
+      <button class="btn primary" id="btn-dry-alle" hidden>Create all</button>
+      <button class="btn" id="btn-tpl" disabled>Save as template</button>
       <span class="sperrgrund" id="sperrgrund" hidden></span>
-      <button class="btn" id="btn-move" hidden>Move &hellip;</button>
-      <button class="btn" id="btn-swap" hidden>Swap source &hellip;</button>
-      <button class="btn" id="btn-del" hidden>Remove alias &hellip;</button>
+      <button class="btn" id="btn-move" hidden>Move</button>
+      <button class="btn" id="btn-swap" hidden>Swap source</button>
+      <button class="btn" id="btn-del" hidden>Remove alias</button>
       <button class="btn" id="btn-checks">Checks <span id="checkchip"></span></button>
       <span class="sp" style="flex:1"></span>
     </div>

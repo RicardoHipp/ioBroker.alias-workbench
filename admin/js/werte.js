@@ -371,6 +371,18 @@ export function istZerlegt(kanal) {
   return !!geraeteBild(kanal).eltern;
 }
 
+/* Wo das Geraet in der gewohnten Bauform laege: die Ebenen ueber dem
+   Praefix plus der Geraetepfad - `…SmartHome_Test.cmnd.Weihnachten_aussen`
+   steht damit wie `…SmartHome_Test.Weihnachten_aussen`. `null`, wenn das
+   Geraet nicht zerlegt ist. Fuer den Ablagevorschlag (`zielId`): sonst
+   wurde der Praefix `cmnd`/`stat`/`tele` zum Ordner, und je nach
+   angeklicktem Zweig ein anderer (Ricardo, 25.11.2026). */
+export function gewohnterPfad(kanal) {
+  var bild = geraeteBild(kanal);
+  if (!bild.eltern || !bild.geraetPfad) { return null; }
+  return bild.eltern.split('.').concat(bild.geraetPfad);
+}
+
 /* Welche Kennung haette ein Punkt mit diesem relativen Namen an diesem
    Geraet — auch wenn es ihn noch nicht gibt?
 

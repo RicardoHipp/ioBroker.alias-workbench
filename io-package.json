@@ -190,7 +190,8 @@
     "iconFunctions": true,
     "iconReplace": true,
     "templatesFromAdmin": true,
-    "mqttObjects": false
+    "mqttObjects": false,
+    "startView": "short"
   },
   "objects": [
     {

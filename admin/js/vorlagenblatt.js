@@ -6,7 +6,7 @@
 import { S } from './zustand.js';
 import { socket } from './verbindung.js';
 import { D, $, el, kurz } from './basis.js';
-import { tr, sprachtext, sprache } from './sprache.js';
+import { tr, sprachtext, sprache, leerhilfe } from './sprache.js';
 import { katalogFehlt } from './katalog.js';
 import { funktionsAuswahl, kennungZuFunktion } from './aufzaehlungen.js';
 import { musterVon, platzFuerRolle, typenFuerRolle } from './erkennung.js';
@@ -281,9 +281,7 @@ export function zeichneVorlagenBlatt(host) {
   var tpl = vArbeitsstand();
   if (!tpl) {
     /* Dieselbe Erklaerung wie in den anderen beiden Modi. */
-    var lh = el('div', 'empty leerhilfe');
-    lh.appendChild(el('div', 'lh1', tr('help.templates')));
-    host.appendChild(lh);
+    host.appendChild(leerhilfe('templates'));
     return;
   }
   var eigen = tpl._quelle === 'benutzer' || !!vEinlesen;

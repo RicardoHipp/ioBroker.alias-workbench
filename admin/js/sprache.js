@@ -95,6 +95,33 @@ export function ladeSprache(fertig) {
 var spaeterExperte = null;
 export function beiSpaetemExperten(fn) { spaeterExperte = fn; }
 
+/* Die leere rechte Seite: Pfeil nach links, Ueberschrift, Erklaerung und
+   beim Anlegen die drei Schritte. `modus` ist sources, aliases oder
+   templates. Hier und nicht in ergebnis.js, weil sie schon beim Start
+   steht, bevor irgendetwas gezeichnet ist (Ricardo, 25.11.2026: „gern
+   groesser und schoener"). */
+export function leerhilfe(modus) {
+  var mk = function (tag, cls, text) {
+    var x = document.createElement(tag);
+    if (cls) { x.className = cls; }
+    if (text !== undefined) { x.textContent = text; }
+    return x;
+  };
+  var k = mk('div', 'empty leerhilfe');
+  var pfeil = mk('div', 'lhpfeil');
+  pfeil.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20z"/></svg>';
+  k.appendChild(pfeil);
+  k.appendChild(mk('div', 'lhtitel', tr('help.title_' + modus)));
+  k.appendChild(mk('div', 'lh1', tr('help.' + modus)));
+  if (modus === 'sources') {
+    var ol = mk('ol', 'lhschritte');
+    ['help.step1', 'help.step2', 'help.step3'].forEach(function (s) { ol.appendChild(mk('li', null, tr(s))); });
+    k.appendChild(ol);
+  }
+  if (modus === 'aliases') { k.appendChild(mk('div', 'lh2', tr('help.aliasesAdd'))); }
+  return k;
+}
+
 /* Beschriftungen im festen HTML nachziehen. */
 export function beschrifteHtml() {
   document.title = tr('app.title');
@@ -108,6 +135,15 @@ export function beschrifteHtml() {
   setz('#m-vorlagen', tr('tree.templates'));
   setz('.pickpane .panehead .lbl', tr('app.objectsCount', '').trim());
   setz('.respane .panehead .lbl', tr('result.header'));
+  setz('#btn-ansicht-kurz', tr('short.viewShort'));
+  setz('#btn-ansicht-detail', tr('short.viewDetail'));
+  var ua = $('#ansicht');
+  if (ua) {
+    ua.setAttribute('aria-label', tr('short.viewAria'));
+    /* Der Hinweis, wo sich das einstellen laesst, ist ein eigener
+       (kurzansicht.js, `verkabeln`) - ein `title` ragte als eine lange
+       Zeile aus dem Fenster (Ricardo, 25.11.2026). */
+  }
   var q = $('#q');
   if (q) {
     q.placeholder = tr('tree.filter');
@@ -149,8 +185,13 @@ export function beschrifteHtml() {
   setz('#guess-titel', tr('guess.tplTitle'));
   setz('#btn-guess-go', tr('guess.tplGo'));
   setz('#tree .empty', tr('tree.loading'));
-  /* Startmodus ist das Anlegen - bis das erste Zeichnen laeuft. */
-  setz('#res .empty', tr('help.sources'));
+  /* Startmodus ist das Anlegen - bis das erste Zeichnen laeuft. Dieselbe
+     Karte wie danach, sonst stuende beim Oeffnen der alte graue Satz da. */
+  var r0 = $('#res');
+  var leer0 = r0 && r0.querySelector('.empty');
+  /* Auch ein zweites Mal, wenn die Systemsprache nach der des Browsers
+     kommt - solange rechts nur diese Karte steht. */
+  if (leer0 && r0.children.length === 1) { r0.replaceChild(leerhilfe('sources'), leer0); }
   setz('#btn-dry-write', tr('write.now'));
   setz('#dlg-checks h3', tr('check.title'));
   setz('#mock-titel', tr('tree.exportMock'));

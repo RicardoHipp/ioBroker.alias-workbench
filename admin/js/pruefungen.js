@@ -36,7 +36,8 @@ export function pruefungRueckmeldung(e) {
   var namen = lahm.map(function (x) { return x.n; }).join(', ');
   if (sofort === true) { return { s: 'ok', t: tr('check.feedback'), d: tr('check.feedbackFast') }; }
   if (sofort === null) { return { s: 'mut', t: tr('check.feedback'), d: tr('check.feedbackUnknown', namen) }; }
-  return { s: 'warn', t: tr('check.feedback'), d: tr('check.feedbackSlow', namen) };
+  return { s: 'warn', t: tr('check.feedback'), d: tr('check.feedbackSlow', namen),
+    zeilen: lahm.map(function (x) { return x.n; }) };
 }
 
 /* Zeigen zwei Punkte auf genau dasselbe?
@@ -56,12 +57,12 @@ export function pruefungDopplung(e) {
     var k = s.srcR + '|' + (s.f || '') + ' → ' + (s.srcW || '') + '|' + (s.fw || '');
     (nach[k] = nach[k] || []).push(s.n);
   });
-  var doppelt = [];
+  var doppelt = [], dz = [];
   Object.keys(nach).forEach(function (k) {
-    if (nach[k].length > 1) { doppelt.push(nach[k].join(' = ')); }
+    if (nach[k].length > 1) { doppelt.push(nach[k].join(' = ')); dz = dz.concat(nach[k]); }
   });
   if (!doppelt.length) { return { s: 'ok', t: tr('check.duplicate'), d: tr('check.duplicateNone') }; }
-  return { s: 'warn', t: tr('check.duplicate'), d: tr('check.duplicateSome', doppelt.join(',  ')) };
+  return { s: 'warn', t: tr('check.duplicate'), d: tr('check.duplicateSome', doppelt.join(',  ')), zeilen: dz };
 }
 
 /* Kann der Schreibweg ueberhaupt senden? Bei MQTT sitzt der Schalter
@@ -89,9 +90,9 @@ export function pruefungSenden(e) {
     if (m.publish === false) { stumm.push(x.n); }
     else if (m.publish === null) { unklar.push(x.n); }
   });
-  if (fehlt.length) { return { s: 'bad', t: tr('check.publish'), d: tr('check.sendPointMissing', fehlt.join(', ')) }; }
+  if (fehlt.length) { return { s: 'bad', t: tr('check.publish'), d: tr('check.sendPointMissing', fehlt.join(', ')), zeilen: fehlt }; }
   if (!mqtt.length) { return { s: 'mut', t: tr('check.publish'), d: tr('check.notMqtt') }; }
-  if (stumm.length) { return { s: 'bad', t: tr('check.publish'), d: tr('check.cannotSend', stumm.join(', ')) }; }
+  if (stumm.length) { return { s: 'bad', t: tr('check.publish'), d: tr('check.cannotSend', stumm.join(', ')), zeilen: stumm }; }
   if (unklar.length) { return { s: 'mut', t: tr('check.publish'), d: tr('check.sendUnknown', unklar.join(', ')) }; }
   return { s: 'ok', t: tr('check.publish'), d: tr('check.canSend', mqtt.length) };
 }
@@ -114,14 +115,19 @@ export function pruefungZielKann(e) {
     zielKann(s).forEach(function (x) { treffer.push({ n: s.n, art: x.art, typ: x.typ }); });
   });
   if (!treffer.length) { return { s: 'ok', t: tr('check.targetCan'), d: tr('check.targetCanFine') }; }
+  var texte = {};
   var text = treffer.map(function (x) {
-    if (x.art === 'formelBlind') { return tr('check.targetVoidFormula', x.n, x.typ); }
-    return tr('check.targetNoWrite', x.n);
+    var t = (x.art === 'formelBlind') ? tr('check.targetVoidFormula', x.n, x.typ) : tr('check.targetNoWrite', x.n);
+    texte[x.n] = (texte[x.n] ? texte[x.n] + ', ' : '') + t;
+    return t;
   }).join(', ');
-  return { s: 'warn', t: tr('check.targetCan'), d: text };
+  return { s: 'warn', t: tr('check.targetCan'), d: text,
+    zeilen: Object.keys(texte), texte: texte };
 }
 
-export function baueChecks(e, haupt, pflichtFehlt) {
+/* Die Ergebnisse allein, ohne sie zu zeichnen - die Ampel der
+   Kurzansicht liest dieselben, damit beide nie Verschiedenes sagen. */
+export function pruefErgebnisse(e, haupt, pflichtFehlt) {
   var an = e.states.filter(function (s) { return s.on; });
   var ohneQuelle = an.filter(function (s) { return s.srcR && !S.objects[s.srcR]; });
   var ohneWert = an.filter(function (s) { return s.srcR && S.objects[s.srcR] && !S.werte[s.srcR]; });
@@ -129,11 +135,14 @@ export function baueChecks(e, haupt, pflichtFehlt) {
 
   var items = [
     { s: ohneQuelle.length ? 'bad' : 'ok', t: tr('check.sourceExists'),
-      d: ohneQuelle.length ? ohneQuelle.map(function (x) { return x.n; }).join(', ') : tr('check.checked', an.length) },
+      d: ohneQuelle.length ? ohneQuelle.map(function (x) { return x.n; }).join(', ') : tr('check.checked', an.length),
+      zeilen: ohneQuelle.map(function (x) { return x.n; }) },
     { s: ohneWert.length ? 'bad' : 'ok', t: tr('check.sourceHasValue'),
-      d: ohneWert.length ? ohneWert.map(function (x) { return x.n; }).join(', ') : tr('check.allDeliver') },
+      d: ohneWert.length ? ohneWert.map(function (x) { return x.n; }).join(', ') : tr('check.allDeliver'),
+      zeilen: ohneWert.map(function (x) { return x.n; }) },
     { s: formelKaputt.length ? 'bad' : 'ok', t: tr('check.formulaYields'),
-      d: formelKaputt.length ? formelKaputt.map(function (x) { return x.n; }).join(', ') : tr('check.allFine') },
+      d: formelKaputt.length ? formelKaputt.map(function (x) { return x.n; }).join(', ') : tr('check.allFine'),
+      zeilen: formelKaputt.map(function (x) { return x.n; }) },
     { s: haupt && !pflichtFehlt.length ? 'ok' : 'bad', t: tr('check.rolesMakeDevice'),
       d: haupt ? (pflichtFehlt.length
             ? tr('pattern.missing', pflichtFehlt.map(function (x) { return x.name; }).join(', '))
@@ -143,6 +152,31 @@ export function baueChecks(e, haupt, pflichtFehlt) {
     pruefungZielKann(e),
     pruefungDopplung(e)
   ];
+  return items;
+}
+
+/* Welche Zeile ist von welcher Pruefung betroffen?
+
+   Die Pruefungen nannten die Zeilen nur im Text des Dialogs - an der
+   Zeile selbst sah man nichts, man musste sie suchen (Ricardo,
+   25.11.2026). Jetzt traegt jede Pruefung, die einzelne Zeilen meint,
+   deren Namen in `zeilen`; die Zustandsliste setzt daraus ein Zeichen
+   vor den Namen. Nur `bad` und `warn` - ein „unbekannt" ist kein
+   Befund. → { ZEILENNAME: [ { s, text } ] } */
+export function zeilenBefunde(items) {
+  var raus = {};
+  (items || []).forEach(function (c) {
+    if ((c.s !== 'bad' && c.s !== 'warn') || !c.zeilen) { return; }
+    c.zeilen.forEach(function (n) {
+      var text = c.t + ': ' + ((c.texte && c.texte[n]) || c.d);
+      (raus[n] = raus[n] || []).push({ s: c.s, text: text });
+    });
+  });
+  return raus;
+}
+
+export function baueChecks(e, haupt, pflichtFehlt) {
+  var items = pruefErgebnisse(e, haupt, pflichtFehlt);
 
   var ul = $('#checklist');
   ul.textContent = '';

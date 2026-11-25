@@ -119,6 +119,10 @@ describe('Die Uebersetzungen des Reiters', () => {
                 const w = jc.items[feld][attr];
                 if (typeof w === 'string') { seite.add(w); }
             });
+            // Auswahlfelder: auch die Beschriftungen ihrer Optionen.
+            (jc.items[feld].options || []).forEach(o => {
+                if (typeof o.label === 'string') { seite.add(o.label); }
+            });
         });
         const tot = Object.keys(dateien.en).filter(k => {
             if (seite.has(k)) { return false; }
@@ -486,6 +490,11 @@ describe('Die Einstellungsseite', () => {
                 const w = jc.items[feld][attr];
                 if (typeof w === 'string' && w.trim()) {
                     gefunden.push({ ort: `${feld}.${attr}`, text: w });
+                }
+            });
+            (jc.items[feld].options || []).forEach((o, i) => {
+                if (typeof o.label === 'string' && o.label.trim()) {
+                    gefunden.push({ ort: `${feld}.options[${i}].label`, text: o.label });
                 }
             });
         });

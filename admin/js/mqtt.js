@@ -477,6 +477,70 @@ function zerlegtZweige(kanal) {
   return Object.keys(zweige).length;
 }
 
+/* Die fehlenden Sendepunkte, auf die eine angehakte Zeile des Entwurfs
+   schreiben soll. Nur am Entwurf dieses Geraets - ohne Entwurf braucht
+   niemand etwas. */
+function gebrauchteSendeziele(kanal) {
+  var e = S.entwurf;
+  var ziele = {};
+  if (!e || e.kanal !== kanal) { return ziele; }
+  e.states.forEach(function (s) {
+    if (!s.on || !s.srcW) { return; }
+    var i = s.srcW.lastIndexOf('.cmnd.');
+    if (i > -1) { ziele[s.srcW.slice(i + 6)] = 1; }
+  });
+  return ziele;
+}
+
+function gebrauchteFehlende(l, kanal) {
+  if (!l.fehlen.length) { return []; }
+  var ziele = gebrauchteSendeziele(kanal);
+  return l.fehlen.filter(function (x) { return ziele[x.name]; });
+}
+
+function gebrauchteStumme(l, kanal) {
+  if (!l.stumm.length) { return []; }
+  var ziele = gebrauchteSendeziele(kanal);
+  return l.stumm.filter(function (x) { return ziele[x.name]; });
+}
+
+/* Die Befunde im Kopf der MQTT-Karte - als Liste, damit die Ampel der
+   Kurzansicht dasselbe sagt wie die Karte (Ricardo, 25.11.2026: „OFFLINE"
+   stand an der Karte, die Ampel schwieg). `art` sagt, welcher Befund es
+   ist; die Ampel laesst `fehlen`/`stumm` weg, wenn die Pruefung
+   „publish" sie schon meldet. */
+function mqttBefundeAus(l, kanal) {
+  var raus = [];
+  /* Erreichbarkeit nur, wenn es etwas zu sagen gibt. Kein gruener Chip
+     fuer den Normalfall: die Kopfzeile traegt schon drei, ein vierter,
+     der fast immer dasteht, macht die anderen unsichtbar. */
+  var err = geraetErreichbar(kanal);
+  if (err && err.stand === 'offline') { raus.push({ s: 'bad', art: 'offline', t: tr('mq.offline') }); }
+  else if (err && err.stand === 'still') { raus.push({ s: 'warn', art: 'still', t: tr('mq.silent') }); }
+  /* Gemeldet wird nur, was der Alias braucht: ein Sendepunkt, auf den eine
+     angehakte Zeile schreiben soll. `Sleep`, `SleepMode` und die anderen
+     Befehle, die das Geraet kennt, braucht man fast nie - als gelber Chip
+     standen sie trotzdem an jedem Tasmota (Ricardo, 25.11.2026). In der
+     aufgeklappten Karte und im Dialog stehen weiter alle. */
+  var noetig = gebrauchteFehlende(l, kanal);
+  if (noetig.length) { raus.push({ s: 'warn', art: 'fehlen', t: tr('mq.missing', noetig.length) }); }
+  /* Dieselbe Regel fuer stumme Punkte: `cmnd.Status` ohne publish stoert
+     keinen Alias, nur die Helfer der Karte - die zeigt ihn aufgeklappt
+     weiter mit „stumm" (Ricardo, 25.11.2026). */
+  var stummNoetig = gebrauchteStumme(l, kanal);
+  if (stummNoetig.length) { raus.push({ s: 'bad', art: 'stumm', t: tr('mq.mute', stummNoetig.length) }); }
+  /* Nur warnen, wo es jemanden trifft: Ohne eine Zeile, die aus tele
+     liest und nach cmnd schreibt, ist SetOption59 folgenlos. */
+  var telZ = telegesteuert(S.entwurf);
+  if (l.sofort === false && telZ.length) { raus.push({ s: 'warn', art: 'sofort', t: tr('mq.instantOffShort') }); }
+  return raus;
+}
+
+export function mqttBefunde(kanal) {
+  var l = mqttLage(kanal);
+  return l ? mqttBefundeAus(l, kanal) : [];
+}
+
 export function mqttKarte(host, kanal) {
   var l = mqttLage(kanal);
   if (!l) { return; }
@@ -488,7 +552,7 @@ export function mqttKarte(host, kanal) {
      oft neu gezeichnet. */
   mqttStand.kanal = kanal;
 
-  var k = el('div', 'card');
+  var k = el('div', 'card mqttkarte');
   k.style.marginBottom = '11px';
   var ch = el('div', 'ch');
   ch.style.cursor = 'pointer';
@@ -506,23 +570,13 @@ export function mqttKarte(host, kanal) {
      Ort. */
   var zweigZahl = zerlegtZweige(kanal);
   if (zweigZahl) { ch.appendChild(el('span', 'chip mut', tr('mq.split', zweigZahl))); }
-  /* Erreichbarkeit nur, wenn es etwas zu sagen gibt. Kein gruener Chip
-     fuer den Normalfall: die Kopfzeile traegt schon drei, ein vierter,
-     der fast immer dasteht, macht die anderen unsichtbar. */
-  var err = geraetErreichbar(kanal);
-  if (err && err.stand === 'offline') {
-    ch.appendChild(el('span', 'chip bad', tr('mq.offline')));
-  } else if (err && err.stand === 'still') {
-    ch.appendChild(el('span', 'chip warn', tr('mq.silent')));
-  }
-  if (l.fehlen.length) { ch.appendChild(el('span', 'chip warn', tr('mq.missing', l.fehlen.length))); }
-  if (l.stumm.length) { ch.appendChild(el('span', 'chip bad', tr('mq.mute', l.stumm.length))); }
-  /* Nur warnen, wo es jemanden trifft: Ohne eine Zeile, die aus tele
-     liest und nach cmnd schreibt, ist SetOption59 folgenlos. */
+  /* Die Befunde stehen in `mqttBefundeAus` - dieselbe Liste liest die
+     Ampel der Kurzansicht. */
   var telZ = telegesteuert(S.entwurf);
-  if (l.sofort === false && telZ.length) {
-    ch.appendChild(el('span', 'chip warn', tr('mq.instantOffShort')));
-  }
+  var err = geraetErreichbar(kanal);   /* weiter unten: Nachfragen bei offline */
+  mqttBefundeAus(l, kanal).forEach(function (b) {
+    ch.appendChild(el('span', 'chip ' + b.s, b.t));
+  });
   ch.insertBefore(klappZeichen(mqttAuf), ch.firstChild);
   ch.classList.add('klappbar');
   ch.addEventListener('click', function () { mqttAuf = !mqttAuf; zeichneErgebnis(); });
@@ -825,6 +879,9 @@ function mqttFehlgeschlagen(kanal, err) {
 /* Ueberlebt das Neuzeichnen — wie bei der MQTT-Karte. */
 
 var mqttAuf = false;
+
+/* Die Ampel der Kurzansicht springt hierher: aufgeklappt, nicht umgeklappt. */
+export function mqttAufklappen() { mqttAuf = true; }
 
 /* Leere Nutzlast fragt nur, "1" schaltet ein. Beides ueber denselben
    Weg, damit es nur eine Stelle gibt, die das Objekt anlegt. */

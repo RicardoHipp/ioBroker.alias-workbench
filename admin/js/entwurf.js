@@ -8,7 +8,7 @@ import { $ } from './basis.js';
 import { txt, tr } from './sprache.js';
 import './enums.js';
 import { zusatzName, setzeModus, zeichneBaum, merkeKlappstand } from './baum.js';
-import { kindZustaende, geraetePunkte, aliasQuellen, holeWerte, istZerlegt,
+import { kindZustaende, geraetePunkte, aliasQuellen, holeWerte, istZerlegt, gewohnterPfad,
   mitVorspann, schreibQuelle, zeileAusAlias, statesText, statesGleich, istTaster as istTasterObjekt
 } from './werte.js';
 import { erkenneEntwurf, musterVon } from './erkennung.js';
@@ -660,7 +660,10 @@ export function kennungtauglich(t) {
 }
 
 export function zielId(kanal) {
-  var t = kanal.split('.');
+  /* Ein zerlegtes Tasmota (`%prefix%/%topic%/`) liegt unter `cmnd`, `stat`
+     und `tele` - der Ordner kommt dann von der Ebene ueber dem Praefix,
+     wie bei jedem anderen Tasmota (H32). */
+  var t = gewohnterPfad(kanal) || kanal.split('.');
   var name = zusatzName(kanal) || t.pop();
   if (zusatzName(kanal)) { t.pop(); }
   var raum = t.length > 2 ? t[t.length - 1] : '';

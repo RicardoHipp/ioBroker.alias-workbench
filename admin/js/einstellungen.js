@@ -27,13 +27,22 @@ var EINST_VORGABE = {
      Im Aufnahmeantrag ins ioBroker-Repository als Ausnahme vermerkt und
      angenommen - hier wird sie zur bewussten Entscheidung dessen, der
      die Werkbank betreibt (22.11.2026). */
-  mqttObjects: false
+  mqttObjects: false,
+  /* Welche Ansicht rechts beim Waehlen eines Geraets: `short` (Vorgabe),
+     `detail` oder `remember` - die zuletzt gewaehlte (25.11.2026). */
+  startView: 'short'
 };
 var einstellungen = {};
 
 export function einst(name) {
   var v = einstellungen[name];
   return v === undefined ? !!EINST_VORGABE[name] : !!v;
+}
+
+/* Wie `einst`, aber der Wert selbst statt wahr/falsch - fuer Auswahlen. */
+export function einstWert(name) {
+  var v = einstellungen[name];
+  return (v === undefined || v === null || v === '') ? EINST_VORGABE[name] : v;
 }
 
 /* Die eigene Instanz - `%instance%` steht in der URL, sonst 0. */

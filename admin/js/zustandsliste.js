@@ -465,6 +465,8 @@ export function baueListe(host, e, pl, rateKnopf, musterBlock) {
     var row = el('div', 'erow' + (s.on ? '' : ' skip') + (S.openRow === i ? ' open' : '') +
                  (ohnePlatz ? ' ohneplatz' : ''));
     row.tabIndex = 0;
+    /* Woran die Ampel der Kurzansicht die Zeile wiederfindet. */
+    if (s.n) { row.dataset.zeile = s.n; }
     if (ohnePlatz) {
       row.title = kipptAnTyp
         ? tr('pattern.noPlaceBecauseType', musterName(e.want) || e.want || '?',
@@ -496,6 +498,23 @@ export function baueListe(host, e, pl, rateKnopf, musterBlock) {
     row.appendChild(mk);
 
     var n3 = el('span', 'nm3', s.n || tr('list.newPoint'));
+    /* Betrifft eine Pruefung diese Zeile, steht ein Zeichen davor - rot
+       bei einem Fehler, orange bei einem Hinweis, der Text im Hinweis.
+       Ein Klick klappt die Zeile auf: dort steht, was zu aendern ist
+       (Ricardo, 25.11.2026). Gefuellt von `zeichneErgebnis` aus
+       denselben Ergebnissen wie der Dialog „Pruefungen". */
+    var befZ = (s.on && s.n && S.zeilenBefunde) ? S.zeilenBefunde[s.n] : null;
+    if (befZ && befZ.length) {
+      var schlimm = befZ.some(function (b) { return b.s === 'bad'; });
+      var zb = el('span', 'zbef ' + (schlimm ? 'bad' : 'warn'), schlimm ? '✕' : '!');
+      zb.title = befZ.map(function (b) { return b.text; }).join(String.fromCharCode(10));
+      zb.addEventListener('click', function (ev) {
+        ev.stopPropagation();
+        S.openRow = i;
+        zeichneErgebnis();
+      });
+      n3.insertBefore(zb, n3.firstChild);
+    }
     /* Die Beschriftung (kuenftiger Anzeigename) steht im Hinweis an der
        Kennung, nicht in der Zeile.
 

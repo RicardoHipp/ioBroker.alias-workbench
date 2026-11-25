@@ -138,6 +138,58 @@
       "md": 12,
       "lg": 12,
       "xl": 12
+    },
+    "_ansichtKopf": {
+      "type": "header",
+      "size": 3,
+      "text": "Short and detailed view",
+      "newLine": true,
+      "xs": 12,
+      "sm": 12,
+      "md": 12,
+      "lg": 12,
+      "xl": 12
+    },
+    "_ansichtText": {
+      "type": "staticText",
+      "text": "When you pick a device, the workbench first shows a short view: what it was recognised as, room, function, a traffic light from the checks and a preview. The switch Short | Detail at the top right always works; this setting decides what you get on the next device.",
+      "style": {
+        "marginBottom": 8,
+        "fontSize": 12,
+        "opacity": 0.7
+      },
+      "newLine": true,
+      "xs": 12,
+      "sm": 12,
+      "md": 12,
+      "lg": 12,
+      "xl": 12
+    },
+    "startView": {
+      "type": "select",
+      "label": "Show when a device is picked",
+      "options": [
+        {
+          "label": "Short view",
+          "value": "short"
+        },
+        {
+          "label": "Always the detailed view",
+          "value": "detail"
+        },
+        {
+          "label": "Remember the last choice",
+          "value": "remember"
+        }
+      ],
+      "default": "short",
+      "help": "Takes effect the next time the workbench tab is opened.",
+      "newLine": true,
+      "xs": 12,
+      "sm": 12,
+      "md": 6,
+      "lg": 6,
+      "xl": 6
     }
   }
 }
